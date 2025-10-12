@@ -1,0 +1,37 @@
+feat: Add IFC validation service and model view enhancements
+
+Implemented comprehensive IFC quality validation system to address real-world
+BIM coordinator needs. Added transparent quality reporting that detects schema
+errors, GUID duplication, geometry completeness, and LOD issues - addressing
+limitations of tools like Solibri and SimpleBIM that hide quality problems.
+
+Backend Changes:
+- Added IFC validation service (services_validation.py) with 6 validation checks
+- Created IFCValidationReport database model with migration
+- Integrated validation into upload flow (runs before extraction)
+- Added /api/models/{id}/validation/ endpoint
+- Added file_size tracking to Model (BigIntegerField)
+- Fixed DRF pagination response handling
+
+Frontend Changes:
+- Fixed pagination handling for DRF paginated responses
+- Added table/gallery view toggle for models
+- Implemented latest-version filtering (shows only newest version)
+- Added file size formatting (KB/MB/GB)
+- Updated TypeScript types to match backend schema
+- Enhanced ProjectDetail page with dual view modes
+
+Validation Checks:
+- Schema validation (ifcopenshell.validate)
+- GUID duplication detection
+- Geometry completeness checking
+- Property set analysis
+- LOD analysis
+
+Files: 25+ files modified/created
+Database: 1 new table (ifc_validation_reports)
+Testing: Validated with 447-element IFC model
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>

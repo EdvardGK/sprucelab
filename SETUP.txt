@@ -1,0 +1,262 @@
+================================================================================
+BIM COORDINATOR PLATFORM - SETUP INSTRUCTIONS
+================================================================================
+
+Project: IFC Extract 3D Mesh + BIM Coordinator Platform
+Repository: https://github.com/EdvardGK/sprucelab.git
+Tech Stack: Django 5.0 + PostgreSQL + React 18 + TypeScript + Vite
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+1. Python 3.9+ (conda recommended)
+2. Node.js 18+
+3. PostgreSQL database (Supabase account)
+4. Git
+
+================================================================================
+BACKEND SETUP (Django)
+================================================================================
+
+1. Navigate to backend directory:
+   cd backend
+
+2. Create conda environment:
+   conda create -n sprucelab python=3.9
+   conda activate sprucelab
+
+3. Install Python dependencies:
+   pip install -r requirements.txt
+
+4. Configure environment variables:
+   - Copy .env.example to .env
+   - Update DATABASE_URL with your Supabase credentials:
+     DATABASE_URL=postgresql://postgres.[project]:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+
+5. Run database migrations:
+   python manage.py migrate
+
+6. Create superuser (optional):
+   python manage.py createsuperuser
+
+7. Start Django development server:
+   python manage.py runserver
+
+   Backend running at: http://127.0.0.1:8000
+
+================================================================================
+FRONTEND SETUP (React + Vite)
+================================================================================
+
+1. Navigate to frontend directory:
+   cd frontend
+
+2. Install Node dependencies:
+   npm install
+
+3. Start Vite development server:
+   npm run dev
+
+   Frontend running at: http://localhost:5173
+
+4. Build for production (optional):
+   npm run build
+   npm run preview
+
+================================================================================
+DATABASE SCHEMA
+================================================================================
+
+The platform uses 15 PostgreSQL tables:
+
+Core Tables:
+- projects: Top-level project containers
+- models: IFC file versions with metadata
+- ifc_entities: All building elements (walls, doors, etc.)
+- spatial_hierarchy: Project/Site/Building/Storey structure
+
+Metadata Tables:
+- property_sets: Psets and individual properties
+- systems: HVAC, Electrical, Plumbing systems
+- system_memberships: Element ↔ System relationships
+- materials: Material library
+- material_assignments: Element ↔ Material relationships
+- ifc_types: Type objects (WallType, DoorType, etc.)
+- type_assignments: Element ↔ Type relationships
+
+Analysis Tables:
+- geometry: Mesh data (vertices, faces, simplified versions)
+- graph_edges: IFC relationships for visualization
+- ifc_validation_reports: IFC quality validation results
+- storage_metrics: File size breakdown by component
+
+================================================================================
+FEATURES IMPLEMENTED (Session 005)
+================================================================================
+
+Backend:
+✅ Django REST Framework API
+✅ PostgreSQL database with Supabase
+✅ IFC file upload and processing (ifcopenshell)
+✅ Complete IFC data extraction (elements, properties, geometry)
+✅ IFC validation service:
+   - Schema validation
+   - GUID duplication detection
+   - Geometry completeness checking
+   - Property set analysis
+   - LOD analysis
+✅ Validation API endpoint: GET /api/models/{id}/validation/
+
+Frontend:
+✅ React 18 + TypeScript + Vite
+✅ Tailwind CSS v4 with custom design system
+✅ shadcn/ui components (13 components copied)
+✅ Tanstack Query (React Query) for server state
+✅ Project management dashboard
+✅ Model upload with drag-and-drop
+✅ Gallery view (card-based layout)
+✅ Table view (detailed metadata table)
+✅ Latest version filtering (shows only latest version of each model)
+✅ File size display with formatting (KB, MB, GB)
+✅ Model status badges (uploading, processing, ready, error)
+
+================================================================================
+API ENDPOINTS
+================================================================================
+
+Projects:
+GET    /api/projects/                    - List all projects (paginated)
+POST   /api/projects/                    - Create new project
+GET    /api/projects/{id}/               - Get project details
+PATCH  /api/projects/{id}/               - Update project
+DELETE /api/projects/{id}/               - Delete project
+
+Models:
+GET    /api/models/                      - List all models (paginated)
+GET    /api/models/?project={id}         - List models for project
+POST   /api/models/upload/               - Upload IFC file
+GET    /api/models/{id}/                 - Get model details
+GET    /api/models/{id}/status/          - Get processing status
+GET    /api/models/{id}/elements/        - Get model elements
+GET    /api/models/{id}/validation/      - Get validation report
+
+Entities:
+GET    /api/entities/                    - List entities (paginated)
+GET    /api/entities/{id}/               - Get entity details
+
+================================================================================
+RUNNING THE APPLICATION
+================================================================================
+
+1. Start Backend (Terminal 1):
+   cd backend
+   conda activate sprucelab
+   python manage.py runserver
+
+2. Start Frontend (Terminal 2):
+   cd frontend
+   npm run dev
+
+3. Open browser:
+   http://localhost:5173
+
+4. Upload an IFC file:
+   - Click "New Project"
+   - Click into project
+   - Click "Upload Model"
+   - Select .ifc file
+   - Watch validation run in backend console
+
+================================================================================
+TESTING VALIDATION
+================================================================================
+
+After uploading an IFC file, check:
+
+1. Backend Console Output:
+   🔍 Running IFC validation...
+
+   IFC Validation Report
+   ================================================================================
+   Overall Status: PASS / WARNING / FAIL
+   Total Elements: 142
+   Elements with Issues: 0
+
+   ✅ Schema Validation: PASS
+   ✅ GUID Uniqueness: PASS
+   ✅ Geometry Completeness: GOOD
+
+2. API Response:
+   GET http://127.0.0.1:8000/api/models/{model_id}/validation/
+
+   Returns full validation report with:
+   - Schema errors and warnings
+   - GUID duplication issues
+   - Geometry completeness
+   - Property set completeness
+   - LOD analysis
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Issue: Django "No module named 'django'"
+Fix: Activate conda environment: conda activate sprucelab
+
+Issue: Frontend shows "No projects"
+Fix: Backend must be running at http://127.0.0.1:8000
+
+Issue: CORS errors
+Fix: Backend CORS is configured for localhost:5173 (Vite default)
+
+Issue: Database connection error
+Fix: Update .env with correct Supabase credentials
+
+Issue: Migration errors
+Fix: Run: python manage.py migrate --run-syncdb
+
+================================================================================
+NEXT STEPS (Planned)
+================================================================================
+
+Session 005 - Part B: Basic Three.js 3D Viewer
+- React Three Fiber canvas setup
+- IFC element mesh rendering
+- OrbitControls for camera
+- Element selection
+- Color by IFC type
+
+Session 006: Simplification Pipeline
+- Integrate Session 001 mesh simplification
+- Open3D integration
+- LOD generation
+
+Session 007: Fragments Format Support
+- @thatopen/fragments integration
+- Multi-format viewing (Original IFC, Simplified IFC, Fragments)
+
+Session 008: Non-Destructive Editing
+- Change tracking
+- Download modified IFC as {name}_endret.ifc
+- Original IFC preservation
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+- CLAUDE.md: Project instructions for AI assistance
+- QUICKSTART.md: Quick start guide
+- SESSION_002_SUMMARY.md: Latest session summary
+- project-management/planning/: Implementation plans
+- project-management/worklog/: Session notes
+- project-management/to-do/: Task tracking
+
+================================================================================
+CONTACT & SUPPORT
+================================================================================
+
+Repository: https://github.com/EdvardGK/sprucelab.git
+Issues: https://github.com/EdvardGK/sprucelab/issues
+
+================================================================================

@@ -1,0 +1,74 @@
+/* Inter font from Google Fonts - must come first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn/ui semantic variables (HSL format for dark mode) */
+    --background: 210 20% 7%;           /* #0a0f14 */
+    --foreground: 0 0% 98%;             /* #fafafa */
+
+    --card: 210 20% 11%;                /* #141b22 */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 210 20% 15%;             /* #1f2933 */
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 207 100% 56%;            /* #1890ff */
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 156 52% 37%;           /* #33a070 */
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 214 13% 37%;               /* #4a5568 */
+    --muted-foreground: 210 23% 85%;    /* #cbd5e0 */
+
+    --accent: 167 100% 67%;             /* #5dffca */
+    --accent-foreground: 210 29% 12%;   /* #1a202c */
+
+    --destructive: 0 70% 75%;           /* #fc8181 */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 214 17% 24%;              /* #2d3748 */
+    --input: 214 13% 37%;               /* #4a5568 */
+    --ring: 207 100% 56%;               /* #1890ff */
+
+    --radius: 0.5rem;
+  }
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground;
+  font-feature-settings: 'rlig' 1, 'calt' 1;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-background;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-border/80;
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+  @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+}

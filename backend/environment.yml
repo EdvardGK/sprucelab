@@ -1,0 +1,56 @@
+# Conda environment for BIM Coordinator Platform
+# Uses existing 'sprucelab' environment with Python 3.11
+
+name: sprucelab
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      # Django Core
+      - Django==5.0.0
+      - djangorestframework==3.14.0
+      - django-cors-headers==4.3.1
+      - python-dotenv==1.0.0
+
+      # Database
+      - psycopg2-binary==2.9.9
+      - dj-database-url==2.1.0
+
+      # Supabase
+      - supabase==2.3.0
+
+      # Async Tasks
+      - celery==5.3.4
+      - redis==5.0.1
+
+      # IFC Processing
+      - ifcopenshell>=0.8.0
+      - numpy>=1.26.0
+      - open3d>=0.18.0
+
+      # Utilities
+      - tqdm==4.66.1
+      - python-dateutil==2.8.2
+
+      # Development
+      - black==23.12.1
+      - ruff==0.1.9
+      - pytest==7.4.3
+      - pytest-django==4.7.0
+
+# Installation instructions:
+# 1. Activate your existing sprucelab environment:
+#    conda activate sprucelab
+#
+# 2. Install/update packages:
+#    conda env update -f environment.yml --prune
+#    OR
+#    pip install -r requirements.txt
+#
+# 3. Verify installation:
+#    python -c "import django; import ifcopenshell; print('Success!')"
