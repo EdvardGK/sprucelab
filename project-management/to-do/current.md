@@ -1,236 +1,166 @@
-# Current TODO List
+# Current TODO - BIM Coordinator Platform
 
-**Last Updated**: 2025-10-12 (Session 005)
-**Session**: 005 - IFC Validation Service + 3D Viewer Foundation
-
-## Session 003 - Completed ✅
-
-### Backend Implementation & Testing
-- [x] Create ModelSerializer with upload validation
-- [x] Create ModelViewSet with upload endpoint
-- [x] Implement IFC extraction service (services.py)
-- [x] Test with real IFC file (142 elements, 95% geometry success)
-- [x] Document frontend design system (1,270 lines)
-- [x] Update CLAUDE.md with design system reference
-
-## Session 004 - Completed ✅
-
-### Frontend Foundation - ALL COMPLETE
-- [x] Initialize Vite + React 18 + TypeScript project
-- [x] Install and configure Tailwind CSS v4
-- [x] Install all dependencies (React Router, Zustand, Tanstack Query, etc.)
-- [x] Create design token system (127 lines)
-- [x] Copy 13 shadcn/ui components
-- [x] Create API client with React Query hooks
-- [x] Build Dashboard page with project grid
-- [x] Build Project Detail page with model upload
-- [x] Build Model Viewer page (3-panel layout)
-- [x] Production build verified (327KB bundle)
-
-## Session 005 - Active 🚧
-
-### Phase A: IFC Validation Service - COMPLETE ✅
-- [x] Create IFC validation service (services_validation.py - 400 lines)
-- [x] Implement schema validation (ifcopenshell.validate)
-- [x] Implement GUID duplication detection
-- [x] Implement geometry completeness checking
-- [x] Implement property set analysis
-- [x] Implement LOD analysis
-- [x] Create IFCValidationReport database model
-- [x] Run database migration (0002_add_ifc_validation_report)
-- [x] Integrate validation into IFC upload flow
-- [x] Create validation API endpoint (GET /api/models/{id}/validation/)
-- [x] Document Session 005 worklog
-
-### Phase A: Current Blocker ⚠️
-- [ ] **Debug frontend project display issue**
-  - Projects created successfully (2 in database)
-  - API calls succeed (POST 201, GET 200)
-  - UI not updating after project creation
-  - Need to check: API response vs frontend rendering
-
-### Phase B: Basic 3D Viewer - PENDING
-- [ ] Create geometry parsing utilities (three-utils.ts)
-- [ ] Create IFC color scheme (ifc-colors.ts)
-- [ ] Create Viewer3D canvas component
-- [ ] Create IFCScene container component
-- [ ] Create IFCElement mesh component
-- [ ] Update ModelViewer page with 3D integration
-- [ ] Test with real model data
-
-### Phase C: Architecture Preparation - PENDING
-- [ ] Create ifc_versions table migration
-- [ ] Document file naming convention ({name}_endret.ifc)
-- [ ] Create ViewModeSelector component (placeholder UI)
-
-### Phase 1: Frontend Foundation
-
-**Setup & Dependencies:**
-- [ ] Initialize Vite + React 18 + TypeScript project in `frontend/`
-- [ ] Install Tailwind CSS v4 + PostCSS + Autoprefixer
-- [ ] Install React Router v6
-- [ ] Install Zustand (state management)
-- [ ] Install Tanstack Query (React Query)
-- [ ] Install Axios (HTTP client)
-- [ ] Install Zod (schema validation)
-- [ ] Install Lucide React (icons)
-
-**Design System Implementation:**
-- [ ] Create `lib/design-tokens.ts` with complete token system
-  - Color palette (dark minimalism + Spruce Forge brand)
-  - Typography (Inter font, sizes, weights)
-  - Spacing scale (8px grid)
-  - Border radius, shadows, transitions
-- [ ] Configure `tailwind.config.ts` with design tokens
-- [ ] Create `styles/globals.css` with CSS variables
-- [ ] Install Inter font (Google Fonts or local)
-
-**shadcn/ui Setup:**
-- [ ] Run `npx shadcn-ui@latest init`
-- [ ] Configure to use design tokens
-- [ ] Copy essential components:
-  - [ ] button
-  - [ ] input
-  - [ ] card
-  - [ ] dialog
-  - [ ] dropdown-menu
-  - [ ] tooltip
-  - [ ] popover
-  - [ ] select
-  - [ ] switch
-  - [ ] tabs
-  - [ ] badge
-  - [ ] table
-
-**Project Structure:**
-- [ ] Create directory structure:
-  - `src/components/ui/` (shadcn/ui components)
-  - `src/components/layouts/` (page layouts)
-  - `src/components/bim/` (BIM-specific components)
-  - `src/lib/` (utilities, API client, design tokens)
-  - `src/hooks/` (custom React hooks)
-  - `src/stores/` (Zustand stores)
-  - `src/pages/` (route pages)
-  - `src/styles/` (global styles)
-
-**API Integration:**
-- [ ] Create `lib/api-client.ts` with Axios instance
-- [ ] Configure base URL (http://127.0.0.1:8000/api/)
-- [ ] Create TypeScript types for API responses
-- [ ] Create React Query hooks:
-  - [ ] `useProjects()` - List projects
-  - [ ] `useProject(id)` - Get project details
-  - [ ] `useModels(projectId)` - List models
-  - [ ] `useModel(id)` - Get model details
-  - [ ] `useCreateProject()` - Create project mutation
-  - [ ] `useUploadModel()` - Upload model mutation
-
-**Dashboard Page:**
-- [ ] Create `pages/Dashboard.tsx`
-- [ ] Create `components/layouts/DashboardLayout.tsx`
-- [ ] Create `components/ProjectCard.tsx` (Linear-style card)
-- [ ] Implement project grid (responsive)
-- [ ] Create "Create Project" dialog
-- [ ] Add empty state for no projects
-- [ ] Connect to backend API
-
-**Routing:**
-- [ ] Set up React Router with routes:
-  - `/` → Dashboard (project list)
-  - `/projects/:id` → Project detail (model list)
-  - `/models/:id` → Model viewer (3D + tree + properties)
-- [ ] Create `components/layouts/Header.tsx`
-- [ ] Create `components/layouts/Sidebar.tsx` (optional)
-
-**Testing:**
-- [ ] Test dashboard loads with no projects
-- [ ] Test create project flow
-- [ ] Test project grid displays correctly
-- [ ] Test routing between pages
-- [ ] Verify dark mode works
-- [ ] Check responsiveness (desktop, tablet, mobile)
-
-### Phase 2: BIM Viewer Foundation (Next Session)
-
-**3D Viewer:**
-- [ ] Install Three.js, @react-three/fiber, @react-three/drei
-- [ ] Create `components/bim/Viewer3D.tsx`
-- [ ] Test loading geometry from backend API
-- [ ] Implement camera controls (OrbitControls)
-- [ ] Create basic lighting setup
-
-**BIM Components:**
-- [ ] Create `components/bim/ModelTree.tsx`
-- [ ] Create `components/bim/PropertyPanel.tsx`
-- [ ] Create `components/bim/ViewerToolbar.tsx`
-- [ ] Implement 3-panel resizable layout
-
-## Future Tasks (Phase 3+)
-
-### Backend Enhancements
-- [ ] Install Redis and configure Celery
-- [ ] Implement graph edge extraction
-- [ ] Implement storage metrics calculation
-- [ ] Add geometry endpoint with simplified option
-- [ ] Implement change detection service
-
-### Frontend Features
-- [ ] Graph visualization (react-force-graph-3d)
-- [ ] Change detection UI
-- [ ] Command palette (Cmd+K)
-- [ ] Keyboard shortcuts
-- [ ] Search and filter
-- [ ] Export functionality
-
-## Blockers
-
-**Current:** None
-
-**Future:**
-- Redis not installed (needed for Celery)
-- Large IFC files will timeout (need async processing)
-
-## Session 004 Success Criteria
-
-### Minimum (MVP):
-- ✅ React project initialized with TypeScript
-- ✅ Tailwind CSS configured with design tokens
-- ✅ Dashboard page shows project list
-- ✅ Can create new project via UI
-- ✅ Dark mode works correctly
-- ✅ API integration functional
-
-### Ideal:
-- ✅ All shadcn/ui components copied and working
-- ✅ Design tokens fully implemented
-- ✅ Routing configured for all planned pages
-- ✅ Project grid displays with proper styling
-- ✅ Responsive on desktop and tablet
-
-## Notes
-
-### Key References
-- **Design System Spec**: `project-management/planning/frontend-design-system.md` (1,270 lines)
-- **Backend Architecture**: `project-management/planning/session-002-bim-coordinator-platform.md`
-- **Session 003 Worklog**: `project-management/worklog/session-003.md`
-- **Backend API**: http://127.0.0.1:8000/api/ (must be running)
-
-### Development Environment
-- **Node.js**: v18+ required for Vite
-- **Package Manager**: npm or yarn
-- **Backend**: Django server must be running at http://127.0.0.1:8000/
-- **Browser**: Chrome/Edge recommended (React DevTools support)
-
-### Design Principles to Follow
-- Dark minimalism (not pure black, use #0a0f14)
-- Desaturated colors (20-30% less saturation for dark mode)
-- Off-white text (#fafafa, not pure white)
-- 8px spacing grid
-- Zero hardcoding (use design tokens)
-- Accessible (WCAG 2.1 AA minimum)
+**Last Updated**: 2025-10-13 (Session 015)
+**Status**: ✅ Session Complete - Ready for Next Phase
 
 ---
 
-**Next Action**: Initialize Vite + React + TypeScript project in `frontend/` directory
+## ✅ Completed (Session 015)
 
-**Status**: Session 004 started, frontend initialization in progress 🚧
+- [x] Fix TypeScript build errors (15 errors)
+- [x] Install missing Radix UI checkbox package
+- [x] Delete legacy viewer files
+- [x] Debug why viewer groups not displaying
+- [x] Fix pagination response handling in React hooks
+- [x] Update FederatedViewer to load real data
+- [x] Match viewer group card styling to model cards
+- [x] Add gallery/table views to ViewerGroups page
+
+---
+
+## 🎯 Next Session (016) - High Priority
+
+### Viewer Layout Redesign
+- [ ] Replace 3-column layout with full-width canvas
+- [ ] Add collapsible right sidebar for models
+- [ ] Implement floating HUD panels for filters
+- [ ] Make HUD panels toggleable
+
+### Add Models Feature
+- [ ] Create "Add Models to Group" dialog
+- [ ] List available models from project
+- [ ] Support multi-select with coordination data
+- [ ] Wire up to backend API
+- [ ] Refresh group after adding models
+
+**See**: `project-management/to-do/session-016-viewer-layout.md` for detailed breakdown
+
+---
+
+## 🔨 Medium Priority (Future Sessions)
+
+### Group Management
+- [ ] Edit group dialog
+- [ ] Delete group with confirmation
+- [ ] Duplicate group
+- [ ] Reorder models in group
+
+### Model Management
+- [ ] Persist model visibility changes to backend
+- [ ] Edit model coordination data (offset, rotation, color, opacity)
+- [ ] Remove models from group
+- [ ] Batch update coordination data
+
+### 3D Viewer Integration
+- [ ] Set up Three.js canvas
+- [ ] Load IFC geometry from backend
+- [ ] Implement camera controls (orbit, pan, zoom)
+- [ ] Apply visibility/color/opacity from backend
+- [ ] Sync 3D selection with sidebar
+
+### Filter Functionality
+- [ ] Connect IFC Element Type filters to backend queries
+- [ ] Connect IFC Systems filters to backend queries
+- [ ] Apply filters to 3D visualization
+- [ ] Save/load filter presets
+
+---
+
+## 🚀 Low Priority (Polish & Optimization)
+
+### Performance
+- [ ] Implement virtual scrolling for large model lists
+- [ ] Lazy load 3D geometry
+- [ ] Optimize re-renders with React.memo
+- [ ] Add loading skeletons
+
+### UX Improvements
+- [ ] Keyboard shortcuts (e.g., H to toggle HUD)
+- [ ] Tooltips for all icons
+- [ ] Undo/redo for viewer changes
+- [ ] Export viewer configuration as JSON
+- [ ] Import viewer configuration
+
+### Testing
+- [ ] Unit tests for hooks
+- [ ] Integration tests for viewer
+- [ ] E2E tests for group creation flow
+- [ ] Performance benchmarks
+
+---
+
+## 📋 Backlog (Research/Design Needed)
+
+### Advanced Features
+- [ ] Clash detection visualization
+- [ ] Measure tools in 3D viewer
+- [ ] Section planes/cutting views
+- [ ] Animation/4D timeline
+- [ ] Multi-user collaboration
+- [ ] Comments/annotations in 3D
+
+### BEP Integration
+- [ ] Link viewer groups to BEP milestones
+- [ ] Validate model maturity levels (MMI)
+- [ ] Check naming conventions compliance
+- [ ] Generate coordination reports
+
+---
+
+## 🐛 Known Issues
+
+**None currently!** All blocking issues resolved in Session 015.
+
+---
+
+## 💡 Ideas / Future Enhancements
+
+1. **Group Templates**: Pre-configured group setups (e.g., "Full Building", "MEP Coordination", "Structural Review")
+
+2. **Smart Grouping**: Auto-create groups based on:
+   - Model discipline (ARK, STR, HVAC, etc.)
+   - Building zones
+   - Construction phases
+
+3. **Model Comparison**: Side-by-side viewer for version comparison
+
+4. **Export Options**:
+   - Export combined IFC from group
+   - Export BCF issues from viewer
+   - Export screenshots/videos
+
+5. **Integration**:
+   - Link to external BIM tools (Solibri, Navisworks)
+   - Export to game engines (Unity, Unreal)
+
+---
+
+## 📊 Progress Tracking
+
+**Overall Project Completion**: ~60%
+
+### Backend ✅ 95% Complete
+- [x] Database models
+- [x] REST API endpoints
+- [x] BEP system
+- [ ] 3D geometry optimization (pending)
+
+### Frontend 🔨 70% Complete
+- [x] Project/Model management
+- [x] Viewer groups UI
+- [x] Group creation/listing
+- [ ] Add models dialog (in progress)
+- [ ] 3D viewer (pending)
+- [ ] Filters (pending)
+
+### 3D Visualization 🚧 10% Complete
+- [ ] Three.js setup (pending)
+- [ ] Geometry loading (pending)
+- [ ] Camera controls (pending)
+- [ ] Visual effects (pending)
+
+---
+
+**Next Action**: Start Session 016 with viewer layout redesign
+**Blocker**: None
+**Estimated Time to MVP**: 2-3 more sessions

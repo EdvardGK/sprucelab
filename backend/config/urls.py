@@ -18,6 +18,9 @@ urlpatterns = [
     path('api/entities/', include('apps.entities.urls')),
     path('api/changes/', include('apps.changes.urls')),
     path('api/graph/', include('apps.graph.urls')),
+    path('api/bep/', include('apps.bep.urls')),
+    path('api/viewers/', include('apps.viewers.urls')),
+    path('api/', include('apps.scripting.urls')),
 ]
 
 # Serve media files in development

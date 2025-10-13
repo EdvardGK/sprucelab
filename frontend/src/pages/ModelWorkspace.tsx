@@ -7,6 +7,7 @@ import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { QTODashboard } from '@/components/features/qto/QTODashboard';
 import { MMIDashboard } from '@/components/features/mmi/MMIDashboard';
+import { IFCViewer } from '@/components/features/viewer/IFCViewer';
 
 // Tab definitions
 const TABS = [
@@ -276,34 +277,88 @@ function Viewer3DTab({ model }: { model: any }) {
   return (
     <div className="flex h-full">
       {/* Model tree (left panel) */}
-      <aside className="w-64 border-r border-border bg-background p-4">
+      <aside className="w-64 border-r border-border bg-background p-4 overflow-y-auto">
         <h2 className="text-sm font-semibold text-text-primary mb-3">Model Tree</h2>
-        <div className="text-xs text-text-secondary">
+        <div className="text-xs text-text-secondary mb-4">
           {model.element_count.toLocaleString()} elements
         </div>
-        {/* TODO: Add model tree component */}
+
+        {/* Placeholder tree structure */}
+        <div className="space-y-1 text-xs">
+          <div className="font-medium text-text-primary py-1">📁 Project</div>
+          <div className="pl-4 space-y-1">
+            <div className="font-medium text-text-primary py-1">📁 Site</div>
+            <div className="pl-4 space-y-1">
+              <div className="font-medium text-text-primary py-1">🏢 Building</div>
+              <div className="pl-4 space-y-1">
+                {Array.from({ length: model.storey_count || 3 }, (_, i) => (
+                  <div key={i} className="text-text-secondary py-1 hover:text-text-primary cursor-pointer">
+                    📐 Storey {i + 1}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 text-xs text-text-tertiary">
+          Tree view coming soon...
+        </div>
       </aside>
 
       {/* 3D viewer (center panel) */}
-      <main className="flex-1 bg-background-elevated">
-        <div className="flex h-full items-center justify-center">
-          <div className="text-center">
-            <p className="text-text-secondary mb-4">3D Viewer</p>
-            <p className="text-sm text-text-tertiary">
-              Three.js viewer coming soon...
-            </p>
-          </div>
-        </div>
-        {/* TODO: Add Three.js viewer component */}
+      <main className="flex-1 relative">
+        <IFCViewer modelId={model.id} />
       </main>
 
       {/* Properties panel (right panel) */}
-      <aside className="w-80 border-l border-border bg-background p-4">
+      <aside className="w-80 border-l border-border bg-background p-4 overflow-y-auto">
         <h2 className="text-sm font-semibold text-text-primary mb-3">Properties</h2>
-        <div className="text-sm text-text-secondary">
+        <div className="text-sm text-text-secondary mb-4">
           Select an element to view its properties
         </div>
-        {/* TODO: Add property panel component */}
+
+        {/* Placeholder properties */}
+        <div className="space-y-4">
+          <div>
+            <div className="text-xs font-semibold text-text-tertiary mb-2">BASIC INFO</div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between py-1">
+                <span className="text-text-secondary">Type:</span>
+                <span className="text-text-primary">IfcWall</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-text-secondary">Name:</span>
+                <span className="text-text-primary">Wall-001</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-text-secondary">GUID:</span>
+                <span className="text-text-primary font-mono">1a2b3c...</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs font-semibold text-text-tertiary mb-2">DIMENSIONS</div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between py-1">
+                <span className="text-text-secondary">Width:</span>
+                <span className="text-text-primary">200 mm</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-text-secondary">Height:</span>
+                <span className="text-text-primary">3000 mm</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-text-secondary">Length:</span>
+                <span className="text-text-primary">5000 mm</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-xs text-text-tertiary mt-4">
+            Full properties panel coming soon...
+          </div>
+        </div>
       </aside>
     </div>
   );

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table } from 'lucide-react';
+import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { useModels } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ModelUploadDialog } from '@/components/ModelUploadDialog';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { AppLayout } from '@/components/Layout/AppLayout';
@@ -61,8 +61,10 @@ export default function ProjectDetail() {
   if (projectLoading || modelsLoading) {
     return (
       <AppLayout>
-        <div className="container mx-auto p-6">
-          <div className="text-text-secondary">Loading project... (Project: {projectLoading ? 'loading' : 'done'}, Models: {modelsLoading ? 'loading' : 'done'})</div>
+        <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
+          <div className="max-w-7xl w-full mx-auto">
+            <div className="text-text-secondary">Loading project... (Project: {projectLoading ? 'loading' : 'done'}, Models: {modelsLoading ? 'loading' : 'done'})</div>
+          </div>
         </div>
       </AppLayout>
     );
@@ -71,7 +73,8 @@ export default function ProjectDetail() {
   if (projectError || !project) {
     return (
       <AppLayout>
-        <div className="container mx-auto p-6">
+        <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
+          <div className="max-w-7xl w-full mx-auto">
           <Button
             variant="ghost"
             size="sm"
@@ -92,6 +95,7 @@ export default function ProjectDetail() {
               <p className="text-xs mt-2">Error: {String(projectError)}</p>
             )}
           </div>
+          </div>
         </div>
       </AppLayout>
     );
@@ -103,9 +107,9 @@ export default function ProjectDetail() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-6">
+      <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 max-w-7xl w-full mx-auto">
           <Button
             variant="ghost"
             size="sm"
@@ -142,7 +146,7 @@ export default function ProjectDetail() {
         </div>
 
         {/* Models section */}
-        <div>
+        <div className="max-w-7xl w-full mx-auto">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold text-text-primary">IFC Models</h2>
 
@@ -192,73 +196,83 @@ export default function ProjectDetail() {
 
           {/* Gallery view */}
           {models && models.length > 0 && viewMode === 'gallery' && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-2 md:gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 pb-6">
               {models.map((model) => (
-                <Card
-                  key={model.id}
-                  className="cursor-pointer transition-all hover:shadow-glow hover:border-primary/50"
-                  onClick={() => {
-                    if (model.status === 'ready') {
-                      navigate(`/models/${model.id}`);
-                    }
-                  }}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">{model.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          Version {model.version_number}
-                        </CardDescription>
+                <li key={model.id} className="list-none">
+                  <div
+                    className="group relative bg-surface border border-border rounded-md p-5 flex flex-col transition-all duration-150 cursor-pointer hover:bg-surface/80 hover:border-primary/50 h-44 pt-5 pb-0"
+                    onClick={() => {
+                      if (model.status === 'ready') {
+                        navigate(`/models/${model.id}`);
+                      }
+                    }}
+                  >
+                    {/* Top section: Name, version, status */}
+                    <div className="flex flex-col space-y-1.5 px-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium text-text-primary truncate pr-8">
+                          {model.name}
+                        </p>
+                        <ModelStatusBadge status={model.status} />
                       </div>
-                      <ModelStatusBadge status={model.status} />
-                    </div>
-                  </CardHeader>
 
-                  <CardContent>
-                    <dl className="space-y-2 text-sm">
+                      <span className="text-xs text-text-secondary">
+                        Version {model.version_number}
+                      </span>
+
+                      {/* Stats - compact single line */}
                       {model.status === 'ready' && (
-                        <>
-                          <div className="flex justify-between">
-                            <dt className="text-text-secondary">Elements</dt>
-                            <dd className="font-medium text-text-primary">
-                              {model.element_count.toLocaleString()}
-                            </dd>
-                          </div>
-                          <div className="flex justify-between">
-                            <dt className="text-text-secondary">Storeys</dt>
-                            <dd className="font-medium text-text-primary">
-                              {model.storey_count}
-                            </dd>
-                          </div>
+                        <div className="flex items-center gap-3 text-xs text-text-tertiary pt-1">
+                          <span>{model.element_count.toLocaleString()} elements</span>
+                          <span>•</span>
+                          <span>{model.storey_count} storeys</span>
                           {model.system_count > 0 && (
-                            <div className="flex justify-between">
-                              <dt className="text-text-secondary">Systems</dt>
-                              <dd className="font-medium text-text-primary">
-                                {model.system_count}
-                              </dd>
-                            </div>
+                            <>
+                              <span>•</span>
+                              <span>{model.system_count} systems</span>
+                            </>
                           )}
-                        </>
-                      )}
-
-                      {model.status === 'error' && model.processing_error && (
-                        <div className="text-xs text-error">
-                          {model.processing_error}
+                          {model.file_size > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>{formatFileSize(model.file_size)}</span>
+                            </>
+                          )}
                         </div>
                       )}
+                    </div>
 
-                      <div className="flex justify-between pt-2 border-t border-border">
-                        <dt className="text-text-tertiary">Uploaded</dt>
-                        <dd className="text-text-tertiary">
-                          {new Date(model.created_at).toLocaleDateString()}
-                        </dd>
-                      </div>
-                    </dl>
-                  </CardContent>
-                </Card>
+                    {/* Bottom section: Error or upload date + user */}
+                    <div className="mt-auto w-full">
+                      {model.status === 'error' && model.processing_error ? (
+                        <div className="bg-error/10 border border-error/20 rounded-md p-3 pb-4">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="h-3.5 w-3.5 text-error mt-0.5 shrink-0" />
+                            <p className="text-xs text-error line-clamp-2">
+                              {model.processing_error}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-text-tertiary pb-4 space-y-0.5">
+                          <div>Uploaded {new Date(model.created_at).toLocaleDateString()}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span>by</span>
+                            <span className="font-medium text-text-secondary">Current User</span>
+                            {/* TODO: Add uploaded_by field to Model backend */}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Chevron indicator */}
+                    <div className="absolute right-4 top-4 text-text-tertiary transition-all duration-200 group-hover:right-3 group-hover:text-text-primary">
+                      <ChevronRight className="h-5 w-5" />
+                    </div>
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
 
           {/* Table view */}

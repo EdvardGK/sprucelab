@@ -19,6 +19,8 @@ import {
 } from '@tremor/react';
 import { Download, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useMMIAnalysis } from '@/hooks/use-script-execution';
+import { useModel } from '@/hooks/use-models';
+import { useProjectBEP, mmiLevelToTremorColor, getMaxMMILevel } from '@/hooks/use-bep';
 
 interface MMIDashboardProps {
   modelId: string;
@@ -60,18 +62,18 @@ interface MMIGapItem {
   missing: string[];
 }
 
-// MMI level colors
-const MMI_COLORS: Record<number, string> = {
-  1: 'red',
-  2: 'orange',
-  3: 'amber',
-  4: 'yellow',
-  5: 'lime',
-  6: 'green',
-  7: 'emerald',
-};
-
 export function MMIDashboard({ modelId }: MMIDashboardProps) {
+  // Fetch model to get project ID
+  const { data: model } = useModel(modelId);
+
+  // Fetch project BEP to get MMI scale
+  const { data: bep } = useProjectBEP(model?.project || '');
+
+  // Get MMI scale from BEP
+  const mmiScale = bep?.mmi_scale || [];
+  const maxMMI = getMaxMMILevel(mmiScale);
+
+  // Fetch MMI analysis data
   const { data, isLoading, isError, isExecuting, error, execution } = useMMIAnalysis(modelId);
 
   const [selectedTab, setSelectedTab] = useState(0);
@@ -156,7 +158,9 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
         <div>
           <Title>MMI Analysis - Norwegian Model Maturity Index</Title>
           <Text className="mt-1">
-            Model maturity based on buildingSMART Norge standards (MMI 1-7)
+            {bep
+              ? `Model maturity based on ${bep.name} (MMI ${Math.min(...mmiScale.map(d => d.mmi_level))}-${Math.max(...mmiScale.map(d => d.mmi_level))})`
+              : 'Model maturity based on buildingSMART Norge standards'}
           </Text>
         </div>
         <Button
@@ -171,7 +175,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
       {/* Overall MMI and Distribution */}
       <Grid numItemsMd={2} className="gap-6">
         {/* Overall MMI Gauge */}
-        <Card decoration="top" decorationColor={MMI_COLORS[overallMMI]}>
+        <Card decoration="top" decorationColor={mmiLevelToTremorColor(overallMMI, mmiScale)}>
           <Flex alignItems="center" justifyContent="between">
             <div>
               <Text>Overall Model Maturity</Text>
@@ -191,7 +195,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
               data={mmiDistribution.map(item => ({ mmi: `MMI ${item.mmi}`, count: item.count }))}
               category="count"
               index="mmi"
-              colors={["red", "orange", "amber", "yellow", "lime", "green", "emerald"]}
+              colors={mmiDistribution.map(item => mmiLevelToTremorColor(item.mmi, mmiScale))}
               className="w-40"
             />
           </Flex>
@@ -244,7 +248,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
             <div className="space-y-2">
               {mmiDistribution.map((item) => (
                 <Flex key={item.mmi} justifyContent="between" alignItems="center">
-                  <Badge color={MMI_COLORS[item.mmi]}>
+                  <Badge color={mmiLevelToTremorColor(item.mmi, mmiScale)}>
                     MMI {item.mmi}
                   </Badge>
                   <Text>{item.count} ({item.percentage}%)</Text>
@@ -281,7 +285,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
                   showLegend={false}
                   layout="horizontal"
                   minValue={0}
-                  maxValue={7}
+                  maxValue={maxMMI}
                 />
 
                 <div className="mt-6 overflow-auto">
@@ -315,7 +319,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
                             {item.count}
                           </td>
                           <td className="px-4 py-3 text-sm text-right">
-                            <Badge color={MMI_COLORS[Math.round(item.avg_mmi)]}>
+                            <Badge color={mmiLevelToTremorColor(Math.round(item.avg_mmi), mmiScale)}>
                               MMI {item.avg_mmi}
                             </Badge>
                           </td>
@@ -347,7 +351,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
                   yAxisWidth={80}
                   showLegend={false}
                   minValue={0}
-                  maxValue={7}
+                  maxValue={maxMMI}
                 />
 
                 <div className="mt-6 overflow-auto">
@@ -375,7 +379,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
                             {item.count}
                           </td>
                           <td className="px-4 py-3 text-sm text-right">
-                            <Badge color={MMI_COLORS[Math.round(item.avg_mmi)]}>
+                            <Badge color={mmiLevelToTremorColor(Math.round(item.avg_mmi), mmiScale)}>
                               MMI {item.avg_mmi}
                             </Badge>
                           </td>
@@ -404,7 +408,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
                       showLegend={false}
                       layout="horizontal"
                       minValue={0}
-                      maxValue={7}
+                      maxValue={maxMMI}
                     />
 
                     <div className="mt-6 overflow-auto">
@@ -432,7 +436,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
                                 {item.count}
                               </td>
                               <td className="px-4 py-3 text-sm text-right">
-                                <Badge color={MMI_COLORS[Math.round(item.avg_mmi)]}>
+                                <Badge color={mmiLevelToTremorColor(Math.round(item.avg_mmi), mmiScale)}>
                                   MMI {item.avg_mmi}
                                 </Badge>
                               </td>
@@ -504,7 +508,7 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
                               {gap.storey}
                             </td>
                             <td className="px-4 py-3 text-sm text-right">
-                              <Badge color={MMI_COLORS[gap.mmi]}>
+                              <Badge color={mmiLevelToTremorColor(gap.mmi, mmiScale)}>
                                 MMI {gap.mmi}
                               </Badge>
                             </td>
@@ -548,45 +552,44 @@ export function MMIDashboard({ modelId }: MMIDashboardProps) {
 
       {/* MMI Scale Reference */}
       <Card>
-        <Title>MMI Scale Reference (buildingSMART Norge)</Title>
-        <dl className="mt-4 space-y-3">
-          <div className="flex items-center justify-between p-3 bg-gray-800/30 rounded">
-            <div>
-              <Badge color="red">MMI 1-2</Badge>
-              <Text className="ml-2 inline">Conceptual</Text>
+        <Title>
+          {bep ? `${bep.name} - MMI Scale` : 'MMI Scale Reference (buildingSMART Norge)'}
+        </Title>
+        {mmiScale.length > 0 ? (
+          <dl className="mt-4 space-y-2">
+            {mmiScale.slice(0, 10).map((def) => (
+              <div key={def.id} className="flex items-start justify-between p-3 bg-gray-800/30 rounded">
+                <div className="flex items-center gap-2">
+                  <Badge color={mmiLevelToTremorColor(def.mmi_level, mmiScale)}>
+                    MMI {def.mmi_level}
+                  </Badge>
+                  <div>
+                    <Text className="font-medium">{def.name}</Text>
+                    {def.name_en && (
+                      <Text className="text-xs text-gray-500">{def.name_en}</Text>
+                    )}
+                  </div>
+                </div>
+                <Text className="text-sm text-gray-400 max-w-md text-right">
+                  {def.description.split('.')[0] || def.description}
+                </Text>
+              </div>
+            ))}
+            {mmiScale.length > 10 && (
+              <Text className="text-center text-sm text-gray-500 pt-2">
+                Showing 10 of {mmiScale.length} MMI levels
+              </Text>
+            )}
+          </dl>
+        ) : (
+          <dl className="mt-4 space-y-3">
+            <div className="flex items-center justify-between p-3 bg-gray-800/30 rounded">
+              <Text className="text-gray-400">
+                No BEP configuration found for this project. Using default MMI scale.
+              </Text>
             </div>
-            <Text className="text-sm text-gray-400">
-              Symbolic representation, basic shapes, minimal information
-            </Text>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-800/30 rounded">
-            <div>
-              <Badge color="yellow">MMI 3-4</Badge>
-              <Text className="ml-2 inline">Schematic Design</Text>
-            </div>
-            <Text className="text-sm text-gray-400">
-              Approximate geometry, key properties defined
-            </Text>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-800/30 rounded">
-            <div>
-              <Badge color="green">MMI 5-6</Badge>
-              <Text className="ml-2 inline">Detailed Design</Text>
-            </div>
-            <Text className="text-sm text-gray-400">
-              Detailed geometry, full property sets, ready for construction
-            </Text>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-800/30 rounded">
-            <div>
-              <Badge color="emerald">MMI 7</Badge>
-              <Text className="ml-2 inline">As-Built</Text>
-            </div>
-            <Text className="text-sm text-gray-400">
-              Verified geometry, complete properties, quality assured
-            </Text>
-          </div>
-        </dl>
+          </dl>
+        )}
       </Card>
 
       {/* Execution Info */}

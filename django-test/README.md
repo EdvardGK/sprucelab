@@ -75,6 +75,115 @@ Duration: 1234ms
 
 ---
 
+## Session 014: Federated Viewer Scripts
+
+Scripts for testing and verifying the federated viewer implementation.
+
+### test_viewer_api.py
+
+Create sample viewer configuration and test API endpoints.
+
+**Usage:**
+```bash
+# From project root (recommended)
+python django-test/test_viewer_api.py
+
+# Or from backend directory
+cd backend
+python ../django-test/test_viewer_api.py
+```
+
+**What it does:**
+- Creates test project with 4 IFC models (ARK, HVAC, STR, Landscape)
+- Creates federated viewer "Site Overview"
+- Creates hierarchical group structure:
+  - Building A (with nested ARK, HVAC, STR groups)
+  - Landscape
+- Assigns models to groups with coordination data
+- Tests API serialization
+- Displays viewer tree structure
+- Lists all available API endpoints
+
+**Expected output:**
+```
+============================================================
+Federated Viewer API Test
+============================================================
+
+📁 Step 1: Setting up test project...
+   ✓ Project: Test Project - Federated Viewer (created)
+
+📐 Step 2: Setting up test models...
+   ✓ Model: ARK_Building_A_v3.ifc (created)
+   ✓ Model: HVAC_Bygg1_v2.ifc (created)
+   ✓ Model: STR_BuildingA_v1.ifc (created)
+   ✓ Model: Landscape_Site.ifc (created)
+
+🎨 Step 3: Creating viewer configuration...
+   ✓ Viewer: Site Overview (created)
+
+📂 Step 4: Creating viewer groups...
+   ✓ Group: Building A
+   ✓ Group: Landscape
+   ✓ Group: Building A → Architecture
+   ✓ Group: Building A → HVAC
+   ✓ Group: Building A → Structure
+
+🔗 Step 5: Assigning models to groups...
+   ✓ ARK_Building_A_v3.ifc → Architecture
+   ✓ HVAC_Bygg1_v2.ifc → HVAC [#FF5733]
+   ✓ STR_BuildingA_v1.ifc → Structure
+   ✓ Landscape_Site.ifc → Landscape (100, 50, 0) [#2ECC71]
+
+🔍 Step 6: Testing API serialization...
+   ✓ Viewer: Site Overview
+   ✓ Project: Test Project - Federated Viewer
+   ✓ Total Groups: 5
+   ✓ Total Models: 4
+   ✓ Top-level Groups: 2
+
+🌳 Step 7: Viewer tree structure:
+
+   📁 Site Overview
+      └─ 📁 Building A (building)
+         └─ 📁 Architecture (discipline)
+            └─ 📐 ARK_Building_A_v3.ifc 👁️
+         └─ 📁 HVAC (discipline)
+            └─ 📐 HVAC_Bygg1_v2.ifc 👁️ [#FF5733]
+         └─ 📁 Structure (discipline)
+            └─ 📐 STR_BuildingA_v1.ifc 👁️
+      └─ 📁 Landscape (zone)
+         └─ 📐 Landscape_Site.ifc 👁️ [#2ECC71] (offset)
+
+✅ Step 8: API endpoints available:
+
+   Viewer Configuration:
+      GET    /api/viewers/
+      POST   /api/viewers/
+      GET    /api/viewers/{id}/
+      PATCH  /api/viewers/{id}/
+      DELETE /api/viewers/{id}/
+
+   Viewer Groups:
+      GET    /api/viewers/groups/
+      POST   /api/viewers/groups/
+      POST   /api/viewers/groups/reorder/
+
+   Viewer Models:
+      GET    /api/viewers/models/
+      POST   /api/viewers/models/
+      POST   /api/viewers/models/{id}/coordinate/
+      POST   /api/viewers/models/batch-coordinate/
+
+============================================================
+✅ Test Complete - Federated Viewer API Ready!
+============================================================
+```
+
+**When to use:** After running migrations for viewer app
+
+---
+
 ## Session 011: MMI-veileder 2.0 Scripts
 
 Scripts for testing and verifying the MMI-veileder 2.0 implementation.
@@ -290,4 +399,4 @@ This pattern ensures scripts work on:
 
 ---
 
-**Last Updated**: Session 011 (2025-10-13)
+**Last Updated**: Session 014 (2025-10-13)
