@@ -25,7 +25,6 @@ interface ModelUploadDialogProps {
 export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUploadDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState('');
-  const [versionNumber, setVersionNumber] = useState('1.0');
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const uploadModel = useUploadModel();
@@ -110,13 +109,11 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
         file,
         project_id: projectId,
         name: name || file.name.replace('.ifc', ''),
-        version_number: versionNumber,
       });
 
       // Reset form and close dialog
       setFile(null);
       setName('');
-      setVersionNumber('1.0');
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload model');
@@ -127,7 +124,6 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
     if (!uploadModel.isPending) {
       setFile(null);
       setName('');
-      setVersionNumber('1.0');
       setError(null);
       onOpenChange(false);
     }
@@ -225,17 +221,9 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
                   onChange={(e) => setName(e.target.value)}
                   disabled={uploadModel.isPending}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="version">Version Number</Label>
-                <Input
-                  id="version"
-                  placeholder="1.0"
-                  value={versionNumber}
-                  onChange={(e) => setVersionNumber(e.target.value)}
-                  disabled={uploadModel.isPending}
-                />
+                <p className="text-xs text-text-tertiary">
+                  Version number will be automatically assigned based on existing models
+                </p>
               </div>
             </div>
 

@@ -1,151 +1,203 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { useProjects } from '@/hooks/use-projects';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CreateProjectDialog } from '@/components/CreateProjectDialog';
-import { LoadingCard } from '@/components/LoadingCard';
+import { Target, FileText, AlertCircle, Clock, TrendingUp, Activity } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
+import { AppLayout } from '@/components/Layout/AppLayout';
 
 export default function Dashboard() {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const { data: projects, isLoading, error } = useProjects();
   const navigate = useNavigate();
 
-  // Debug logging
-  console.log('[Dashboard] Render state:', {
-    projects,
-    projectsLength: projects?.length,
-    isLoading,
-    error,
-    isArray: Array.isArray(projects),
-  });
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="container mx-auto p-6">
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-text-primary">Projects</h1>
-              <p className="text-text-secondary mt-2">Manage your BIM coordination projects</p>
-            </div>
-            <Button size="lg" disabled>
-              <Plus className="mr-2 h-5 w-5" />
-              New Project
-            </Button>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <LoadingCard />
-            <LoadingCard />
-            <LoadingCard />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="container mx-auto p-6">
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold text-text-primary">Projects</h1>
-            <p className="text-text-secondary mt-2">Manage your BIM coordination projects</p>
-          </div>
-          <div className="rounded-lg border border-error bg-error/10 p-4 text-error">
-            <h3 className="font-semibold mb-2">Error loading projects</h3>
-            <p className="text-sm">{error.message}</p>
-            <p className="text-sm mt-2 text-text-tertiary">
-              Make sure the Django backend is running at http://127.0.0.1:8000/
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-text-primary">Projects</h1>
-            <p className="text-text-secondary mt-2">Manage your BIM coordination projects</p>
-          </div>
+    <AppLayout>
+      <div className="h-[calc(100vh-4rem)] overflow-hidden p-6">
+        <div className="max-w-7xl mx-auto h-full flex flex-col gap-4">
+          {/* Welcome Header - Compact */}
+          <header>
+            <h1 className="text-2xl font-semibold text-text-primary">Home</h1>
+            <p className="text-sm text-text-secondary">Overview of your work and activity</p>
+          </header>
 
-          <Button onClick={() => setCreateDialogOpen(true)} size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            New Project
-          </Button>
-        </div>
-
-        {/* Empty state */}
-        {projects && projects.length === 0 && (
-          <div className="rounded-lg border border-border bg-card p-12 text-center">
-            <h3 className="text-xl font-semibold text-text-primary mb-2">No projects yet</h3>
-            <p className="text-text-secondary mb-6">
-              Create your first project to start managing BIM models
-            </p>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Project
-            </Button>
-          </div>
-        )}
-
-        {/* Project grid */}
-        {projects && projects.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
+          {/* Main Grid - 2 rows */}
+          <div className="flex-1 grid grid-rows-[2fr_1fr] gap-4 min-h-0">
+            {/* Top Row: Work Stats + Activity */}
+            <div className="grid grid-cols-4 gap-4">
+              {/* Issues Assigned */}
               <Card
-                key={project.id}
-                className="cursor-pointer transition-all hover:shadow-glow hover:border-primary/50"
-                onClick={() => navigate(`/projects/${project.id}`)}
+                className="cursor-pointer transition-all hover:shadow-glow hover:border-primary/50 flex flex-col"
+                onClick={() => navigate('/my-issues')}
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-xl">{project.name}</CardTitle>
-                    <Badge variant="outline" className="ml-2">
-                      {project.model_count || 0} models
-                    </Badge>
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-base">Issues</CardTitle>
+                    </div>
                   </div>
-                  {project.description && (
-                    <CardDescription className="mt-2">
-                      {project.description}
-                    </CardDescription>
-                  )}
                 </CardHeader>
-
-                <CardContent>
-                  <dl className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <dt className="text-text-secondary">Created</dt>
-                      <dd className="text-text-tertiary">
-                        {new Date(project.created_at).toLocaleDateString()}
-                      </dd>
+                <CardContent className="flex-1 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-3xl font-bold text-text-primary">0</div>
+                      <div className="text-xs text-text-secondary">Assigned to you</div>
                     </div>
-                    <div className="flex justify-between">
-                      <dt className="text-text-secondary">Last updated</dt>
-                      <dd className="text-text-tertiary">
-                        {new Date(project.updated_at).toLocaleDateString()}
-                      </dd>
+                    <div className="space-y-1.5 pt-2 border-t border-border">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-text-secondary">Open</span>
+                        <span className="text-text-primary font-medium">0</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-text-secondary">In Progress</span>
+                        <span className="text-text-primary font-medium">0</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-text-secondary">Due This Week</span>
+                        <span className="text-warning font-medium">0</span>
+                      </div>
                     </div>
-                  </dl>
+                  </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Create project dialog */}
-      <CreateProjectDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-      />
-    </div>
+              {/* RFIs Delegated */}
+              <Card
+                className="cursor-pointer transition-all hover:shadow-glow hover:border-primary/50 flex flex-col"
+                onClick={() => navigate('/my-rfis')}
+              >
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-base">RFIs</CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-3xl font-bold text-text-primary">0</div>
+                      <div className="text-xs text-text-secondary">Awaiting response</div>
+                    </div>
+                    <div className="space-y-1.5 pt-2 border-t border-border">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-text-secondary">Pending</span>
+                        <span className="text-text-primary font-medium">0</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-text-secondary">Due Soon</span>
+                        <span className="text-error font-medium">0</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-text-secondary">Overdue</span>
+                        <span className="text-error font-medium">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Needs Attention */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-warning" />
+                    <CardTitle className="text-base">Needs Attention</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto">
+                  <div className="space-y-3">
+                    <div className="text-xs text-text-tertiary text-center py-4">
+                      <p>No urgent items</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Activity */}
+              <Card className="flex flex-col overflow-hidden">
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-base">Recent Activity</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto">
+                  <div className="space-y-3">
+                    <div className="text-xs text-text-tertiary text-center py-4">
+                      <p>No recent activity</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Bottom Row: Quick Stats */}
+            <div className="grid grid-cols-4 gap-4">
+              {/* Your Projects */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-text-secondary">Your Projects</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex items-center">
+                  <div>
+                    <div className="text-2xl font-bold text-text-primary">0</div>
+                    <div className="text-xs text-text-tertiary">Active projects</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Models Uploaded */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-text-secondary">Models Uploaded</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex items-center">
+                  <div>
+                    <div className="text-2xl font-bold text-text-primary">0</div>
+                    <div className="text-xs text-text-tertiary">Total IFC files</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* This Week */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" />
+                    <CardTitle className="text-sm text-text-secondary">This Week</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-text-tertiary">Issues Closed</span>
+                      <span className="text-text-primary font-medium">0</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-text-tertiary">RFIs Responded</span>
+                      <span className="text-text-primary font-medium">0</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Trend */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-success" />
+                    <CardTitle className="text-sm text-text-secondary">Productivity</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 flex items-center">
+                  <div>
+                    <div className="text-2xl font-bold text-success">—</div>
+                    <div className="text-xs text-text-tertiary">vs last week</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AppLayout>
   );
 }

@@ -1,0 +1,134 @@
+================================================================================
+GIT FIRST COMMIT - EXPLANATION
+================================================================================
+
+Q: When does the GitHub URL connection happen?
+A: The GitHub URL is connected AFTER git init, using "git remote add origin"
+
+================================================================================
+THE PROCESS (3 SEPARATE STEPS)
+================================================================================
+
+STEP 1: Initialize Local Git Repository
+----------------------------------------
+Command: git init
+
+What it does:
+- Creates a .git folder in your project
+- Turns your folder into a local git repository
+- Does NOT connect to GitHub yet
+- Only affects your local machine
+
+STEP 2: Add GitHub Remote URL
+------------------------------
+Command: git remote add origin https://github.com/EdvardGK/sprucelab.git
+
+What it does:
+- Tells your local git repo where to push/pull from
+- "origin" is the default name for the remote
+- The URL points to your GitHub repository
+- Still no data is sent to GitHub yet
+
+STEP 3: Push to GitHub
+----------------------
+Command: git push -u origin main
+
+What it does:
+- Uploads your commits to GitHub
+- "-u" sets upstream tracking (so future pushes can just use "git push")
+- "origin" is the remote name (from step 2)
+- "main" is the branch name
+
+================================================================================
+QUICK START (EASIEST METHOD)
+================================================================================
+
+Run the PowerShell script that does everything:
+
+    .\git-init-and-commit.ps1
+
+This script will:
+1. Run git init (if needed)
+2. Configure git user (if needed)
+3. Stage all files
+4. Create commit with pre-written message
+5. Add GitHub remote URL
+6. Rename branch to main
+7. Push to GitHub
+
+================================================================================
+MANUAL METHOD (STEP BY STEP)
+================================================================================
+
+# 1. Initialize local repository
+git init
+
+# 2. Configure git (if first time)
+git config user.name "Your Name"
+git config user.email "your.email@example.com"
+
+# 3. Check what files will be committed
+git status
+
+# 4. Stage all files
+git add .
+
+# 5. Create commit with message file
+git commit -F commit-message.txt
+
+# 6. Connect to GitHub
+git remote add origin https://github.com/EdvardGK/sprucelab.git
+
+# 7. Rename branch to main (GitHub's default)
+git branch -M main
+
+# 8. Push to GitHub
+git push -u origin main
+
+================================================================================
+VERIFY IT WORKED
+================================================================================
+
+After pushing, check:
+
+1. GitHub Repository:
+   https://github.com/EdvardGK/sprucelab
+
+2. Commit History:
+   https://github.com/EdvardGK/sprucelab/commits/main
+
+3. Local Status:
+   git status
+
+   Should show: "Your branch is up to date with 'origin/main'"
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Error: "remote origin already exists"
+Fix: git remote remove origin
+     Then: git remote add origin https://github.com/EdvardGK/sprucelab.git
+
+Error: "failed to push some refs"
+Fix: Make sure GitHub repo exists at https://github.com/EdvardGK/sprucelab
+     If repo has files, you may need: git pull origin main --allow-unrelated-histories
+
+Error: "Author identity unknown"
+Fix: git config user.name "Your Name"
+     git config user.email "your@email.com"
+
+================================================================================
+WHAT HAPPENS NEXT?
+================================================================================
+
+After first commit:
+
+Future commits are easier:
+1. git add .                  (or git add specific-file.py)
+2. git commit -m "message"
+3. git push
+
+The remote URL is already configured, so no need to add it again.
+
+================================================================================

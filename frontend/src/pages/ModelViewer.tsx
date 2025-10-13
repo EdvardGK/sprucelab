@@ -120,7 +120,7 @@ export default function ModelViewer() {
       <footer className="border-t border-border bg-background-elevated px-4 py-2">
         <div className="flex items-center justify-between text-xs text-text-tertiary">
           <div>Selected: None</div>
-          <div>Uploaded {new Date(model.uploaded_at).toLocaleDateString()}</div>
+          <div>Uploaded {new Date(model.created_at).toLocaleDateString()}</div>
         </div>
       </footer>
     </div>

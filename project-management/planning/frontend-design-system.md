@@ -759,7 +759,308 @@ export function CommandPalette() {
 
 ---
 
-## 7. Responsive Design (Desktop-First)
+## 7. Application Architecture (Two-Level Navigation)
+
+### Philosophy: Personal Workspace vs. Project Workspace
+
+The application follows a **two-level architecture** inspired by Linear and Notion:
+
+**Level 1: Personal Dashboard** (`/`) - "What do I need to work on?"
+**Level 2: Project Workspace** (`/projects/:id`) - "Where the work happens"
+
+This separation ensures:
+- Personal dashboard remains focused on user-specific tasks
+- Project workspace is contextual and scoped to that project
+- No confusion between personal settings and project-specific data
+- Clear mental model for navigation
+
+---
+
+### Level 1: Personal Dashboard (`/`)
+
+**Purpose:** High-level overview of all work across projects + personal preferences
+
+**Layout:** NO contextual sidebar (simple page with header + content)
+
+**What You See:**
+```
+┌─────────────────────────────────────────────────────┐
+│ Header: Logo | Search | Profile                     │
+├─────────────────────────────────────────────────────┤
+│                                                      │
+│  MY WORK (Priority Section)                         │
+│  ┌──────────────────────────────────────────┐      │
+│  │ 🎯 Issues Assigned to You (5)            │      │
+│  │ ├─ [HIGH] Fix beam placement - Building A│      │
+│  │ ├─ Review clash detection - Project C    │      │
+│  │ └─ ...                                    │      │
+│  │                                           │      │
+│  │ 📝 RFIs Delegated to You (3)             │      │
+│  │ ├─ Clarify door schedule - Building B    │      │
+│  │ └─ ...                                    │      │
+│  └──────────────────────────────────────────┘      │
+│                                                      │
+│  YOUR PROJECTS                                       │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐             │
+│  │Proj A│ │Proj B│ │Proj C│ │+ New │             │
+│  │5 mod │ │12 mod│ │3 mod │ │      │             │
+│  └──────┘ └──────┘ └──────┘ └──────┘             │
+│                                                      │
+│  YOUR WORKSPACE                                      │
+│  ├─ ⚙️  Preferences & Settings                     │
+│  ├─ 📜 Scripts & Templates Library                 │
+│  └─ 📊 Quick Stats Across All Projects             │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
+**Key Characteristics:**
+- **Task-oriented:** Issues and RFIs bubble up from all projects
+- **No project-specific data:** Can't browse individual project models here
+- **Personal configuration:** User preferences, custom scripts, templates
+- **Gateway to projects:** Click a project card → Enter project workspace
+
+**What You CANNOT Do Here:**
+- ❌ Browse all models from a specific project
+- ❌ View project documentation
+- ❌ Manage project team/access
+- ❌ See project-specific issues (only yours)
+- ❌ Configure project settings
+
+**Implementation:**
+```tsx
+// pages/Dashboard.tsx
+export default function Dashboard() {
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Simple header, no sidebar */}
+      <Header />
+
+      <main className="container mx-auto p-6">
+        {/* My Work Section */}
+        <MyWorkSection />
+
+        {/* Project Gallery */}
+        <ProjectGallery />
+
+        {/* User Workspace */}
+        <UserWorkspace />
+      </main>
+    </div>
+  );
+}
+```
+
+---
+
+### Level 2: Project Workspace (`/projects/:id`)
+
+**Purpose:** Scoped workspace for a specific project with full context
+
+**Layout:** Contextual sidebar + tabbed content area
+
+**What You See:**
+```
+┌─────────────────────────────────────────────────────┐
+│ Header: Breadcrumbs > Project Name | Actions        │
+├──────────┬──────────────────────────────────────────┤
+│          │                                           │
+│ SIDEBAR  │  PROJECT OVERVIEW                         │
+│ (Context)│  ┌─────────────────────────────────┐    │
+│          │  │ 📊 Stats: 42 models, 1.2k issues│    │
+│ Project  │  │ 👥 Team: 12 members              │    │
+│ Name     │  │ 📅 Updated: 2 hours ago          │    │
+│          │  └─────────────────────────────────┘    │
+│ ─────    │                                           │
+│ Overview │  RECENT ACTIVITY                          │
+│ Models   │  [Activity feed]                          │
+│   ├ All  │                                           │
+│   ├ Act. │  MODELS BY STATUS                         │
+│   └ Arc. │  [Chart/grid]                             │
+│ Docs     │                                           │
+│ Issues   │                                           │
+│ RFIs     │                                           │
+│ Team     │                                           │
+│ Settings │                                           │
+│          │                                           │
+│ ──────   │                                           │
+│ [User]   │                                           │
+└──────────┴──────────────────────────────────────────┘
+```
+
+**Sidebar Navigation (Contextual to Project):**
+```
+📊 Overview              → Project dashboard
+🏗️ Models                → Model management
+   ├─ All Models
+   ├─ Active
+   └─ Archived
+📁 Documentation         → Project docs, drawings
+🐛 Issues                → Project-specific issues
+📝 RFIs                  → Project-specific RFIs
+👥 Team & Access         → Project members, permissions
+⚙️ Project Settings      → Project configuration
+```
+
+**Key Characteristics:**
+- **Contextual sidebar:** Only appears inside a project
+- **Project-scoped:** Everything is filtered to this project
+- **Full functionality:** All project work happens here
+- **Navigation tabs:** Switch between sections easily
+
+**What You CAN Do Here:**
+- ✅ Browse all models in this project
+- ✅ View version history
+- ✅ Upload new models
+- ✅ View project documentation
+- ✅ See ALL issues (not just yours)
+- ✅ Manage team access
+- ✅ Configure project settings
+- ✅ Open 3D viewer for any model
+
+**Implementation:**
+```tsx
+// pages/ProjectDetail.tsx
+import { AppLayout } from '@/components/Layout';
+
+export default function ProjectDetail() {
+  const { id } = useParams();
+  const { data: project } = useProject(id);
+
+  return (
+    <AppLayout
+      sidebar={<ProjectSidebar projectId={id} />}
+      headerContent={<ProjectHeader project={project} />}
+    >
+      {/* Tabbed content area */}
+      <ProjectContent />
+    </AppLayout>
+  );
+}
+```
+
+---
+
+### Navigation Flow
+
+**User Journey:**
+
+```
+1. Login → Personal Dashboard (/)
+   ├─ See my assigned issues/RFIs
+   ├─ See all projects I have access to
+   └─ Click "Project A" card
+
+2. Enter Project Workspace (/projects/:id)
+   ├─ Sidebar appears (project context)
+   ├─ Default view: Project Overview
+   └─ Click "Models" in sidebar
+
+3. View Models (/projects/:id#models)
+   ├─ See all models in this project
+   ├─ Filter by status, version, date
+   └─ Click a model card
+
+4. Open 3D Viewer (/models/:modelId)
+   ├─ Full 3-panel layout
+   ├─ Model tree, viewer, properties
+   └─ "Back to Project" breadcrumb
+```
+
+**Breadcrumb Examples:**
+```
+Home / Projects                              (Personal dashboard)
+Home / Project A                             (Project overview)
+Home / Project A / Models                    (Models list)
+Home / Project A / Model v3                  (3D viewer)
+```
+
+---
+
+### Why This Architecture?
+
+**Problem with Single-Level:**
+- Personal dashboard gets cluttered with project navigation
+- Hard to distinguish "my work" from "project work"
+- Sidebar becomes too generic or too project-specific
+
+**Benefits of Two-Level:**
+- **Clear mental model:** "Where am I? What can I do here?"
+- **Task focus:** Personal dashboard = your work, not navigation
+- **Project context:** Sidebar makes sense only within a project
+- **Scalability:** Easy to add more projects or personal features
+- **Matches industry leaders:** Linear, Notion, Asana all use this pattern
+
+---
+
+### Sidebar Behavior
+
+**Rule:** Sidebar only appears in **Project Workspace** (Level 2)
+
+**Personal Dashboard (Level 1):**
+```tsx
+// No sidebar
+<div className="min-h-screen">
+  <Header />
+  <main>{children}</main>
+</div>
+```
+
+**Project Workspace (Level 2):**
+```tsx
+// Contextual sidebar
+<div className="flex h-screen">
+  <Sidebar projectId={id} /> {/* Project-specific */}
+  <div className="flex-1">
+    <Header />
+    <main>{children}</main>
+  </div>
+</div>
+```
+
+---
+
+### Component Structure
+
+```tsx
+// components/Layout/AppLayout.tsx
+interface AppLayoutProps {
+  children: ReactNode;
+  sidebar?: ReactNode;          // Optional, only for Level 2
+  headerContent?: ReactNode;
+}
+
+export function AppLayout({ children, sidebar, headerContent }: AppLayoutProps) {
+  return (
+    <div className="flex h-screen">
+      {/* Sidebar only if provided */}
+      {sidebar && <aside className="w-64 border-r">{sidebar}</aside>}
+
+      <div className="flex flex-1 flex-col">
+        {headerContent && <header>{headerContent}</header>}
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+// Usage: Personal Dashboard (no sidebar)
+<AppLayout>
+  <DashboardContent />
+</AppLayout>
+
+// Usage: Project Workspace (with sidebar)
+<AppLayout
+  sidebar={<ProjectSidebar />}
+  headerContent={<ProjectHeader />}
+>
+  <ProjectContent />
+</AppLayout>
+```
+
+---
+
+## 8. Responsive Design (Desktop-First)
 
 ### Primary Use Case: Desktop/Laptop
 

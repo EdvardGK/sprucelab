@@ -67,7 +67,7 @@ export function useUploadModel() {
       formData.append('file', data.file);
       formData.append('project_id', data.project_id);
       if (data.name) formData.append('name', data.name);
-      if (data.version_number) formData.append('version_number', data.version_number);
+      // Note: version_number is auto-calculated by backend, not sent by frontend
 
       const response = await apiClient.post<{ model: Model; message: string }>('/models/upload/', formData, {
         headers: {

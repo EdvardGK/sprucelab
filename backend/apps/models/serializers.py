@@ -7,18 +7,21 @@ class ModelSerializer(serializers.ModelSerializer):
     """Serializer for IFC Model instances."""
 
     project_name = serializers.CharField(source='project.name', read_only=True)
+    # Explicitly format dates to ensure ISO 8601 format
+    created_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S.%fZ', read_only=True)
+    updated_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S.%fZ', read_only=True)
 
     class Meta:
         model = Model
         fields = [
             'id', 'project', 'project_name', 'name', 'original_filename',
             'ifc_schema', 'file_url', 'file_size', 'status', 'version_number',
-            'parent_model', 'element_count', 'storey_count', 'system_count',
+            'parent_model', 'is_published', 'element_count', 'storey_count', 'system_count',
             'processing_error', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'ifc_schema', 'file_url', 'file_size', 'status', 'element_count',
-            'storey_count', 'system_count', 'processing_error',
+            'id', 'ifc_schema', 'file_url', 'file_size', 'status', 'is_published',
+            'element_count', 'storey_count', 'system_count', 'processing_error',
             'created_at', 'updated_at'
         ]
 
@@ -39,11 +42,7 @@ class ModelUploadSerializer(serializers.Serializer):
         max_length=255,
         help_text="Optional model name (defaults to filename)"
     )
-    version_number = serializers.IntegerField(
-        required=False,
-        min_value=1,
-        help_text="Version number (defaults to auto-increment)"
-    )
+    # Note: version_number is NOT allowed in upload - it's always auto-calculated by the backend
 
     def validate_file(self, value):
         """Validate that the uploaded file is an IFC file."""
@@ -91,7 +90,8 @@ class ModelDetailSerializer(ModelSerializer):
                 'id': str(prev.id),
                 'version_number': prev.version_number,
                 'name': prev.name,
-                'status': prev.status
+                'status': prev.status,
+                'is_published': prev.is_published
             }
         return None
 
@@ -102,7 +102,8 @@ class ModelDetailSerializer(ModelSerializer):
                 'id': str(next_ver.id),
                 'version_number': next_ver.version_number,
                 'name': next_ver.name,
-                'status': next_ver.status
+                'status': next_ver.status,
+                'is_published': next_ver.is_published
             }
         return None
 

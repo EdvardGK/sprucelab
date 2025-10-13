@@ -3,9 +3,10 @@ import { Badge } from '@/components/ui/badge';
 
 interface ModelStatusBadgeProps {
   status: 'uploading' | 'processing' | 'ready' | 'error';
+  className?: string;
 }
 
-export function ModelStatusBadge({ status }: ModelStatusBadgeProps) {
+export function ModelStatusBadge({ status, className }: ModelStatusBadgeProps) {
   const statusConfig = {
     uploading: {
       icon: Upload,
@@ -37,7 +38,7 @@ export function ModelStatusBadge({ status }: ModelStatusBadgeProps) {
   const Icon = config.icon;
 
   return (
-    <Badge variant={config.variant}>
+    <Badge variant={config.variant} className={className}>
       <Icon className={`mr-1 h-3 w-3 ${config.animate ? 'animate-spin' : ''}`} />
       {config.label}
     </Badge>

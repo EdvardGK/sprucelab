@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'apps.entities',
     'apps.changes',
     'apps.graph',
+    'apps.scripting',
+    'apps.bep',
 ]
 
 MIDDLEWARE = [
@@ -83,7 +85,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASE_URL = os.getenv('DATABASE_URL')
 if DATABASE_URL:
     DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=0,  # Close connections immediately to prevent pool exhaustion
+            conn_health_checks=True,  # Enable connection health checks
+        )
     }
 else:
     # Fallback for local development

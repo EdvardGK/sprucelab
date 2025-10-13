@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ModelUploadDialog } from '@/components/ModelUploadDialog';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
+import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model } from '@/lib/api-types';
 
 type ViewMode = 'gallery' | 'table';
@@ -27,7 +28,14 @@ export default function ProjectDetail() {
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
 
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
-  const { data: allModels, isLoading: modelsLoading } = useModels(id);
+  const { data: allModels, isLoading: modelsLoading, error: modelsError } = useModels(id);
+
+  // Debug logging
+  console.log('[ProjectDetail] Project loading:', projectLoading, 'Models loading:', modelsLoading);
+  console.log('[ProjectDetail] Project data:', project);
+  console.log('[ProjectDetail] Models data:', allModels);
+  console.log('[ProjectDetail] Project error:', projectError);
+  console.log('[ProjectDetail] Models error:', modelsError);
 
   // Filter to show only the latest version of each model
   const models = useMemo(() => {
@@ -45,24 +53,24 @@ export default function ProjectDetail() {
     // Get the latest version of each model (highest version_number)
     return Object.values(modelsByName).map(versions =>
       versions.reduce((latest, current) =>
-        parseInt(current.version_number) > parseInt(latest.version_number) ? current : latest
+        current.version_number > latest.version_number ? current : latest
       )
     );
   }, [allModels]);
 
   if (projectLoading || modelsLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <AppLayout>
         <div className="container mx-auto p-6">
-          <div className="text-text-secondary">Loading project...</div>
+          <div className="text-text-secondary">Loading project... (Project: {projectLoading ? 'loading' : 'done'}, Models: {modelsLoading ? 'loading' : 'done'})</div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (projectError || !project) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <AppLayout>
         <div className="container mx-auto p-6">
           <Button
             variant="ghost"
@@ -80,14 +88,21 @@ export default function ProjectDetail() {
               <h3 className="font-semibold">Project not found</h3>
             </div>
             <p className="text-sm">The project you're looking for doesn't exist or has been deleted.</p>
+            {projectError && (
+              <p className="text-xs mt-2">Error: {String(projectError)}</p>
+            )}
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
+  if (modelsError) {
+    console.error('[ProjectDetail] Models loading error:', modelsError);
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <AppLayout>
       <div className="container mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
@@ -236,7 +251,7 @@ export default function ProjectDetail() {
                       <div className="flex justify-between pt-2 border-t border-border">
                         <dt className="text-text-tertiary">Uploaded</dt>
                         <dd className="text-text-tertiary">
-                          {new Date(model.uploaded_at).toLocaleDateString()}
+                          {new Date(model.created_at).toLocaleDateString()}
                         </dd>
                       </div>
                     </dl>
@@ -291,7 +306,7 @@ export default function ProjectDetail() {
                         {model.file_size ? formatFileSize(model.file_size) : '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-tertiary">
-                        {new Date(model.uploaded_at).toLocaleDateString()}
+                        {new Date(model.created_at).toLocaleDateString()}
                       </td>
                     </tr>
                   ))}
@@ -300,14 +315,14 @@ export default function ProjectDetail() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Upload dialog */}
-      <ModelUploadDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        projectId={id!}
-      />
-    </div>
+        {/* Upload dialog */}
+        <ModelUploadDialog
+          open={uploadDialogOpen}
+          onOpenChange={setUploadDialogOpen}
+          projectId={id!}
+        />
+      </div>
+    </AppLayout>
   );
 }
