@@ -83,3 +83,114 @@ export function useUploadModel() {
     },
   });
 }
+
+// Geometry types
+export interface ModelGeometry {
+  entity_id: string;
+  ifc_guid: string;
+  ifc_type: string;
+  name: string;
+  vertices: number[]; // Flat array [x,y,z, x,y,z, ...]
+  faces: number[]; // Flat array of indices
+  vertex_count: number;
+  triangle_count: number;
+}
+
+export interface GeometryResponse {
+  model_id: string;
+  model_name: string;
+  geometry_count: number;
+  geometries: ModelGeometry[];
+}
+
+// Fetch model geometry
+export function useModelGeometry(modelId: string) {
+  return useQuery({
+    queryKey: [...modelKeys.detail(modelId), 'geometry'],
+    queryFn: async () => {
+      const response = await apiClient.get<GeometryResponse>(`/models/${modelId}/geometry/`);
+      return response.data;
+    },
+    enabled: !!modelId,
+    staleTime: 5 * 60 * 1000, // Geometry doesn't change often, cache for 5 minutes
+  });
+}
+
+// Delete preview types
+export interface DeletePreviewChildVersion {
+  id: string;
+  version: number;
+  name: string;
+  status: string;
+  is_published: boolean;
+  element_count: number;
+}
+
+export interface DeletePreview {
+  model: {
+    id: string;
+    name: string;
+    version: number;
+    status: string;
+    is_published: boolean;
+    element_count: number;
+    file_size: number;
+    file_size_mb: number;
+    created_at: string;
+  };
+  child_versions: {
+    count: number;
+    versions: DeletePreviewChildVersion[];
+  };
+  impact: {
+    total_models_deleted: number;
+    total_entities_deleted: number;
+    total_file_size_deleted: number;
+    total_file_size_deleted_mb: number;
+  };
+  warnings: string[];
+  can_delete: boolean;
+  deletion_note: string;
+}
+
+// Fetch delete preview
+export function useDeletePreview(modelId: string, enabled: boolean = false) {
+  return useQuery({
+    queryKey: [...modelKeys.detail(modelId), 'delete_preview'],
+    queryFn: async () => {
+      const response = await apiClient.get<DeletePreview>(`/models/${modelId}/delete_preview/`);
+      return response.data;
+    },
+    enabled: !!modelId && enabled,
+  });
+}
+
+// Delete model mutation
+export function useDeleteModel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (modelId: string) => {
+      const response = await apiClient.delete<{
+        message: string;
+        deleted_model: {
+          id: string;
+          name: string;
+          version: number;
+          project: string;
+          is_published: boolean;
+          child_versions_deleted: number;
+        };
+        deleted_files: string[];
+        total_models_deleted: number;
+      }>(`/models/${modelId}/`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      // Invalidate all model lists (we don't know which project it belonged to)
+      queryClient.invalidateQueries({ queryKey: modelKeys.lists() });
+      // Remove the specific model from cache
+      queryClient.removeQueries({ queryKey: modelKeys.detail(data.deleted_model.id) });
+    },
+  });
+}

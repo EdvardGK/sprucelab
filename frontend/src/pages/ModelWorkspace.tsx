@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import * as THREE from 'three';
 import { useModel } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
@@ -8,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { QTODashboard } from '@/components/features/qto/QTODashboard';
 import { MMIDashboard } from '@/components/features/mmi/MMIDashboard';
 import { IFCViewer } from '@/components/features/viewer/IFCViewer';
+import type { Model } from '@/lib/api-types';
 
 // Tab definitions
 const TABS = [
@@ -28,8 +30,12 @@ type TabId = typeof TABS[number]['id'];
 export default function ModelWorkspace() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: model, isLoading } = useModel(id!);
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('3d-viewer');
+
+  // Get preparsed scene from navigation state (if uploaded)
+  const preparsedScene = (location.state as any)?.preparsedScene as THREE.Group | undefined;
 
   if (isLoading) {
     return (
@@ -51,7 +57,10 @@ export default function ModelWorkspace() {
     );
   }
 
-  // Only allow access if model is ready
+  // Viewer available immediately if file uploaded (doesn't need processing)
+  const hasFile = !!model.file_url;
+
+  // Other tabs need processing to complete
   const isReady = model.status === 'ready';
 
   return (
@@ -108,8 +117,7 @@ export default function ModelWorkspace() {
           {TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => isReady && setActiveTab(tab.id)}
-              disabled={!isReady}
+              onClick={() => setActiveTab(tab.id)}
               className={`
                 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap
                 border-b-2 -mb-px
@@ -117,7 +125,6 @@ export default function ModelWorkspace() {
                   ? 'text-text-primary border-primary'
                   : 'text-text-secondary border-transparent hover:text-text-primary hover:border-border'
                 }
-                ${!isReady && 'opacity-50 cursor-not-allowed'}
               `}
             >
               {tab.label}
@@ -128,43 +135,24 @@ export default function ModelWorkspace() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-auto bg-background">
-        {!isReady ? (
-          <div className="flex h-full items-center justify-center">
-            <Card className="max-w-md">
-              <CardContent className="pt-6 text-center">
-                <ModelStatusBadge status={model.status} className="mb-4" />
-                <h3 className="text-lg font-semibold text-text-primary mb-2">
-                  Model Not Ready
-                </h3>
-                <p className="text-text-secondary">
-                  {model.status === 'processing' && 'Model is currently being processed. This may take a few minutes.'}
-                  {model.status === 'uploading' && 'Model is being uploaded. Please wait...'}
-                  {model.status === 'error' && `Processing failed: ${model.processing_error}`}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <>
-            {activeTab === 'overview' && <OverviewTab model={model} />}
-            {activeTab === '3d-viewer' && <Viewer3DTab model={model} />}
-            {activeTab === 'qto' && <QTODashboard modelId={model.id} />}
-            {activeTab === 'mmi' && <MMIDashboard modelId={model.id} />}
-            {activeTab === 'validation' && <PlaceholderTab title="Validation" />}
-            {activeTab === 'statistics' && <PlaceholderTab title="Statistics" />}
-            {activeTab === 'properties' && <PlaceholderTab title="Properties" />}
-            {activeTab === 'scripts' && <PlaceholderTab title="Scripts" />}
-            {activeTab === 'metadata' && <PlaceholderTab title="Metadata" />}
-            {activeTab === 'history' && <PlaceholderTab title="History" />}
-          </>
-        )}
+        {/* All tabs - show content or processing message */}
+        {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === '3d-viewer' && (hasFile ? <Viewer3DTab model={model} preparsedScene={preparsedScene} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'qto' && (isReady ? <QTODashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'mmi' && (isReady ? <MMIDashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'validation' && (isReady ? <PlaceholderTab title="Validation" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'statistics' && (isReady ? <PlaceholderTab title="Statistics" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'properties' && (isReady ? <PlaceholderTab title="Properties" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'scripts' && (isReady ? <PlaceholderTab title="Scripts" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'metadata' && (isReady ? <PlaceholderTab title="Metadata" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'history' && (isReady ? <PlaceholderTab title="History" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
       </div>
     </div>
   );
 }
 
 // Overview Tab Component
-function OverviewTab({ model }: { model: any }) {
+function OverviewTab({ model }: { model: Model }) {
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -232,12 +220,6 @@ function OverviewTab({ model }: { model: any }) {
                 <ModelStatusBadge status={model.status} />
               </dd>
             </div>
-            {model.processing_time && (
-              <div className="flex justify-between py-2 border-b border-border">
-                <dt className="text-text-secondary">Processing Time</dt>
-                <dd className="text-text-primary font-medium">{model.processing_time}s</dd>
-              </div>
-            )}
           </dl>
         </CardContent>
       </Card>
@@ -273,7 +255,7 @@ function OverviewTab({ model }: { model: any }) {
 }
 
 // 3D Viewer Tab Component
-function Viewer3DTab({ model }: { model: any }) {
+function Viewer3DTab({ model, preparsedScene }: { model: Model; preparsedScene?: THREE.Group }) {
   return (
     <div className="flex h-full">
       {/* Model tree (left panel) */}
@@ -307,7 +289,7 @@ function Viewer3DTab({ model }: { model: any }) {
 
       {/* 3D viewer (center panel) */}
       <main className="flex-1 relative">
-        <IFCViewer modelId={model.id} />
+        <IFCViewer modelId={model.id} preparsedScene={preparsedScene} />
       </main>
 
       {/* Properties panel (right panel) */}
@@ -360,6 +342,30 @@ function Viewer3DTab({ model }: { model: any }) {
           </div>
         </div>
       </aside>
+    </div>
+  );
+}
+
+// Processing Message Component
+function ProcessingMessage({ status, error }: { status: Model['status']; error?: string | null }) {
+  return (
+    <div className="flex h-full items-center justify-center p-8">
+      <Card className="max-w-md">
+        <CardContent className="pt-6 text-center">
+          <ModelStatusBadge status={status} className="mb-4" />
+          <h3 className="text-lg font-semibold text-text-primary mb-2">
+            Processing Model
+          </h3>
+          <p className="text-text-secondary mb-4">
+            {status === 'processing' && 'Extracting metadata and geometry. This tab will update when ready.'}
+            {status === 'uploading' && 'Uploading file...'}
+            {status === 'error' && `Processing failed: ${error}`}
+          </p>
+          <p className="text-xs text-text-tertiary">
+            You can view the model in the <strong>Web-IFC Viewer</strong> tab while processing continues in the background.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

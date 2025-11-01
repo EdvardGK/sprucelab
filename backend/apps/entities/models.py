@@ -9,21 +9,41 @@ import uuid
 class IFCEntity(models.Model):
     """
     Individual IFC building element (wall, door, window, etc.).
+
+    Layer 1 (Core IFC Data): Always populated during parsing
+    Layer 2 (Geometry): Populated during geometry extraction (optional)
     """
+    GEOMETRY_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('no_representation', 'No Representation'),  # Element has no geometry in IFC
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='entities')
+
+    # === Layer 1: Core IFC Metadata (always populated) ===
     ifc_guid = models.CharField(max_length=22)  # IFC GlobalId
     ifc_type = models.CharField(max_length=100)  # IfcWall, IfcDoor, etc.
     name = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     storey_id = models.UUIDField(null=True, blank=True)  # Reference to parent storey
 
-    # Geometry flags
+    # === Layer 2: Geometry Extraction Status ===
+    geometry_status = models.CharField(
+        max_length=20,
+        choices=GEOMETRY_STATUS_CHOICES,
+        default='pending',
+        help_text="Status of geometry extraction for this element"
+    )
+
+    # DEPRECATED: Use Geometry model instead (kept for backward compatibility)
+    # TODO: Remove in future version after data migration
     has_geometry = models.BooleanField(default=False)
     vertex_count = models.IntegerField(default=0)
     triangle_count = models.IntegerField(default=0)
-
-    # Bounding box for spatial queries
     bbox_min_x = models.FloatField(null=True, blank=True)
     bbox_min_y = models.FloatField(null=True, blank=True)
     bbox_min_z = models.FloatField(null=True, blank=True)
@@ -125,10 +145,13 @@ class SystemMembership(models.Model):
 class Material(models.Model):
     """
     IFC materials.
+
+    Note: IfcMaterial does NOT have GlobalId (doesn't inherit from IfcRoot).
+    We store the IFC step ID in material_guid for unique identification within a file.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='materials')
-    material_guid = models.CharField(max_length=22, blank=True, null=True)
+    material_guid = models.CharField(max_length=50)  # IFC step ID (e.g., "123")
     name = models.CharField(max_length=255)
     category = models.CharField(max_length=100, blank=True, null=True)
     properties = models.JSONField(default=dict, blank=True)
@@ -189,9 +212,24 @@ class TypeAssignment(models.Model):
 class Geometry(models.Model):
     """
     Simplified mesh geometry for elements.
+
+    Layer 2 data: Populated during geometry extraction phase.
     """
     entity = models.OneToOneField(IFCEntity, on_delete=models.CASCADE, primary_key=True, related_name='geometry')
 
+    # === Geometry Metrics (NEW - moved from IFCEntity) ===
+    vertex_count = models.IntegerField(default=0, help_text="Number of vertices in original mesh")
+    triangle_count = models.IntegerField(default=0, help_text="Number of triangles in original mesh")
+
+    # Bounding box for spatial queries (NEW - moved from IFCEntity)
+    bbox_min_x = models.FloatField(null=True, blank=True)
+    bbox_min_y = models.FloatField(null=True, blank=True)
+    bbox_min_z = models.FloatField(null=True, blank=True)
+    bbox_max_x = models.FloatField(null=True, blank=True)
+    bbox_max_y = models.FloatField(null=True, blank=True)
+    bbox_max_z = models.FloatField(null=True, blank=True)
+
+    # === Geometry Data (existing) ===
     # Geometry data (compressed numpy arrays stored as binary)
     vertices_original = models.BinaryField(null=True, blank=True)
     faces_original = models.BinaryField(null=True, blank=True)
@@ -200,6 +238,10 @@ class Geometry(models.Model):
 
     simplification_ratio = models.FloatField(null=True, blank=True)
     geometry_file_path = models.URLField(max_length=500, blank=True, null=True)  # Path to full geometry in storage
+
+    # === Timestamps ===
+    extracted_at = models.DateTimeField(auto_now_add=True, help_text="When geometry was extracted")
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'geometry'
@@ -319,3 +361,77 @@ class IFCValidationReport(models.Model):
 
     def __str__(self):
         return f"Validation {self.overall_status.upper()} - {self.model.name}"
+
+
+class ProcessingReport(models.Model):
+    """
+    Detailed processing report for IFC file extraction.
+
+    CRITICAL: This report MUST be created even if processing fails catastrophically.
+    Each stage tracks: processed count, skipped count, failed count, errors.
+    """
+    STATUS_CHOICES = [
+        ('success', 'Success'),
+        ('partial', 'Partial Success'),
+        ('failed', 'Failed'),
+    ]
+
+    STAGE_CHOICES = [
+        ('file_open', 'File Open'),
+        ('validation', 'Validation'),
+        ('spatial_hierarchy', 'Spatial Hierarchy'),
+        ('materials', 'Materials'),
+        ('types', 'Types'),
+        ('systems', 'Systems'),
+        ('elements', 'Elements'),
+        ('properties', 'Property Sets'),
+        ('graph_edges', 'Graph Edges'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='processing_reports')
+
+    # Timestamps
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.FloatField(null=True, blank=True)
+
+    # Overall status
+    overall_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='failed')
+
+    # File info
+    ifc_schema = models.CharField(max_length=50, blank=True, null=True)
+    file_size_bytes = models.BigIntegerField(default=0)
+
+    # Per-stage results (JSON array of stage objects)
+    # Each stage: {stage, status, processed, skipped, failed, errors[], duration_ms}
+    stage_results = models.JSONField(default=list, blank=True)
+
+    # Overall counts
+    total_entities_processed = models.IntegerField(default=0)
+    total_entities_skipped = models.IntegerField(default=0)
+    total_entities_failed = models.IntegerField(default=0)
+
+    # Errors (JSON array of error objects)
+    # Each error: {stage, severity, message, element_guid, element_type, timestamp}
+    errors = models.JSONField(default=list, blank=True)
+
+    # Catastrophic failure details
+    catastrophic_failure = models.BooleanField(default=False)
+    failure_stage = models.CharField(max_length=50, blank=True, null=True, choices=STAGE_CHOICES)
+    failure_exception = models.TextField(blank=True, null=True)
+    failure_traceback = models.TextField(blank=True, null=True)
+
+    # Summary text
+    summary = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'processing_reports'
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['overall_status']),
+            models.Index(fields=['started_at']),
+        ]
+
+    def __str__(self):
+        return f"Processing {self.overall_status.upper()} - {self.model.name} ({self.started_at})"

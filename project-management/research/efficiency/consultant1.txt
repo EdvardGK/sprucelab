@@ -1,0 +1,164 @@
+As a buildingSMART dev team member specializing in IFC performance and data architecture, I'll give you the strategic blueprint for building a high-performance BIM coordinator platform. Let's break this down systematically:
+
+Core Architecture Philosophy
+IFC as Layer 1 - you're absolutely right. Treat IFC like TCP/IP - the foundational protocol, not the application layer. Your platform should sit at Layer 2+, providing the value-added services.
+
+Parsing Strategy: Multi-Tiered Approach
+Tier 1: Hot Path Data (Database Storage)
+Store these in optimized DB structures:
+
+Spatial hierarchy: IfcProject, IfcSite, IfcBuilding, IfcStorey
+
+Element core properties: GUID, name, type, creation date
+
+Critical relationships: decomposition, containment, property sets
+
+Validation metadata: last validation results, issue tracking
+
+Spatial indexes: bounding boxes, storey assignments
+
+Tier 2: Warm Path Data (Structured Arrays/JSONB)
+Property sets: Store as JSONB for flexible querying
+
+Material layers: Array structures for quick composition analysis
+
+Classification references: Normalized but quickly accessible
+
+Geometry metadata: face counts, volume, area (pre-computed)
+
+Tier 3: Cold Path Data (Direct IFC Access)
+Detailed geometry: Parse on-demand for viewer
+
+Process data: construction schedules, costs
+
+Audit trails: full change history
+
+Raw property values: for advanced analysis only
+
+Technology Stack for Performance
+Parser: Rust + C++ Hybrid
+rust
+// Use ifcopenshell core algorithms but rewrite I/O in Rust
+ifcrs (your Rust wrapper) -> ifcopenshell-core (C++) -> optimized data structures
+Why this mix?
+
+Rust: Memory safety, zero-cost abstractions, excellent async/await
+
+C++: ifcopenshell's proven geometry processing
+
+Avoid Python for core parsing - use it only for scripting interface
+
+Database: PostgreSQL + TimescaleDB
+JSONB for flexible property storage
+
+PostGIS for spatial queries
+
+Timescale for versioning/change tracking
+
+Columnar storage for analytics
+
+Viewer: WebGPU + WASM
+Compile geometry processing to WebAssembly
+
+WebGPU for Dalux-level rendering performance
+
+Implement LOD (Level of Detail) aggressively
+
+Spatial indexing for large models
+
+Performance Optimization Strategy
+1. Lazy Loading Architecture
+python
+# Pseudo-architecture
+class IFCModel:
+    def __init__(self):
+        self.metadata = {}  # Always loaded
+        self.spatial_tree = {}  # Always loaded  
+        self.geometry = LazyLoader()  # Load on viewer demand
+        self.properties = LazyLoader() # Load on analysis demand
+2. Spatial Indexing First
+Build R-tree during parse phase
+
+Store spatial indexes in database
+
+Enable sub-model loading (per floor, per discipline)
+
+3. Validation Pipeline
+rust
+// Parallel validation engine
+trait Validator {
+    fn validate(&self, model: &LightweightModel) -> Vec<ValidationResult>;
+}
+
+// Run validators in parallel, prioritize by criticality
+UX-Focused Parsing Decisions
+Fast First Load
+Parse header + spatial structure in < 2 seconds
+
+Show project tree immediately
+
+Background load geometry and properties
+
+Smart Validation
+Tier 1: Critical issues (load-bearing, safety) - always run
+
+Tier 2: Quality issues (clashes, standards) - configurable
+
+Tier 3: Advisory (best practices) - optional
+
+Batch Operations
+Process multiple IFCs in background
+
+Incremental model updates
+
+Background revalidation on changes
+
+Implementation Roadmap
+Phase 1: MVP (3-4 months)
+Rust-based metadata extractor
+
+Basic WebGL viewer with Three.js
+
+Simple validation engine
+
+PostgreSQL storage
+
+Phase 2: Performance (6 months)
+WebGPU viewer migration
+
+Advanced spatial indexing
+
+Parallel validation engine
+
+ifcrs Rust parser
+
+Phase 3: Advanced Features (ongoing)
+Real-time collaboration
+
+Advanced scripting interface
+
+Machine learning validation
+
+Multi-model federation
+
+Key Differentiators vs Competitors
+Parse Speed: 2-5x faster than Solibri on equivalent hardware
+
+Smart Validation: Context-aware, not just rule-based
+
+Scripting First: Built-for-code generation and automation
+
+BIM Coordinator UX: Workflows designed for coordination, not modeling
+
+Critical Success Factors
+Never block the UI: Background processing for everything non-essential
+
+Progressive enhancement: Show something useful immediately
+
+Configurable strictness: Don't be "anal" by default, but allow it when needed
+
+Excellent error handling: Tell users WHY parsing failed, not just THAT it failed
+
+The key insight: Your platform should feel like it was built for the BIM coordinator's mental model, not the IFC file's structure. Parse and store data in the way coordinators think about buildings, not how IFC represents them.
+
+This architecture will give you the performance to compete with Dalux while providing the deep IFC capabilities that BIM coordinators desperately need but can't find in current platforms.

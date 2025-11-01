@@ -17,6 +17,9 @@ import QuickStats from './pages/QuickStats';
 import Settings from './pages/Settings';
 import FederatedViewer from './pages/FederatedViewer';
 import ViewerGroups from './pages/ViewerGroups';
+import ProcessingReports from './pages/dev/ProcessingReports';
+import ProcessingReportDetail from './pages/dev/ProcessingReportDetail';
+import EmergencyViewerPage from './pages/EmergencyViewer';
 
 function App() {
   return (
@@ -39,6 +42,9 @@ function App() {
           <Route path="/scripts" element={<ScriptsLibrary />} />
           <Route path="/stats" element={<QuickStats />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/dev/processing-reports" element={<ProcessingReports />} />
+          <Route path="/dev/processing-reports/:id" element={<ProcessingReportDetail />} />
+          <Route path="/emergency-viewer" element={<EmergencyViewerPage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

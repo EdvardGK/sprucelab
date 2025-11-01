@@ -4,7 +4,7 @@ from apps.entities.models import IFCValidationReport
 
 
 class ModelSerializer(serializers.ModelSerializer):
-    """Serializer for IFC Model instances."""
+    """Serializer for IFC Model instances (with layered status tracking)."""
 
     project_name = serializers.CharField(source='project.name', read_only=True)
     # Explicitly format dates to ensure ISO 8601 format
@@ -15,14 +15,21 @@ class ModelSerializer(serializers.ModelSerializer):
         model = Model
         fields = [
             'id', 'project', 'project_name', 'name', 'original_filename',
-            'ifc_schema', 'file_url', 'file_size', 'status', 'version_number',
-            'parent_model', 'is_published', 'element_count', 'storey_count', 'system_count',
+            'ifc_schema', 'file_url', 'file_size',
+            # Legacy status (deprecated, use layer-specific statuses below)
+            'status',
+            # Layered status tracking (NEW)
+            'parsing_status', 'geometry_status', 'validation_status',
+            # Other fields
+            'version_number', 'parent_model', 'is_published',
+            'element_count', 'storey_count', 'system_count',
             'processing_error', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'ifc_schema', 'file_url', 'file_size', 'status', 'is_published',
-            'element_count', 'storey_count', 'system_count', 'processing_error',
-            'created_at', 'updated_at'
+            'id', 'ifc_schema', 'file_url', 'file_size',
+            'status', 'parsing_status', 'geometry_status', 'validation_status',
+            'is_published', 'element_count', 'storey_count', 'system_count',
+            'processing_error', 'created_at', 'updated_at'
         ]
 
 
@@ -90,7 +97,9 @@ class ModelDetailSerializer(ModelSerializer):
                 'id': str(prev.id),
                 'version_number': prev.version_number,
                 'name': prev.name,
-                'status': prev.status,
+                'status': prev.status,  # Legacy
+                'parsing_status': prev.parsing_status,
+                'geometry_status': prev.geometry_status,
                 'is_published': prev.is_published
             }
         return None
@@ -102,7 +111,9 @@ class ModelDetailSerializer(ModelSerializer):
                 'id': str(next_ver.id),
                 'version_number': next_ver.version_number,
                 'name': next_ver.name,
-                'status': next_ver.status,
+                'status': next_ver.status,  # Legacy
+                'parsing_status': next_ver.parsing_status,
+                'geometry_status': next_ver.geometry_status,
                 'is_published': next_ver.is_published
             }
         return None

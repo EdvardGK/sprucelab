@@ -12,15 +12,68 @@ Professional BIM coordination platform for managing IFC model versions, tracking
 **Tech Stack:**
 - **Backend**: Django 5.0 + DRF, PostgreSQL (Supabase), ifcopenshell 0.8.x
 - **Frontend**: React 18 + TypeScript + Vite, Tailwind v4 + shadcn/ui
-- **Infrastructure**: Supabase (database + storage), Redis (Celery)
+- **Infrastructure**: Supabase (database + storage), Django Q (async tasks)
 
-**Current Phase**: Backend + Frontend operational, BEP system complete (Session 010-011)
+**Current Phase**: Backend + Frontend operational, BEP system complete, **Layered Architecture implemented (Session 012)**
 
 **Key Documentation**:
 - Project status: `project-management/worklog/` (latest session)
 - Planning docs: `project-management/planning/`
 - TODO lists: `project-management/to-do/`
 - Architecture: `project-management/planning/session-002-bim-coordinator-platform.md`
+- **Layered Processing**: `LAYERED_ARCHITECTURE_IMPLEMENTATION.md` ⭐
+
+---
+
+## ⭐ Layered Architecture (Session 012)
+
+### **Processing Model: Parse → Enrich → Validate**
+
+**CRITICAL:** All IFC processing now uses a **layered architecture**:
+
+```
+Layer 1 (Parse):    Extract metadata ONLY (GUID, type, name, properties)
+                    → ALWAYS succeeds (unless file corrupt)
+                    → Fast: 5-15 seconds
+                    → NO GEOMETRY
+                    → Service: services/parse.py
+
+Layer 2 (Geometry): Extract 3D geometry (optional, separate)
+                    → CAN FAIL per element
+                    → Slow: 30s - 5 minutes
+                    → Retryable
+                    → Service: services/geometry.py
+
+Layer 3 (Validate): Quality checks (BEP compliance, schema, LOD)
+                    → REPORTS issues, doesn't fail
+                    → Fast: 5-30 seconds
+                    → Service: services_validation.py
+```
+
+### **Status Tracking:**
+
+**Model-level statuses:**
+- `parsing_status`: pending/parsing/parsed/failed (Layer 1)
+- `geometry_status`: pending/extracting/completed/partial/failed (Layer 2)
+- `validation_status`: pending/validating/completed/failed (Layer 3)
+- `status`: Legacy field (computed from above)
+
+**Entity-level status:**
+- `IFCEntity.geometry_status`: pending/processing/completed/failed/no_representation
+
+### **Key Benefits:**
+- ✅ Metadata persists even if geometry fails
+- ✅ 10-100x faster metadata extraction (bulk inserts)
+- ✅ Can retry failed geometry without re-parsing
+- ✅ True "Layer 1" foundation for all features
+- ✅ Optional/deferred geometry extraction
+
+### **Files:**
+- `backend/apps/models/services/parse.py` - Layer 1 metadata extraction
+- `backend/apps/models/services/geometry.py` - Layer 2 geometry extraction
+- `backend/apps/models/tasks.py` - Orchestrates layered processing
+- `LAYERED_ARCHITECTURE_IMPLEMENTATION.md` - Full documentation
+- `MIGRATION_GUIDE.md` - Migration instructions
 
 ---
 
@@ -51,7 +104,7 @@ Professional BIM coordination platform for managing IFC model versions, tracking
 - Database constraint: UNIQUE(model_id, ifc_guid)
 
 **Performance**:
-- Celery for long operations (IFC processing)
+- Django Q for long operations (IFC processing)
 - Never process IFC in Django request/response cycle
 - Geometry NOT returned in list endpoints (too large)
 - Use pagination for large element lists (100 per page)
@@ -93,11 +146,12 @@ Professional BIM coordination platform for managing IFC model versions, tracking
 5. Update documentation if schema changed
 
 **Code Modularity** ⭐:
-- **300-line limit**: Files exceeding 300 lines should be refactored
-- Focus on modularity: extract functions, create separate modules
-- Keep scripts short and sweet rather than massive behemoths
-- Single responsibility principle: one file, one purpose
-- If a file is hard to understand or maintain, it's too long
+- **Thresholds**: Under 500 lines is fine, 500-800 review for splits, over 800 consider refactoring
+- **Cohesion matters more than length**: Related models/ViewSets can exceed limits
+- **Django patterns**: Keep related models together, keep ViewSets intact
+- **Natural boundaries**: Only split when clear logical separations exist
+- **Single responsibility**: One file, one clear purpose (domain/subsystem)
+- **Maintainability**: If hard to navigate or causes conflicts, consider splitting
 
 ### 5. Django Test Scripts ⭐
 

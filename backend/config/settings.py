@@ -36,12 +36,12 @@ INSTALLED_APPS = [
     # Third party
     'rest_framework',
     'corsheaders',
+    'django_q',
 
     # Local apps
     'apps.projects',
     'apps.models',
     'apps.entities',
-    'apps.changes',
     'apps.graph',
     'apps.scripting',
     'apps.bep',
@@ -213,15 +213,31 @@ SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
 
-# Celery Configuration
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per task
+# Django-Q Configuration
+# Uses PostgreSQL database (no Redis needed) - perfect for Windows!
+Q_CLUSTER = {
+    'name': 'BIM_Coordinator',
+    'workers': 4,  # Number of worker processes
+    'recycle': 100,  # Recycle worker after 100 tasks (prevent memory leaks)
+    'timeout': 1800,  # Task timeout: 30 minutes (1800 seconds)
+    'retry': 1860,  # Retry timeout: 31 minutes (slightly more than timeout)
+    'queue_limit': 50,  # Max tasks in queue
+    'bulk': 10,  # Number of tasks to process per batch
+    'orm': 'default',  # Use default database (PostgreSQL)
+
+    # Task execution
+    'save_limit': 250,  # Keep last 250 successful tasks in database
+    'sync': False,  # Run async with background workers
+
+    # Error handling
+    'catch_up': True,  # Process missed schedules on worker restart
+    'max_attempts': 3,  # Retry failed tasks 3 times
+
+    # Monitoring
+    'ack_failures': True,  # Acknowledge failed tasks
+    'compress': True,  # Compress task data
+    'cpu_affinity': None,  # Let OS handle CPU assignment
+}
 
 
 # File Upload Settings

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
-    System, Material, IFCType, Geometry
+    System, Material, IFCType, Geometry, ProcessingReport
 )
 
 
@@ -65,3 +65,24 @@ class SpatialHierarchySerializer(serializers.ModelSerializer):
     class Meta:
         model = SpatialHierarchy
         fields = ['id', 'model', 'entity', 'entity_name', 'entity_type', 'parent', 'hierarchy_level', 'path']
+
+
+class ProcessingReportSerializer(serializers.ModelSerializer):
+    """Serializer for IFC processing reports."""
+
+    model_name = serializers.CharField(source='model.name', read_only=True)
+    model_id = serializers.CharField(source='model.id', read_only=True)
+    project_id = serializers.CharField(source='model.project.id', read_only=True)
+    project_name = serializers.CharField(source='model.project.name', read_only=True)
+
+    class Meta:
+        model = ProcessingReport
+        fields = [
+            'id', 'model', 'model_name', 'model_id', 'project_id', 'project_name',
+            'started_at', 'completed_at', 'duration_seconds',
+            'overall_status', 'ifc_schema', 'file_size_bytes',
+            'stage_results', 'total_entities_processed', 'total_entities_skipped', 'total_entities_failed',
+            'errors', 'catastrophic_failure', 'failure_stage', 'failure_exception', 'failure_traceback',
+            'summary'
+        ]
+        read_only_fields = ['id', 'started_at']

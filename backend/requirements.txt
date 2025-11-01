@@ -2,6 +2,7 @@
 Django==5.0.0
 djangorestframework==3.14.0
 django-cors-headers==4.3.1
+django-filter==23.5
 python-dotenv==1.0.0
 
 # Database
@@ -12,8 +13,7 @@ dj-database-url==2.1.0
 supabase==2.3.0
 
 # Async Tasks
-celery==5.3.4
-redis==5.0.1
+django-q2==1.6.2
 
 # IFC Processing
 ifcopenshell>=0.8.0
@@ -21,6 +21,7 @@ numpy>=1.26.0
 pandas>=2.0.0
 open3d>=0.18.0
 openpyxl>=3.1.0
+trimesh>=4.0.0
 
 # Utilities
 tqdm==4.66.1

@@ -1,7 +1,20 @@
 # Current TODO - BIM Coordinator Platform
 
-**Last Updated**: 2025-10-13 (Session 015)
-**Status**: ✅ Session Complete - Ready for Next Phase
+**Last Updated**: 2025-10-20 (Session 017)
+**Status**: ✅ Celery Integration Complete
+
+---
+
+## ✅ Completed (Session 017) - Celery Integration
+
+- [x] Create Celery tasks for IFC processing
+- [x] Add celery_task_id field to Model
+- [x] Replace threading.Thread with Celery tasks
+- [x] Update status endpoint to query Celery
+- [x] Convert revert operation to async
+- [x] Enhance Celery configuration
+- [x] Create test_celery management command
+- [x] Create CELERY_SETUP.md documentation
 
 ---
 

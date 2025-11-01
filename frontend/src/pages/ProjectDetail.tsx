@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2 } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { useModels } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ModelUploadDialog } from '@/components/ModelUploadDialog';
+import { DeleteModelDialog } from '@/components/DeleteModelDialog';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model } from '@/lib/api-types';
@@ -24,8 +25,9 @@ function formatFileSize(bytes: number): string {
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
+  const [modelToDelete, setModelToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
   const { data: allModels, isLoading: modelsLoading, error: modelsError } = useModels(id);
@@ -202,9 +204,8 @@ export default function ProjectDetail() {
                   <div
                     className="group relative bg-surface border border-border rounded-md p-5 flex flex-col transition-all duration-150 cursor-pointer hover:bg-surface/80 hover:border-primary/50 h-44 pt-5 pb-0"
                     onClick={() => {
-                      if (model.status === 'ready') {
-                        navigate(`/models/${model.id}`);
-                      }
+                      // Allow viewing even during processing - WebIfcViewer loads file directly
+                      navigate(`/models/${model.id}`);
                     }}
                   >
                     {/* Top section: Name, version, status */}
@@ -213,7 +214,20 @@ export default function ProjectDetail() {
                         <p className="text-sm font-medium text-text-primary truncate pr-8">
                           {model.name}
                         </p>
-                        <ModelStatusBadge status={model.status} />
+                        <div className="flex items-center gap-1">
+                          <ModelStatusBadge status={model.status} />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-error/10 hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setModelToDelete({ id: model.id, name: model.name });
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
 
                       <span className="text-xs text-text-secondary">
@@ -288,39 +302,69 @@ export default function ProjectDetail() {
                     <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">Storeys</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">File Size</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Uploaded</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-card divide-y divide-border">
                   {models.map((model) => (
                     <tr
                       key={model.id}
-                      className="cursor-pointer hover:bg-surface/50 transition-colors"
-                      onClick={() => {
-                        if (model.status === 'ready') {
-                          navigate(`/models/${model.id}`);
-                        }
-                      }}
+                      className="group hover:bg-surface/50 transition-colors"
                     >
-                      <td className="px-4 py-3 text-sm text-text-primary font-medium">
+                      <td
+                        className="px-4 py-3 text-sm text-text-primary font-medium cursor-pointer"
+                        onClick={() => navigate(`/models/${model.id}`)}
+                      >
                         {model.name}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">
+                      <td
+                        className="px-4 py-3 text-sm text-text-secondary cursor-pointer"
+                        onClick={() => navigate(`/models/${model.id}`)}
+                      >
                         v{model.version_number}
                       </td>
-                      <td className="px-4 py-3">
+                      <td
+                        className="px-4 py-3 cursor-pointer"
+                        onClick={() => navigate(`/models/${model.id}`)}
+                      >
                         <ModelStatusBadge status={model.status} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary text-right">
+                      <td
+                        className="px-4 py-3 text-sm text-text-secondary text-right cursor-pointer"
+                        onClick={() => navigate(`/models/${model.id}`)}
+                      >
                         {model.status === 'ready' ? model.element_count.toLocaleString() : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary text-right">
+                      <td
+                        className="px-4 py-3 text-sm text-text-secondary text-right cursor-pointer"
+                        onClick={() => navigate(`/models/${model.id}`)}
+                      >
                         {model.status === 'ready' ? model.storey_count : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary text-right">
+                      <td
+                        className="px-4 py-3 text-sm text-text-secondary text-right cursor-pointer"
+                        onClick={() => navigate(`/models/${model.id}`)}
+                      >
                         {model.file_size ? formatFileSize(model.file_size) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-tertiary">
+                      <td
+                        className="px-4 py-3 text-sm text-text-tertiary cursor-pointer"
+                        onClick={() => navigate(`/models/${model.id}`)}
+                      >
                         {new Date(model.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 hover:bg-error/10 hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setModelToDelete({ id: model.id, name: model.name });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -330,12 +374,24 @@ export default function ProjectDetail() {
           )}
         </div>
 
-        {/* Upload dialog */}
+        {/* Upload dialog - Simple backend processing with LOD mesh decimation */}
         <ModelUploadDialog
           open={uploadDialogOpen}
           onOpenChange={setUploadDialogOpen}
           projectId={id!}
         />
+
+        {/* Delete dialog */}
+        {modelToDelete && (
+          <DeleteModelDialog
+            modelId={modelToDelete.id}
+            modelName={modelToDelete.name}
+            open={!!modelToDelete}
+            onOpenChange={(open) => {
+              if (!open) setModelToDelete(null);
+            }}
+          />
+        )}
       </div>
     </AppLayout>
   );

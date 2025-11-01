@@ -127,10 +127,18 @@ def validate_schema(ifc_file):
 
     # Check IFC schema version
     schema = ifc_file.schema
-    if schema not in ['IFC2X3', 'IFC4', 'IFC4X3']:
+    supported_schemas = [
+        'IFC2X3',     # IFC 2x3 (widely used, supported)
+        'IFC4',       # IFC 4 (current standard, supported)
+        'IFC4X1',     # IFC 4.1 (addon, low risk)
+        'IFC4X2',     # IFC 4.2 (addon, low risk)
+        'IFC4X3',     # IFC 4.3 (latest standard, supported)
+        'IFC4X3_ADD2' # IFC 4.3 Addendum 2 (latest version, supported)
+    ]
+    if schema not in supported_schemas:
         warnings.append({
             'type': 'schema_version',
-            'message': f'Uncommon IFC schema: {schema}',
+            'message': f'Uncommon/unsupported IFC schema: {schema}. Supported: {", ".join(supported_schemas)}',
             'severity': 'warning'
         })
 

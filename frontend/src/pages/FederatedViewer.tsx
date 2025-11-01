@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings, Maximize2, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Settings, Maximize2, Eye, EyeOff, Plus } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { useViewerGroup } from '@/hooks/use-viewer-groups';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { IFCViewer } from '@/components/features/viewer/IFCViewer';
+import { AddModelsDialog } from '@/components/features/viewers/AddModelsDialog';
 
 export default function FederatedViewer() {
   const { id: projectId, groupId } = useParams<{ id: string; groupId: string }>();
@@ -16,6 +18,9 @@ export default function FederatedViewer() {
   // Load group data from API
   const { data: group, isLoading } = useViewerGroup(groupId!);
 
+  // State for add models dialog
+  const [isAddModelsDialogOpen, setIsAddModelsDialogOpen] = useState(false);
+
   // State for model visibility
   const [modelVisibility, setModelVisibility] = useState<Record<string, boolean>>({});
 
@@ -24,7 +29,7 @@ export default function FederatedViewer() {
     if (group?.models && Object.keys(modelVisibility).length === 0) {
       setModelVisibility(Object.fromEntries(group.models.map(m => [m.id, m.is_visible ?? true])));
     }
-  }, [group, modelVisibility]);
+  }, [group]); // Only re-run when group changes, not modelVisibility
 
   // State for filters
   const [elementTypeFilters, setElementTypeFilters] = useState<Record<string, boolean>>({
@@ -96,6 +101,14 @@ export default function FederatedViewer() {
           <div className="text-xs text-text-tertiary">
             {group?.models?.length || 0} models
           </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setIsAddModelsDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Models
+          </Button>
           <Button variant="ghost" size="icon">
             <Maximize2 className="h-4 w-4" />
           </Button>
@@ -143,17 +156,8 @@ export default function FederatedViewer() {
         </div>
 
         {/* Center Panel - 3D Canvas */}
-        <div className="flex-1 bg-background-dark flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-4xl mb-4">🎨</div>
-            <div className="text-sm text-text-secondary mb-2">3D Viewer</div>
-            <div className="text-xs text-text-tertiary">
-              Three.js renderer will load here
-            </div>
-            <div className="mt-4 text-xs text-text-tertiary">
-              {group?.models?.length || 0} models in group
-            </div>
-          </div>
+        <div className="flex-1 bg-background-dark relative">
+          <IFCViewer modelIds={group?.models?.map(m => m.model) || []} />
         </div>
 
         {/* Right Panel - Filters */}
@@ -260,6 +264,15 @@ export default function FederatedViewer() {
           </div>
         </div>
       </div>
+
+      {/* Add Models Dialog */}
+      <AddModelsDialog
+        isOpen={isAddModelsDialogOpen}
+        onClose={() => setIsAddModelsDialogOpen(false)}
+        groupId={groupId!}
+        projectId={projectId!}
+        existingModelIds={group?.models?.map(m => m.model) || []}
+      />
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   FileStack,
   Image,
   Box,
+  Bug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [workspaceOpen, setWorkspaceOpen] = useState(true);
+  const [developerOpen, setDeveloperOpen] = useState(true);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
   // Detect if we're in a project context
@@ -281,6 +283,41 @@ export function Sidebar() {
               >
                 <BarChart3 className="h-4 w-4" />
                 <span>Quick Stats</span>
+              </Link>
+            </div>
+          )}
+          </div>
+        )}
+
+        {/* Developer section (only when NOT in project context) */}
+        {!projectId && (
+          <div className="mb-4">
+          <button
+            onClick={() => setDeveloperOpen(!developerOpen)}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary hover:bg-surface transition-colors"
+          >
+            <ChevronDown
+              className={cn(
+                'h-3 w-3 transition-transform',
+                !developerOpen && '-rotate-90'
+              )}
+            />
+            <span>Developer</span>
+          </button>
+
+          {developerOpen && (
+            <div className="mt-1 space-y-0.5">
+              <Link
+                to="/dev/processing-reports"
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 pl-8 text-sm transition-colors',
+                  isActive('/dev/processing-reports')
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <Bug className="h-4 w-4" />
+                <span>Processing Reports</span>
               </Link>
             </div>
           )}

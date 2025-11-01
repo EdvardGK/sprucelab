@@ -1,15 +1,11 @@
 """
-Check the status of the latest uploaded model in the database.
-
-Usage:
-    cd backend
-    python ../django-test/check_model_status.py
+Check current status of a model.
 """
 import os
 import sys
 import django
 
-# Add the backend directory to Python path
+# Add backend directory to path
 backend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend')
 sys.path.insert(0, backend_dir)
 
@@ -18,58 +14,28 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from apps.models.models import Model
+from apps.entities.models import IFCEntity
 
-def check_latest_model():
-    """Check the status of the latest model."""
-    try:
-        # Get the latest model
-        m = Model.objects.latest('created_at')
+model_name = sys.argv[1] if len(sys.argv) > 1 else 'G55_RIE'
 
-        print("=" * 80)
-        print("LATEST MODEL STATUS")
-        print("=" * 80)
-        print(f"ID:                {m.id}")
-        print(f"Name:              {m.name}")
-        print(f"Status:            {m.status}")
-        print(f"IFC Schema:        {m.ifc_schema}")
-        print(f"Element Count:     {m.element_count}")
-        print(f"Storey Count:      {m.storey_count}")
-        print(f"System Count:      {m.system_count}")
-        print(f"File URL:          {m.file_url}")
-        print(f"File Size:         {m.file_size} bytes")
-        print(f"Created:           {m.created_at}")
-        print(f"Updated:           {m.updated_at}")
-        print(f"Processing Error:  {repr(m.processing_error)}")
-        print("=" * 80)
+model = Model.objects.filter(name=model_name).order_by('-created_at').first()
 
-        # Check if there are validation reports
-        from apps.entities.models import IFCValidationReport
-        validation_reports = IFCValidationReport.objects.filter(model=m)
-        print(f"\nValidation Reports: {validation_reports.count()}")
-        if validation_reports.exists():
-            for report in validation_reports:
-                print(f"  - Status: {report.overall_status}")
-                print(f"  - Total Elements: {report.total_elements}")
-                print(f"  - Elements with Issues: {report.elements_with_issues}")
+if model:
+    print(f"Model: {model.name} (v{model.version_number})")
+    print(f"Status: {model.status}")
+    print(f"Processing Error: {model.processing_error or 'None'}")
+    print(f"Element Count: {model.element_count}")
+    print(f"Created: {model.created_at}")
+    print(f"Updated: {model.updated_at}")
+    print()
 
-        # Check if there are entities extracted
-        from apps.entities.models import IFCEntity
-        entity_count = IFCEntity.objects.filter(model=m).count()
-        print(f"\nExtracted Entities: {entity_count}")
+    # Check how many entities were actually extracted
+    entity_count = IFCEntity.objects.filter(model=model).count()
+    print(f"Entities in database: {entity_count}")
 
-        # Check geometry
-        from apps.entities.models import Geometry
-        geometry_count = Geometry.objects.filter(entity__model=m).count()
-        print(f"Extracted Geometries: {geometry_count}")
-
-        print("\n")
-
-    except Model.DoesNotExist:
-        print("No models found in database!")
-    except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
-
-if __name__ == '__main__':
-    check_latest_model()
+    if entity_count > 0:
+        print("\nSample entities:")
+        for entity in IFCEntity.objects.filter(model=model)[:5]:
+            print(f"  - {entity.ifc_type}: {entity.name or entity.ifc_guid}")
+else:
+    print(f"Model '{model_name}' not found")
