@@ -156,6 +156,9 @@ if USE_SUPABASE_STORAGE:
     # Extract project ref from SUPABASE_URL (e.g., https://abcd1234.supabase.co)
     SUPABASE_PROJECT_REF = os.getenv('SUPABASE_URL', '').replace('https://', '').split('.')[0]
 
+    # Public URL domain for accessing files (different from S3 endpoint)
+    SUPABASE_PUBLIC_URL = f"{SUPABASE_PROJECT_REF}.supabase.co/storage/v1/object/public/{os.getenv('SUPABASE_STORAGE_BUCKET', 'ifc-files')}"
+
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
@@ -169,6 +172,7 @@ if USE_SUPABASE_STORAGE:
                 "querystring_auth": False,  # Public URLs without signatures
                 "file_overwrite": True,
                 "signature_version": "s3v4",
+                "custom_domain": SUPABASE_PUBLIC_URL,  # Use public URL for file access
             },
         },
         "staticfiles": {
