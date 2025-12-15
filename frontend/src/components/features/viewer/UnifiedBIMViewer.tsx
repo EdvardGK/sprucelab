@@ -300,8 +300,12 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const highlighter = components.get(OBCF.Highlighter);
         highlighter.setup({ world });
 
-        // Configure highlighter
+        // Configure highlighter - DISABLE all automatic camera movement
         highlighter.zoomToSelection = false; // Don't zoom on selection
+        // @ts-ignore - ThatOpen may have additional zoom properties
+        if ('autoZoom' in highlighter) highlighter.autoZoom = false;
+        // @ts-ignore
+        if ('zoomFactor' in highlighter) highlighter.zoomFactor = 0;
 
         // Add selection style with green color
         const green = new THREE.Color(0x00ff00);
@@ -470,6 +474,35 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         };
 
         container.addEventListener('click', handleClick);
+
+        // Setup double-click middle mouse button (scroll wheel) for fit-to-view
+        const handleDoubleClick = (event: MouseEvent) => {
+          // Middle mouse button = button 1
+          if (event.button === 1) {
+            event.preventDefault();
+            console.log('🎯 Double-click middle mouse - Fit to view');
+            fitAllModelsToView();
+          }
+        };
+
+        // Use auxclick for middle mouse button double-click detection
+        let lastMiddleClickTime = 0;
+        const handleAuxClick = (event: MouseEvent) => {
+          // Middle mouse button = button 1
+          if (event.button === 1) {
+            const now = Date.now();
+            if (now - lastMiddleClickTime < 300) {
+              // Double-click detected (within 300ms)
+              event.preventDefault();
+              console.log('🎯 Double-click scroll wheel - Fit to view');
+              fitAllModelsToView();
+            }
+            lastMiddleClickTime = now;
+          }
+        };
+
+        container.addEventListener('dblclick', handleDoubleClick);
+        container.addEventListener('auxclick', handleAuxClick);
 
         // Setup right-click handler for context menu (section planes)
         const handleContextMenu = async (event: MouseEvent) => {
@@ -837,6 +870,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         cleanupSelection = () => {
           container.removeEventListener('click', handleClick);
+          container.removeEventListener('dblclick', handleDoubleClick);
+          container.removeEventListener('auxclick', handleAuxClick);
           container.removeEventListener('contextmenu', handleContextMenu);
           container.removeEventListener('wheel', handleWheel, { capture: true });
           window.removeEventListener('keydown', handleKeyDown);
@@ -1179,6 +1214,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             <div>Right drag: Pan</div>
             <div>Scroll: Zoom</div>
             <div>Click: Select</div>
+            <div>Dbl-click 🖱️: Fit all</div>
             {sectionPlanes.planes.length > 0 && (
               <>
                 <div className="font-medium text-gray-200 mt-2 mb-1">Section Plane</div>
