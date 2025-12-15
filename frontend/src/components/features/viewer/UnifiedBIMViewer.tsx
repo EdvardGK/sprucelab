@@ -32,6 +32,11 @@ import { useSectionPlanes, type SectionPlane } from '@/hooks/useSectionPlanes';
 import { ViewerContextMenu, useViewerContextMenu } from './ViewerContextMenu';
 import { ElementPropertiesPanel, type ElementProperties } from './ElementPropertiesPanel';
 
+// API base URL - use env var for production, fallback to relative path for local dev
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
+
 // Imperative handle interface for parent components
 export interface UnifiedBIMViewerHandle {
   deleteSectionPlane: (planeId: string) => void;
@@ -374,7 +379,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           try {
             // Use the by-express-id endpoint for full property sets
             // Note: entities app is nested, so path is /api/entities/entities/by-express-id/
-            const response = await fetch(`/api/entities/entities/by-express-id/?model=${backendModelId}&express_id=${expressID}`);
+            const response = await fetch(`${API_BASE}/entities/entities/by-express-id/?model=${backendModelId}&express_id=${expressID}`);
             if (response.ok) {
               const entity = await response.json();
 
@@ -925,7 +930,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
           try {
             // Fetch model metadata
-            const modelResponse = await fetch(`/api/models/${modelId}/`);
+            const modelResponse = await fetch(`${API_BASE}/models/${modelId}/`);
             if (!modelResponse.ok) {
               throw new Error(`Model ${modelId} not found`);
             }
@@ -933,7 +938,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
             // Try to load Fragments first (fast path)
             try {
-              const fragmentsResponse = await fetch(`/api/models/${modelId}/fragments/`);
+              const fragmentsResponse = await fetch(`${API_BASE}/models/${modelId}/fragments/`);
 
               if (fragmentsResponse.ok) {
                 const { fragments_url } = await fragmentsResponse.json();
@@ -1051,7 +1056,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             console.log(`✅ Loaded ${totalElements} elements from ${modelData.name} (IFC)`);
 
             // Optionally trigger Fragment generation for next time
-            fetch(`/api/models/${modelId}/generate_fragments/`, {
+            fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, {
               method: 'POST',
             }).catch(() => {
               // Silent fail - fragments are optional optimization

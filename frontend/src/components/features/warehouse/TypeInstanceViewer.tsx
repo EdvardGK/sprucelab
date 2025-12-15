@@ -20,6 +20,11 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2, AlertCircle, Box } from 'lucide-react';
 import { useTypeInstances } from '@/hooks/use-warehouse';
 
+// API base URL - use env var for production, fallback to relative path for local dev
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
+
 interface TypeInstanceViewerProps {
   modelId: string;
   typeId: string | null;
@@ -205,7 +210,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
         // Try to load Fragments first
         try {
-          const fragmentsResponse = await fetch(`/api/models/${modelId}/fragments/`);
+          const fragmentsResponse = await fetch(`${API_BASE}/models/${modelId}/fragments/`);
 
           if (fragmentsResponse.ok) {
             const fragmentsData = await fragmentsResponse.json();
@@ -239,7 +244,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         }
 
         // Fallback: Load IFC
-        const modelResponse = await fetch(`/api/models/${modelId}/`);
+        const modelResponse = await fetch(`${API_BASE}/models/${modelId}/`);
         if (!modelResponse.ok) throw new Error('Model not found');
 
         const modelData = await modelResponse.json();
@@ -258,7 +263,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         fitToModel(group);
 
         // Trigger fragment generation for next time
-        fetch(`/api/models/${modelId}/generate_fragments/`, { method: 'POST' });
+        fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, { method: 'POST' });
 
         console.log('✅ IFC loaded for Instance Viewer');
       } catch (err) {
