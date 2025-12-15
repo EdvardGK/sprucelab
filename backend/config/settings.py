@@ -164,10 +164,11 @@ if USE_SUPABASE_STORAGE:
                 "endpoint_url": f"https://{SUPABASE_PROJECT_REF}.storage.supabase.co/storage/v1/s3",
                 "access_key": os.getenv('SUPABASE_S3_ACCESS_KEY'),
                 "secret_key": os.getenv('SUPABASE_S3_SECRET_KEY'),
-                "region_name": os.getenv('SUPABASE_STORAGE_REGION', 'eu-central-1'),
-                "default_acl": "public-read",
+                "region_name": os.getenv('SUPABASE_STORAGE_REGION', 'us-east-1'),
+                "default_acl": None,  # Supabase handles ACL via bucket settings
                 "querystring_auth": False,  # Public URLs without signatures
                 "file_overwrite": True,
+                "signature_version": "s3v4",
             },
         },
         "staticfiles": {
