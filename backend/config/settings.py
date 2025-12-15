@@ -175,9 +175,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite dev server
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "https://sprucelab.vercel.app",  # Production frontend
 ]
 
-# Add production frontend URLs from environment
+# Add additional frontend URLs from environment
 if os.getenv('FRONTEND_URL'):
     CORS_ALLOWED_ORIGINS.append(os.getenv('FRONTEND_URL'))
 
@@ -210,9 +211,10 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "https://sprucelab.vercel.app",  # Production frontend
 ]
 
-# Add production frontend URLs from environment
+# Add additional frontend URLs from environment
 if os.getenv('FRONTEND_URL'):
     CSRF_TRUSTED_ORIGINS.append(os.getenv('FRONTEND_URL'))
 
