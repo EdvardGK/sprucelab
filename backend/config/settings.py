@@ -177,6 +177,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
+# Add production frontend URLs from environment
+if os.getenv('FRONTEND_URL'):
+    CORS_ALLOWED_ORIGINS.append(os.getenv('FRONTEND_URL'))
+
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -207,6 +211,10 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
 ]
+
+# Add production frontend URLs from environment
+if os.getenv('FRONTEND_URL'):
+    CSRF_TRUSTED_ORIGINS.append(os.getenv('FRONTEND_URL'))
 
 
 # Supabase Configuration
