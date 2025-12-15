@@ -161,7 +161,7 @@ if USE_SUPABASE_STORAGE:
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
             "OPTIONS": {
                 "bucket_name": os.getenv('SUPABASE_STORAGE_BUCKET', 'ifc-files'),
-                "endpoint_url": f"https://{SUPABASE_PROJECT_REF}.supabase.co/storage/v1/s3",
+                "endpoint_url": f"https://{SUPABASE_PROJECT_REF}.storage.supabase.co/storage/v1/s3",
                 "access_key": os.getenv('SUPABASE_S3_ACCESS_KEY'),
                 "secret_key": os.getenv('SUPABASE_S3_SECRET_KEY'),
                 "region_name": os.getenv('SUPABASE_STORAGE_REGION', 'eu-central-1'),
