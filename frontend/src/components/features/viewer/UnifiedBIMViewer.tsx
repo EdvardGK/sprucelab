@@ -451,10 +451,39 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           onSelectionChange?.(null);
         });
 
-        // Setup click handler to trigger highlighting
-        const handleClick = (event: MouseEvent) => {
+        // Setup click handler with drag detection
+        // Only trigger selection on true "clicks" (not drags for camera movement)
+        const CLICK_THRESHOLD_PX = 5;     // Max pixels moved to count as click
+        const CLICK_THRESHOLD_MS = 250;   // Max milliseconds for a click
+
+        let mouseDownPos = { x: 0, y: 0 };
+        let mouseDownTime = 0;
+
+        const handleMouseDown = (event: MouseEvent) => {
+          // Only track left mouse button
+          if (event.button !== 0) return;
+          mouseDownPos = { x: event.clientX, y: event.clientY };
+          mouseDownTime = Date.now();
+        };
+
+        const handleMouseUp = (event: MouseEvent) => {
+          // Only handle left mouse button
+          if (event.button !== 0) return;
+
           if (!world?.camera?.controls) {
             console.warn('Camera not ready for selection');
+            return;
+          }
+
+          // Check if this was a true click (not a drag)
+          const dx = Math.abs(event.clientX - mouseDownPos.x);
+          const dy = Math.abs(event.clientY - mouseDownPos.y);
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const elapsed = Date.now() - mouseDownTime;
+
+          // If mouse moved too much or held too long, it's a drag - don't select
+          if (distance > CLICK_THRESHOLD_PX || elapsed > CLICK_THRESHOLD_MS) {
+            console.log(`🖱️ Drag detected (${distance.toFixed(1)}px, ${elapsed}ms) - no selection`);
             return;
           }
 
@@ -463,7 +492,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
             const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
-            console.log('🖱️ Click at:', { x, y });
+            console.log(`🖱️ Click detected (${distance.toFixed(1)}px, ${elapsed}ms) - selecting`);
 
             // Call highlight with correct parameters
             // @ts-ignore - ThatOpen types are incomplete
@@ -473,7 +502,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           }
         };
 
-        container.addEventListener('click', handleClick);
+        container.addEventListener('mousedown', handleMouseDown);
+        container.addEventListener('mouseup', handleMouseUp);
 
         // Setup double-click middle mouse button (scroll wheel) for fit-to-view
         const handleDoubleClick = (event: MouseEvent) => {
@@ -869,7 +899,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         window.addEventListener('keydown', handleKeyDown);
 
         cleanupSelection = () => {
-          container.removeEventListener('click', handleClick);
+          container.removeEventListener('mousedown', handleMouseDown);
+          container.removeEventListener('mouseup', handleMouseUp);
           container.removeEventListener('dblclick', handleDoubleClick);
           container.removeEventListener('auxclick', handleAuxClick);
           container.removeEventListener('contextmenu', handleContextMenu);
