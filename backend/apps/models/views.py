@@ -1083,6 +1083,103 @@ class ModelViewSet(viewsets.ModelViewSet):
             'generated_at': model.fragments_generated_at
         })
 
+    @action(detail=True, methods=['post'])
+    def fork(self, request, pk=None):
+        """
+        Create a fork of this model.
+
+        POST /api/models/{id}/fork/
+
+        Request body:
+            - fork_name: Required. Human-readable name (e.g., "LCA Timber Alternative")
+            - fork_type: Optional. One of: analysis, lca_scenario, design_option, client_review, archive
+            - fork_description: Optional. Description of what this fork explores
+            - copy_entities: Optional (default: false). If true, copies all entities (editable fork)
+
+        Response:
+            - fork: The newly created fork model
+            - message: Success message
+            - source_model: Reference to the source model
+        """
+        model = self.get_object()
+
+        fork_name = request.data.get('fork_name')
+        fork_type = request.data.get('fork_type', 'analysis')
+        fork_description = request.data.get('fork_description')
+        copy_entities = request.data.get('copy_entities', False)
+
+        if not fork_name:
+            return Response(
+                {'error': 'fork_name is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        valid_types = ['analysis', 'lca_scenario', 'design_option', 'client_review', 'archive']
+        if fork_type not in valid_types:
+            return Response(
+                {'error': f'fork_type must be one of: {", ".join(valid_types)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if model.status != 'ready':
+            return Response(
+                {'error': f'Cannot fork model with status "{model.status}". Only "ready" models can be forked.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            fork = model.create_fork(
+                fork_name=fork_name,
+                fork_type=fork_type,
+                fork_description=fork_description,
+                copy_entities=copy_entities
+            )
+
+            response_serializer = ModelDetailSerializer(fork)
+            return Response({
+                'fork': response_serializer.data,
+                'message': f'Fork "{fork_name}" created successfully',
+                'source_model': {
+                    'id': str(model.id),
+                    'name': model.name,
+                    'version': model.version_number,
+                },
+                'copy_entities': copy_entities,
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to create fork: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def forks(self, request, pk=None):
+        """
+        Get all forks of this model.
+
+        GET /api/models/{id}/forks/
+
+        Response:
+            - source_model: The source model info
+            - forks: List of fork models
+            - total_forks: Count of forks
+        """
+        model = self.get_object()
+
+        forks = model.get_forks()
+        serializer = ModelSerializer(forks, many=True)
+
+        return Response({
+            'source_model': {
+                'id': str(model.id),
+                'name': model.name,
+                'version': model.version_number,
+            },
+            'forks': serializer.data,
+            'total_forks': forks.count(),
+        })
+
     @action(detail=True, methods=['delete'])
     def delete_fragments(self, request, pk=None):
         """

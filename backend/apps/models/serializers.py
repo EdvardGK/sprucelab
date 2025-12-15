@@ -10,6 +10,9 @@ class ModelSerializer(serializers.ModelSerializer):
     # Explicitly format dates to ensure ISO 8601 format
     created_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S.%fZ', read_only=True)
     updated_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S.%fZ', read_only=True)
+    forked_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S.%fZ', read_only=True)
+    is_fork = serializers.BooleanField(read_only=True)
+    fork_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Model
@@ -23,6 +26,9 @@ class ModelSerializer(serializers.ModelSerializer):
             # Version tracking
             'version_number', 'parent_model', 'is_published',
             'ifc_timestamp', 'version_diff',
+            # Fork tracking
+            'forked_from', 'fork_name', 'fork_type', 'fork_description',
+            'forked_at', 'is_fork', 'fork_count',
             # Other fields
             'element_count', 'storey_count', 'system_count',
             'processing_error', 'created_at', 'updated_at'
@@ -31,9 +37,14 @@ class ModelSerializer(serializers.ModelSerializer):
             'id', 'ifc_schema', 'file_url', 'file_size',
             'status', 'parsing_status', 'geometry_status', 'validation_status',
             'is_published', 'ifc_timestamp', 'version_diff',
+            'forked_at', 'is_fork', 'fork_count',
             'element_count', 'storey_count', 'system_count',
             'processing_error', 'created_at', 'updated_at'
         ]
+
+    def get_fork_count(self, obj):
+        """Get count of forks for this model."""
+        return obj.forks.count()
 
 
 class ModelUploadSerializer(serializers.Serializer):

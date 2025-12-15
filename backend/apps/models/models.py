@@ -93,6 +93,47 @@ class Model(models.Model):
     parent_model = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='versions')
     is_published = models.BooleanField(default=False, help_text="Whether this version is the active/published version")
 
+    # === Forking (scenarios, analysis, design alternatives) ===
+    FORK_TYPE_CHOICES = [
+        ('analysis', 'Analysis'),
+        ('lca_scenario', 'LCA Scenario'),
+        ('design_option', 'Design Option'),
+        ('client_review', 'Client Review'),
+        ('archive', 'Archive Snapshot'),
+    ]
+
+    forked_from = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='forks',
+        help_text="Source model this was forked from"
+    )
+    fork_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Human-readable fork name (e.g., 'LCA Timber Alternative')"
+    )
+    fork_type = models.CharField(
+        max_length=20,
+        choices=FORK_TYPE_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Purpose of this fork"
+    )
+    fork_description = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Description of what this fork explores/changes"
+    )
+    forked_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this fork was created"
+    )
+
     # IFC file timestamp (from IfcOwnerHistory)
     ifc_timestamp = models.DateTimeField(
         null=True,
@@ -222,6 +263,95 @@ class Model(models.Model):
         """Unpublish this version."""
         self.is_published = False
         self.save()
+
+    @property
+    def is_fork(self):
+        """Check if this model is a fork."""
+        return self.forked_from is not None
+
+    def get_forks(self):
+        """Get all forks of this model."""
+        return Model.objects.filter(forked_from=self).order_by('-forked_at')
+
+    def create_fork(self, fork_name, fork_type='analysis', fork_description=None, copy_entities=False):
+        """
+        Create a fork of this model.
+
+        Args:
+            fork_name: Human-readable name for the fork
+            fork_type: One of analysis, lca_scenario, design_option, client_review, archive
+            fork_description: Optional description
+            copy_entities: If True, copies all entities (editable fork). If False, view-only fork.
+
+        Returns:
+            The new forked Model instance
+        """
+        from django.utils import timezone
+
+        fork = Model.objects.create(
+            project=self.project,
+            name=f"{self.name} ({fork_name})",
+            original_filename=self.original_filename,
+            ifc_schema=self.ifc_schema,
+            file_url=self.file_url,
+            file_size=self.file_size,
+            fragments_url=self.fragments_url,
+            fragments_size_mb=self.fragments_size_mb,
+            fragments_generated_at=self.fragments_generated_at,
+            status='ready',
+            parsing_status='parsed',
+            geometry_status=self.geometry_status,
+            validation_status=self.validation_status,
+            version_number=1,  # Forks start at v1
+            element_count=self.element_count,
+            storey_count=self.storey_count,
+            system_count=self.system_count,
+            # Coordinate systems
+            gis_basepoint_x=self.gis_basepoint_x,
+            gis_basepoint_y=self.gis_basepoint_y,
+            gis_basepoint_z=self.gis_basepoint_z,
+            gis_crs=self.gis_crs,
+            local_basepoint_x=self.local_basepoint_x,
+            local_basepoint_y=self.local_basepoint_y,
+            local_basepoint_z=self.local_basepoint_z,
+            transformation_matrix=self.transformation_matrix,
+            # Fork metadata
+            forked_from=self,
+            fork_name=fork_name,
+            fork_type=fork_type,
+            fork_description=fork_description,
+            forked_at=timezone.now(),
+        )
+
+        if copy_entities:
+            self._copy_entities_to_fork(fork)
+
+        return fork
+
+    def _copy_entities_to_fork(self, fork):
+        """Copy all entities from this model to the fork."""
+        from apps.entities.models import IFCEntity, PropertySet
+
+        # Bulk copy entities
+        entities = list(self.entities.all())
+        entity_map = {}  # old_id -> new_entity
+
+        for entity in entities:
+            old_id = entity.id
+            entity.pk = None  # Reset PK for new insert
+            entity.id = None
+            entity.model = fork
+            entity.save()
+            entity_map[old_id] = entity
+
+        # Copy property sets
+        for old_id, new_entity in entity_map.items():
+            old_entity_psets = PropertySet.objects.filter(entity_id=old_id)
+            for pset in old_entity_psets:
+                pset.pk = None
+                pset.id = None
+                pset.entity = new_entity
+                pset.save()
 
     def get_task_status(self):
         """
