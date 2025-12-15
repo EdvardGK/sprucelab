@@ -10,9 +10,18 @@ import dj_database_url
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from parent directory
-env_path = BASE_DIR.parent / '.env'
-load_dotenv(env_path)
+# Load environment variables
+# Priority: .env.local (local dev overrides) > .env (base config)
+# Check backend/.env.local first (local dev), then root .env (shared/production)
+local_env_path = BASE_DIR / '.env.local'
+root_env_path = BASE_DIR.parent / '.env'
+
+if local_env_path.exists():
+    print(f"📁 Loading local env: {local_env_path}")
+    load_dotenv(local_env_path)
+else:
+    print(f"📁 Loading env: {root_env_path}")
+    load_dotenv(root_env_path)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
