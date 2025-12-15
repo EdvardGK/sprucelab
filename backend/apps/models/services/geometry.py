@@ -1,14 +1,21 @@
 """
 Layer 2: Geometry Extraction Service
 
-PHILOSOPHY:
+⚠️ DEPRECATED: This service is no longer used.
+
+The platform now uses a metadata-only architecture:
+- Geometry is NOT stored in the database
+- 3D visualization handled by ThatOpen viewer loading IFC/Fragments directly
+- This file is kept for reference but should not be imported or used
+
+ORIGINAL PHILOSOPHY (for reference):
 - Extract geometry for elements that were parsed in Layer 1
 - CAN FAIL per element without losing metadata
 - SLOW: Can take minutes for complex models (use PARALLEL PROCESSING)
 - OPTIONAL: Can be run on-demand or in background
 - RETRYABLE: Failed elements can be retried
 
-PURPOSE:
+PURPOSE (deprecated):
 This enriches the Layer 1 foundation with 3D geometry for visualization and analysis.
 
 PERFORMANCE OPTIMIZATION (Per research):
@@ -32,7 +39,8 @@ from django.utils import timezone
 from multiprocessing import Pool, cpu_count
 from functools import partial
 
-from apps.entities.models import IFCEntity, Geometry
+from apps.entities.models import IFCEntity
+# DEPRECATED: Geometry model removed - no longer storing 3D mesh data in database
 
 
 def decimate_mesh(vertices, faces, target_triangles=2000):

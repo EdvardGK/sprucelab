@@ -96,14 +96,18 @@ conda env update -f environment.yml --prune
 
 ### 4. Configure Environment Variables
 
-Edit the `.env` file in the project root and add your database password:
+Edit the `.env` file in the project root:
 
 ```env
 # .env
+# Database (Supabase)
 DATABASE_URL=postgresql://postgres.mwcjhbvzhnzslnatglcg:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+
+# Celery (default: Redis on localhost)
+CELERY_BROKER_URL=redis://localhost:6379/0
 ```
 
-Get your password from:
+Get your Supabase password from:
 **Supabase Dashboard → Project Settings → Database → Connection String**
 
 ### 5. Run Migrations
@@ -223,13 +227,16 @@ pytest --cov=apps --cov-report=html
 - Check Python version: `python --version`
 - Try reinstalling: `pip install -r requirements.txt --force-reinstall`
 
-## Next Steps
+## Project Status
 
-- [ ] Implement file upload endpoint
-- [ ] Create IFC processing Celery task
-- [ ] Build change detection service
-- [ ] Add API authentication
-- [ ] Create API documentation with Swagger
+- [x] File upload endpoint with Supabase storage
+- [x] IFC processing with layered architecture (Parse → Geometry → Validate)
+- [x] Celery task system for async processing
+- [x] BEP (BIM Execution Plan) system with MMI scale
+- [x] Change detection service
+- [x] 3D viewer integration (frontend)
+- [ ] API authentication
+- [ ] API documentation with Swagger/OpenAPI
 
 ## Documentation
 

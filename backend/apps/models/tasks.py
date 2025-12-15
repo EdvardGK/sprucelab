@@ -1,19 +1,20 @@
 """
-Django-Q tasks for IFC model processing.
+Celery tasks for IFC model processing.
 
-This module contains async tasks for processing IFC files using Django-Q.
-Tasks are executed by Django-Q workers and use PostgreSQL for queue management.
-
-Unlike Celery, Django-Q tasks are just regular Python functions - no decorators needed!
+This module contains async tasks for processing IFC files using Celery.
+Tasks are executed by Celery workers and use Redis for message brokering.
+Results are stored in the Django database via django-celery-results.
 """
 from django.db import transaction
 import time
 import traceback
+from celery import shared_task
 
 
-def process_ifc_task(model_id, file_path, skip_geometry=False, lod_level='low', target_triangles=2000):
+@shared_task(bind=True, name='apps.models.tasks.process_ifc_task')
+def process_ifc_task(self, model_id, file_path, skip_geometry=False, lod_level='low', target_triangles=2000):
     """
-    Process an IFC file asynchronously using Django-Q (STAGED APPROACH).
+    Process an IFC file asynchronously using Celery (STAGED APPROACH).
 
     This task uses a layered architecture:
     1. Layer 1 (Parse): Extract metadata only (fast, always succeeds)
@@ -85,12 +86,12 @@ def process_ifc_task(model_id, file_path, skip_geometry=False, lod_level='low', 
             print(f"LAYER 2: EXTRACTING GEOMETRY")
             print(f"{'='*80}")
 
-            # Sequential processing (Django-Q workers are already parallel)
-            # Note: Can't use multiprocessing.Pool inside Django-Q daemon processes
+            # Sequential processing (Celery workers are already parallel)
+            # Note: Can't use multiprocessing.Pool inside Celery worker processes
             geometry_result = extract_geometry_for_model(
                 model_id,
                 file_path,
-                parallel=False,  # Django-Q handles parallelism at task level
+                parallel=False,  # Celery handles parallelism at task level
                 lod_level=lod_level,
                 target_triangles=target_triangles
             )
@@ -105,10 +106,9 @@ def process_ifc_task(model_id, file_path, skip_geometry=False, lod_level='low', 
             model.refresh_from_db()
 
             # Determine legacy status based on layer statuses
-            if model.parsing_status == 'parsed' and model.geometry_status == 'completed':
-                model.status = 'ready'
-            elif model.parsing_status == 'parsed' and model.geometry_status == 'partial':
-                model.status = 'ready'  # Partial geometry is still usable
+            # In metadata-only architecture, models are ready when parsing completes
+            if model.parsing_status == 'parsed':
+                model.status = 'ready'  # Geometry is optional, metadata is sufficient
             elif model.parsing_status == 'failed':
                 model.status = 'error'
             else:
@@ -141,7 +141,7 @@ def process_ifc_task(model_id, file_path, skip_geometry=False, lod_level='low', 
         # Log the error
         error_msg = str(e)
         error_trace = traceback.format_exc()
-        print(f"\n❌ Django-Q task failed for model {model_id}")
+        print(f"\n❌ Celery task failed for model {model_id}")
         print(f"   Error: {error_msg}")
         print(f"   Traceback:\n{error_trace}")
 
@@ -160,11 +160,12 @@ def process_ifc_task(model_id, file_path, skip_geometry=False, lod_level='low', 
         except Exception as inner_e:
             print(f"❌ Could not update model status: {str(inner_e)}")
 
-        # Re-raise exception so Django-Q marks task as failed
+        # Re-raise exception so Celery marks task as failed
         raise
 
 
-def revert_model_task(old_model_id, new_model_id):
+@shared_task(bind=True, name='apps.models.tasks.revert_model_task')
+def revert_model_task(self, old_model_id, new_model_id):
     """
     Revert to an old model version by re-processing its file.
 
@@ -239,11 +240,12 @@ def revert_model_task(old_model_id, new_model_id):
         except:
             pass
 
-        # Re-raise so Django-Q marks as failed
+        # Re-raise so Celery marks as failed
         raise
 
 
-def enrich_model_task(model_id, file_path, extract_properties=True, extract_relationships=True, run_validation=True):
+@shared_task(bind=True, name='apps.models.tasks.enrich_model_task')
+def enrich_model_task(self, model_id, file_path, extract_properties=True, extract_relationships=True, run_validation=True):
     """
     Enrich a model with additional metadata beyond what web-ifc provides.
 
@@ -388,16 +390,16 @@ def enrich_model_task(model_id, file_path, extract_properties=True, extract_rela
         raise
 
 
-def debug_task():
+@shared_task(bind=True, name='apps.models.tasks.debug_task')
+def debug_task(self):
     """
-    Simple debug task to test Django-Q setup.
+    Simple debug task to test Celery setup.
 
     Usage:
-        from django_q.tasks import async_task
         from apps.models.tasks import debug_task
 
-        task_id = async_task(debug_task)
-        print(f"Task ID: {task_id}")
+        result = debug_task.delay()
+        print(f"Task ID: {result.id}")
     """
     import time
 
@@ -407,6 +409,6 @@ def debug_task():
 
     return {
         'status': 'success',
-        'message': 'Django-Q is working!',
+        'message': 'Celery is working!',
         'timestamp': time.time()
     }

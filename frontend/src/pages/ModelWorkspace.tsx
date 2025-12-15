@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import * as THREE from 'three';
 import { useModel } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { QTODashboard } from '@/components/features/qto/QTODashboard';
 import { MMIDashboard } from '@/components/features/mmi/MMIDashboard';
-import { IFCViewer } from '@/components/features/viewer/IFCViewer';
+import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer';
+import { ElementPropertiesPanel, ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import type { Model } from '@/lib/api-types';
 
 // Tab definitions
@@ -30,12 +30,12 @@ type TabId = typeof TABS[number]['id'];
 export default function ModelWorkspace() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
   const { data: model, isLoading } = useModel(id!);
   const [activeTab, setActiveTab] = useState<TabId>('3d-viewer');
 
   // Get preparsed scene from navigation state (if uploaded)
-  const preparsedScene = (location.state as any)?.preparsedScene as THREE.Group | undefined;
+  // const preparsedScene = (location.state as any)?.preparsedScene as THREE.Group | undefined;
 
   if (isLoading) {
     return (
@@ -137,7 +137,7 @@ export default function ModelWorkspace() {
       <div className="flex-1 overflow-auto bg-background">
         {/* All tabs - show content or processing message */}
         {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === '3d-viewer' && (hasFile ? <Viewer3DTab model={model} preparsedScene={preparsedScene} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === '3d-viewer' && (hasFile ? <Viewer3DTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === 'qto' && (isReady ? <QTODashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === 'mmi' && (isReady ? <MMIDashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === 'validation' && (isReady ? <PlaceholderTab title="Validation" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
@@ -255,7 +255,9 @@ function OverviewTab({ model }: { model: Model }) {
 }
 
 // 3D Viewer Tab Component
-function Viewer3DTab({ model, preparsedScene }: { model: Model; preparsedScene?: THREE.Group }) {
+function Viewer3DTab({ model }: { model: Model }) {
+  const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
+
   return (
     <div className="flex h-full">
       {/* Model tree (left panel) */}
@@ -289,58 +291,19 @@ function Viewer3DTab({ model, preparsedScene }: { model: Model; preparsedScene?:
 
       {/* 3D viewer (center panel) */}
       <main className="flex-1 relative">
-        <IFCViewer modelId={model.id} preparsedScene={preparsedScene} />
+        <UnifiedBIMViewer
+          modelId={model.id}
+          showPropertiesPanel={false}
+          onSelectionChange={(element) => setSelectedElement(element)}
+        />
       </main>
 
       {/* Properties panel (right panel) */}
-      <aside className="w-80 border-l border-border bg-background p-4 overflow-y-auto">
-        <h2 className="text-sm font-semibold text-text-primary mb-3">Properties</h2>
-        <div className="text-sm text-text-secondary mb-4">
-          Select an element to view its properties
-        </div>
-
-        {/* Placeholder properties */}
-        <div className="space-y-4">
-          <div>
-            <div className="text-xs font-semibold text-text-tertiary mb-2">BASIC INFO</div>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1">
-                <span className="text-text-secondary">Type:</span>
-                <span className="text-text-primary">IfcWall</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-text-secondary">Name:</span>
-                <span className="text-text-primary">Wall-001</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-text-secondary">GUID:</span>
-                <span className="text-text-primary font-mono">1a2b3c...</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs font-semibold text-text-tertiary mb-2">DIMENSIONS</div>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1">
-                <span className="text-text-secondary">Width:</span>
-                <span className="text-text-primary">200 mm</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-text-secondary">Height:</span>
-                <span className="text-text-primary">3000 mm</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-text-secondary">Length:</span>
-                <span className="text-text-primary">5000 mm</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-xs text-text-tertiary mt-4">
-            Full properties panel coming soon...
-          </div>
-        </div>
+      <aside className="w-80 border-l border-border bg-background overflow-hidden">
+        <ElementPropertiesPanel
+          element={selectedElement}
+          onClose={() => setSelectedElement(null)}
+        />
       </aside>
     </div>
   );

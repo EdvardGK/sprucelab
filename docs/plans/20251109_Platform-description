@@ -1,0 +1,62 @@
+It's time to clarify what I need Sprucelab to be: 
+
+Upload and store IFC files. 
+Query IFC files using IfcOpenShell
+Edit IFC files using IFC openshell:
+- CRUD properties and property sets
+- CRUD geometry
+- CRUD relationships and structure
+
+Usecases: 
+- Basic IFC validation, IfcOpenShell and IDS (IfcWall has Pset.WallCommon with FireRating, IsExternal, LoadBearing, AcousticRating + duplicate checking and basic IFC integrity)
+- Project specific IFC validation (Custom psets, naming/specific value ranges etc)
+- Create IFC objects from structured data like CSV/Excel/JSON. (Downloadable templates for compatabiity) - UI for object shapes. Not a full blown BIM authoting tool, but simple previews of geometry. Aimed at low LOD objects, annotations and virtual objects: Spaces, opensings, survey points, placeholders. (Example: Add a low LOD fire insulation object under all steel beams of type x. Example 2: Create a zone model based on enclosed spaces. Exmple 3: Create a site model with survey points, grids/lines from surveyor coordinate files)
+- Simplify object meshes
+- Fix broken model structures, like missing Site or floors or orphan objects. 
+- Quantity Extraction with or without a Qset. (Dashboards, analysis tools - Inspiration: PowerBI/Tableau, Plotly and Grafana) 
+- Model and object rotation
+- Georeferencing
+- Create type and material libraries (Ifc warehouse, DB based. The Ifc approach can be edited to simply show a 3D view of each object. Maybe we show the simplest object shape we can in Three.js and display database values in the same UI, rather than showing a IFC?)
+
+
+
+Upload and store pointclouds: 
+- Store several formats. 
+- Convert between formats
+- View alone and with IFC files. 
+- Merge, split, and run simple algorithms like SOR and subsampling with Octrees or point distance rules. Not a competitor to the advanced functions of CloudCompare, but should handle the basics that are needed to view and interact with pointclouds and models. Maybe simple cleanup functions like drawing polygons and keeping in/out. 
+
+
+LCA: Handle model information and structured data like excel, csv and json. 
+- Allow users to create design optinos/analysis models and use psets to assign design option values to IFC models and ITOs/QTOs. 
+- Use material and type libraries to map to EPDs or benchmark values. 
+- Set object status (New, Existing Kept, Existing Waste, Reused). 
+- Create scenarios Scenario A, B, C with object status and material/type compositions. 
+- Focus on model stats and organizing datasets for export to in-depth LCA tools like OneCLickLCA and Reduzer. 
+	- I/O templates for these tools
+
+
+
+Project management: 
+- Track versions
+- Track individual object history
+- BCF issues and RFIs
+- Phasing
+- Cost analysis, budgeting and material orders. 
+- Meeting module with agenda, minutes, connected docs/models. Integrates with BCF/RFI/todolist. 
+- Project snapshot of what versions were available at 7 in the morning each day. 
+
+BIM manager/BIM coordinator workbench: 
+- BEP, EIR, project config. 
+- Structured data that can be viewed as a PDF or as machine readable formatting. Use reportlab or similar for creating PDF and allow export to word/docs/markdown/txt. 
+- Easy to use UI for setting up BEP with simple dropdowns or custom fields. File names, property sets and properties, georef, project rotation, applcations, data requirements, naming/labling etc (NS3680, ISO19650 etc.)
+
+IFC viewer:
+- Individual and federated models. 
+- Model groups (Building A, B, C)
+- Speed and smooth feel over details. 
+- View/edit properties view. 
+- Add objects with a simple UI like predefined shapes like cube, rectangle, cone, sphere based on "insert shape A in coordinate XYZ" Simple UI for rotation and relative placement to the point (extrude up/down along vector AA etc). Both batch and single mode for the same shape. Nothing fancy, and complex placement for multiple objects and shapes needs the Scripting workbench. 
+
+Scripting workbench: 
+ 

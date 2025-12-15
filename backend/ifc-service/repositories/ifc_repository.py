@@ -1,0 +1,579 @@
+"""
+IFC Repository - Database operations for IFC processing.
+
+Handles bulk inserts and updates to the shared PostgreSQL database.
+Uses asyncpg for async operations with batched inserts for performance.
+"""
+
+import uuid
+import json
+from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
+
+from core.database import get_connection, get_transaction
+
+
+# =============================================================================
+# Data Classes for bulk insert operations
+# =============================================================================
+
+@dataclass
+class EntityData:
+    """Data for a single IFC entity."""
+    ifc_guid: str
+    ifc_type: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    storey_id: Optional[str] = None
+    area: Optional[float] = None
+    volume: Optional[float] = None
+    length: Optional[float] = None
+    height: Optional[float] = None
+    perimeter: Optional[float] = None
+
+
+@dataclass
+class PropertyData:
+    """Data for a single property."""
+    entity_id: str
+    pset_name: str
+    property_name: str
+    property_value: Optional[str] = None
+    property_type: Optional[str] = None
+
+
+@dataclass
+class SpatialData:
+    """Data for spatial hierarchy entry."""
+    entity_id: str
+    parent_id: Optional[str]
+    hierarchy_level: str
+    path: List[str]
+
+
+@dataclass
+class MaterialData:
+    """Data for a material."""
+    material_guid: str
+    name: str
+    category: Optional[str] = None
+    properties: Optional[Dict] = None
+
+
+@dataclass
+class TypeData:
+    """Data for an IFC type."""
+    type_guid: str
+    type_name: Optional[str]
+    ifc_type: str
+    properties: Optional[Dict] = None
+
+
+@dataclass
+class SystemData:
+    """Data for a system."""
+    system_guid: str
+    system_name: Optional[str]
+    system_type: Optional[str]
+    description: Optional[str] = None
+
+
+# =============================================================================
+# Repository Class
+# =============================================================================
+
+class IFCRepository:
+    """
+    Repository for IFC database operations.
+
+    All methods are async and use batched operations for performance.
+    """
+
+    ENTITY_BATCH_SIZE = 500
+    PROPERTY_BATCH_SIZE = 1000
+
+    async def update_model_status(
+        self,
+        model_id: str,
+        status: Optional[str] = None,
+        parsing_status: Optional[str] = None,
+        geometry_status: Optional[str] = None,
+        validation_status: Optional[str] = None,
+        ifc_schema: Optional[str] = None,
+        element_count: Optional[int] = None,
+        storey_count: Optional[int] = None,
+        system_count: Optional[int] = None,
+        processing_error: Optional[str] = None,
+    ) -> bool:
+        """Update model status fields."""
+        updates = []
+        values = []
+        param_idx = 1
+
+        if status is not None:
+            updates.append(f"status = ${param_idx}")
+            values.append(status)
+            param_idx += 1
+
+        if parsing_status is not None:
+            updates.append(f"parsing_status = ${param_idx}")
+            values.append(parsing_status)
+            param_idx += 1
+
+        if geometry_status is not None:
+            updates.append(f"geometry_status = ${param_idx}")
+            values.append(geometry_status)
+            param_idx += 1
+
+        if validation_status is not None:
+            updates.append(f"validation_status = ${param_idx}")
+            values.append(validation_status)
+            param_idx += 1
+
+        if ifc_schema is not None:
+            updates.append(f"ifc_schema = ${param_idx}")
+            values.append(ifc_schema)
+            param_idx += 1
+
+        if element_count is not None:
+            updates.append(f"element_count = ${param_idx}")
+            values.append(element_count)
+            param_idx += 1
+
+        if storey_count is not None:
+            updates.append(f"storey_count = ${param_idx}")
+            values.append(storey_count)
+            param_idx += 1
+
+        if system_count is not None:
+            updates.append(f"system_count = ${param_idx}")
+            values.append(system_count)
+            param_idx += 1
+
+        if processing_error is not None:
+            updates.append(f"processing_error = ${param_idx}")
+            values.append(processing_error)
+            param_idx += 1
+
+        # Always update updated_at
+        updates.append(f"updated_at = ${param_idx}")
+        values.append(datetime.now(timezone.utc))
+        param_idx += 1
+
+        if not updates:
+            return False
+
+        # Add model_id as last parameter
+        values.append(uuid.UUID(model_id))
+
+        query = f"""
+            UPDATE models
+            SET {', '.join(updates)}
+            WHERE id = ${param_idx}
+        """
+
+        async with get_connection() as conn:
+            result = await conn.execute(query, *values)
+            return result == "UPDATE 1"
+
+    async def bulk_insert_entities(
+        self,
+        model_id: str,
+        entities: List[EntityData],
+    ) -> Dict[str, str]:
+        """
+        Bulk insert IFC entities.
+
+        Returns:
+            Dict mapping ifc_guid to entity_id (UUID)
+        """
+        if not entities:
+            return {}
+
+        guid_to_id = {}
+        model_uuid = uuid.UUID(model_id)
+
+        async with get_transaction() as conn:
+            for i in range(0, len(entities), self.ENTITY_BATCH_SIZE):
+                batch = entities[i:i + self.ENTITY_BATCH_SIZE]
+                records = []
+
+                for entity in batch:
+                    entity_id = uuid.uuid4()
+                    guid_to_id[entity.ifc_guid] = str(entity_id)
+
+                    # Convert storey_id string to UUID if present
+                    storey_uuid = uuid.UUID(entity.storey_id) if entity.storey_id else None
+
+                    records.append((
+                        entity_id,
+                        model_uuid,
+                        entity.ifc_guid,
+                        entity.ifc_type,
+                        entity.name,
+                        entity.description,
+                        storey_uuid,
+                        entity.area,
+                        entity.volume,
+                        entity.length,
+                        entity.height,
+                        entity.perimeter,
+                    ))
+
+                await conn.executemany(
+                    """
+                    INSERT INTO ifc_entities (
+                        id, model_id, ifc_guid, ifc_type, name, description,
+                        storey_id, area, volume, length, height, perimeter
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    ON CONFLICT (model_id, ifc_guid) DO NOTHING
+                    """,
+                    records
+                )
+
+        return guid_to_id
+
+    async def bulk_insert_properties(
+        self,
+        properties: List[PropertyData],
+    ) -> int:
+        """
+        Bulk insert property sets.
+
+        Returns:
+            Number of properties inserted
+        """
+        if not properties:
+            return 0
+
+        count = 0
+        async with get_transaction() as conn:
+            for i in range(0, len(properties), self.PROPERTY_BATCH_SIZE):
+                batch = properties[i:i + self.PROPERTY_BATCH_SIZE]
+                records = []
+
+                for prop in batch:
+                    records.append((
+                        uuid.uuid4(),
+                        uuid.UUID(prop.entity_id),
+                        prop.pset_name,
+                        prop.property_name,
+                        prop.property_value,
+                        prop.property_type,
+                    ))
+
+                await conn.executemany(
+                    """
+                    INSERT INTO property_sets (
+                        id, entity_id, pset_name, property_name, property_value, property_type
+                    ) VALUES ($1, $2, $3, $4, $5, $6)
+                    """,
+                    records
+                )
+                count += len(batch)
+
+        return count
+
+    async def bulk_insert_spatial_hierarchy(
+        self,
+        model_id: str,
+        items: List[SpatialData],
+    ) -> int:
+        """
+        Bulk insert spatial hierarchy entries.
+
+        Returns:
+            Number of entries inserted
+        """
+        if not items:
+            return 0
+
+        model_uuid = uuid.UUID(model_id)
+        records = []
+
+        for item in items:
+            entity_uuid = uuid.UUID(item.entity_id)
+            parent_uuid = uuid.UUID(item.parent_id) if item.parent_id else None
+
+            records.append((
+                uuid.uuid4(),
+                model_uuid,
+                entity_uuid,
+                parent_uuid,
+                item.hierarchy_level,
+                item.path,
+            ))
+
+        async with get_transaction() as conn:
+            await conn.executemany(
+                """
+                INSERT INTO spatial_hierarchy (
+                    id, model_id, entity_id, parent_id, hierarchy_level, path
+                ) VALUES ($1, $2, $3, $4, $5, $6)
+                """,
+                records
+            )
+
+        return len(items)
+
+    async def bulk_insert_materials(
+        self,
+        model_id: str,
+        materials: List[MaterialData],
+    ) -> Dict[str, str]:
+        """
+        Bulk insert materials.
+
+        Returns:
+            Dict mapping material_guid to material_id (UUID)
+        """
+        if not materials:
+            return {}
+
+        guid_to_id = {}
+        model_uuid = uuid.UUID(model_id)
+        records = []
+
+        for material in materials:
+            material_id = uuid.uuid4()
+            guid_to_id[material.material_guid] = str(material_id)
+
+            records.append((
+                material_id,
+                model_uuid,
+                material.material_guid,
+                material.name,
+                material.category,
+                json.dumps(material.properties or {}),
+            ))
+
+        async with get_transaction() as conn:
+            await conn.executemany(
+                """
+                INSERT INTO materials (
+                    id, model_id, material_guid, name, category, properties
+                ) VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (model_id, material_guid) DO NOTHING
+                """,
+                records
+            )
+
+        return guid_to_id
+
+    async def bulk_insert_types(
+        self,
+        model_id: str,
+        types: List[TypeData],
+    ) -> Dict[str, str]:
+        """
+        Bulk insert IFC types.
+
+        Returns:
+            Dict mapping type_guid to type_id (UUID)
+        """
+        if not types:
+            return {}
+
+        guid_to_id = {}
+        model_uuid = uuid.UUID(model_id)
+        records = []
+
+        for type_data in types:
+            type_id = uuid.uuid4()
+            guid_to_id[type_data.type_guid] = str(type_id)
+
+            records.append((
+                type_id,
+                model_uuid,
+                type_data.type_guid,
+                type_data.type_name,
+                type_data.ifc_type,
+                json.dumps(type_data.properties or {}),
+            ))
+
+        async with get_transaction() as conn:
+            await conn.executemany(
+                """
+                INSERT INTO ifc_types (
+                    id, model_id, type_guid, type_name, ifc_type, properties
+                ) VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (model_id, type_guid) DO NOTHING
+                """,
+                records
+            )
+
+        return guid_to_id
+
+    async def bulk_insert_systems(
+        self,
+        model_id: str,
+        systems: List[SystemData],
+    ) -> Dict[str, str]:
+        """
+        Bulk insert systems.
+
+        Returns:
+            Dict mapping system_guid to system_id (UUID)
+        """
+        if not systems:
+            return {}
+
+        guid_to_id = {}
+        model_uuid = uuid.UUID(model_id)
+        records = []
+
+        for system in systems:
+            system_id = uuid.uuid4()
+            guid_to_id[system.system_guid] = str(system_id)
+
+            records.append((
+                system_id,
+                model_uuid,
+                system.system_guid,
+                system.system_name,
+                system.system_type,
+                system.description,
+            ))
+
+        async with get_transaction() as conn:
+            await conn.executemany(
+                """
+                INSERT INTO systems (
+                    id, model_id, system_guid, system_name, system_type, description
+                ) VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (model_id, system_guid) DO NOTHING
+                """,
+                records
+            )
+
+        return guid_to_id
+
+    async def create_processing_report(
+        self,
+        model_id: str,
+        started_at: datetime,
+        completed_at: Optional[datetime] = None,
+        duration_seconds: Optional[float] = None,
+        overall_status: str = "failed",
+        ifc_schema: Optional[str] = None,
+        file_size_bytes: int = 0,
+        stage_results: Optional[List[Dict]] = None,
+        total_entities_processed: int = 0,
+        total_entities_skipped: int = 0,
+        total_entities_failed: int = 0,
+        errors: Optional[List[Dict]] = None,
+        catastrophic_failure: bool = False,
+        failure_stage: Optional[str] = None,
+        failure_exception: Optional[str] = None,
+        failure_traceback: Optional[str] = None,
+        summary: Optional[str] = None,
+    ) -> str:
+        """
+        Create a processing report.
+
+        Returns:
+            The report ID (UUID string)
+        """
+        report_id = uuid.uuid4()
+        model_uuid = uuid.UUID(model_id)
+
+        async with get_connection() as conn:
+            await conn.execute(
+                """
+                INSERT INTO processing_reports (
+                    id, model_id, started_at, completed_at, duration_seconds,
+                    overall_status, ifc_schema, file_size_bytes,
+                    stage_results, total_entities_processed, total_entities_skipped,
+                    total_entities_failed, errors, catastrophic_failure,
+                    failure_stage, failure_exception, failure_traceback, summary
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+                )
+                """,
+                report_id,
+                model_uuid,
+                started_at,
+                completed_at,
+                duration_seconds,
+                overall_status,
+                ifc_schema,
+                file_size_bytes,
+                json.dumps(stage_results or []),
+                total_entities_processed,
+                total_entities_skipped,
+                total_entities_failed,
+                json.dumps(errors or []),
+                catastrophic_failure,
+                failure_stage,
+                failure_exception,
+                failure_traceback,
+                summary,
+            )
+
+        return str(report_id)
+
+    async def delete_model_data(self, model_id: str) -> Dict[str, int]:
+        """
+        Delete all data for a model (for re-processing).
+
+        Returns:
+            Dict with counts of deleted records per table
+        """
+        model_uuid = uuid.UUID(model_id)
+        deleted = {}
+
+        async with get_transaction() as conn:
+            # Delete in order to respect foreign keys
+            # Property sets reference entities
+            result = await conn.execute(
+                """
+                DELETE FROM property_sets
+                WHERE entity_id IN (
+                    SELECT id FROM ifc_entities WHERE model_id = $1
+                )
+                """,
+                model_uuid
+            )
+            deleted["property_sets"] = int(result.split()[-1]) if result else 0
+
+            # Spatial hierarchy
+            result = await conn.execute(
+                "DELETE FROM spatial_hierarchy WHERE model_id = $1",
+                model_uuid
+            )
+            deleted["spatial_hierarchy"] = int(result.split()[-1]) if result else 0
+
+            # Systems
+            result = await conn.execute(
+                "DELETE FROM systems WHERE model_id = $1",
+                model_uuid
+            )
+            deleted["systems"] = int(result.split()[-1]) if result else 0
+
+            # Types
+            result = await conn.execute(
+                "DELETE FROM ifc_types WHERE model_id = $1",
+                model_uuid
+            )
+            deleted["types"] = int(result.split()[-1]) if result else 0
+
+            # Materials
+            result = await conn.execute(
+                "DELETE FROM materials WHERE model_id = $1",
+                model_uuid
+            )
+            deleted["materials"] = int(result.split()[-1]) if result else 0
+
+            # Entities (last, as others reference it)
+            result = await conn.execute(
+                "DELETE FROM ifc_entities WHERE model_id = $1",
+                model_uuid
+            )
+            deleted["entities"] = int(result.split()[-1]) if result else 0
+
+        return deleted
+
+
+# Singleton instance
+ifc_repository = IFCRepository()

@@ -1,20 +1,20 @@
 from rest_framework import serializers
 from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
-    System, Material, IFCType, Geometry, ProcessingReport
+    System, Material, IFCType, ProcessingReport,
+    NS3451Code, TypeMapping, MaterialMapping
 )
 
 
 class IFCEntitySerializer(serializers.ModelSerializer):
-    """Serializer for IFC entities (without geometry data)."""
+    """Serializer for IFC entities with metadata and quantities."""
 
     class Meta:
         model = IFCEntity
         fields = [
-            'id', 'model', 'ifc_guid', 'ifc_type', 'name', 'description',
-            'storey_id', 'has_geometry', 'vertex_count', 'triangle_count',
-            'bbox_min_x', 'bbox_min_y', 'bbox_min_z',
-            'bbox_max_x', 'bbox_max_y', 'bbox_max_z'
+            'id', 'model', 'express_id', 'ifc_guid', 'ifc_type',
+            'predefined_type', 'object_type', 'name', 'description',
+            'storey_id', 'area', 'volume', 'length', 'height', 'perimeter'
         ]
         read_only_fields = ['id']
 
@@ -86,3 +86,102 @@ class ProcessingReportSerializer(serializers.ModelSerializer):
             'summary'
         ]
         read_only_fields = ['id', 'started_at']
+
+
+# =============================================================================
+# WAREHOUSE SERIALIZERS - NS3451, Type Mapping, Material Mapping
+# =============================================================================
+
+class NS3451CodeSerializer(serializers.ModelSerializer):
+    """Serializer for NS-3451 classification codes (reference data)."""
+
+    class Meta:
+        model = NS3451Code
+        fields = ['code', 'name', 'name_en', 'guidance', 'level', 'parent_code']
+
+
+class TypeMappingSerializer(serializers.ModelSerializer):
+    """Serializer for type → NS3451 mappings."""
+
+    ns3451_name = serializers.CharField(source='ns3451.name', read_only=True)
+
+    class Meta:
+        model = TypeMapping
+        fields = [
+            'id', 'ifc_type', 'ns3451_code', 'ns3451', 'ns3451_name',
+            'product', 'representative_unit', 'discipline',
+            'mapping_status', 'confidence', 'notes',
+            'mapped_by', 'mapped_at', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        # Auto-link ns3451 FK when ns3451_code is provided
+        ns3451_code = validated_data.get('ns3451_code')
+        if ns3451_code and not validated_data.get('ns3451'):
+            try:
+                validated_data['ns3451'] = NS3451Code.objects.get(code=ns3451_code)
+            except NS3451Code.DoesNotExist:
+                pass
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Auto-link ns3451 FK when ns3451_code is provided
+        ns3451_code = validated_data.get('ns3451_code')
+        if ns3451_code:
+            try:
+                validated_data['ns3451'] = NS3451Code.objects.get(code=ns3451_code)
+            except NS3451Code.DoesNotExist:
+                validated_data['ns3451'] = None
+        elif 'ns3451_code' in validated_data and ns3451_code is None:
+            validated_data['ns3451'] = None
+        return super().update(instance, validated_data)
+
+
+class IFCTypeWithMappingSerializer(serializers.ModelSerializer):
+    """Serializer for IFC types with their mapping status."""
+
+    mapping = TypeMappingSerializer(read_only=True)
+    instance_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = IFCType
+        fields = [
+            'id', 'model', 'type_guid', 'type_name', 'ifc_type',
+            'properties', 'mapping', 'instance_count'
+        ]
+
+    def get_instance_count(self, obj):
+        """Count how many entities use this type."""
+        return obj.assignments.count()
+
+
+class MaterialMappingSerializer(serializers.ModelSerializer):
+    """Serializer for material mappings."""
+
+    class Meta:
+        model = MaterialMapping
+        fields = [
+            'id', 'material', 'standard_name', 'density_kg_m3',
+            'epd_reference', 'thermal_conductivity', 'mapping_status',
+            'notes', 'mapped_by', 'mapped_at', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class MaterialWithMappingSerializer(serializers.ModelSerializer):
+    """Serializer for materials with their mapping status."""
+
+    mapping = MaterialMappingSerializer(read_only=True)
+    usage_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Material
+        fields = [
+            'id', 'model', 'material_guid', 'name', 'category',
+            'properties', 'mapping', 'usage_count'
+        ]
+
+    def get_usage_count(self, obj):
+        """Count how many entities use this material."""
+        return obj.assignments.count()

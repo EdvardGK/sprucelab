@@ -57,29 +57,55 @@ export function useModelStatus(id: string) {
   });
 }
 
+// Version warning from upload response
+export interface VersionWarning {
+  type: 'older_file' | 'same_timestamp';
+  message: string;
+  current_version_timestamp: string;
+  uploaded_file_timestamp: string;
+}
+
+// Upload response type
+export interface UploadResponse {
+  model: Model;
+  message: string;
+  version_warning?: VersionWarning;
+  quick_stats?: {
+    ifc_schema: string;
+    total_elements: number;
+    storey_count: number;
+    type_count: number;
+    material_count: number;
+    top_entity_types: Array<{ type: string; count: number }>;
+    storey_names: string[];
+    stats_duration_ms: number;
+  };
+  task_id?: string;
+}
+
 // Upload model mutation
 export function useUploadModel() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: UploadModelRequest) => {
+    mutationFn: async (data: UploadModelRequest): Promise<UploadResponse> => {
       const formData = new FormData();
       formData.append('file', data.file);
-      formData.append('project_id', data.project_id);
+      formData.append('project_id', data.project);
       if (data.name) formData.append('name', data.name);
       // Note: version_number is auto-calculated by backend, not sent by frontend
 
-      const response = await apiClient.post<{ model: Model; message: string }>('/models/upload/', formData, {
+      const response = await apiClient.post<UploadResponse>('/models/upload/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
         timeout: 300000, // 5 minutes for upload
       });
-      // Backend returns { model: {...}, message: "..." }
-      return response.data.model;
+      // Return full response including version_warning
+      return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: modelKeys.list(data.project) });
+      queryClient.invalidateQueries({ queryKey: modelKeys.list(data.model.project) });
     },
   });
 }

@@ -6,8 +6,8 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import os
 from pathlib import Path
+from datetime import datetime
 
-from django_q.tasks import async_task
 from .models import Model
 from .serializers import (
     ModelSerializer,
@@ -19,6 +19,32 @@ from .tasks import process_ifc_task, revert_model_task
 from apps.projects.models import Project
 from apps.entities.models import IFCValidationReport, IFCEntity
 import json
+
+
+def _quick_extract_ifc_timestamp(file_path: str):
+    """
+    Quick extraction of IFC timestamp from IfcOwnerHistory.
+
+    Opens IFC file, reads timestamp, and closes immediately.
+    Returns timezone-aware datetime or None.
+    """
+    try:
+        import ifcopenshell
+        from django.utils import timezone
+        ifc_file = ifcopenshell.open(file_path)
+
+        owner_histories = ifc_file.by_type('IfcOwnerHistory')
+        if owner_histories:
+            oh = owner_histories[0]
+            timestamp = getattr(oh, 'LastModifiedDate', None) or getattr(oh, 'CreationDate', None)
+            if timestamp:
+                # Make timezone-aware using UTC
+                naive_dt = datetime.fromtimestamp(timestamp)
+                return timezone.make_aware(naive_dt)
+        return None
+    except Exception as e:
+        print(f"Error extracting IFC timestamp: {e}")
+        return None
 
 
 class ModelViewSet(viewsets.ModelViewSet):
@@ -117,6 +143,28 @@ class ModelViewSet(viewsets.ModelViewSet):
         saved_path = default_storage.save(file_path, ContentFile(uploaded_file.read()))
         file_url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else saved_path
 
+        # Quick extract IFC timestamp for version comparison
+        full_path = default_storage.path(saved_path)
+        new_ifc_timestamp = _quick_extract_ifc_timestamp(full_path)
+
+        # Build version warning if uploading older file
+        version_warning = None
+        if parent_model and parent_model.ifc_timestamp and new_ifc_timestamp:
+            if new_ifc_timestamp < parent_model.ifc_timestamp:
+                version_warning = {
+                    'type': 'older_file',
+                    'message': 'Denne modellen er eldre enn den nåværende versjonen',
+                    'current_version_timestamp': parent_model.ifc_timestamp.isoformat(),
+                    'uploaded_file_timestamp': new_ifc_timestamp.isoformat(),
+                }
+            elif new_ifc_timestamp == parent_model.ifc_timestamp:
+                version_warning = {
+                    'type': 'same_timestamp',
+                    'message': 'Denne modellen har samme tidsstempel som forrige versjon',
+                    'current_version_timestamp': parent_model.ifc_timestamp.isoformat(),
+                    'uploaded_file_timestamp': new_ifc_timestamp.isoformat(),
+                }
+
         # Create model entry
         model = Model.objects.create(
             project=project,
@@ -126,34 +174,106 @@ class ModelViewSet(viewsets.ModelViewSet):
             file_size=uploaded_file.size,  # Save file size in bytes
             version_number=version_number,
             parent_model=parent_model,  # Link to previous version
+            ifc_timestamp=new_ifc_timestamp,  # Store IFC timestamp
             status='processing'  # Set to processing immediately
         )
 
-        # Start async processing with Django-Q
+        # Start IFC processing (two-phase: quick stats + background full processing)
         # NOTE: Using skip_geometry=True for fast client-side rendering with IFC.js
         # Frontend will download the IFC file directly from Supabase Storage
-        # and render it in the browser using web-ifc-three (1-2 seconds vs 2-5 minutes)
-        full_path = default_storage.path(saved_path)
-        task_id = async_task(
-            process_ifc_task,
-            str(model.id),
-            full_path,
-            skip_geometry=True  # ← Skip geometry extraction (client-side rendering)
-        )
+        # (full_path already defined above for timestamp extraction)
 
-        # Store task ID in model
-        model.task_id = task_id
-        model.save(update_fields=['task_id'])
+        # Try FastAPI first (preferred), fallback to Celery
+        from .services.fastapi_client import IFCServiceClient
 
-        print(f"✅ IFC processing task queued (metadata only): {task_id}")
+        quick_stats = None
+        task_id = None
 
-        # Return response immediately (don't wait for processing)
+        try:
+            client = IFCServiceClient()
+
+            # Check if FastAPI is available
+            if client.is_available():
+                print(f"Using FastAPI for IFC processing (two-phase)...")
+
+                # Phase 1: Get quick stats immediately
+                quick_stats = client.process_ifc(
+                    model_id=str(model.id),
+                    file_path=full_path,
+                    skip_geometry=True,
+                )
+
+                if quick_stats.get('success'):
+                    print(f"✅ Quick stats received: {quick_stats.get('total_elements')} elements, {quick_stats.get('storey_count')} storeys")
+                    print(f"   Top types: {quick_stats.get('top_entity_types', [])[:3]}")
+
+                    # Update model with quick stats (before full processing completes)
+                    model.ifc_schema = quick_stats.get('ifc_schema', '')
+                    model.element_count = quick_stats.get('total_elements', 0)
+                    model.storey_count = quick_stats.get('storey_count', 0)
+                    model.save(update_fields=['ifc_schema', 'element_count', 'storey_count'])
+
+                else:
+                    print(f"⚠️ Quick stats failed: {quick_stats.get('error')}")
+
+                # Full processing continues in FastAPI background
+                # Frontend can poll /api/models/{id}/status/ for completion
+
+            else:
+                # FastAPI not available, use Celery
+                print(f"FastAPI not available, falling back to Celery...")
+                result = process_ifc_task.delay(
+                    str(model.id),
+                    full_path,
+                    skip_geometry=True
+                )
+                task_id = result.id
+                model.task_id = task_id
+                model.save(update_fields=['task_id'])
+                print(f"✅ Celery task queued: {task_id}")
+
+        except Exception as e:
+            # If FastAPI call fails, fallback to Celery
+            print(f"FastAPI error ({e}), falling back to Celery...")
+            result = process_ifc_task.delay(
+                str(model.id),
+                full_path,
+                skip_geometry=True
+            )
+            task_id = result.id
+            model.task_id = task_id
+            model.save(update_fields=['task_id'])
+            print(f"✅ Celery task queued (fallback): {task_id}")
+
+        # Return response with quick stats (full processing continues in background)
         response_serializer = ModelDetailSerializer(model)
-        return Response({
+        response_data = {
             'model': response_serializer.data,
-            'task_id': task_id,
-            'message': f'File uploaded successfully. Processing started. Use GET /api/models/{model.id}/status/ to check progress.'
-        }, status=status.HTTP_201_CREATED)
+            'message': f'File uploaded successfully. Processing started.',
+        }
+
+        # Include version warning if uploading older/same timestamp file
+        if version_warning:
+            response_data['version_warning'] = version_warning
+
+        # Include quick stats if available
+        if quick_stats and quick_stats.get('success'):
+            response_data['quick_stats'] = {
+                'ifc_schema': quick_stats.get('ifc_schema'),
+                'total_elements': quick_stats.get('total_elements'),
+                'storey_count': quick_stats.get('storey_count'),
+                'type_count': quick_stats.get('type_count'),
+                'material_count': quick_stats.get('material_count'),
+                'top_entity_types': quick_stats.get('top_entity_types', []),
+                'storey_names': quick_stats.get('storey_names', []),
+                'stats_duration_ms': quick_stats.get('duration_ms'),
+            }
+            response_data['message'] = f'File uploaded. Quick stats ready ({quick_stats.get("duration_ms")}ms). Full processing in background.'
+
+        if task_id:
+            response_data['task_id'] = task_id
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='upload-with-metadata')
     def upload_with_metadata(self, request):
@@ -306,21 +426,18 @@ class ModelViewSet(viewsets.ModelViewSet):
             task_id = None
 
             if should_enrich:
-                from django_q.tasks import async_task
                 from .tasks import enrich_model_task
 
-                task_id = async_task(
-                    enrich_model_task,
+                result = enrich_model_task.delay(
                     str(model.id),
-                    saved_path,
-                    task_name=f'enrich_{model.name}_v{model.version_number}'
+                    saved_path
                 )
 
                 # Store task ID for tracking
-                model.task_id = task_id
+                model.task_id = result.id
                 model.save(update_fields=['task_id'])
 
-                print(f"✅ Background enrichment task queued: {task_id}")
+                print(f"✅ Background enrichment task queued: {result.id}")
 
             # Return success response
             response_serializer = ModelDetailSerializer(model)
@@ -562,20 +679,20 @@ class ModelViewSet(viewsets.ModelViewSet):
             status='processing'  # Set to processing immediately
         )
 
-        # Start async revert task with Django-Q
-        task_id = async_task(revert_model_task, str(old_model.id), str(new_model.id))
+        # Start async revert task with Celery
+        result = revert_model_task.delay(str(old_model.id), str(new_model.id))
 
         # Store task ID in new model
-        new_model.task_id = task_id
+        new_model.task_id = result.id
         new_model.save(update_fields=['task_id'])
 
-        print(f"✅ Revert task queued: {task_id}")
+        print(f"✅ Revert task queued: {result.id}")
 
         # Return response immediately (don't wait for processing)
         response_serializer = ModelDetailSerializer(new_model)
         return Response({
             'model': response_serializer.data,
-            'task_id': task_id,
+            'task_id': result.id,
             'message': f'Reverting to version {old_model.version_number}. Created new version {new_version_number}. Use GET /api/models/{new_model.id}/status/ to check progress.',
             'reverted_from': {
                 'id': str(old_model.id),
@@ -860,121 +977,29 @@ class ModelViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def geometry(self, request, pk=None):
         """
-        Get geometry data for all elements in this model.
+        DEPRECATED: Geometry endpoint no longer supported.
 
-        GET /api/models/{id}/geometry/
+        This endpoint previously returned geometry stored in the database.
+        The platform now uses a metadata-only architecture - geometry is NOT
+        stored in the database.
 
-        Returns geometry in Three.js-compatible format:
-        - vertices: flat array of [x,y,z, x,y,z, ...]
-        - faces: flat array of vertex indices
-        - colors: optional per-vertex colors
+        For 3D visualization, use ThatOpen viewer to load IFC or Fragments files directly:
+        - Original IFC: model.file_url
+        - Optimized Fragments: model.fragments_url (10-100x faster loading)
+
+        GET /api/models/{id}/ to get file URLs.
         """
-        import numpy as np
-        import io
-
         model = self.get_object()
 
-        from apps.entities.models import IFCEntity, Geometry
-
-        # Get all entities with geometry for this model
-        entities = IFCEntity.objects.filter(model=model, has_geometry=True).select_related('geometry')
-
-        print(f"\n{'='*60}")
-        print(f"Geometry endpoint called for model: {model.name}")
-        print(f"Total entities marked as has_geometry=True: {entities.count()}")
-        print(f"{'='*60}\n")
-
-        geometries = []
-        skipped_no_data = 0
-        skipped_errors = 0
-
-        for entity in entities:
-            try:
-                geom = entity.geometry
-
-                # Get raw bytes (using simplified if available, otherwise original)
-                if geom.vertices_simplified:
-                    vertices_bytes = geom.vertices_simplified
-                elif geom.vertices_original:
-                    vertices_bytes = geom.vertices_original
-                else:
-                    skipped_no_data += 1
-                    print(f"  Skipping {entity.ifc_guid}: No vertex data")
-                    continue
-
-                # Get face bytes
-                if geom.faces_simplified:
-                    faces_bytes = geom.faces_simplified
-                elif geom.faces_original:
-                    faces_bytes = geom.faces_original
-                else:
-                    skipped_no_data += 1
-                    print(f"  Skipping {entity.ifc_guid}: No face data")
-                    continue
-
-                # Reconstruct numpy arrays from raw bytes
-                # Geometry is stored as vertices.tobytes() and faces.tobytes()
-                # vertices shape: (vertex_count, 3) - float64
-                # faces shape: (triangle_count, 3) - int32 or int64
-
-                vertex_count = entity.vertex_count
-                triangle_count = entity.triangle_count
-
-                # Reconstruct vertices array
-                vertices = np.frombuffer(vertices_bytes, dtype=np.float64).reshape(vertex_count, 3)
-
-                # Transform from IFC Z-up to Three.js Y-up
-                # Rotate -90° around X-axis: (x, y, z) -> (x, z, -y)
-                vertices_transformed = np.zeros_like(vertices)
-                vertices_transformed[:, 0] = vertices[:, 0]  # X stays the same
-                vertices_transformed[:, 1] = vertices[:, 2]  # Z becomes Y (up)
-                vertices_transformed[:, 2] = -vertices[:, 1]  # -Y becomes Z (forward)
-                vertices = vertices_transformed
-
-                # Try int32 first, if size doesn't match try int64
-                expected_face_size_int32 = triangle_count * 3 * 4  # 3 indices * 4 bytes
-                expected_face_size_int64 = triangle_count * 3 * 8  # 3 indices * 8 bytes
-
-                if len(faces_bytes) == expected_face_size_int32:
-                    faces = np.frombuffer(faces_bytes, dtype=np.int32).reshape(triangle_count, 3)
-                elif len(faces_bytes) == expected_face_size_int64:
-                    faces = np.frombuffer(faces_bytes, dtype=np.int64).reshape(triangle_count, 3)
-                else:
-                    print(f"Warning: Unexpected face data size for {entity.ifc_guid}")
-                    continue
-
-                # Convert to lists for JSON serialization
-                geometries.append({
-                    'entity_id': str(entity.id),
-                    'ifc_guid': entity.ifc_guid,
-                    'ifc_type': entity.ifc_type,
-                    'name': entity.name,
-                    'vertices': vertices.flatten().tolist(),  # [x,y,z, x,y,z, ...]
-                    'faces': faces.flatten().tolist(),  # [i,j,k, i,j,k, ...]
-                    'vertex_count': len(vertices),
-                    'triangle_count': len(faces),
-                })
-
-            except Exception as e:
-                # Skip entities with invalid geometry
-                skipped_errors += 1
-                print(f"Warning: Could not load geometry for entity {entity.ifc_guid}: {str(e)}")
-                continue
-
-        print(f"\n{'='*60}")
-        print(f"Geometry loading summary:")
-        print(f"  Successfully loaded: {len(geometries)}")
-        print(f"  Skipped (no data): {skipped_no_data}")
-        print(f"  Skipped (errors): {skipped_errors}")
-        print(f"  Total queried: {entities.count()}")
-        print(f"{'='*60}\n")
-
         return Response({
+            'error': 'Geometry endpoint deprecated',
+            'message': 'Geometry is no longer stored in the database. Use ThatOpen viewer to load IFC or Fragments files directly.',
             'model_id': str(model.id),
             'model_name': model.name,
-            'geometry_count': len(geometries),
-            'geometries': geometries
-        })
+            'file_url': model.file_url,
+            'fragments_url': model.fragments_url,
+            'fragments_generated_at': model.fragments_generated_at,
+        }, status=status.HTTP_410_GONE)
 
     @action(detail=True, methods=['post'])
     def generate_fragments(self, request, pk=None):

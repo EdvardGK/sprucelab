@@ -20,15 +20,18 @@ class ModelSerializer(serializers.ModelSerializer):
             'status',
             # Layered status tracking (NEW)
             'parsing_status', 'geometry_status', 'validation_status',
-            # Other fields
+            # Version tracking
             'version_number', 'parent_model', 'is_published',
+            'ifc_timestamp', 'version_diff',
+            # Other fields
             'element_count', 'storey_count', 'system_count',
             'processing_error', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'ifc_schema', 'file_url', 'file_size',
             'status', 'parsing_status', 'geometry_status', 'validation_status',
-            'is_published', 'element_count', 'storey_count', 'system_count',
+            'is_published', 'ifc_timestamp', 'version_diff',
+            'element_count', 'storey_count', 'system_count',
             'processing_error', 'created_at', 'updated_at'
         ]
 

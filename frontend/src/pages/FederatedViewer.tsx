@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Settings, Maximize2, Eye, EyeOff, Plus } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { IFCViewer } from '@/components/features/viewer/IFCViewer';
+import { UnifiedBIMViewer, type SectionPlane, type UnifiedBIMViewerHandle } from '@/components/features/viewer/UnifiedBIMViewer';
+import { ElementPropertiesPanel, type ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { AddModelsDialog } from '@/components/features/viewers/AddModelsDialog';
+import { SectionPlanesPanel } from '@/components/features/viewer/SectionPlanesPanel';
 
 export default function FederatedViewer() {
   const { id: projectId, groupId } = useParams<{ id: string; groupId: string }>();
@@ -44,6 +46,16 @@ export default function FederatedViewer() {
     'HVAC System 1': true,
     'Electrical System 1': true,
   });
+
+  // Ref to access viewer's section plane controls
+  const viewerRef = useRef<UnifiedBIMViewerHandle>(null);
+
+  // State for section planes (managed by UnifiedBIMViewer, we just display)
+  const [sectionPlanes, setSectionPlanes] = useState<SectionPlane[]>([]);
+  const [activePlaneId, setActivePlaneId] = useState<string | null>(null);
+
+  // State for selected element (for properties panel in sidebar)
+  const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
 
   // Handlers
   const handleModelVisibilityToggle = (modelId: string) => {
@@ -143,7 +155,7 @@ export default function FederatedViewer() {
                     )}
                   </button>
                   <span className="text-xs text-text-primary flex-1 truncate">
-                    {model.model_name}
+                    Model {model.model}
                   </span>
                 </div>
               ))
@@ -157,15 +169,53 @@ export default function FederatedViewer() {
 
         {/* Center Panel - 3D Canvas */}
         <div className="flex-1 bg-background-dark relative">
-          <IFCViewer modelIds={group?.models?.map(m => m.model) || []} />
+          {group?.models && group.models.length > 0 ? (
+            <UnifiedBIMViewer
+              ref={viewerRef}
+              modelIds={group.models.map(m => m.model)}
+              modelVisibility={modelVisibility}
+              elementTypeFilter={elementTypeFilters}
+              showPropertiesPanel={false}
+              showModelInfo={true}
+              showControls={true}
+              onSectionPlanesChange={setSectionPlanes}
+              onSelectionChange={setSelectedElement}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              No models in this viewer group
+            </div>
+          )}
         </div>
 
-        {/* Right Panel - Filters */}
+        {/* Right Panel - Properties & Filters */}
         <div className="w-80 border-l border-border bg-surface flex flex-col">
           <div className="h-10 border-b border-border flex items-center px-3">
-            <h2 className="text-xs font-semibold text-text-primary">Filters</h2>
+            <h2 className="text-xs font-semibold text-text-primary">Properties & Tools</h2>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-4">
+            {/* Element Properties Panel */}
+            <ElementPropertiesPanel
+              element={selectedElement}
+              onClose={() => setSelectedElement(null)}
+            />
+
+            {/* Section Planes Panel */}
+            <SectionPlanesPanel
+              planes={sectionPlanes}
+              activePlaneId={activePlaneId}
+              onSelectPlane={(id) => {
+                setActivePlaneId(id);
+                viewerRef.current?.setActiveSectionPlane(id);
+              }}
+              onDeletePlane={(id) => {
+                viewerRef.current?.deleteSectionPlane(id);
+              }}
+              onClearAll={() => {
+                viewerRef.current?.clearAllSectionPlanes();
+              }}
+            />
+
             {/* Model Visibility Section */}
             <Card className="p-3">
               <h3 className="text-xs font-semibold text-text-primary mb-2">Model Visibility</h3>
@@ -182,7 +232,7 @@ export default function FederatedViewer() {
                         htmlFor={`model-${model.id}`}
                         className="text-xs text-text-primary cursor-pointer flex-1 truncate"
                       >
-                        {model.model_name}
+                        Model {model.model}
                       </label>
                     </div>
                   ))

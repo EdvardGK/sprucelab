@@ -48,7 +48,7 @@ function GroupNode({
   onGroupVisibilityToggle,
   onModelSettings,
 }: GroupNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(group.is_expanded);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [groupVisible, setGroupVisible] = useState(true);
 
   const hasChildren = (group.models && group.models.length > 0);
@@ -113,12 +113,12 @@ function GroupNode({
 
         {/* Group Icon and Name */}
         <div className="flex-1 flex items-center gap-2 min-w-0">
-          <span className="text-sm">{getGroupIcon(group.group_type)}</span>
+          <span className="text-sm">{getGroupIcon('default')}</span>
           <span className="text-xs font-medium text-text-primary truncate">
             {group.name}
           </span>
           <span className="text-[10px] text-text-tertiary">
-            ({group.model_count})
+            ({group.models?.length || 0})
           </span>
         </div>
 

@@ -205,7 +205,7 @@ export default function ProcessingReportDetail() {
                             {stage.errors.length} error(s)
                           </summary>
                           <ul className="mt-1 space-y-1 pl-4">
-                            {stage.errors.map((err, i) => (
+                            {stage.errors.map((err: any, i: number) => (
                               <li key={i} className="text-xs text-error">
                                 • {err}
                               </li>

@@ -65,7 +65,6 @@ export function AddModelsDialog({
           group: groupId,
           model: modelId,
           is_visible: true,
-          opacity: 1.0,
         });
       }
 

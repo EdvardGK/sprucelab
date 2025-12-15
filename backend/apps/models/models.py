@@ -93,18 +93,77 @@ class Model(models.Model):
     parent_model = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='versions')
     is_published = models.BooleanField(default=False, help_text="Whether this version is the active/published version")
 
+    # IFC file timestamp (from IfcOwnerHistory)
+    ifc_timestamp = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Creation/modification date from IFC file (IfcOwnerHistory)"
+    )
+
+    # Version diff summary
+    version_diff = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Diff summary: {entities: {created: N, updated: N, removed: N}}"
+    )
+
     # Metadata
     element_count = models.IntegerField(default=0)
     storey_count = models.IntegerField(default=0)
     system_count = models.IntegerField(default=0)
     processing_error = models.TextField(blank=True, null=True)
 
-    # Django Q task tracking
+    # === Coordinate Systems (GIS + Local) ===
+    # GIS coordinates (for infrastructure, surveying)
+    gis_basepoint_x = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="GIS X coordinate (Easting) - typically UTM or national grid"
+    )
+    gis_basepoint_y = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="GIS Y coordinate (Northing) - typically UTM or national grid"
+    )
+    gis_basepoint_z = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="GIS Z coordinate (elevation above sea level) in meters"
+    )
+    gis_crs = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Coordinate Reference System (e.g., 'EPSG:25832' for UTM Zone 32N)"
+    )
+
+    # Local coordinates (for buildings, typical 0,0,0 at project basepoint)
+    local_basepoint_x = models.FloatField(
+        default=0,
+        help_text="Local X coordinate - typically 0 at project basepoint"
+    )
+    local_basepoint_y = models.FloatField(
+        default=0,
+        help_text="Local Y coordinate - typically 0 at project basepoint"
+    )
+    local_basepoint_z = models.FloatField(
+        default=0,
+        help_text="Local Z coordinate - typically 0 at project basepoint"
+    )
+
+    # Transformation matrix (4x4 affine transform) for converting GIS ↔ Local
+    transformation_matrix = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="4x4 transformation matrix for GIS to Local coordinate conversion"
+    )
+
+    # Celery task tracking
     task_id = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        help_text="Django Q task ID for async processing"
+        help_text="Celery task ID for async processing"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

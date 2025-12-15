@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Home,
   Target,
@@ -24,20 +25,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { useProject } from '@/hooks/use-projects';
-
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ReactNode;
-}
-
-const mainNavItems: NavItem[] = [
-  { name: 'My Page', href: '/my-page', icon: <User className="h-4 w-4" /> },
-  { name: 'My Issues', href: '/my-issues', icon: <Target className="h-4 w-4" /> },
-  { name: 'My RFIs', href: '/my-rfis', icon: <FileText className="h-4 w-4" /> },
-];
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [workspaceOpen, setWorkspaceOpen] = useState(true);
@@ -49,6 +40,15 @@ export function Sidebar() {
     const match = location.pathname.match(/^\/projects\/([^\/]+)/);
     return match ? match[1] : null;
   }, [location.pathname]);
+
+  // Detect if we're in the workbench
+  const isInWorkbench = location.pathname.includes('/workbench');
+
+  // Get workbench view from URL search params (types, materials, products, stats)
+  const workbenchView = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('view') || 'types';
+  }, [location.search]);
 
   const { data: currentProject } = useProject(projectId || '');
 
@@ -80,14 +80,13 @@ export function Sidebar() {
           variant="ghost"
           size="sm"
           className="flex-1 justify-start gap-2"
-          aria-label="Search"
+          aria-label={t('common.search')}
           onClick={() => {
-            // TODO: Implement search functionality
             console.log('Search clicked - feature coming soon');
           }}
         >
           <Search className="h-4 w-4" />
-          <span className="text-text-secondary">Search</span>
+          <span className="text-text-secondary">{t('common.search')}</span>
         </Button>
         <Button
           variant="ghost"
@@ -105,21 +104,42 @@ export function Sidebar() {
         {/* Main navigation - only when NOT in project */}
         {!projectId && (
           <div className="mb-4 space-y-0.5">
-            {mainNavItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(item.href)
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                {item.icon}
-                <span>{item.name}</span>
-              </Link>
-            ))}
+            <Link
+              to="/my-page"
+              className={cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                isActive('/my-page')
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+              )}
+            >
+              <User className="h-4 w-4" />
+              <span>{t('nav.myPage')}</span>
+            </Link>
+            <Link
+              to="/my-issues"
+              className={cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                isActive('/my-issues')
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+              )}
+            >
+              <Target className="h-4 w-4" />
+              <span>{t('nav.myIssues')}</span>
+            </Link>
+            <Link
+              to="/my-rfis"
+              className={cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                isActive('/my-rfis')
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+              )}
+            >
+              <FileText className="h-4 w-4" />
+              <span>{t('nav.myRFIs')}</span>
+            </Link>
           </div>
         )}
 
@@ -142,7 +162,7 @@ export function Sidebar() {
                 )}
               >
                 <User className="h-4 w-4" />
-                <span>My Page</span>
+                <span>{t('nav.myPage')}</span>
               </Link>
 
               {/* 3D Viewer link */}
@@ -156,27 +176,43 @@ export function Sidebar() {
                 )}
               >
                 <Box className="h-4 w-4" />
-                <span>3D Viewer</span>
+                <span>{t('nav.viewer3d')}</span>
+              </Link>
+            </div>
+
+            {/* Project Overview */}
+            <div className="mt-4 space-y-0.5">
+              <Link
+                to={`/projects/${projectId}`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  location.pathname === `/projects/${projectId}`
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>{t('nav.dashboard')}</span>
               </Link>
             </div>
 
             {/* Files section */}
             <div className="mt-4">
               <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                Files
+                {t('nav.files')}
               </div>
               <div className="mt-1 space-y-0.5">
                 <Link
-                  to={`/projects/${projectId}`}
+                  to={`/projects/${projectId}/models`}
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    location.pathname === `/projects/${projectId}`
+                    location.pathname === `/projects/${projectId}/models`
                       ? 'bg-primary/10 text-primary font-medium'
                       : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                   )}
                 >
                   <Layers className="h-4 w-4" />
-                  <span>Models</span>
+                  <span>{t('nav.models')}</span>
                 </Link>
                 <Link
                   to={`/projects/${projectId}/documents`}
@@ -188,7 +224,7 @@ export function Sidebar() {
                   )}
                 >
                   <FileStack className="h-4 w-4" />
-                  <span>Documents</span>
+                  <span>{t('nav.documents')}</span>
                 </Link>
                 <Link
                   to={`/projects/${projectId}/drawings`}
@@ -200,18 +236,18 @@ export function Sidebar() {
                   )}
                 >
                   <Image className="h-4 w-4" />
-                  <span>Drawings</span>
+                  <span>{t('nav.drawings')}</span>
                 </Link>
               </div>
             </div>
           </div>
         )}
 
-        {/* Modules section (only when in project context) */}
-        {projectId && currentProject && (
+        {/* Modules section (only when in project context and NOT in workbench) */}
+        {projectId && currentProject && !isInWorkbench && (
           <div className="mb-4">
             <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-              Modules
+              {t('nav.modules')}
             </div>
             <div className="mt-1 space-y-0.5">
               <Link
@@ -224,7 +260,84 @@ export function Sidebar() {
                 )}
               >
                 <Wrench className="h-4 w-4" />
-                <span>BIM Workbench</span>
+                <span>{t('workbench.title')}</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Workbench sub-navigation (when IN workbench) */}
+        {projectId && currentProject && isInWorkbench && (
+          <div className="mb-4">
+            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+              {t('workbench.title')}
+            </div>
+            <div className="mt-1 space-y-0.5">
+              <Link
+                to={`/projects/${projectId}/workbench?view=types`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  workbenchView === 'types'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <Layers className="h-4 w-4" />
+                <span>{t('workbench.typeLibrary')}</span>
+              </Link>
+              <Link
+                to={`/projects/${projectId}/workbench?view=materials`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  workbenchView === 'materials'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <Box className="h-4 w-4" />
+                <span>{t('workbench.materialLibrary')}</span>
+              </Link>
+              <Link
+                to={`/projects/${projectId}/workbench?view=stats`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  workbenchView === 'stats'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>{t('workbench.mappingStats')}</span>
+              </Link>
+            </div>
+
+            <div className="mt-3 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+              {t('workbench.tools')}
+            </div>
+            <div className="mt-1 space-y-0.5">
+              <Link
+                to={`/projects/${projectId}/workbench?view=bep`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  workbenchView === 'bep'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <Settings className="h-4 w-4" />
+                <span>{t('workbench.bepConfig')}</span>
+              </Link>
+              <Link
+                to={`/projects/${projectId}/workbench?view=scripting`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  workbenchView === 'scripting'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <Code className="h-4 w-4" />
+                <span>{t('workbench.scripting')}</span>
               </Link>
             </div>
           </div>
@@ -243,7 +356,7 @@ export function Sidebar() {
                 !workspaceOpen && '-rotate-90'
               )}
             />
-            <span>Workspace</span>
+            <span>{t('nav.workspace')}</span>
           </button>
 
           {workspaceOpen && (
@@ -258,7 +371,7 @@ export function Sidebar() {
                 )}
               >
                 <Folder className="h-4 w-4" />
-                <span>Projects</span>
+                <span>{t('nav.projects')}</span>
               </Link>
               <Link
                 to="/scripts"
@@ -270,7 +383,7 @@ export function Sidebar() {
                 )}
               >
                 <Code className="h-4 w-4" />
-                <span>Scripts Library</span>
+                <span>{t('nav.scriptsLibrary')}</span>
               </Link>
               <Link
                 to="/stats"
@@ -282,7 +395,7 @@ export function Sidebar() {
                 )}
               >
                 <BarChart3 className="h-4 w-4" />
-                <span>Quick Stats</span>
+                <span>{t('nav.quickStats')}</span>
               </Link>
             </div>
           )}
@@ -302,7 +415,7 @@ export function Sidebar() {
                 !developerOpen && '-rotate-90'
               )}
             />
-            <span>Developer</span>
+            <span>{t('nav.developer')}</span>
           </button>
 
           {developerOpen && (
@@ -317,7 +430,7 @@ export function Sidebar() {
                 )}
               >
                 <Bug className="h-4 w-4" />
-                <span>Processing Reports</span>
+                <span>{t('nav.processingReports')}</span>
               </Link>
             </div>
           )}
@@ -339,11 +452,12 @@ export function Sidebar() {
         </button>
 
         <div className="mt-1 flex items-center gap-1">
+          <LanguageSelector />
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            aria-label="Settings"
+            aria-label={t('common.settings')}
             onClick={() => navigate('/settings')}
           >
             <Settings className="h-4 w-4" />
@@ -352,9 +466,8 @@ export function Sidebar() {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            aria-label="Help"
+            aria-label={t('common.help')}
             onClick={() => {
-              // TODO: Implement help/documentation
               console.log('Help clicked - feature coming soon');
             }}
           >

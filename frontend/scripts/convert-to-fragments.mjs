@@ -40,28 +40,38 @@ async function convertToFragments(inputPath, outputPath) {
 
   try {
     // Initialize Components
-    console.log('   1/5 Initializing Components...');
+    console.log('   1/4 Initializing Components...');
     const components = new OBC.Components();
 
     // Setup FragmentsManager
-    console.log('   2/5 Setting up FragmentsManager...');
+    console.log('   2/4 Setting up FragmentsManager...');
     const fragments = components.get(OBC.FragmentsManager);
-    await fragments.init();
+    // Note: FragmentsManager no longer has init() method in v2.4+
 
     // Setup IFC Loader
-    console.log('   3/5 Setting up IFC Loader...');
+    console.log('   3/4 Setting up IFC Loader...');
     const ifcLoader = components.get(OBC.IfcLoader);
+
+    // Resolve path to local web-ifc WASM files
+    // Script location: frontend/scripts/convert-to-fragments.mjs
+    // WASM location: frontend/node_modules/web-ifc/
+    const wasmPath = path.join(__dirname, '..', 'node_modules', 'web-ifc');
+
     await ifcLoader.setup({
-      autoSetWasm: true,
+      autoSetWasm: false,
+      wasm: {
+        path: wasmPath + '/',
+        absolute: true,
+      },
     });
 
     // Load IFC file
-    console.log('   4/5 Loading IFC file...');
+    console.log('   4/4 Loading IFC file...');
     const ifcData = fs.readFileSync(inputPath);
     const buffer = new Uint8Array(ifcData);
 
     let loadProgress = 0;
-    await ifcLoader.load(buffer, false, path.basename(inputPath), {
+    const model = await ifcLoader.load(buffer, false, path.basename(inputPath), {
       processData: {
         progressCallback: (progress) => {
           const currentProgress = Math.floor(progress * 100);
@@ -74,24 +84,26 @@ async function convertToFragments(inputPath, outputPath) {
       },
     });
 
-    // Get the first (and only) fragment model
-    const modelArray = Array.from(fragments.list.values());
-    if (modelArray.length === 0) {
-      throw new Error('No fragments were generated from IFC file');
+    if (!model) {
+      throw new Error('No model was loaded from IFC file');
     }
 
-    const model = modelArray[0];
-
     // Export to Fragments file
-    console.log('   5/5 Exporting to Fragments file...');
-    const fragmentsBuffer = await model.getBuffer(false);
+    console.log('   Exporting to Fragments file...');
+    const fragmentsBuffer = fragments.export(model);
     fs.writeFileSync(outputPath, fragmentsBuffer);
+
+    // Count total elements
+    let elementCount = 0;
+    for (const fragment of model.items) {
+      elementCount += fragment.capacity;
+    }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     const sizeMB = (fragmentsBuffer.byteLength / 1024 / 1024).toFixed(2);
 
     console.log(`✅ Fragments saved: ${outputPath}`);
-    console.log(`   Elements: ${model.items.count}`);
+    console.log(`   Elements: ${elementCount}`);
     console.log(`   Size: ${sizeMB} MB`);
     console.log(`   Duration: ${duration}s`);
 
@@ -100,7 +112,7 @@ async function convertToFragments(inputPath, outputPath) {
 
     return {
       outputPath,
-      elementCount: model.items.count,
+      elementCount,
       sizeMB: parseFloat(sizeMB),
       duration: parseFloat(duration),
     };

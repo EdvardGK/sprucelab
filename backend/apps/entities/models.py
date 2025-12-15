@@ -10,46 +10,68 @@ class IFCEntity(models.Model):
     """
     Individual IFC building element (wall, door, window, etc.).
 
-    Layer 1 (Core IFC Data): Always populated during parsing
-    Layer 2 (Geometry): Populated during geometry extraction (optional)
+    Stores metadata and quantities only - no geometry data.
+    3D visualization handled by ThatOpen viewer loading IFC/Fragments directly.
     """
-    GEOMETRY_STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('processing', 'Processing'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
-        ('no_representation', 'No Representation'),  # Element has no geometry in IFC
-    ]
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='entities')
 
-    # === Layer 1: Core IFC Metadata (always populated) ===
-    ifc_guid = models.CharField(max_length=22)  # IFC GlobalId
-    ifc_type = models.CharField(max_length=100)  # IfcWall, IfcDoor, etc.
-    name = models.CharField(max_length=255, blank=True, null=True)
+    # === Core IFC Metadata ===
+    express_id = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="IFC STEP file ID (express ID) - used for viewer selection"
+    )
+    ifc_guid = models.CharField(max_length=22, help_text="IFC GlobalId - unique identifier")
+    ifc_type = models.CharField(max_length=100, help_text="IFC class (IfcWall, IfcDoor, etc.)")
+    predefined_type = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="IFC PredefinedType (STANDARD, NOTDEFINED, etc.)"
+    )
+    object_type = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="IFC ObjectType - user-defined type string"
+    )
+    name = models.TextField(blank=True, null=True)  # No length limit - some IFC names are very long
     description = models.TextField(blank=True, null=True)
-    storey_id = models.UUIDField(null=True, blank=True)  # Reference to parent storey
+    storey_id = models.UUIDField(null=True, blank=True, help_text="Reference to parent storey")
 
-    # === Layer 2: Geometry Extraction Status ===
-    geometry_status = models.CharField(
-        max_length=20,
-        choices=GEOMETRY_STATUS_CHOICES,
-        default='pending',
-        help_text="Status of geometry extraction for this element"
+    # === Version tracking ===
+    is_removed = models.BooleanField(
+        default=False,
+        help_text="Soft delete: entity not present in latest model version"
     )
 
-    # DEPRECATED: Use Geometry model instead (kept for backward compatibility)
-    # TODO: Remove in future version after data migration
-    has_geometry = models.BooleanField(default=False)
-    vertex_count = models.IntegerField(default=0)
-    triangle_count = models.IntegerField(default=0)
-    bbox_min_x = models.FloatField(null=True, blank=True)
-    bbox_min_y = models.FloatField(null=True, blank=True)
-    bbox_min_z = models.FloatField(null=True, blank=True)
-    bbox_max_x = models.FloatField(null=True, blank=True)
-    bbox_max_y = models.FloatField(null=True, blank=True)
-    bbox_max_z = models.FloatField(null=True, blank=True)
+    # === Quantities (for analysis & BEP validation) ===
+    area = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Net area in square meters (m²) - from Qto_*BaseQuantities"
+    )
+    volume = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Net volume in cubic meters (m³) - from Qto_*BaseQuantities"
+    )
+    length = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Length in meters (m) - for linear elements"
+    )
+    height = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Height in meters (m) - for vertical elements"
+    )
+    perimeter = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Perimeter in meters (m) - for boundary calculations"
+    )
 
     class Meta:
         db_table = 'ifc_entities'
@@ -58,6 +80,8 @@ class IFCEntity(models.Model):
             models.Index(fields=['ifc_type']),
             models.Index(fields=['ifc_guid']),
             models.Index(fields=['storey_id']),
+            models.Index(fields=['express_id']),
+            models.Index(fields=['is_removed']),
         ]
 
     def __str__(self):
@@ -209,42 +233,263 @@ class TypeAssignment(models.Model):
         unique_together = ['entity', 'type']
 
 
-class Geometry(models.Model):
+# =============================================================================
+# REFERENCE DATA - Standard classifications
+# =============================================================================
+
+class NS3451Code(models.Model):
     """
-    Simplified mesh geometry for elements.
+    NS-3451 building part classification codes (Norwegian standard).
 
-    Layer 2 data: Populated during geometry extraction phase.
+    Reference table loaded from NS-3451:2022 standard.
+    Used for dropdown selection when mapping IFC types.
     """
-    entity = models.OneToOneField(IFCEntity, on_delete=models.CASCADE, primary_key=True, related_name='geometry')
+    code = models.CharField(
+        max_length=20,
+        primary_key=True,
+        help_text="NS-3451 code (e.g., '222' for columns, '231' for external walls)"
+    )
+    name = models.CharField(max_length=255, help_text="Norwegian name")
+    name_en = models.CharField(max_length=255, blank=True, null=True, help_text="English name")
+    guidance = models.TextField(blank=True, null=True, help_text="Usage guidance from standard")
+    level = models.IntegerField(
+        help_text="Hierarchy level (1=main category, 2=subcategory, 3=detail)"
+    )
+    parent_code = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Parent code for hierarchy"
+    )
 
-    # === Geometry Metrics (NEW - moved from IFCEntity) ===
-    vertex_count = models.IntegerField(default=0, help_text="Number of vertices in original mesh")
-    triangle_count = models.IntegerField(default=0, help_text="Number of triangles in original mesh")
+    class Meta:
+        db_table = 'ns3451_codes'
+        ordering = ['code']
+        verbose_name = 'NS-3451 Code'
+        verbose_name_plural = 'NS-3451 Codes'
 
-    # Bounding box for spatial queries (NEW - moved from IFCEntity)
-    bbox_min_x = models.FloatField(null=True, blank=True)
-    bbox_min_y = models.FloatField(null=True, blank=True)
-    bbox_min_z = models.FloatField(null=True, blank=True)
-    bbox_max_x = models.FloatField(null=True, blank=True)
-    bbox_max_y = models.FloatField(null=True, blank=True)
-    bbox_max_z = models.FloatField(null=True, blank=True)
+    def __str__(self):
+        return f"{self.code} - {self.name}"
 
-    # === Geometry Data (existing) ===
-    # Geometry data (compressed numpy arrays stored as binary)
-    vertices_original = models.BinaryField(null=True, blank=True)
-    faces_original = models.BinaryField(null=True, blank=True)
-    vertices_simplified = models.BinaryField(null=True, blank=True)
-    faces_simplified = models.BinaryField(null=True, blank=True)
 
-    simplification_ratio = models.FloatField(null=True, blank=True)
-    geometry_file_path = models.URLField(max_length=500, blank=True, null=True)  # Path to full geometry in storage
+# =============================================================================
+# WAREHOUSE MODELS - User mappings and annotations
+# =============================================================================
 
-    # === Timestamps ===
-    extracted_at = models.DateTimeField(auto_now_add=True, help_text="When geometry was extracted")
+class ProductLibrary(models.Model):
+    """
+    Cross-project product database for mapping IFC types to real products.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    category = models.CharField(max_length=100, blank=True, null=True)
+    manufacturer = models.CharField(max_length=255, blank=True, null=True)
+    product_code = models.CharField(max_length=100, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    epd_data = models.JSONField(default=dict, blank=True, help_text="EPD/LCA data")
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'geometry'
+        db_table = 'product_library'
+        ordering = ['category', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.manufacturer or 'Unknown'})"
+
+
+class TypeMapping(models.Model):
+    """
+    User mapping of IFC type to standard classifications.
+    """
+    MAPPING_STATUS = [
+        ('pending', 'Pending'),
+        ('mapped', 'Mapped'),
+        ('ignored', 'Ignored'),
+        ('review', 'Needs Review'),
+        ('followup', 'Follow-up'),  # Requires discipline manager review
+    ]
+
+    REPRESENTATIVE_UNIT = [
+        ('pcs', 'Piece count'),
+        ('m', 'Linear meter'),
+        ('m2', 'Square meter'),
+        ('m3', 'Cubic meter'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ifc_type = models.OneToOneField(IFCType, on_delete=models.CASCADE, related_name='mapping')
+
+    # Standard classifications
+    ns3451_code = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="NS-3451 building part code (e.g., '222')"
+    )
+    ns3451 = models.ForeignKey(
+        NS3451Code,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='type_mappings',
+        help_text="Reference to NS-3451 code lookup"
+    )
+    product = models.ForeignKey(
+        ProductLibrary,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='type_mappings'
+    )
+
+    # Representative unit (procurement-based)
+    representative_unit = models.CharField(
+        max_length=10,
+        choices=REPRESENTATIVE_UNIT,
+        blank=True,
+        null=True,
+        help_text="Procurement-based representative unit (pcs, m, m2, m3)"
+    )
+
+    # Discipline (parsed from source model or manual)
+    discipline = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="BIM discipline code (ARK, RIB, RIV, RIE, etc.)"
+    )
+
+    # Status tracking
+    mapping_status = models.CharField(max_length=20, choices=MAPPING_STATUS, default='pending')
+    confidence = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Mapping confidence (auto/manual/high/low)"
+    )
+    notes = models.TextField(blank=True, null=True)
+
+    # Audit
+    mapped_by = models.CharField(max_length=255, blank=True, null=True)
+    mapped_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'type_mappings'
+        indexes = [
+            models.Index(fields=['mapping_status']),
+            models.Index(fields=['ns3451_code']),
+        ]
+
+    def __str__(self):
+        return f"{self.ifc_type.type_name} → {self.ns3451_code or 'unmapped'}"
+
+
+class MaterialMapping(models.Model):
+    """
+    User mapping of IFC material to standard data.
+    """
+    MAPPING_STATUS = [
+        ('pending', 'Pending'),
+        ('mapped', 'Mapped'),
+        ('ignored', 'Ignored'),
+        ('review', 'Needs Review'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    material = models.OneToOneField(Material, on_delete=models.CASCADE, related_name='mapping')
+
+    # Standard data
+    standard_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Normalized material name"
+    )
+    density_kg_m3 = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Material density in kg/m³"
+    )
+    epd_reference = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="EPD database reference"
+    )
+    thermal_conductivity = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="W/(m·K)"
+    )
+
+    # Status tracking
+    mapping_status = models.CharField(max_length=20, choices=MAPPING_STATUS, default='pending')
+    notes = models.TextField(blank=True, null=True)
+
+    # Audit
+    mapped_by = models.CharField(max_length=255, blank=True, null=True)
+    mapped_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'material_mappings'
+        indexes = [
+            models.Index(fields=['mapping_status']),
+            models.Index(fields=['standard_name']),
+        ]
+
+    def __str__(self):
+        return f"{self.material.name} → {self.standard_name or 'unmapped'}"
+
+
+class TypeLayer(models.Model):
+    """
+    Layer composition for composite types (walls, floors, roofs).
+    Enables 'sandwich' view of composite elements.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ifc_type = models.ForeignKey(IFCType, on_delete=models.CASCADE, related_name='layers')
+
+    layer_order = models.IntegerField(help_text="Layer position (1 = exterior/bottom)")
+    material = models.ForeignKey(
+        Material,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='type_layers'
+    )
+    material_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Material name (if material not in DB)"
+    )
+    thickness_mm = models.FloatField(help_text="Layer thickness in millimeters")
+
+    # Optional properties
+    is_structural = models.BooleanField(default=False)
+    is_ventilated = models.BooleanField(default=False)
+    notes = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'type_layers'
+        ordering = ['ifc_type', 'layer_order']
+        unique_together = ['ifc_type', 'layer_order']
+
+    def __str__(self):
+        mat_name = self.material.name if self.material else self.material_name or 'Unknown'
+        return f"Layer {self.layer_order}: {mat_name} ({self.thickness_mm}mm)"
+
+
+# Geometry model removed - no longer storing 3D mesh data in database
+# IFC is the source of truth - stream geometry on demand
 
 
 class GraphEdge(models.Model):

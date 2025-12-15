@@ -1,0 +1,131 @@
+# Sprucelab Development Stack
+#
+# Usage:
+#   docker-compose up -d          # Start all services
+#   docker-compose up django      # Start Django only
+#   docker-compose logs -f        # View logs
+#   docker-compose down           # Stop all services
+#
+# Note: Database is hosted on Supabase (not in this compose file)
+
+version: "3.8"
+
+services:
+  # ==========================================================================
+  # Redis - Message broker for Celery and IFC file caching
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: sprucelab-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Django Backend - Coordination layer (auth, metadata, project management)
+  # ==========================================================================
+  django:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.django
+    container_name: sprucelab-django
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - IFC_SERVICE_URL=http://ifc-service:8001
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - django_media:/app/media
+    command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Celery Worker - Async task processing for Django
+  # ==========================================================================
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.django
+    container_name: sprucelab-celery
+    env_file:
+      - .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - django_media:/app/media
+    command: celery -A config worker -l info
+    restart: unless-stopped
+
+  # ==========================================================================
+  # FastAPI IFC Service - Heavy IFC processing (bulk edit, validation, export)
+  # ==========================================================================
+  ifc-service:
+    build:
+      context: ./backend/ifc-service
+      dockerfile: Dockerfile
+    container_name: sprucelab-ifc-service
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - DJANGO_URL=http://django:8000
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/ifc-service:/app
+      - ifc_temp:/tmp/ifc-service
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Frontend - React development server (optional, can run separately)
+  # ==========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: sprucelab-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_IFC_SERVICE_URL=http://localhost:8001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: yarn dev --host
+    profiles:
+      - frontend  # Only start with: docker-compose --profile frontend up
+
+volumes:
+  redis_data:
+  django_media:
+  ifc_temp:
+
+networks:
+  default:
+    name: sprucelab-network

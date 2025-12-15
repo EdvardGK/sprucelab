@@ -27,6 +27,31 @@ from apps.entities.models import (
 )
 
 
+def _extract_ifc_timestamp(ifc_file):
+    """
+    Extract timestamp from IfcOwnerHistory (CreationDate or LastModifiedDate).
+
+    IFC stores timestamps as Unix epoch integers.
+
+    Returns:
+        timezone-aware datetime or None if not available
+    """
+    try:
+        from django.utils import timezone as dj_timezone
+        owner_histories = ifc_file.by_type('IfcOwnerHistory')
+        if owner_histories:
+            oh = owner_histories[0]
+            # Prefer LastModifiedDate, fall back to CreationDate
+            timestamp = getattr(oh, 'LastModifiedDate', None) or getattr(oh, 'CreationDate', None)
+            if timestamp:
+                # Make timezone-aware
+                naive_dt = datetime.fromtimestamp(timestamp)
+                return dj_timezone.make_aware(naive_dt)
+    except Exception:
+        pass
+    return None
+
+
 def parse_ifc_metadata(model_id, file_path):
     """
     Parse IFC file and extract ONLY metadata (no geometry).
@@ -64,6 +89,7 @@ def parse_ifc_metadata(model_id, file_path):
         'property_count': 0,
         'material_count': 0,
         'type_count': 0,
+        'type_assignment_count': 0,
         'processing_report_id': str(report.id),
     }
 
@@ -97,7 +123,16 @@ def parse_ifc_metadata(model_id, file_path):
             })
 
             results['ifc_schema'] = ifc_schema
-            print(f"✅ File opened: {ifc_schema}")
+
+            # Extract IFC timestamp from IfcOwnerHistory
+            ifc_timestamp = _extract_ifc_timestamp(ifc_file)
+            results['ifc_timestamp'] = ifc_timestamp
+            if ifc_timestamp:
+                model.ifc_timestamp = ifc_timestamp
+                model.save(update_fields=['ifc_timestamp'])
+                print(f"✅ File opened: {ifc_schema}, IFC timestamp: {ifc_timestamp}")
+            else:
+                print(f"✅ File opened: {ifc_schema} (no timestamp in IfcOwnerHistory)")
 
         except Exception as e:
             error_msg = f"Failed to open IFC file: {str(e)}"
@@ -228,6 +263,25 @@ def parse_ifc_metadata(model_id, file_path):
             errors.extend(stage_errors)
             print(f"✅ Properties: {property_count} ({len(stage_errors)} errors)")
 
+            # ==================== STAGE: Type Assignments ====================
+            stage_start = time.time()
+            print("\n🔗 [LAYER 1] Extracting type assignments...")
+            type_assignment_count, stage_errors = _extract_type_assignments(model, ifc_file)
+            results['type_assignment_count'] = type_assignment_count
+
+            stage_results.append({
+                'stage': 'type_assignments',
+                'status': 'success' if len(stage_errors) == 0 else 'partial',
+                'processed': type_assignment_count,
+                'skipped': 0,
+                'failed': len(stage_errors),
+                'errors': [e['message'] for e in stage_errors],
+                'duration_ms': int((time.time() - stage_start) * 1000),
+                'message': f"Extracted {type_assignment_count} type assignments"
+            })
+            errors.extend(stage_errors)
+            print(f"✅ Type Assignments: {type_assignment_count} ({len(stage_errors)} errors)")
+
         # ==================== Parsing Complete ====================
         end_time = time.time()
         duration = end_time - start_time
@@ -254,6 +308,7 @@ def parse_ifc_metadata(model_id, file_path):
             results['storey_count'] +
             results['material_count'] +
             results['type_count'] +
+            results['type_assignment_count'] +
             results['system_count']
         )
         report.summary = f"""
@@ -332,7 +387,6 @@ def _extract_spatial_hierarchy(model, ifc_file):
                 defaults={
                     'ifc_type': 'IfcProject',
                     'name': project.Name or 'Unnamed Project',
-                    'geometry_status': 'no_representation'  # Projects don't have geometry
                 }
             )
             if not created:
@@ -367,7 +421,6 @@ def _extract_spatial_hierarchy(model, ifc_file):
                 defaults={
                     'ifc_type': 'IfcSite',
                     'name': site.Name or 'Unnamed Site',
-                    'geometry_status': 'no_representation'
                 }
             )
             if not created:
@@ -399,7 +452,6 @@ def _extract_spatial_hierarchy(model, ifc_file):
                 defaults={
                     'ifc_type': 'IfcBuilding',
                     'name': building.Name or 'Unnamed Building',
-                    'geometry_status': 'no_representation'
                 }
             )
             if not created:
@@ -431,7 +483,6 @@ def _extract_spatial_hierarchy(model, ifc_file):
                 defaults={
                     'ifc_type': 'IfcBuildingStorey',
                     'name': storey.Name or 'Unnamed Storey',
-                    'geometry_status': 'no_representation'
                 }
             )
             if not created:
@@ -515,6 +566,70 @@ def _extract_types(model, ifc_file):
     return count, errors
 
 
+def _extract_type_assignments(model, ifc_file):
+    """
+    Extract type→entity assignments from IFC.
+
+    Links IFCEntity records to their IFCType via IfcRelDefinesByType relationships.
+    Must be called AFTER both entities and types have been extracted.
+    """
+    count = 0
+    errors = []
+
+    # Build lookup dictionaries for efficiency
+    # GUID → IFCEntity
+    entity_by_guid = {
+        e.ifc_guid: e for e in IFCEntity.objects.filter(model=model)
+    }
+    # GUID → IFCType
+    type_by_guid = {
+        t.type_guid: t for t in IFCType.objects.filter(model=model)
+    }
+
+    # Process IfcRelDefinesByType relationships
+    for rel in ifc_file.by_type('IfcRelDefinesByType'):
+        try:
+            relating_type = rel.RelatingType
+            if not relating_type or not hasattr(relating_type, 'GlobalId'):
+                continue
+
+            type_guid = relating_type.GlobalId
+            ifc_type_obj = type_by_guid.get(type_guid)
+
+            if not ifc_type_obj:
+                continue
+
+            # Get related objects (elements that use this type)
+            related_objects = rel.RelatedObjects or []
+
+            for element in related_objects:
+                if not hasattr(element, 'GlobalId'):
+                    continue
+
+                entity = entity_by_guid.get(element.GlobalId)
+                if not entity:
+                    continue
+
+                # Create type assignment
+                TypeAssignment.objects.get_or_create(
+                    entity=entity,
+                    type=ifc_type_obj,
+                )
+                count += 1
+
+        except Exception as e:
+            errors.append({
+                'stage': 'type_assignments',
+                'severity': 'warning',
+                'message': f"Failed to extract type assignment: {str(e)}",
+                'element_guid': None,
+                'element_type': 'IfcRelDefinesByType',
+                'timestamp': datetime.now().isoformat()
+            })
+
+    return count, errors
+
+
 def _extract_systems(model, ifc_file):
     """Extract systems (metadata only)."""
     count = 0
@@ -543,86 +658,90 @@ def _extract_systems(model, ifc_file):
     return count, errors
 
 
-def _extract_simple_bbox(element):
+def _extract_quantities(element):
     """
-    Extract a simple bounding box from element WITHOUT tessellation.
+    Extract quantities from element (area, volume, length, height, perimeter).
 
-    This is VERY fast (just reading placement data, no geometry generation).
-    Used for initial display - viewer shows boxes, then upgrades to real geometry.
+    Reads from Qto_*BaseQuantities property sets - this is FAST (just reading properties,
+    no geometry calculation).
 
     Args:
         element: IFC element
 
     Returns:
-        dict with min/max coordinates, or default small box at origin
+        dict with quantity values (all nullable)
     """
-    try:
-        # Try to get object placement (fast - just reading properties)
-        if hasattr(element, 'ObjectPlacement') and element.ObjectPlacement:
-            # Get placement matrix (4x4 transform)
-            matrix = ifcopenshell.util.placement.get_local_placement(element.ObjectPlacement)
-
-            # Extract position from matrix (translation component)
-            x, y, z = matrix[0][3], matrix[1][3], matrix[2][3]
-
-            # Try to get simple dimensions from representation
-            size = 1.0  # Default 1m box
-            if hasattr(element, 'Representation') and element.Representation:
-                # Try to extract a characteristic size
-                # This is approximate but FAST (no tessellation)
-                try:
-                    for rep in element.Representation.Representations:
-                        for item in rep.Items:
-                            if hasattr(item, 'Dim'):
-                                size = max(size, float(item.Dim))
-                            elif hasattr(item, 'Depth'):
-                                size = max(size, float(item.Depth))
-                except:
-                    pass  # Use default
-
-            # Create a box around the placement position
-            half_size = size / 2
-            return {
-                'min_x': float(x - half_size),
-                'min_y': float(y - half_size),
-                'min_z': float(z - half_size),
-                'max_x': float(x + half_size),
-                'max_y': float(y + half_size),
-                'max_z': float(z + half_size),
-            }
-    except:
-        pass  # Fall through to default
-
-    # Default: small box at origin (element has no valid placement)
-    return {
-        'min_x': 0.0,
-        'min_y': 0.0,
-        'min_z': 0.0,
-        'max_x': 1.0,
-        'max_y': 1.0,
-        'max_z': 1.0,
+    quantities = {
+        'area': None,
+        'volume': None,
+        'length': None,
+        'height': None,
+        'perimeter': None,
     }
+
+    try:
+        # Check if element has quantity sets
+        if not hasattr(element, 'IsDefinedBy') or not element.IsDefinedBy:
+            return quantities
+
+        # Look for Qto_*BaseQuantities property sets
+        for definition in element.IsDefinedBy:
+            if definition.is_a('IfcRelDefinesByProperties'):
+                prop_set = definition.RelatingPropertyDefinition
+
+                # Look for quantity sets (Qto_* property sets)
+                if prop_set.is_a('IfcElementQuantity'):
+                    # Extract quantities from the set
+                    for quantity in prop_set.Quantities:
+                        quantity_name = quantity.Name.lower() if quantity.Name else ''
+
+                        # Map common quantity names to our fields
+                        if 'netfloorarea' in quantity_name or 'area' in quantity_name:
+                            if quantity.is_a('IfcQuantityArea'):
+                                quantities['area'] = float(quantity.AreaValue)
+
+                        elif 'netvolume' in quantity_name or 'volume' in quantity_name:
+                            if quantity.is_a('IfcQuantityVolume'):
+                                quantities['volume'] = float(quantity.VolumeValue)
+
+                        elif 'length' in quantity_name:
+                            if quantity.is_a('IfcQuantityLength'):
+                                quantities['length'] = float(quantity.LengthValue)
+
+                        elif 'height' in quantity_name:
+                            if quantity.is_a('IfcQuantityLength'):
+                                quantities['height'] = float(quantity.LengthValue)
+
+                        elif 'perimeter' in quantity_name:
+                            if quantity.is_a('IfcQuantityLength'):
+                                quantities['perimeter'] = float(quantity.LengthValue)
+
+    except Exception as e:
+        # If quantity extraction fails, return nulls (element just won't have quantities)
+        pass
+
+    return quantities
 
 
 def _extract_elements_metadata(model, ifc_file):
     """
-    Extract element metadata ONLY (no geometry).
+    Extract element metadata with UPSERT pattern (no geometry).
 
-    This is MUCH faster than the original extract_elements() because:
-    1. No geometry processing (no ifcopenshell.geom.create_shape calls)
-    2. Uses bulk_create for batch inserts (100x faster)
-    3. No per-element transactions
-    4. Pre-fetches storeys to avoid N+1 query problem
+    UPSERT Strategy:
+    - New entities (GUID not in DB): bulk_create
+    - Existing entities (GUID in DB): bulk_update
+    - Removed entities (in DB but not in file): mark is_removed=True
+
+    This preserves user data (enrichment_status, validation_status, notes)
+    while updating IFC data (type, name, quantities, etc.)
     """
-    element_count = 0
     errors = []
 
-    # Get all physical elements
+    # Get all physical elements from IFC file
     elements = ifc_file.by_type('IfcElement')
-
     print(f"   Found {len(elements)} elements in IFC file")
 
-    # PRE-FETCH all storeys into a dict for O(1) lookup (CRITICAL for performance!)
+    # PRE-FETCH all storeys into a dict for O(1) lookup
     storey_map = {
         entity.ifc_guid: entity.id
         for entity in IFCEntity.objects.filter(
@@ -632,55 +751,99 @@ def _extract_elements_metadata(model, ifc_file):
     }
     print(f"   Pre-fetched {len(storey_map)} storeys for fast lookup")
 
-    # Prepare batch for bulk insert
-    entities_to_create = []
+    # PRE-FETCH existing entities by GUID for UPSERT
+    existing_by_guid = {
+        e.ifc_guid: e
+        for e in IFCEntity.objects.filter(model=model).exclude(
+            ifc_type__in=['IfcProject', 'IfcSite', 'IfcBuilding', 'IfcBuildingStorey']
+        )
+    }
+    print(f"   Found {len(existing_by_guid)} existing entities in database")
+
+    # Track which GUIDs we see in the new file
+    seen_guids = set()
+
+    # Prepare batches for bulk operations
+    to_create = []
+    to_update = []
     batch_size = 500
+
+    # Fields to update (IFC data - not user data like enrichment_status)
+    update_fields = [
+        'express_id', 'ifc_type', 'predefined_type', 'object_type',
+        'name', 'description', 'storey_id',
+        'area', 'volume', 'length', 'height', 'perimeter',
+        'is_removed',  # Reset is_removed flag for entities that reappear
+    ]
 
     for element in elements:
         try:
-            # Extract simple bounding box (NO tessellation, just read placement)
-            bbox_data = _extract_simple_bbox(element)
+            guid = element.GlobalId
+            seen_guids.add(guid)
 
-            # Determine geometry status
-            if element.Representation:
-                geometry_status = 'pending'  # Has representation, extract in Layer 2
-            else:
-                geometry_status = 'no_representation'  # No geometry to extract
+            # Extract quantities (area, volume, length, height, perimeter)
+            quantities = _extract_quantities(element)
 
-            # Get storey UUID (if assigned) - use pre-fetched map for O(1) lookup
+            # Get storey UUID (if assigned)
             storey_id = None
             if hasattr(element, 'ContainedInStructure') and element.ContainedInStructure:
                 for rel in element.ContainedInStructure:
                     if rel.RelatingStructure.is_a('IfcBuildingStorey'):
                         storey_guid = rel.RelatingStructure.GlobalId
-                        storey_id = storey_map.get(storey_guid)  # Fast dict lookup, no DB query!
+                        storey_id = storey_map.get(storey_guid)
                         break
 
-            # Create entity object (but don't save yet)
-            entity = IFCEntity(
-                model=model,
-                ifc_guid=element.GlobalId,
-                ifc_type=element.is_a(),
-                name=element.Name or '',
-                description=getattr(element, 'Description', None),
-                storey_id=storey_id,
-                geometry_status=geometry_status,
-                # Store simple bounding box for fast initial display
-                bbox_min_x=bbox_data['min_x'],
-                bbox_min_y=bbox_data['min_y'],
-                bbox_min_z=bbox_data['min_z'],
-                bbox_max_x=bbox_data['max_x'],
-                bbox_max_y=bbox_data['max_y'],
-                bbox_max_z=bbox_data['max_z'],
-            )
-            entities_to_create.append(entity)
-            element_count += 1
+            # Extract predefined type (e.g., STANDARD, NOTDEFINED)
+            predefined_type = None
+            if hasattr(element, 'PredefinedType') and element.PredefinedType:
+                predefined_type = str(element.PredefinedType)
 
-            # Batch insert when we reach batch_size
-            if len(entities_to_create) >= batch_size:
-                IFCEntity.objects.bulk_create(entities_to_create, ignore_conflicts=True)
-                print(f"   Inserted {element_count} elements...")
-                entities_to_create = []
+            # Extract object type (user-defined type string)
+            object_type = None
+            if hasattr(element, 'ObjectType') and element.ObjectType:
+                object_type = str(element.ObjectType)
+
+            # Entity data dict
+            entity_data = {
+                'express_id': element.id(),
+                'ifc_type': element.is_a(),
+                'predefined_type': predefined_type,
+                'object_type': object_type,
+                'name': element.Name or '',
+                'description': getattr(element, 'Description', None),
+                'storey_id': storey_id,
+                'area': quantities['area'],
+                'volume': quantities['volume'],
+                'length': quantities['length'],
+                'height': quantities['height'],
+                'perimeter': quantities['perimeter'],
+                'is_removed': False,  # Entity is present in file
+            }
+
+            if guid in existing_by_guid:
+                # UPDATE existing entity
+                existing = existing_by_guid[guid]
+                for key, value in entity_data.items():
+                    setattr(existing, key, value)
+                to_update.append(existing)
+            else:
+                # CREATE new entity
+                to_create.append(IFCEntity(
+                    model=model,
+                    ifc_guid=guid,
+                    **entity_data
+                ))
+
+            # Batch operations when we reach batch_size
+            if len(to_create) >= batch_size:
+                IFCEntity.objects.bulk_create(to_create)
+                print(f"   Created {len(to_create)} new entities...")
+                to_create = []
+
+            if len(to_update) >= batch_size:
+                IFCEntity.objects.bulk_update(to_update, update_fields, batch_size=batch_size)
+                print(f"   Updated {len(to_update)} existing entities...")
+                to_update = []
 
         except Exception as e:
             errors.append({
@@ -692,11 +855,42 @@ def _extract_elements_metadata(model, ifc_file):
                 'timestamp': datetime.now().isoformat()
             })
 
-    # Insert remaining entities
-    if entities_to_create:
-        IFCEntity.objects.bulk_create(entities_to_create, ignore_conflicts=True)
+    # Insert/update remaining entities
+    if to_create:
+        IFCEntity.objects.bulk_create(to_create)
+        print(f"   Created {len(to_create)} new entities...")
 
-    return element_count, errors
+    if to_update:
+        IFCEntity.objects.bulk_update(to_update, update_fields, batch_size=batch_size)
+        print(f"   Updated {len(to_update)} existing entities...")
+
+    # Mark removed entities (in DB but not in new file)
+    removed_guids = set(existing_by_guid.keys()) - seen_guids
+    removed_count = 0
+    if removed_guids:
+        removed_count = IFCEntity.objects.filter(
+            model=model,
+            ifc_guid__in=removed_guids
+        ).update(is_removed=True)
+        print(f"   Marked {removed_count} entities as removed")
+
+    # Calculate totals
+    created_count = len(elements) - len([g for g in seen_guids if g in existing_by_guid])
+    updated_count = len([g for g in seen_guids if g in existing_by_guid])
+    total_count = created_count + updated_count
+
+    # Store version diff on model
+    model.version_diff = {
+        'entities': {
+            'created': created_count,
+            'updated': updated_count,
+            'removed': removed_count,
+            'total': total_count,
+        }
+    }
+    model.save(update_fields=['version_diff'])
+
+    return total_count, errors
 
 
 def _extract_property_sets(model, ifc_file):
