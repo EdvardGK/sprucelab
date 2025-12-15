@@ -178,6 +178,11 @@ CORS_ALLOWED_ORIGINS = [
     "https://sprucelab.vercel.app",  # Production frontend
 ]
 
+# Allow Vercel preview deployments (unique URLs per deployment)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://sprucelab.*\.vercel\.app$",
+]
+
 # Add additional frontend URLs from environment
 if os.getenv('FRONTEND_URL'):
     CORS_ALLOWED_ORIGINS.append(os.getenv('FRONTEND_URL'))
