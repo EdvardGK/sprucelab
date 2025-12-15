@@ -179,8 +179,19 @@ class ModelViewSet(viewsets.ModelViewSet):
 
         # Save file to storage (local or Supabase depending on settings)
         file_path = f'ifc_files/{project.id}/{uploaded_file.name}'
-        saved_path = default_storage.save(file_path, ContentFile(uploaded_file.read()))
-        file_url = default_storage.url(saved_path)
+        try:
+            print(f"📤 Uploading file to storage: {file_path}")
+            saved_path = default_storage.save(file_path, ContentFile(uploaded_file.read()))
+            file_url = default_storage.url(saved_path)
+            print(f"✅ File saved to: {file_url}")
+        except Exception as storage_error:
+            print(f"❌ Storage upload failed: {storage_error}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'File storage failed: {str(storage_error)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         # Get local file path for IFC processing
         # For cloud storage, this downloads to a temp file
