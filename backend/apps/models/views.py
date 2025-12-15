@@ -4,7 +4,9 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.conf import settings
 import os
+import tempfile
 from pathlib import Path
 from datetime import datetime
 
@@ -19,6 +21,44 @@ from .tasks import process_ifc_task, revert_model_task
 from apps.projects.models import Project
 from apps.entities.models import IFCValidationReport, IFCEntity
 import json
+
+
+def _get_local_file_path(storage_path: str, file_url: str = None) -> str:
+    """
+    Get a local file path for processing.
+
+    For local storage: returns the actual file path
+    For cloud storage: downloads to temp file and returns temp path
+
+    Args:
+        storage_path: The path in storage (e.g., 'ifc_files/project_id/file.ifc')
+        file_url: The full URL (for cloud storage download)
+
+    Returns:
+        Local file path (caller is responsible for cleanup if temp file)
+    """
+    # Check if using cloud storage (Supabase/S3)
+    use_cloud = getattr(settings, 'USE_SUPABASE_STORAGE', False)
+
+    if not use_cloud:
+        # Local storage - use path() method
+        return default_storage.path(storage_path)
+    else:
+        # Cloud storage - download to temp file
+        import requests
+
+        if not file_url:
+            file_url = default_storage.url(storage_path)
+
+        response = requests.get(file_url)
+        response.raise_for_status()
+
+        # Create temp file with .ifc extension
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.ifc')
+        temp_file.write(response.content)
+        temp_file.close()
+
+        return temp_file.name
 
 
 def _quick_extract_ifc_timestamp(file_path: str):
@@ -137,14 +177,17 @@ class ModelViewSet(viewsets.ModelViewSet):
             version_number = 1
             parent_model = None
 
-        # Save file temporarily (we'll upload to Supabase storage later)
-        # For now, save to local media folder
+        # Save file to storage (local or Supabase depending on settings)
         file_path = f'ifc_files/{project.id}/{uploaded_file.name}'
         saved_path = default_storage.save(file_path, ContentFile(uploaded_file.read()))
-        file_url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else saved_path
+        file_url = default_storage.url(saved_path)
+
+        # Get local file path for IFC processing
+        # For cloud storage, this downloads to a temp file
+        full_path = _get_local_file_path(saved_path, file_url)
+        is_temp_file = getattr(settings, 'USE_SUPABASE_STORAGE', False)
 
         # Quick extract IFC timestamp for version comparison
-        full_path = default_storage.path(saved_path)
         new_ifc_timestamp = _quick_extract_ifc_timestamp(full_path)
 
         # Build version warning if uploading older file

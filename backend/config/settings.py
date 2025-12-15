@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_celery_results',  # Store task results in database
+    'storages',  # Cloud storage (Supabase/S3)
 
     # Local apps
     'apps.projects',
@@ -137,6 +138,45 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Media files
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# =============================================================================
+# Cloud Storage (Supabase Storage - S3-compatible)
+# =============================================================================
+# Supabase Storage uses S3-compatible API
+# Get credentials from: Supabase Dashboard → Settings → API → S3 Access Keys
+#
+# Required environment variables:
+#   SUPABASE_STORAGE_BUCKET=ifc-files
+#   SUPABASE_S3_ACCESS_KEY=your-access-key
+#   SUPABASE_S3_SECRET_KEY=your-secret-key
+
+USE_SUPABASE_STORAGE = os.getenv('SUPABASE_S3_ACCESS_KEY') is not None
+
+if USE_SUPABASE_STORAGE:
+    # Extract project ref from SUPABASE_URL (e.g., https://abcd1234.supabase.co)
+    SUPABASE_PROJECT_REF = os.getenv('SUPABASE_URL', '').replace('https://', '').split('.')[0]
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "bucket_name": os.getenv('SUPABASE_STORAGE_BUCKET', 'ifc-files'),
+                "endpoint_url": f"https://{SUPABASE_PROJECT_REF}.supabase.co/storage/v1/s3",
+                "access_key": os.getenv('SUPABASE_S3_ACCESS_KEY'),
+                "secret_key": os.getenv('SUPABASE_S3_SECRET_KEY'),
+                "region_name": os.getenv('SUPABASE_STORAGE_REGION', 'eu-central-1'),
+                "default_acl": "public-read",
+                "querystring_auth": False,  # Public URLs without signatures
+                "file_overwrite": True,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+    # Media URL points to Supabase Storage public URL
+    MEDIA_URL = f"https://{SUPABASE_PROJECT_REF}.supabase.co/storage/v1/object/public/{os.getenv('SUPABASE_STORAGE_BUCKET', 'ifc-files')}/"
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

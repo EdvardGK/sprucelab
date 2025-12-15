@@ -6,13 +6,44 @@ Tasks are executed by Celery workers and use Redis for message brokering.
 Results are stored in the Django database via django-celery-results.
 """
 from django.db import transaction
+from django.conf import settings
+import os
+import tempfile
 import time
 import traceback
 from celery import shared_task
 
 
+def _ensure_local_file(model, file_path=None):
+    """
+    Ensure we have a local file path for processing.
+
+    For cloud storage (Supabase), downloads the file to a temp location.
+    Returns (local_path, is_temp) tuple.
+    """
+    use_cloud = getattr(settings, 'USE_SUPABASE_STORAGE', False)
+
+    # If file_path exists locally, use it
+    if file_path and os.path.exists(file_path):
+        return file_path, False
+
+    # For cloud storage or missing local file, download from file_url
+    if model.file_url:
+        import requests
+        response = requests.get(model.file_url)
+        response.raise_for_status()
+
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.ifc')
+        temp_file.write(response.content)
+        temp_file.close()
+
+        return temp_file.name, True
+
+    raise FileNotFoundError(f"Cannot find IFC file for model {model.id}")
+
+
 @shared_task(bind=True, name='apps.models.tasks.process_ifc_task')
-def process_ifc_task(self, model_id, file_path, skip_geometry=False, lod_level='low', target_triangles=2000):
+def process_ifc_task(self, model_id, file_path=None, skip_geometry=False, lod_level='low', target_triangles=2000):
     """
     Process an IFC file asynchronously using Celery (STAGED APPROACH).
 
@@ -40,6 +71,8 @@ def process_ifc_task(self, model_id, file_path, skip_geometry=False, lod_level='
     from .models import Model
     from .services import parse_ifc_metadata, extract_geometry_for_model
 
+    temp_file_to_cleanup = None
+
     try:
         # Get model instance
         try:
@@ -49,8 +82,14 @@ def process_ifc_task(self, model_id, file_path, skip_geometry=False, lod_level='
             print(f"❌ {error_msg}")
             raise Exception(error_msg)
 
+        # Ensure we have a local file (download from cloud if needed)
+        local_path, is_temp = _ensure_local_file(model, file_path)
+        if is_temp:
+            temp_file_to_cleanup = local_path
+            print(f"📥 Downloaded file from cloud storage to: {local_path}")
+
         print(f"\n🔄 Starting LAYERED processing for model {model.name} (v{model.version_number})...")
-        print(f"   File: {file_path}")
+        print(f"   File: {local_path}")
         print(f"   Stage 1: Parse metadata")
         print(f"   Stage 2: Extract geometry")
         print(f"   Stage 3: Validate (TODO)")
@@ -60,7 +99,7 @@ def process_ifc_task(self, model_id, file_path, skip_geometry=False, lod_level='
         print(f"LAYER 1: PARSING METADATA (no geometry)")
         print(f"{'='*80}")
 
-        parse_result = parse_ifc_metadata(model_id, file_path)
+        parse_result = parse_ifc_metadata(model_id, local_path)
 
         # Check if parsing succeeded
         if parse_result.get('element_count', 0) == 0:
@@ -90,7 +129,7 @@ def process_ifc_task(self, model_id, file_path, skip_geometry=False, lod_level='
             # Note: Can't use multiprocessing.Pool inside Celery worker processes
             geometry_result = extract_geometry_for_model(
                 model_id,
-                file_path,
+                local_path,
                 parallel=False,  # Celery handles parallelism at task level
                 lod_level=lod_level,
                 target_triangles=target_triangles
@@ -162,6 +201,15 @@ def process_ifc_task(self, model_id, file_path, skip_geometry=False, lod_level='
 
         # Re-raise exception so Celery marks task as failed
         raise
+
+    finally:
+        # Clean up temp file if we downloaded from cloud storage
+        if temp_file_to_cleanup and os.path.exists(temp_file_to_cleanup):
+            try:
+                os.unlink(temp_file_to_cleanup)
+                print(f"🗑️  Cleaned up temp file: {temp_file_to_cleanup}")
+            except Exception as cleanup_error:
+                print(f"⚠️  Could not cleanup temp file: {cleanup_error}")
 
 
 @shared_task(bind=True, name='apps.models.tasks.revert_model_task')
@@ -245,7 +293,7 @@ def revert_model_task(self, old_model_id, new_model_id):
 
 
 @shared_task(bind=True, name='apps.models.tasks.enrich_model_task')
-def enrich_model_task(self, model_id, file_path, extract_properties=True, extract_relationships=True, run_validation=True):
+def enrich_model_task(self, model_id, file_path=None, extract_properties=True, extract_relationships=True, run_validation=True):
     """
     Enrich a model with additional metadata beyond what web-ifc provides.
 
@@ -254,7 +302,7 @@ def enrich_model_task(self, model_id, file_path, extract_properties=True, extrac
 
     Args:
         model_id: UUID of the Model instance
-        file_path: Path to the IFC file
+        file_path: Path to the IFC file (optional, will use model.file_url if not provided)
         extract_properties: Extract property sets (Psets)
         extract_relationships: Extract spatial/containment relationships
         run_validation: Run BEP validation checks
@@ -267,10 +315,18 @@ def enrich_model_task(self, model_id, file_path, extract_properties=True, extrac
     import ifcopenshell
     import ifcopenshell.util.element as Element
 
+    temp_file_to_cleanup = None
+
     try:
         # Get model instance
         model = Model.objects.get(id=model_id)
         print(f"\n🔍 Starting enrichment for model: {model.name} (v{model.version_number})")
+
+        # Ensure we have a local file (download from cloud if needed)
+        local_path, is_temp = _ensure_local_file(model, file_path)
+        if is_temp:
+            temp_file_to_cleanup = local_path
+            print(f"📥 Downloaded file from cloud storage to: {local_path}")
 
         results = {
             'model_id': str(model_id),
@@ -280,8 +336,8 @@ def enrich_model_task(self, model_id, file_path, extract_properties=True, extrac
         }
 
         # Open IFC file
-        print(f"📂 Opening IFC file: {file_path}")
-        ifc_file = ifcopenshell.open(file_path)
+        print(f"📂 Opening IFC file: {local_path}")
+        ifc_file = ifcopenshell.open(local_path)
 
         # ==================== Extract Properties ====================
         if extract_properties:
@@ -388,6 +444,15 @@ def enrich_model_task(self, model_id, file_path, extract_properties=True, extrac
         # the model is already viewable. Enrichment failure is non-critical.
 
         raise
+
+    finally:
+        # Clean up temp file if we downloaded from cloud storage
+        if temp_file_to_cleanup and os.path.exists(temp_file_to_cleanup):
+            try:
+                os.unlink(temp_file_to_cleanup)
+                print(f"🗑️  Cleaned up temp file: {temp_file_to_cleanup}")
+            except Exception as cleanup_error:
+                print(f"⚠️  Could not cleanup temp file: {cleanup_error}")
 
 
 @shared_task(bind=True, name='apps.models.tasks.debug_task')
