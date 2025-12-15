@@ -29,6 +29,10 @@ trimesh>=4.0.0
 tqdm==4.66.1
 python-dateutil==2.8.2
 
+# Production Server
+gunicorn==21.2.0
+whitenoise==6.6.0
+
 # Development
 black==23.12.1
 ruff==0.1.9
