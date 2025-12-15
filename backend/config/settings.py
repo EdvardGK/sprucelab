@@ -215,7 +215,7 @@ SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
 # Celery Configuration
 # Uses Redis as message broker and result backend
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', os.getenv('REDIS_URL', 'redis://localhost:6379/0'))
 CELERY_RESULT_BACKEND = 'django-db'  # Store results in Django database
 CELERY_CACHE_BACKEND = 'django-cache'
 
