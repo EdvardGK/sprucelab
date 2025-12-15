@@ -228,7 +228,7 @@ public
 /output/
 /versions/
 *.ifc
-*.json
+/output/*.json
 *.npz
 simplified*.ifc
 LBK_RIV_C*.ifc
