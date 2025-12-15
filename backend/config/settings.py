@@ -154,10 +154,11 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        'config.authentication.SupabaseAuthentication',
+        'rest_framework.authentication.SessionAuthentication',  # Keep for Django admin
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # Allow unauthenticated access for now
+        'rest_framework.permissions.AllowAny',  # TODO: Change to IsAuthenticated when ready
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
@@ -211,6 +212,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Supabase Configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET')  # Found in Supabase Dashboard > Settings > API
 
 
 # Celery Configuration

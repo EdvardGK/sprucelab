@@ -7,12 +7,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework import routers
 
+from .views import current_user
+
 # API Router
 router = routers.DefaultRouter()
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
+    path('api/auth/me/', current_user, name='current-user'),
     path('api/projects/', include('apps.projects.urls')),
     path('api/models/', include('apps.models.urls')),
     path('api/entities/', include('apps.entities.urls')),
