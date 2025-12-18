@@ -29,8 +29,9 @@ class ModelSerializer(serializers.ModelSerializer):
             # Fork tracking
             'forked_from', 'fork_name', 'fork_type', 'fork_description',
             'forked_at', 'is_fork', 'fork_count',
-            # Other fields
+            # Aggregate stats (element details queried via FastAPI)
             'element_count', 'storey_count', 'system_count',
+            'type_count', 'material_count', 'type_summary',
             'processing_error', 'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -39,6 +40,7 @@ class ModelSerializer(serializers.ModelSerializer):
             'is_published', 'ifc_timestamp', 'version_diff',
             'forked_at', 'is_fork', 'fork_count',
             'element_count', 'storey_count', 'system_count',
+            'type_count', 'material_count', 'type_summary',
             'processing_error', 'created_at', 'updated_at'
         ]
 

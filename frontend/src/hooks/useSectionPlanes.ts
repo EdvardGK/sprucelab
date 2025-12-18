@@ -181,7 +181,6 @@ export function useSectionPlanes({
       }
     });
 
-    console.log(`✂️ Applied ${clipPlanes.length} clipping planes to ${meshCount} materials`);
   }, [scene]);
 
   // Initialize clipping on renderer when ready
@@ -190,8 +189,6 @@ export function useSectionPlanes({
 
     renderer.localClippingEnabled = true;
     isInitializedRef.current = true;
-
-    console.log('✂️ Section planes initialized - localClippingEnabled = true');
 
     return () => {
       if (renderer) {
@@ -244,20 +241,11 @@ export function useSectionPlanes({
     orientation: SectionOrientation = 'parallel'
   ): SectionPlane | null => {
     if (!renderer || !scene) {
-      console.warn('❌ Cannot add plane: renderer or scene not available');
-      console.log('   renderer:', renderer);
-      console.log('   scene:', scene);
       return null;
     }
     if (planes.length >= MAX_PLANES) {
-      console.warn('❌ Cannot add plane: max planes reached');
       return null;
     }
-
-    console.log('✂️ addPlane called:');
-    console.log('   Point:', point.toArray());
-    console.log('   Normal:', surfaceNormal.toArray());
-    console.log('   Orientation:', orientation);
 
     try {
       // Compute final normal based on orientation
@@ -289,19 +277,15 @@ export function useSectionPlanes({
           if (absY > absX && absY > absZ && absY > (1 - SNAP_THRESHOLD)) {
             // Nearly horizontal surface - snap to Y axis
             normal = new THREE.Vector3(0, Math.sign(surfaceNormal.y), 0);
-            console.log('   ⚡ Snapped to Y axis (horizontal)');
           } else if (absX > absY && absX > absZ && absX > (1 - SNAP_THRESHOLD)) {
             // Nearly vertical facing X - snap to X axis
             normal = new THREE.Vector3(Math.sign(surfaceNormal.x), 0, 0);
-            console.log('   ⚡ Snapped to X axis');
           } else if (absZ > absX && absZ > absY && absZ > (1 - SNAP_THRESHOLD)) {
             // Nearly vertical facing Z - snap to Z axis
             normal = new THREE.Vector3(0, 0, Math.sign(surfaceNormal.z));
-            console.log('   ⚡ Snapped to Z axis');
           } else {
             // Use the surface normal as-is for angled surfaces
             normal = surfaceNormal.clone().normalize();
-            console.log('   📐 Using surface normal (angled surface)');
           }
           break;
       }
@@ -311,10 +295,6 @@ export function useSectionPlanes({
       // Create Three.js clipping plane
       const threeClipPlane = new THREE.Plane();
       threeClipPlane.setFromNormalAndCoplanarPoint(normal, point);
-
-      console.log('   Created THREE.Plane:');
-      console.log('     normal:', threeClipPlane.normal.toArray());
-      console.log('     constant:', threeClipPlane.constant);
 
       // Show brief flash indicator at creation point
       const color = new THREE.Color(PLANE_COLORS[planeIndex]);
@@ -362,18 +342,14 @@ export function useSectionPlanes({
       setPlanes(prev => [...prev, newPlane]);
       setActivePlaneId(newPlane.id);
 
-      console.log(`✅ Created ${newPlane.label} successfully`);
-
       return newPlane;
-    } catch (err) {
-      console.error('❌ Error creating section plane:', err);
+    } catch {
       return null;
     }
   }, [renderer, scene, planes.length, createHelperMesh]);
 
   // Delete a specific plane
   const deletePlane = useCallback((planeId: string) => {
-    console.log(`✂️ Deleting plane ${planeId}`);
     setPlanes(prev => {
       // Find the plane to delete and remove its helper mesh from scene
       const planeToDelete = prev.find(p => p.id === planeId);
@@ -402,8 +378,6 @@ export function useSectionPlanes({
 
   // Clear all planes
   const clearAllPlanes = useCallback(() => {
-    console.log('✂️ Clearing all planes');
-
     // Remove all helper meshes from scene
     setPlanes(prev => {
       prev.forEach(p => {
@@ -461,7 +435,6 @@ export function useSectionPlanes({
         updateHelperMesh(p.helperGroup, p.point, newNormal);
       }
 
-      console.log(`✂️ Flipped plane ${planeId}`);
       return { ...p, normal: newNormal };
     }));
   }, [updateHelperMesh]);
@@ -502,8 +475,6 @@ export function useSectionPlanes({
         updateHelperMesh(p.helperGroup, p.point, newNormal);
       }
 
-      console.log(`✂️ Rotated plane ${planeId} ${axis} by ${degrees}°`);
-      console.log(`   New normal:`, newNormal.toArray().map(v => v.toFixed(3)));
       return { ...p, normal: newNormal };
     }));
   }, [updateHelperMesh]);

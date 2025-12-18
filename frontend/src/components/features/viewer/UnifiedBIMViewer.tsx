@@ -31,11 +31,24 @@ import { Loader2, AlertCircle, Box, Layers } from 'lucide-react';
 import { useSectionPlanes, type SectionPlane } from '@/hooks/useSectionPlanes';
 import { ViewerContextMenu, useViewerContextMenu } from './ViewerContextMenu';
 import { ElementPropertiesPanel, type ElementProperties } from './ElementPropertiesPanel';
+import { ViewerFilterHUD, type TypeInfo } from './ViewerFilterHUD';
+import * as ifcService from '@/lib/ifc-service-client';
 
 // API base URL - use env var for production, fallback to relative path for local dev
 const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
+
+// Django media base URL - needed for FastAPI to download IFC files
+const DJANGO_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Helper to convert relative URLs to absolute (for FastAPI which needs full URLs)
+const toAbsoluteUrl = (url: string): string => {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${DJANGO_BASE}${url}`;
+};
 
 // Imperative handle interface for parent components
 export interface UnifiedBIMViewerHandle {
@@ -52,17 +65,17 @@ interface UnifiedBIMViewerProps {
   // Visibility Control
   modelVisibility?: Record<string, boolean>;  // Toggle models on/off
 
-  // Filtering
-  elementTypeFilter?: Record<string, boolean>;  // { 'IfcWall': true, 'IfcDoor': false }
-  systemFilter?: string[];          // ['HVAC System 1']
+  // Type Filtering (controlled by parent)
+  typeVisibility?: Record<string, boolean>;   // { 'IfcWall': true, 'IfcDoor': false }
 
   // Section Planes
   enableSectionPlanes?: boolean;    // Default: true
 
   // UI Configuration
   showPropertiesPanel?: boolean;    // Default: true
-  showModelInfo?: boolean;          // Default: true
-  showControls?: boolean;           // Default: true
+  showModelInfo?: boolean;          // Default: false (minimal by default)
+  showControls?: boolean;           // Default: false (minimal by default)
+  showFilterHUD?: boolean;          // Default: false (use external panel instead)
 
   // Callbacks
   onSelectionChange?: (element: ElementProperties | null) => void;
@@ -70,6 +83,7 @@ interface UnifiedBIMViewerProps {
   onError?: (error: string) => void;
   onSectionPlanesChange?: (planes: SectionPlane[]) => void;
   onElementTypesDiscovered?: (types: string[]) => void;
+  onTypesDiscovered?: (types: TypeInfo[]) => void;  // New: full type info with counts
 
   // Camera
   autoFitToView?: boolean;          // Default: true
@@ -85,23 +99,26 @@ interface LoadedModel {
   elementCount: number;
   loadMethod: 'fragments' | 'ifc';
   name: string;
+  fileUrl?: string;          // Supabase Storage URL for FastAPI queries
+  ifcServiceFileId?: string; // FastAPI file_id for direct IFC queries
 }
 
 export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMViewerProps>(function UnifiedBIMViewer({
   modelIds: modelIdsProp,
   modelId: singleModelId,
   modelVisibility,
-  elementTypeFilter: _elementTypeFilter, // TODO: Implement filtering
-  // systemFilter,       // TODO: Implement filtering
+  typeVisibility: typeVisibilityProp,  // Controlled type filtering from parent
   enableSectionPlanes = true,
   showPropertiesPanel = true,
-  showModelInfo = true,
-  showControls = true,
+  showModelInfo = false,    // Minimal by default
+  showControls = false,     // Minimal by default
+  showFilterHUD = false,    // Use external panel instead
   onSelectionChange,
   onModelLoaded,
   onError,
   onSectionPlanesChange,
   onElementTypesDiscovered,
+  onTypesDiscovered,        // New callback with full type info
   autoFitToView = true,
   initialCameraPosition,
 }, ref) {
@@ -121,7 +138,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const [error, setError] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [loadingProgress, setLoadingProgress] = useState<Record<string, boolean>>({});
-  const [discoveredTypes, _setDiscoveredTypes] = useState<Set<string>>(new Set()); // TODO: Populate from model classification
+
+  // Type filtering state - auto-discovered from loaded models
+  const [typeInfo, setTypeInfo] = useState<Map<string, { guids: string[]; count: number }>>(new Map());
+  const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
+  const hiderRef = useRef<OBC.Hider | null>(null);
+
+  // Use controlled or internal type visibility
+  const typeVisibility = typeVisibilityProp ?? internalTypeVisibility;
+  const setTypeVisibility = typeVisibilityProp ? undefined : setInternalTypeVisibility;
 
   // Store Three.js objects in state for hooks that need them
   const [viewerState, setViewerState] = useState<{
@@ -158,10 +183,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
   // Notify parent of discovered element types
   useEffect(() => {
-    if (discoveredTypes.size > 0) {
-      onElementTypesDiscovered?.(Array.from(discoveredTypes).sort());
+    if (typeInfo.size > 0) {
+      // Legacy callback (just type names)
+      onElementTypesDiscovered?.(Array.from(typeInfo.keys()).sort());
+
+      // New callback (full type info with counts and visibility)
+      const typesArray: TypeInfo[] = Array.from(typeInfo.entries())
+        .map(([type, data]) => ({
+          type,
+          count: data.count,
+          visible: typeVisibility[type] !== false,
+        }))
+        .sort((a, b) => b.count - a.count);
+      onTypesDiscovered?.(typesArray);
     }
-  }, [discoveredTypes, onElementTypesDiscovered]);
+  }, [typeInfo, typeVisibility, onElementTypesDiscovered, onTypesDiscovered]);
 
   // Reset load guard when modelIds change
   useEffect(() => {
@@ -219,8 +255,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       );
     }
 
-    console.log(`📐 Combined bounds: ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)}m`);
-    console.log(`📷 Camera distance: ${distance.toFixed(1)}m`);
   }, []);
 
   // Initialize viewer on mount
@@ -232,8 +266,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
     const initViewer = async () => {
       try {
-        console.log('🚀 Initializing Unified BIM Viewer...');
-
         const container = containerRef.current;
         if (!container) return;
 
@@ -267,8 +299,22 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         // Configure camera controls for better user experience
         const controls = world.camera.controls;
         controls.dollySpeed = 1.5; // Faster zoom
-        controls.minDistance = 1; // Allow close zoom
-        controls.maxDistance = 1000; // Allow far zoom
+        controls.minDistance = 0.1; // Allow very close zoom for detail inspection
+        controls.maxDistance = 2000; // Allow far zoom for large models
+
+        // Set near/far clipping planes for close-up detail work
+        // Near plane must be small enough to view details up close
+        // Far plane must be large enough to see entire model
+        const threeCamera = world.camera.three;
+        if (threeCamera instanceof THREE.PerspectiveCamera) {
+          threeCamera.near = 0.01; // 1cm - allows very close inspection
+          threeCamera.far = 5000; // 5km - handles large site models
+          threeCamera.updateProjectionMatrix();
+        } else if (threeCamera instanceof THREE.OrthographicCamera) {
+          threeCamera.near = 0.01;
+          threeCamera.far = 5000;
+          threeCamera.updateProjectionMatrix();
+        }
 
         // Set initial camera position (will be adjusted when models load)
         if (initialCameraPosition) {
@@ -281,10 +327,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         } else {
           await controls.setLookAt(50, 50, 50, 0, 0, 0);
         }
-
-        // 7. Setup Grid (after components.init() so scene is accessible)
-        const grids = components.get(OBC.Grids);
-        grids.create(world);
 
         // 9. Setup IFC Loader (for fallback)
         const ifcLoader = components.get(OBC.IfcLoader);
@@ -300,6 +342,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const highlighter = components.get(OBCF.Highlighter);
         highlighter.setup({ world });
 
+        // 10b. Setup Hider for type filtering
+        const hider = components.get(OBC.Hider);
+        hiderRef.current = hider;
+
         // Configure highlighter - DISABLE all automatic camera movement
         highlighter.zoomToSelection = false; // Don't zoom on selection
         // @ts-ignore - ThatOpen may have additional zoom properties
@@ -313,27 +359,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         // Listen for selection events
         const handleSelection = async () => {
-          console.log('🎯 Selection event triggered');
-          console.log('🗺️ Available mappings:', Array.from(modelIdMapRef.current.entries()));
-
           const selection = highlighter.selection.select || highlighter.selection['selection'];
 
           if (selection && typeof selection === 'object') {
             // Iterate through models
             for (const fragmentModelID in selection) {
               const fragmentsData = selection[fragmentModelID];
-              console.log(`📦 Fragment Model ID from selection: ${fragmentModelID}`, fragmentsData);
 
               // Find which backend model this fragment model belongs to
               const backendModelId = modelIdMapRef.current.get(fragmentModelID);
-              console.log(`🔍 Trying to map ${fragmentModelID} → ${backendModelId}`);
 
               // Handle if fragmentsData is a Set (contains express IDs directly)
               if (fragmentsData instanceof Set) {
                 const ids = Array.from(fragmentsData);
                 if (ids.length > 0) {
                   const expressID = ids[0] as number;
-                  console.log('✅ Selected express ID:', expressID);
 
                   // Fetch and display properties
                   await fetchAndDisplayProperties(expressID, backendModelId);
@@ -347,7 +387,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
                   if (expressIDs instanceof Set && expressIDs.size > 0) {
                     const expressID = Array.from(expressIDs)[0] as number;
-                    console.log('✅ Selected express ID:', expressID);
 
                     // Fetch and display properties
                     await fetchAndDisplayProperties(expressID, backendModelId);
@@ -359,12 +398,12 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           }
 
           // If we get here, no valid selection found
-          console.log('⚠️ No valid selection found');
           setSelectedElement(null);
           onSelectionChange?.(null);
         };
 
         // Helper function to fetch and display element properties
+        // Tries FastAPI first (queries IFC directly), falls back to Django (queries database)
         const fetchAndDisplayProperties = async (expressID: number, backendModelId?: string) => {
           if (!backendModelId) {
             const element: ElementProperties = {
@@ -380,9 +419,52 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           // Find loaded model info
           const loadedModel = loadedModelsRef.current.find(m => m.modelId === backendModelId);
 
+          // Try FastAPI first (much faster - queries IFC file directly)
+          if (loadedModel?.ifcServiceFileId) {
+            try {
+              const detail = await ifcService.getElementByExpressId(
+                loadedModel.ifcServiceFileId,
+                expressID
+              );
+
+              const element: ElementProperties = {
+                expressID,
+                type: detail.ifc_type || 'Unknown',
+                predefinedType: undefined, // Not in FastAPI response yet
+                objectType: detail.object_type ?? undefined,
+                name: detail.name ?? undefined,
+                description: detail.description ?? undefined,
+                guid: detail.guid,
+                modelId: backendModelId,
+                modelName: loadedModel?.name,
+                // Location
+                storey: detail.storey ?? undefined,
+                // Quantities from FastAPI
+                ...Object.fromEntries(
+                  Object.entries(detail.quantities || {}).map(([key, val]) => [
+                    key.toLowerCase().includes('area') ? 'area' :
+                    key.toLowerCase().includes('volume') ? 'volume' :
+                    key.toLowerCase().includes('length') ? 'length' :
+                    key.toLowerCase().includes('height') ? 'height' :
+                    key.toLowerCase().includes('perimeter') ? 'perimeter' : key,
+                    (val as { value: number }).value
+                  ])
+                ),
+                // Materials
+                materials: detail.materials?.map(name => ({ name })) || [],
+                // Property sets (already in correct format)
+                psets: detail.properties,
+              };
+              setSelectedElement(element);
+              onSelectionChange?.(element);
+              return;
+            } catch {
+              // FastAPI failed, fall back to Django
+            }
+          }
+
+          // Fall back to Django entity API
           try {
-            // Use the by-express-id endpoint for full property sets
-            // Note: entities app is nested, so path is /api/entities/entities/by-express-id/
             const response = await fetch(`${API_BASE}/entities/entities/by-express-id/?model=${backendModelId}&express_id=${expressID}`);
             if (response.ok) {
               const entity = await response.json();
@@ -446,7 +528,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         highlighter.events.select.onHighlight.add(handleSelection);
         highlighter.events.select.onClear.add(() => {
-          console.log('🧹 Selection cleared');
           setSelectedElement(null);
           onSelectionChange?.(null);
         });
@@ -466,7 +547,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           mouseDownTime = Date.now();
         };
 
-        const handleMouseUp = (event: MouseEvent) => {
+        const handleMouseUp = async (event: MouseEvent) => {
           // Only handle left mouse button
           if (event.button !== 0) return;
 
@@ -483,20 +564,19 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
           // If mouse moved too much or held too long, it's a drag - don't select
           if (distance > CLICK_THRESHOLD_PX || elapsed > CLICK_THRESHOLD_MS) {
-            console.log(`🖱️ Drag detected (${distance.toFixed(1)}px, ${elapsed}ms) - no selection`);
             return;
           }
 
           try {
-            const bounds = container.getBoundingClientRect();
-            const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-            const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
-            console.log(`🖱️ Click detected (${distance.toFixed(1)}px, ${elapsed}ms) - selecting`);
-
-            // Call highlight with correct parameters
-            // @ts-ignore - ThatOpen types are incomplete
-            highlighter.highlight('selection', true, new THREE.Vector2(x, y));
+            // Call highlight with correct parameters:
+            // highlight(name, removePrevious, zoomToSelection, exclude)
+            // - name: 'selection' (our highlight style)
+            // - removePrevious: true (clear old selection)
+            // - zoomToSelection: false (NEVER auto-zoom camera)
+            // - exclude: null (don't exclude any fragments)
+            // Note: Raycaster automatically tracks mouse position from DOM events
+            await highlighter.highlight('selection', true, false);
           } catch (err) {
             console.error('Selection error:', err);
           }
@@ -505,12 +585,80 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         container.addEventListener('mousedown', handleMouseDown);
         container.addEventListener('mouseup', handleMouseUp);
 
+        // Setup double-click (left button) to zoom to selection
+        const handleDoubleClickSelect = async (event: MouseEvent) => {
+          // Only left mouse button
+          if (event.button !== 0) return;
+
+          try {
+            // Highlight WITHOUT zoom (we'll do custom zoom)
+            await highlighter.highlight('selection', true, false);
+
+            // Get the selection
+            const selection = highlighter.selection['selection'];
+            if (!selection || Object.keys(selection).length === 0) return;
+
+            // Get fragments manager
+            const fragments = components.get(OBC.FragmentsManager);
+            if (!fragments) return;
+
+            // Compute bounding box from selected fragments
+            const bbox = new THREE.Box3();
+            let hasGeometry = false;
+
+            for (const [fragId, expressIds] of Object.entries(selection)) {
+              if (!expressIds || (expressIds as Set<number>).size === 0) continue;
+
+              // Get the fragment mesh
+              const fragment = fragments.list.get(fragId);
+              if (!fragment?.mesh) continue;
+
+              // Get bounding box of the fragment mesh
+              const meshBbox = new THREE.Box3().setFromObject(fragment.mesh);
+              if (!meshBbox.isEmpty()) {
+                bbox.union(meshBbox);
+                hasGeometry = true;
+              }
+            }
+
+            // If we found geometry, zoom to it with padding
+            if (hasGeometry && !bbox.isEmpty() && world.camera?.controls) {
+              const center = new THREE.Vector3();
+              bbox.getCenter(center);
+
+              const size = new THREE.Vector3();
+              bbox.getSize(size);
+
+              // Use 2x multiplier for comfortable viewing distance
+              const maxDim = Math.max(size.x, size.y, size.z, 2); // Minimum 2m
+              const distance = Math.max(maxDim * 2.0, 5); // At least 5m away
+
+              // Get current camera direction to maintain viewing angle
+              const camera = world.camera.three;
+              const currentDir = new THREE.Vector3();
+              camera.getWorldDirection(currentDir);
+
+              // Position camera at distance from center, opposite to view direction
+              const cameraPos = center.clone().sub(currentDir.multiplyScalar(distance));
+
+              world.camera.controls.setLookAt(
+                cameraPos.x, cameraPos.y, cameraPos.z,
+                center.x, center.y, center.z,
+                true // Enable transition animation
+              );
+            }
+          } catch (err) {
+            console.error('Double-click selection error:', err);
+          }
+        };
+
+        container.addEventListener('dblclick', handleDoubleClickSelect);
+
         // Setup double-click middle mouse button (scroll wheel) for fit-to-view
         const handleDoubleClick = (event: MouseEvent) => {
           // Middle mouse button = button 1
           if (event.button === 1) {
             event.preventDefault();
-            console.log('🎯 Double-click middle mouse - Fit to view');
             fitAllModelsToView();
           }
         };
@@ -524,7 +672,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             if (now - lastMiddleClickTime < 300) {
               // Double-click detected (within 300ms)
               event.preventDefault();
-              console.log('🎯 Double-click scroll wheel - Fit to view');
               fitAllModelsToView();
             }
             lastMiddleClickTime = now;
@@ -537,7 +684,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         // Setup right-click handler for context menu (section planes)
         const handleContextMenu = async (event: MouseEvent) => {
           event.preventDefault();
-          console.log('🖱️ Right-click detected');
 
           try {
             // Use Three.js raycasting directly for reliability
@@ -545,14 +691,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
             const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
-            console.log('📍 Mouse position (normalized):', { x, y });
-
             // Get camera from world
             const camera = world.camera?.three;
-            if (!camera) {
-              console.warn('No camera available for raycasting');
-              return;
-            }
+            if (!camera) return;
 
             // Create Three.js raycaster
             const raycaster = new THREE.Raycaster();
@@ -560,10 +701,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
             // Get all meshes from the scene
             const scene = world.scene?.three;
-            if (!scene) {
-              console.warn('No scene available for raycasting');
-              return;
-            }
+            if (!scene) return;
 
             // Find all intersectable objects (excluding grid/helpers)
             const intersectables: THREE.Object3D[] = [];
@@ -579,28 +717,17 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               }
             });
 
-            console.log(`🎯 Raycasting against ${intersectables.length} meshes`);
-
             // Perform raycast
             const intersections = raycaster.intersectObjects(intersectables, false);
 
             if (intersections.length > 0) {
               const result = intersections[0];
-              console.log('✅ Intersection found:', result);
 
               if (result.face) {
-                console.log('🔍 Debug normals:');
-                console.log('   face.normal (local):', result.face.normal.toArray());
-                console.log('   result.normal (interpolated):', result.normal?.toArray());
-
-                // Check geometry for stored normals
                 // Compute normal from actual triangle vertices (more accurate than stored normals)
                 const mesh = result.object as THREE.Mesh;
                 const geometry = mesh.geometry;
                 const face = result.face!;
-
-                const hasNormals = geometry.hasAttribute('normal');
-                console.log('   Geometry has normal attribute:', hasNormals);
 
                 // Get vertex positions from geometry
                 const positionAttr = geometry.getAttribute('position');
@@ -632,55 +759,29 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 const edge2 = new THREE.Vector3().subVectors(vC, vA);
                 let worldNormal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
 
-                console.log('   Triangle vertices (world):');
-                console.log('     A:', vA.toArray().map(v => v.toFixed(2)));
-                console.log('     B:', vB.toArray().map(v => v.toFixed(2)));
-                console.log('     C:', vC.toArray().map(v => v.toFixed(2)));
-                console.log('   Computed normal from cross product:', worldNormal.toArray().map(v => v.toFixed(3)));
-                console.log('   Stored face.normal:', result.face.normal.toArray().map(v => v.toFixed(3)));
-
-                // NOTE: No coordinate conversion needed!
-                // The vertices are already transformed to world space via mesh.matrixWorld
-                // which includes any coordinate system rotations from the loader.
-                // The cross product gives us the correct Three.js Y-up normal.
-
-                // IMPORTANT: Ensure normal points toward camera (visible face convention)
-                // If we clicked on a face, it must be facing us. If the computed normal
-                // points away from camera, the triangle has reversed winding - flip it.
+                // Ensure normal points toward camera (visible face convention)
                 const cameraPosition = camera.position.clone();
                 const toCamera = cameraPosition.sub(result.point).normalize();
                 const dotProduct = worldNormal.dot(toCamera);
-                console.log('   Dot product with camera direction:', dotProduct.toFixed(3));
 
                 if (dotProduct < 0) {
                   // Normal points away from camera - flip it
                   worldNormal.negate();
-                  console.log('   ⚠️ Flipped normal (was pointing away from camera)');
                 }
 
                 // Store for visualization (surface normal points OUTWARD from surface toward camera)
                 const originalWorldNormal = worldNormal.clone();
-                console.log('   Surface normal (toward camera):', originalWorldNormal.toArray().map(v => v.toFixed(3)));
 
-                // The clipping plane normal defines which side is VISIBLE:
-                // - Points where (normal · point + constant) > 0 are visible
-                // - Points where (normal · point + constant) < 0 are clipped
-                //
-                // If surface normal points toward camera, and we want to see THROUGH the surface:
-                // - Keep normal as-is: clips everything BEHIND the surface (we see the surface)
-                // - Negate normal: clips the surface itself (we see through it)
-                //
                 // For Dalux-style behavior: clicking a wall should let us see THROUGH it
                 // So we negate the normal to clip the near side and reveal what's behind
                 worldNormal.negate();
-                console.log('   Clipping normal (inverted):', worldNormal.toArray().map(v => v.toFixed(3)));
 
                 // Add visual indicator
-                const scene = world.scene?.three;
-                if (scene) {
+                const sceneForHelper = world.scene?.three;
+                if (sceneForHelper) {
                   // Remove old debug helpers
-                  const oldHelper = scene.getObjectByName('debug-normal-helper');
-                  if (oldHelper) scene.remove(oldHelper);
+                  const oldHelper = sceneForHelper.getObjectByName('debug-normal-helper');
+                  if (oldHelper) sceneForHelper.remove(oldHelper);
 
                   const debugGroup = new THREE.Group();
                   debugGroup.name = 'debug-normal-helper';
@@ -697,58 +798,28 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                   const arrowNormal = new THREE.ArrowHelper(
                     originalWorldNormal,
                     result.point,
-                    3, // longer arrow
-                    0xff00ff, // magenta
+                    3,
+                    0xff00ff,
                     0.4,
                     0.2
                   );
                   arrowNormal.renderOrder = 999;
                   debugGroup.add(arrowNormal);
 
-                  // Add individual axis arrows (longer and clearer)
-                  const arrowX = new THREE.ArrowHelper(
-                    new THREE.Vector3(1, 0, 0),
-                    result.point,
-                    2,
-                    0xff0000, // red = X
-                    0.3,
-                    0.15
-                  );
-                  const arrowY = new THREE.ArrowHelper(
-                    new THREE.Vector3(0, 1, 0),
-                    result.point,
-                    2,
-                    0x00ff00, // green = Y (up)
-                    0.3,
-                    0.15
-                  );
-                  const arrowZ = new THREE.ArrowHelper(
-                    new THREE.Vector3(0, 0, 1),
-                    result.point,
-                    2,
-                    0x0000ff, // blue = Z
-                    0.3,
-                    0.15
-                  );
+                  // Add individual axis arrows
+                  const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), result.point, 2, 0xff0000, 0.3, 0.15);
+                  const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), result.point, 2, 0x00ff00, 0.3, 0.15);
+                  const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), result.point, 2, 0x0000ff, 0.3, 0.15);
                   debugGroup.add(arrowX);
                   debugGroup.add(arrowY);
                   debugGroup.add(arrowZ);
 
-                  scene.add(debugGroup);
-                  console.log('🎯 MAGENTA arrow = surface normal (direction surface is facing)');
-                  console.log('🎯 RED arrow = +X axis');
-                  console.log('🎯 GREEN arrow = +Y axis (up in Three.js)');
-                  console.log('🎯 BLUE arrow = +Z axis');
-                  console.log('📐 Normal vector:', originalWorldNormal.toArray().map(v => v.toFixed(3)));
+                  sceneForHelper.add(debugGroup);
                 }
 
                 // Try to get IFC type if available
                 let ifcType: string | undefined;
                 // TODO: Get IFC type from the intersection if possible
-
-                console.log('📋 Opening context menu at', { x: event.clientX, y: event.clientY });
-                console.log('📐 Intersection point:', result.point.toArray());
-                console.log('🧭 Face normal:', worldNormal.toArray());
 
                 // Open context menu with intersection data
                 contextMenu.openMenu(
@@ -759,11 +830,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                     ifcType,
                   }
                 );
-              } else {
-                console.warn('Intersection has no face data');
               }
-            } else {
-              console.log('⚠️ No intersections found - clicking on empty space');
             }
           } catch (err) {
             console.error('Context menu raycast error:', err);
@@ -788,8 +855,23 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           event.stopPropagation();
           event.stopImmediatePropagation();
 
+          // Calculate step size based on camera distance to plane
+          // Closer = finer control, farther = larger steps
+          const camera = world.camera?.three;
+          let stepSize = 0.5; // default
+          if (camera && activePlane.point) {
+            const cameraPos = camera.position;
+            const planePos = activePlane.point;
+            const distance = cameraPos.distanceTo(planePos);
+            // Scale: 1% of distance, clamped between 0.01m and 2m
+            stepSize = Math.max(0.01, Math.min(2, distance * 0.01));
+          }
+
+          // Shift = 50% reduction for fine control
+          if (event.shiftKey) stepSize *= 0.5;
+
           // Move plane along its normal based on scroll direction
-          const delta = event.deltaY > 0 ? -0.5 : 0.5; // meters
+          const delta = event.deltaY > 0 ? -stepSize : stepSize;
           sp.movePlane(sp.activePlaneId!, delta);
         };
 
@@ -880,7 +962,13 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               // Push plane (move in normal direction - clip more, see deeper)
               if (sp.activePlaneId) {
                 event.preventDefault();
-                const pushAmount = event.shiftKey ? 2.0 : 0.5; // Shift for bigger steps
+                const activePlaneE = sp.planes.find(p => p.id === sp.activePlaneId);
+                let pushAmount = 0.5;
+                if (world.camera?.three && activePlaneE?.point) {
+                  const dist = world.camera.three.position.distanceTo(activePlaneE.point);
+                  pushAmount = Math.max(0.01, Math.min(2, dist * 0.01));
+                }
+                if (event.shiftKey) pushAmount *= 0.5; // Shift = 50% for fine control
                 sp.movePlane(sp.activePlaneId, pushAmount);
               }
               break;
@@ -889,7 +977,13 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               // Pull plane (move opposite to normal - clip less, see more)
               if (sp.activePlaneId) {
                 event.preventDefault();
-                const pullAmount = event.shiftKey ? 2.0 : 0.5;
+                const activePlaneR = sp.planes.find(p => p.id === sp.activePlaneId);
+                let pullAmount = 0.5;
+                if (world.camera?.three && activePlaneR?.point) {
+                  const dist = world.camera.three.position.distanceTo(activePlaneR.point);
+                  pullAmount = Math.max(0.01, Math.min(2, dist * 0.01));
+                }
+                if (event.shiftKey) pullAmount *= 0.5; // Shift = 50% for fine control
                 sp.movePlane(sp.activePlaneId, -pullAmount);
               }
               break;
@@ -901,6 +995,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         cleanupSelection = () => {
           container.removeEventListener('mousedown', handleMouseDown);
           container.removeEventListener('mouseup', handleMouseUp);
+          container.removeEventListener('dblclick', handleDoubleClickSelect);
           container.removeEventListener('dblclick', handleDoubleClick);
           container.removeEventListener('auxclick', handleAuxClick);
           container.removeEventListener('contextmenu', handleContextMenu);
@@ -927,7 +1022,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           scene: world.scene?.three || null,
         });
         setIsInitialized(true);
-        console.log('✅ Viewer initialized!');
       } catch (err) {
         console.error('Failed to initialize viewer:', err);
         const errorMsg = err instanceof Error ? err.message : 'Failed to initialize viewer';
@@ -940,8 +1034,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
     // Cleanup
     return () => {
-      console.log('🧹 Cleaning up viewer...');
-
       cleanupSelection?.();
       cleanupResize?.();
 
@@ -975,12 +1067,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
     // Guard: Only load once
     if (hasLoadedModelsRef.current) {
-      console.log('⏭️  Models already loaded, skipping');
       return;
     }
 
     const loadModels = async () => {
-      console.log(`📦 Starting load for ${modelIds.length} model(s)...`);
       hasLoadedModelsRef.current = true;
       setIsLoading(true);
       setError(null);
@@ -1008,7 +1098,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
               if (fragmentsResponse.ok) {
                 const { fragments_url } = await fragmentsResponse.json();
-                console.log(`🚀 Loading Fragments for model ${modelId}`);
 
                 const response = await fetch(fragments_url);
                 const data = await response.arrayBuffer();
@@ -1016,15 +1105,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
                 // Load fragments (returns FragmentsGroup)
                 const group = fragments.load(buffer);
-
-                // Debug: Log all possible IDs
-                console.log('📦 Loaded group properties:', {
-                  id: group.id,
-                  uuid: group.uuid,
-                  name: group.name,
-                  modelID: (group as any).modelID,
-                  keys: Object.keys(group),
-                });
 
                 // Add to scene
                 worldRef.current!.scene!.three.add(group);
@@ -1037,13 +1117,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                   // Map each individual fragment UUID to backend model ID
                   // ThatOpen uses individual fragment UUIDs in selection events, not group UUID
                   modelIdMapRef.current.set(fragment.id, modelId);
-                  console.log(`🗺️ Mapping fragment ${fragment.id} → backend model ${modelId}`);
                 }
 
                 // Also map the group UUID for compatibility
                 modelIdMapRef.current.set(group.uuid, modelId);
-                console.log(`🗺️ Mapping group UUID ${group.uuid} → backend model ${modelId}`);
-                console.log(`🗺️ Total mappings: ${modelIdMapRef.current.size}`);
 
                 const loadedModel: LoadedModel = {
                   modelId,
@@ -1052,17 +1129,68 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                   elementCount: totalElements,
                   loadMethod: 'fragments',
                   name: modelData.name,
+                  fileUrl: modelData.file_url,
                 };
+
+                // Pre-load IFC in FastAPI for property queries and type discovery
+                if (modelData.file_url) {
+                  const absoluteUrl = toAbsoluteUrl(modelData.file_url);
+                  ifcService.openFromUrl(absoluteUrl)
+                    .then(async (result) => {
+                      loadedModel.ifcServiceFileId = result.file_id;
+
+                      // Discover IFC types from the model
+                      try {
+                        const elementsResponse = await ifcService.getElements(result.file_id, { limit: 10000 });
+                        const newTypeMap = new Map<string, { guids: string[]; count: number }>();
+
+                        for (const elem of elementsResponse.elements) {
+                          const existing = newTypeMap.get(elem.ifc_type) || { guids: [], count: 0 };
+                          existing.guids.push(elem.guid);
+                          existing.count++;
+                          newTypeMap.set(elem.ifc_type, existing);
+                        }
+
+                        // Merge with existing types and update state
+                        setTypeInfo(prev => {
+                          const merged = new Map(prev);
+                          for (const [type, data] of newTypeMap) {
+                            const existing = merged.get(type) || { guids: [], count: 0 };
+                            existing.guids.push(...data.guids);
+                            existing.count += data.count;
+                            merged.set(type, existing);
+                          }
+                          return merged;
+                        });
+
+                        // Initialize visibility for new types (all visible by default)
+                        // Only in uncontrolled mode
+                        setTypeVisibility?.(prev => {
+                          const updated = { ...prev };
+                          for (const type of newTypeMap.keys()) {
+                            if (!(type in updated)) {
+                              updated[type] = true;
+                            }
+                          }
+                          return updated;
+                        });
+                      } catch {
+                        // Type discovery failed, continue without it
+                      }
+                    })
+                    .catch(() => {
+                      // FastAPI not available, will fall back to Django
+                    });
+                }
 
                 loadedModelsRef.current.push(loadedModel);
                 setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
                 onModelLoaded?.(modelId, totalElements);
 
-                console.log(`✅ Loaded ${totalElements} elements from ${modelData.name} (Fragments)`);
                 return loadedModel;
               }
-            } catch (err) {
-              console.warn(`Fragments not available for ${modelId}, falling back to IFC:`, err);
+            } catch {
+              // Fragments not available, fall back to IFC
             }
 
             // Fallback: Load IFC file
@@ -1070,22 +1198,12 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               throw new Error(`No IFC file available for model ${modelId}`);
             }
 
-            console.log(`📂 Loading IFC file for ${modelId}`);
             const response = await fetch(modelData.file_url);
             const arrayBuffer = await response.arrayBuffer();
             const buffer = new Uint8Array(arrayBuffer);
 
             // Load IFC (returns FragmentsGroup)
             const group = await ifcLoader.load(buffer, true, modelData.name);
-
-            // Debug: Log all possible IDs
-            console.log('📦 Loaded IFC group properties:', {
-              id: group.id,
-              uuid: group.uuid,
-              name: group.name,
-              modelID: (group as any).modelID,
-              keys: Object.keys(group),
-            });
 
             // Add to scene
             worldRef.current!.scene!.three.add(group);
@@ -1098,13 +1216,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               // Map each individual fragment UUID to backend model ID
               // ThatOpen uses individual fragment UUIDs in selection events, not group UUID
               modelIdMapRef.current.set(fragment.id, modelId);
-              console.log(`🗺️ Mapping fragment ${fragment.id} → backend model ${modelId}`);
             }
 
             // Also map the group UUID for compatibility
             modelIdMapRef.current.set(group.uuid, modelId);
-            console.log(`🗺️ Mapping group UUID ${group.uuid} → backend model ${modelId}`);
-            console.log(`🗺️ Total mappings: ${modelIdMapRef.current.size}`);
 
             const loadedModel: LoadedModel = {
               modelId,
@@ -1113,13 +1228,62 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               elementCount: totalElements,
               loadMethod: 'ifc',
               name: modelData.name,
+              fileUrl: modelData.file_url,
             };
+
+            // Pre-load IFC in FastAPI for property queries and type discovery
+            if (modelData.file_url) {
+              const absoluteUrl = toAbsoluteUrl(modelData.file_url);
+              ifcService.openFromUrl(absoluteUrl)
+                .then(async (result) => {
+                  loadedModel.ifcServiceFileId = result.file_id;
+
+                  // Discover IFC types from the model
+                  try {
+                    const elementsResponse = await ifcService.getElements(result.file_id, { limit: 10000 });
+                    const newTypeMap = new Map<string, { guids: string[]; count: number }>();
+
+                    for (const elem of elementsResponse.elements) {
+                      const existing = newTypeMap.get(elem.ifc_type) || { guids: [], count: 0 };
+                      existing.guids.push(elem.guid);
+                      existing.count++;
+                      newTypeMap.set(elem.ifc_type, existing);
+                    }
+
+                    // Merge with existing types
+                    setTypeInfo(prev => {
+                      const merged = new Map(prev);
+                      for (const [type, data] of newTypeMap) {
+                        const existing = merged.get(type) || { guids: [], count: 0 };
+                        existing.guids.push(...data.guids);
+                        existing.count += data.count;
+                        merged.set(type, existing);
+                      }
+                      return merged;
+                    });
+
+                    // Initialize visibility for new types (only in uncontrolled mode)
+                    setTypeVisibility?.(prev => {
+                      const updated = { ...prev };
+                      for (const type of newTypeMap.keys()) {
+                        if (!(type in updated)) {
+                          updated[type] = true;
+                        }
+                      }
+                      return updated;
+                    });
+                  } catch {
+                    // Type discovery failed
+                  }
+                })
+                .catch(() => {
+                  // FastAPI not available, will fall back to Django
+                });
+            }
 
             loadedModelsRef.current.push(loadedModel);
             setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
             onModelLoaded?.(modelId, totalElements);
-
-            console.log(`✅ Loaded ${totalElements} elements from ${modelData.name} (IFC)`);
 
             // Optionally trigger Fragment generation for next time
             fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, {
@@ -1151,7 +1315,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         }
 
         setIsLoading(false);
-        console.log(`✅ Successfully loaded ${successfulLoads.length}/${modelIds.length} models`);
       } catch (err) {
         console.error('Failed to load models:', err);
         const errorMsg = err instanceof Error ? err.message : 'Failed to load models';
@@ -1165,13 +1328,92 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     loadModels();
   }, [isInitialized, modelIds.join(','), autoFitToView, fitAllModelsToView, onModelLoaded, onError, viewerState.components]);
 
+  // Apply type visibility filtering using Hider
+  useEffect(() => {
+    if (!hiderRef.current || !viewerState.components || typeInfo.size === 0) return;
+
+    const fragmentsManager = viewerState.components.get(OBC.FragmentsManager);
+    if (!fragmentsManager) return;
+
+    // Collect all GUIDs for visible types
+    const visibleGuids: string[] = [];
+    for (const [type, data] of typeInfo) {
+      if (typeVisibility[type] !== false) {
+        visibleGuids.push(...data.guids);
+      }
+    }
+
+    try {
+      if (visibleGuids.length === 0) {
+        // Hide all elements
+        hiderRef.current.set(false);
+      } else {
+        // Show only visible types
+        const fragmentMap = fragmentsManager.guidToFragmentIdMap(visibleGuids);
+        hiderRef.current.set(false); // Hide all first
+        hiderRef.current.set(true, fragmentMap); // Show filtered
+      }
+    } catch {
+      // Filtering failed, elements remain visible
+    }
+  }, [typeVisibility, typeInfo, viewerState.components]);
+
+  // HUD handlers (only used in uncontrolled mode with showFilterHUD=true)
+  const handleToggleType = useCallback((type: string) => {
+    setTypeVisibility?.(prev => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  }, [setTypeVisibility]);
+
+  const handleShowAll = useCallback(() => {
+    if (!setTypeVisibility) return;
+    setTypeVisibility(() => {
+      const updated: Record<string, boolean> = {};
+      for (const type of typeInfo.keys()) {
+        updated[type] = true;
+      }
+      return updated;
+    });
+  }, [typeInfo, setTypeVisibility]);
+
+  const handleHideAll = useCallback(() => {
+    if (!setTypeVisibility) return;
+    setTypeVisibility(() => {
+      const updated: Record<string, boolean> = {};
+      for (const type of typeInfo.keys()) {
+        updated[type] = false;
+      }
+      return updated;
+    });
+  }, [typeInfo, setTypeVisibility]);
+
+  // Convert typeInfo Map to TypeInfo array for HUD
+  const hudTypes: TypeInfo[] = Array.from(typeInfo.entries())
+    .map(([type, data]) => ({
+      type,
+      count: data.count,
+      visible: typeVisibility[type] !== false,
+    }))
+    .sort((a, b) => b.count - a.count); // Sort by count descending
+
   // Calculate total element count
   const totalElements = loadedModelsRef.current.reduce((sum, m) => sum + m.elementCount, 0);
 
   return (
-    <div className="relative w-full h-screen bg-gray-900">
+    <div className="relative w-full h-full bg-gray-900">
       {/* 3D Viewer Container */}
       <div ref={containerRef} className="w-full h-full" />
+
+      {/* Type Filter HUD (Center Bottom) - only in uncontrolled mode */}
+      {showFilterHUD && hudTypes.length > 0 && (
+        <ViewerFilterHUD
+          types={hudTypes}
+          onToggleType={handleToggleType}
+          onShowAll={handleShowAll}
+          onHideAll={handleHideAll}
+        />
+      )}
 
       {/* Model Info (Top Left) */}
       {showModelInfo && loadedModelsRef.current.length > 0 && (
@@ -1245,6 +1487,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             <div>Right drag: Pan</div>
             <div>Scroll: Zoom</div>
             <div>Click: Select</div>
+            <div>Dbl-click: Zoom to object</div>
             <div>Dbl-click 🖱️: Fit all</div>
             {sectionPlanes.planes.length > 0 && (
               <>
@@ -1344,17 +1587,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         onAddSectionPlane={(point, normal, orientation) => {
           sectionPlanes.addPlane(point, normal, orientation);
         }}
-        onHideType={(type) => {
+        onHideType={(_type) => {
           // TODO: Implement type hiding via parent callback
-          console.log('Hide type:', type);
         }}
-        onIsolateType={(type) => {
+        onIsolateType={(_type) => {
           // TODO: Implement type isolation via parent callback
-          console.log('Isolate type:', type);
         }}
         onShowAllTypes={() => {
           // TODO: Implement show all via parent callback
-          console.log('Show all types');
         }}
         onClose={contextMenu.closeMenu}
       />

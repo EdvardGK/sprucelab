@@ -148,10 +148,17 @@ class Model(models.Model):
         help_text="Diff summary: {entities: {created: N, updated: N, removed: N}}"
     )
 
-    # Metadata
+    # Metadata (aggregate stats - element details queried via FastAPI)
     element_count = models.IntegerField(default=0)
     storey_count = models.IntegerField(default=0)
     system_count = models.IntegerField(default=0)
+    type_count = models.IntegerField(default=0, help_text="Number of IFC type definitions")
+    material_count = models.IntegerField(default=0, help_text="Number of unique materials")
+    type_summary = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Type breakdown: [{ifc_type: 'IfcWall', count: 150}, ...]"
+    )
     processing_error = models.TextField(blank=True, null=True)
 
     # === Coordinate Systems (GIS + Local) ===

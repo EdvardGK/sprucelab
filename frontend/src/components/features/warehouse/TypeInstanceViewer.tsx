@@ -64,17 +64,13 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
     const initViewer = async () => {
       try {
-        console.log('🎯 Initializing Instance Viewer...');
         const container = containerRef.current;
         if (!container) {
-          console.error('❌ Container ref is null');
           return;
         }
-        console.log('📦 Container dimensions:', container.clientWidth, 'x', container.clientHeight);
 
         // Check for valid dimensions
         if (container.clientWidth === 0 || container.clientHeight === 0) {
-          console.warn('⚠️ Container has zero dimensions, retrying in 100ms...');
           setTimeout(() => initViewer(), 100);
           return;
         }
@@ -154,9 +150,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         cleanupResize = () => window.removeEventListener('resize', handleResize);
 
         setIsInitialized(true);
-        console.log('✅ Instance Viewer initialized!');
       } catch (err) {
-        console.error('Failed to initialize viewer:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize viewer');
       }
     };
@@ -164,7 +158,6 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     initViewer();
 
     return () => {
-      console.log('🧹 Cleaning up Instance Viewer...');
       cleanupResize?.();
 
       if (componentsRef.current) {
@@ -215,32 +208,23 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
           if (fragmentsResponse.ok) {
             const fragmentsData = await fragmentsResponse.json();
             const { fragments_url } = fragmentsData;
-            console.log(`🚀 Loading Fragments for Instance Viewer from: ${fragments_url}`);
 
             const response = await fetch(fragments_url);
             const data = await response.arrayBuffer();
             const buffer = new Uint8Array(data);
 
             const group = fragments.load(buffer);
-            console.log('📐 Fragments loaded, adding to scene...');
             worldRef.current?.scene.three.add(group);
             fragmentsGroupRef.current = group;
-
-            // Log bounding box
-            const bbox = new THREE.Box3().setFromObject(group);
-            const size = new THREE.Vector3();
-            bbox.getSize(size);
-            console.log('📏 Model bounding box size:', size.x.toFixed(2), 'x', size.y.toFixed(2), 'x', size.z.toFixed(2));
 
             // Fit to view
             fitToModel(group);
 
-            console.log('✅ Model loaded for Instance Viewer');
             setIsLoading(false);
             return;
           }
-        } catch (err) {
-          console.warn('Fragments not available, falling back to IFC');
+        } catch {
+          // Fragments not available, fall back to IFC
         }
 
         // Fallback: Load IFC
@@ -250,7 +234,6 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         const modelData = await modelResponse.json();
         if (!modelData.file_url) throw new Error('No IFC file available');
 
-        console.log(`📦 Loading IFC for Instance Viewer`);
         const response = await fetch(modelData.file_url);
         const data = await response.arrayBuffer();
         const buffer = new Uint8Array(data);
@@ -264,10 +247,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
         // Trigger fragment generation for next time
         fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, { method: 'POST' });
-
-        console.log('✅ IFC loaded for Instance Viewer');
       } catch (err) {
-        console.error('Failed to load model:', err);
         setError(err instanceof Error ? err.message : 'Failed to load model');
       } finally {
         setIsLoading(false);
@@ -305,8 +285,6 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       const hasMatches = Object.keys(fragmentMap).length > 0;
 
       if (hasMatches) {
-        console.log(`🎯 Found ${Object.keys(fragmentMap).length} fragments with ${instanceGuids.length} instances`);
-
         // Isolate: hide all, then show only matching
         hider.set(false); // Hide all
         hider.set(true, fragmentMap); // Show only matching
@@ -319,11 +297,9 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
           }
         }
       } else {
-        console.log('⚠️ No matching instances found in model, showing all');
         hider.set(true); // Show all if no matches
       }
-    } catch (err) {
-      console.error('Failed to highlight instances:', err);
+    } catch {
       // Show all on error
       hider?.set(true);
     }

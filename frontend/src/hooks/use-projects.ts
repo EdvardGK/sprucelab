@@ -17,11 +17,6 @@ export function useProjects() {
     queryKey: projectKeys.lists(),
     queryFn: async () => {
       const response = await apiClient.get<PaginatedResponse<Project>>('/projects/');
-      console.log('[useProjects] Raw API response:', response);
-      console.log('[useProjects] Response data:', response.data);
-      console.log('[useProjects] Is paginated?', 'results' in response.data);
-      console.log('[useProjects] Results:', response.data.results);
-      console.log('[useProjects] Results length:', response.data.results?.length);
       // Extract the results array from paginated response
       return response.data.results || [];
     },

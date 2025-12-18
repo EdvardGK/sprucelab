@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { queryClient } from './lib/query-client';
+import { Toaster } from './components/ui/toaster';
 import MyPage from './pages/MyPage';
 import ProjectsGallery from './pages/ProjectsGallery';
 import ProjectDashboard from './pages/ProjectDashboard';
@@ -20,32 +21,33 @@ import ViewerGroups from './pages/ViewerGroups';
 import ProcessingReports from './pages/dev/ProcessingReports';
 import ProcessingReportDetail from './pages/dev/ProcessingReportDetail';
 
+const router = createBrowserRouter([
+  { path: "/", element: <ProjectsGallery /> },
+  { path: "/my-page", element: <MyPage /> },
+  { path: "/projects", element: <ProjectsGallery /> },
+  { path: "/projects/:id", element: <ProjectDashboard /> },
+  { path: "/projects/:id/models", element: <ProjectModels /> },
+  { path: "/projects/:id/my-page", element: <ProjectMyPage /> },
+  { path: "/projects/:id/viewer-groups", element: <ViewerGroups /> },
+  { path: "/projects/:id/viewer/:groupId", element: <FederatedViewer /> },
+  { path: "/projects/:id/documents", element: <ProjectDocuments /> },
+  { path: "/projects/:id/drawings", element: <ProjectDrawings /> },
+  { path: "/projects/:id/workbench", element: <BIMWorkbench /> },
+  { path: "/models/:id", element: <ModelWorkspace /> },
+  { path: "/my-issues", element: <MyIssues /> },
+  { path: "/my-rfis", element: <MyRFIs /> },
+  { path: "/scripts", element: <ScriptsLibrary /> },
+  { path: "/stats", element: <QuickStats /> },
+  { path: "/settings", element: <Settings /> },
+  { path: "/dev/processing-reports", element: <ProcessingReports /> },
+  { path: "/dev/processing-reports/:id", element: <ProcessingReportDetail /> },
+]);
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<ProjectsGallery />} />
-          <Route path="/my-page" element={<MyPage />} />
-          <Route path="/projects" element={<ProjectsGallery />} />
-          <Route path="/projects/:id" element={<ProjectDashboard />} />
-          <Route path="/projects/:id/models" element={<ProjectModels />} />
-          <Route path="/projects/:id/my-page" element={<ProjectMyPage />} />
-          <Route path="/projects/:id/viewer-groups" element={<ViewerGroups />} />
-          <Route path="/projects/:id/viewer/:groupId" element={<FederatedViewer />} />
-          <Route path="/projects/:id/documents" element={<ProjectDocuments />} />
-          <Route path="/projects/:id/drawings" element={<ProjectDrawings />} />
-          <Route path="/projects/:id/workbench" element={<BIMWorkbench />} />
-          <Route path="/models/:id" element={<ModelWorkspace />} />
-          <Route path="/my-issues" element={<MyIssues />} />
-          <Route path="/my-rfis" element={<MyRFIs />} />
-          <Route path="/scripts" element={<ScriptsLibrary />} />
-          <Route path="/stats" element={<QuickStats />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/dev/processing-reports" element={<ProcessingReports />} />
-          <Route path="/dev/processing-reports/:id" element={<ProcessingReportDetail />} />
-        </Routes>
-      </BrowserRouter>
+      <Toaster />
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }

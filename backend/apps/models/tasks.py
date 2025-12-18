@@ -455,6 +455,130 @@ def enrich_model_task(self, model_id, file_path=None, extract_properties=True, e
                 print(f"⚠️  Could not cleanup temp file: {cleanup_error}")
 
 
+@shared_task(bind=True, name='apps.models.tasks.process_ifc_lite_task')
+def process_ifc_lite_task(self, model_id, file_path=None):
+    """
+    LITE IFC processing - extract aggregate stats only.
+
+    NEW ARCHITECTURE (2024-12):
+    - Only extracts aggregate statistics (counts, type summary)
+    - NO database writes for individual entities/properties
+    - Frontend queries IFC directly via FastAPI for element details
+    - FAST: Completes in 1-5 seconds for any file size
+
+    This replaces the heavy process_ifc_task that wrote 10k+ rows to Supabase.
+
+    Args:
+        model_id: UUID of the Model instance (as string)
+        file_path: Full path to the IFC file (optional, uses model.file_url if not provided)
+
+    Returns:
+        dict: Processing results with aggregate stats
+    """
+    from .models import Model
+    from .services import parse_ifc_stats
+
+    temp_file_to_cleanup = None
+
+    try:
+        # Get model instance
+        try:
+            model = Model.objects.get(id=model_id)
+        except Model.DoesNotExist:
+            error_msg = f"Model {model_id} not found"
+            print(f"❌ {error_msg}")
+            raise Exception(error_msg)
+
+        # Update status to processing
+        model.status = 'processing'
+        model.parsing_status = 'parsing'
+        model.save(update_fields=['status', 'parsing_status'])
+
+        # Ensure we have a local file (download from cloud if needed)
+        local_path, is_temp = _ensure_local_file(model, file_path)
+        if is_temp:
+            temp_file_to_cleanup = local_path
+            print(f"📥 Downloaded file from cloud storage to: {local_path}")
+
+        print(f"\n🚀 [LITE] Processing model {model.name} (v{model.version_number})...")
+        print(f"   File: {local_path}")
+        print(f"   Mode: Aggregate stats only (no entity CRUD)")
+
+        # ==================== Extract Stats ====================
+        stats = parse_ifc_stats(local_path)
+
+        print(f"\n✅ Stats extracted in {stats['duration_seconds']}s:")
+        print(f"   Schema: {stats['ifc_schema']}")
+        print(f"   Elements: {stats['element_count']}")
+        print(f"   Storeys: {stats['storey_count']}")
+        print(f"   Types: {stats['type_count']}")
+        print(f"   Materials: {stats['material_count']}")
+        print(f"   Systems: {stats['system_count']}")
+
+        # ==================== Update Model ====================
+        with transaction.atomic():
+            model.refresh_from_db()
+            model.ifc_schema = stats['ifc_schema']
+            model.element_count = stats['element_count']
+            model.storey_count = stats['storey_count']
+            model.type_count = stats['type_count']
+            model.material_count = stats['material_count']
+            model.system_count = stats['system_count']
+            model.type_summary = stats['type_summary']
+            model.parsing_status = 'parsed'
+            model.status = 'ready'  # Ready immediately - viewer loads IFC directly
+            model.save(update_fields=[
+                'ifc_schema', 'element_count', 'storey_count',
+                'type_count', 'material_count', 'system_count',
+                'type_summary', 'parsing_status', 'status'
+            ])
+
+        print(f"\n{'='*60}")
+        print(f"✅ [LITE] PROCESSING COMPLETE for {model.name}")
+        print(f"   Duration: {stats['duration_seconds']}s")
+        print(f"   Status: ready")
+        print(f"   Note: Query IFC via FastAPI for element details")
+        print(f"{'='*60}\n")
+
+        return {
+            'model_id': str(model_id),
+            'model_name': model.name,
+            'version': model.version_number,
+            'status': 'success',
+            'processing_mode': 'lite',
+            'stats': stats,
+        }
+
+    except Exception as e:
+        # Log the error
+        error_msg = str(e)
+        error_trace = traceback.format_exc()
+        print(f"\n❌ [LITE] Task failed for model {model_id}")
+        print(f"   Error: {error_msg}")
+        print(f"   Traceback:\n{error_trace}")
+
+        # Update model status to error
+        try:
+            model = Model.objects.get(id=model_id)
+            model.parsing_status = 'failed'
+            model.status = 'error'
+            model.processing_error = error_msg
+            model.save(update_fields=['status', 'processing_error', 'parsing_status'])
+        except Exception as inner_e:
+            print(f"❌ Could not update model status: {str(inner_e)}")
+
+        raise
+
+    finally:
+        # Clean up temp file if we downloaded from cloud storage
+        if temp_file_to_cleanup and os.path.exists(temp_file_to_cleanup):
+            try:
+                os.unlink(temp_file_to_cleanup)
+                print(f"🗑️  Cleaned up temp file: {temp_file_to_cleanup}")
+            except Exception as cleanup_error:
+                print(f"⚠️  Could not cleanup temp file: {cleanup_error}")
+
+
 @shared_task(bind=True, name='apps.models.tasks.debug_task')
 def debug_task(self):
     """

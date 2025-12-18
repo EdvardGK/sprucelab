@@ -122,7 +122,7 @@ async def get_elements(
     file_id: str,
     ifc_type: Optional[str] = Query(None, description="Filter by IFC type (e.g., IfcWall, IfcDoor)"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    limit: int = Query(100, ge=1, le=1000, description="Max elements to return"),
+    limit: int = Query(100, ge=1, le=10000, description="Max elements to return"),
 ):
     """
     Get paginated list of elements from a loaded IFC file.
@@ -153,7 +153,7 @@ async def get_elements(
 @router.get("/{file_id}/elements/{guid}", response_model=ElementDetail)
 async def get_element_detail(file_id: str, guid: str):
     """
-    Get detailed information about a single element.
+    Get detailed information about a single element by GUID.
 
     Includes:
     - All property sets and their properties
@@ -164,6 +164,24 @@ async def get_element_detail(file_id: str, guid: str):
     """
     try:
         detail = ifc_loader.get_element_detail(file_id, guid)
+        return ElementDetail(**detail)
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{file_id}/elements/by-express-id/{express_id}", response_model=ElementDetail)
+async def get_element_by_express_id(file_id: str, express_id: int):
+    """
+    Get detailed information about a single element by Express ID (step_id).
+
+    This is useful when you have the element's Express ID from ThatOpen/web-ifc
+    but don't have the GUID.
+
+    Includes same data as get_element_detail.
+    """
+    try:
+        detail = ifc_loader.get_element_by_express_id(file_id, express_id)
         return ElementDetail(**detail)
 
     except ValueError as e:

@@ -130,7 +130,11 @@ class IFCLoaderService:
         # Count elements by category
         elements = list(ifc_file.by_type("IfcElement"))
         types = list(ifc_file.by_type("IfcTypeObject"))
-        spatials = list(ifc_file.by_type("IfcSpatialElement"))
+        # IFC4 uses IfcSpatialElement, IFC2X3 uses IfcSpatialStructureElement
+        try:
+            spatials = list(ifc_file.by_type("IfcSpatialElement"))
+        except RuntimeError:
+            spatials = list(ifc_file.by_type("IfcSpatialStructureElement"))
 
         # Get file size if we have the path
         file_size_mb = 0.0
@@ -333,6 +337,50 @@ class IFCLoaderService:
                 return rel.RelatingStructure.Name
 
         return None
+
+    def get_element_by_express_id(self, file_id: str, express_id: int) -> Dict[str, Any]:
+        """Get detailed info about a single element by Express ID (step_id)."""
+        ifc_file = self._cache.get(file_id)
+        if not ifc_file:
+            raise ValueError(f"File {file_id} not loaded")
+
+        try:
+            element = ifc_file.by_id(express_id)
+        except RuntimeError:
+            raise ValueError(f"Element with Express ID {express_id} not found")
+
+        # Verify it's an element (not a relationship or other entity)
+        if not hasattr(element, "GlobalId"):
+            raise ValueError(f"Entity {express_id} is not an IFC element")
+
+        # Extract properties
+        properties = self._extract_properties(element)
+
+        # Extract quantities
+        quantities = self._extract_quantities(element)
+
+        # Extract materials
+        materials = self._extract_materials(element)
+
+        # Get type name
+        type_name = self._get_type_name(element)
+
+        # Get storey
+        storey = self._get_element_storey(element)
+
+        return {
+            "guid": element.GlobalId,
+            "ifc_type": element.is_a(),
+            "name": element.Name,
+            "description": getattr(element, "Description", None),
+            "object_type": getattr(element, "ObjectType", None),
+            "storey": storey,
+            "properties": properties,
+            "quantities": quantities,
+            "materials": materials,
+            "type_name": type_name,
+            "express_id": express_id,
+        }
 
     def unload_file(self, file_id: str) -> bool:
         """Unload a file from cache and clean up temp files."""

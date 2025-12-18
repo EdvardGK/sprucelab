@@ -17,7 +17,7 @@ from .serializers import (
     ModelUploadSerializer,
     IFCValidationReportSerializer
 )
-from .tasks import process_ifc_task, revert_model_task
+from .tasks import process_ifc_task, process_ifc_lite_task, revert_model_task
 from apps.projects.models import Project
 from apps.entities.models import IFCValidationReport, IFCEntity
 import json
@@ -274,30 +274,28 @@ class ModelViewSet(viewsets.ModelViewSet):
                 # Frontend can poll /api/models/{id}/status/ for completion
 
             else:
-                # FastAPI not available, use Celery
-                print(f"FastAPI not available, falling back to Celery...")
-                result = process_ifc_task.delay(
+                # FastAPI not available, use Celery LITE task
+                print(f"FastAPI not available, using Celery LITE task...")
+                result = process_ifc_lite_task.delay(
                     str(model.id),
-                    full_path,
-                    skip_geometry=True
+                    full_path
                 )
                 task_id = result.id
                 model.task_id = task_id
                 model.save(update_fields=['task_id'])
-                print(f"✅ Celery task queued: {task_id}")
+                print(f"✅ Celery LITE task queued: {task_id}")
 
         except Exception as e:
-            # If FastAPI call fails, fallback to Celery
-            print(f"FastAPI error ({e}), falling back to Celery...")
-            result = process_ifc_task.delay(
+            # If FastAPI call fails, fallback to Celery LITE task
+            print(f"FastAPI error ({e}), using Celery LITE task...")
+            result = process_ifc_lite_task.delay(
                 str(model.id),
-                full_path,
-                skip_geometry=True
+                full_path
             )
             task_id = result.id
             model.task_id = task_id
             model.save(update_fields=['task_id'])
-            print(f"✅ Celery task queued (fallback): {task_id}")
+            print(f"✅ Celery LITE task queued (fallback): {task_id}")
 
         # Return response with quick stats (full processing continues in background)
         response_serializer = ModelDetailSerializer(model)

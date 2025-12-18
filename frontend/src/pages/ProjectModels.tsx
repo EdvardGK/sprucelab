@@ -30,14 +30,7 @@ export default function ProjectModels() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
-  const { data: allModels, isLoading: modelsLoading, error: modelsError } = useModels(id);
-
-  // Debug logging
-  console.log('[ProjectModels] Project loading:', projectLoading, 'Models loading:', modelsLoading);
-  console.log('[ProjectModels] Project data:', project);
-  console.log('[ProjectModels] Models data:', allModels);
-  console.log('[ProjectModels] Project error:', projectError);
-  console.log('[ProjectModels] Models error:', modelsError);
+  const { data: allModels, isLoading: modelsLoading } = useModels(id);
 
   // Filter to show only the latest version of each model
   const models = useMemo(() => {
@@ -101,10 +94,6 @@ export default function ProjectModels() {
         </div>
       </AppLayout>
     );
-  }
-
-  if (modelsError) {
-    console.error('[ProjectModels] Models loading error:', modelsError);
   }
 
   return (
