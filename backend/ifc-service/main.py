@@ -53,9 +53,11 @@ app = FastAPI(
 )
 
 # CORS middleware
+# Allow specific origins + regex pattern for Vercel preview deployments
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"https://sprucelab.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
