@@ -12,7 +12,54 @@
 
 // Use VITE_IFC_SERVICE_URL for production, fallback to localhost for local dev
 // Note: FastAPI serves endpoints under /api/v1/ifc/
-const IFC_SERVICE_URL = import.meta.env.VITE_IFC_SERVICE_URL || 'http://localhost:8001/api/v1';
+const IFC_SERVICE_URL = import.meta.env.VITE_IFC_SERVICE_URL || 'http://localhost:8100/api/v1';
+
+// Retry configuration for handling transient errors
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 5000,
+};
+
+/**
+ * Fetch with automatic retry for connection errors.
+ * Uses exponential backoff with jitter.
+ */
+async function fetchWithRetry(
+  url: string,
+  options?: RequestInit,
+  retries = RETRY_CONFIG.maxRetries
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (error) {
+      lastError = error as Error;
+
+      // Only retry on network errors (connection refused, timeout, etc.)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        if (attempt < retries) {
+          // Exponential backoff with jitter
+          const delay = Math.min(
+            RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt) + Math.random() * 500,
+            RETRY_CONFIG.maxDelayMs
+          );
+          console.warn(
+            `[IFC Service] Connection failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${Math.round(delay)}ms...`
+          );
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new Error('Failed after retries');
+}
 
 interface IFCOpenResponse {
   file_id: string;
@@ -51,6 +98,16 @@ interface ElementListResponse {
   has_more: boolean;
 }
 
+interface MeshGeometry {
+  guid: string;
+  ifc_type: string;
+  name: string | null;
+  vertices: number[][];
+  faces: number[][];
+  vertex_count: number;
+  face_count: number;
+}
+
 // Cache file_id per URL to avoid re-loading
 const fileIdCache = new Map<string, string>();
 
@@ -63,7 +120,7 @@ export async function openFromUrl(fileUrl: string): Promise<IFCOpenResponse> {
   const cached = fileIdCache.get(fileUrl);
   if (cached) {
     // Get info for cached file
-    const response = await fetch(`${IFC_SERVICE_URL}/ifc/${cached}/info`);
+    const response = await fetchWithRetry(`${IFC_SERVICE_URL}/ifc/${cached}/info`);
     if (response.ok) {
       return response.json();
     }
@@ -72,7 +129,7 @@ export async function openFromUrl(fileUrl: string): Promise<IFCOpenResponse> {
   }
 
   // Load file
-  const response = await fetch(`${IFC_SERVICE_URL}/ifc/open/url`, {
+  const response = await fetchWithRetry(`${IFC_SERVICE_URL}/ifc/open/url`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ file_url: fileUrl }),
@@ -104,7 +161,7 @@ export async function getElements(
   if (options?.offset) params.set('offset', String(options.offset));
   if (options?.limit) params.set('limit', String(options.limit));
 
-  const response = await fetch(
+  const response = await fetchWithRetry(
     `${IFC_SERVICE_URL}/ifc/${fileId}/elements?${params.toString()}`
   );
 
@@ -120,7 +177,7 @@ export async function getElements(
  * Get detailed properties for a single element by GUID.
  */
 export async function getElement(fileId: string, guid: string): Promise<ElementDetail> {
-  const response = await fetch(`${IFC_SERVICE_URL}/ifc/${fileId}/elements/${guid}`);
+  const response = await fetchWithRetry(`${IFC_SERVICE_URL}/ifc/${fileId}/elements/${guid}`);
 
   if (!response.ok) {
     const error = await response.text();
@@ -135,7 +192,7 @@ export async function getElement(fileId: string, guid: string): Promise<ElementD
  * Use this when you have the Express ID from ThatOpen/web-ifc.
  */
 export async function getElementByExpressId(fileId: string, expressId: number): Promise<ElementDetail> {
-  const response = await fetch(`${IFC_SERVICE_URL}/ifc/${fileId}/elements/by-express-id/${expressId}`);
+  const response = await fetchWithRetry(`${IFC_SERVICE_URL}/ifc/${fileId}/elements/by-express-id/${expressId}`);
 
   if (!response.ok) {
     const error = await response.text();
@@ -149,11 +206,33 @@ export async function getElementByExpressId(fileId: string, expressId: number): 
  * Get file info for a loaded file.
  */
 export async function getFileInfo(fileId: string): Promise<IFCOpenResponse> {
-  const response = await fetch(`${IFC_SERVICE_URL}/ifc/${fileId}/info`);
+  const response = await fetchWithRetry(`${IFC_SERVICE_URL}/ifc/${fileId}/info`);
 
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Failed to get file info: ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get mesh geometry (vertices, faces) for a single element.
+ * Used by Plotly viewer for 3D previews.
+ *
+ * Returns null if element has no geometry (e.g., IfcSpace, IfcBuildingStorey, abstract types).
+ */
+export async function getElementGeometry(fileId: string, guid: string): Promise<MeshGeometry | null> {
+  const response = await fetchWithRetry(`${IFC_SERVICE_URL}/ifc/${fileId}/geometry/${guid}`);
+
+  if (!response.ok) {
+    // 404 or geometry extraction errors are expected for some elements
+    if (response.status === 404 || response.status === 422) {
+      console.debug(`[IFC] No geometry for element ${guid}`);
+      return null;
+    }
+    const error = await response.text();
+    throw new Error(`Failed to get geometry: ${error}`);
   }
 
   return response.json();
@@ -173,4 +252,4 @@ export function clearCache(): void {
   fileIdCache.clear();
 }
 
-export type { IFCOpenResponse, ElementSummary, ElementDetail, ElementListResponse };
+export type { IFCOpenResponse, ElementSummary, ElementDetail, ElementListResponse, MeshGeometry };

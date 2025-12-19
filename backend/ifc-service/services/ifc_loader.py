@@ -18,8 +18,10 @@ import os
 import tempfile
 from typing import Dict, List, Any, Optional, Tuple
 import httpx
+import numpy as np
 
 import ifcopenshell
+import ifcopenshell.geom
 
 from config import settings
 
@@ -380,6 +382,96 @@ class IFCLoaderService:
             "materials": materials,
             "type_name": type_name,
             "express_id": express_id,
+        }
+
+    def get_element_geometry(self, file_id: str, guid: str) -> Dict[str, Any]:
+        """
+        Extract mesh geometry (vertices, faces) for a single element.
+
+        Uses ifcopenshell.geom to create shape and extract triangulated mesh.
+        Returns world coordinates.
+
+        For aggregate elements (IfcCurtainWall, IfcStair, etc.), combines geometry
+        from all decomposed children.
+
+        Args:
+            file_id: ID of loaded file
+            guid: Element GUID
+
+        Returns:
+            Dict with vertices, faces, and element info
+        """
+        ifc_file = self._cache.get(file_id)
+        if not ifc_file:
+            raise ValueError(f"File {file_id} not loaded")
+
+        try:
+            element = ifc_file.by_guid(guid)
+        except RuntimeError:
+            raise ValueError(f"Element with GUID {guid} not found")
+
+        # Configure geometry settings
+        settings = ifcopenshell.geom.settings()
+        settings.set(settings.USE_WORLD_COORDS, True)
+        settings.set(settings.WELD_VERTICES, True)
+
+        all_verts = []
+        all_faces = []
+        vertex_offset = 0
+
+        def extract_geometry(elem):
+            """Extract geometry from a single element."""
+            nonlocal vertex_offset
+            try:
+                shape = ifcopenshell.geom.create_shape(settings, elem)
+                geometry = shape.geometry
+
+                verts = np.array(geometry.verts).reshape(-1, 3)
+                faces = np.array(geometry.faces).reshape(-1, 3)
+
+                if len(verts) > 0:
+                    all_verts.append(verts)
+                    # Offset face indices for combined mesh
+                    all_faces.append(faces + vertex_offset)
+                    vertex_offset += len(verts)
+                    return True
+            except Exception:
+                pass
+            return False
+
+        # Try direct geometry first
+        has_direct_geom = extract_geometry(element)
+
+        # If no direct geometry, try decomposed children
+        # (common for IfcCurtainWall, IfcStair, IfcRoof, etc.)
+        if not has_direct_geom:
+            # Check for IsDecomposedBy relationship
+            if hasattr(element, 'IsDecomposedBy'):
+                for rel in element.IsDecomposedBy:
+                    for child in rel.RelatedObjects:
+                        extract_geometry(child)
+
+            # Also check for HasOpenings (voids)
+            # and ContainsElements for spatial elements
+
+        if not all_verts:
+            raise ValueError(
+                f"No geometry for {element.is_a()} '{element.Name or guid}'. "
+                f"Element may be abstract or geometry is in child elements."
+            )
+
+        # Combine all vertices and faces
+        combined_verts = np.vstack(all_verts)
+        combined_faces = np.vstack(all_faces)
+
+        return {
+            "guid": element.GlobalId,
+            "ifc_type": element.is_a(),
+            "name": element.Name,
+            "vertices": combined_verts.tolist(),
+            "faces": combined_faces.astype(int).tolist(),
+            "vertex_count": len(combined_verts),
+            "face_count": len(combined_faces),
         }
 
     def unload_file(self, file_id: str) -> bool:

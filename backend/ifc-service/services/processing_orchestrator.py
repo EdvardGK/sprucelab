@@ -218,7 +218,16 @@ class ProcessingOrchestrator:
             # Merge spatial GUIDs into entity map for property linking
             all_guid_to_id = {**spatial_guid_to_id, **entity_guid_to_id}
 
-            # Step 7: Write properties (with entity references resolved)
+            # Step 7: Write type assignments
+            print(f"[Orchestrator] Writing {len(parse_result.type_assignments)} type assignments...")
+            type_assignment_count = await self.repository.bulk_insert_type_assignments(
+                parse_result.type_assignments,
+                entity_guid_to_id,  # entity GUID → DB ID
+                type_guid_to_id,    # type GUID → DB ID
+            )
+            print(f"[Orchestrator] Created {type_assignment_count} type assignments")
+
+            # Step 8: Write properties (with entity references resolved)
             print(f"[Orchestrator] Writing {len(parse_result.properties)} properties...")
 
             # Update entity_id in properties from GUID to DB ID
@@ -247,6 +256,7 @@ class ProcessingOrchestrator:
                 element_count=result.element_count,
                 storey_count=result.storey_count,
                 system_count=result.system_count,
+                processing_error='',  # Clear any previous error
             )
 
             result.success = True

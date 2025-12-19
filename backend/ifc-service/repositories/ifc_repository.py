@@ -79,6 +79,13 @@ class SystemData:
     description: Optional[str] = None
 
 
+@dataclass
+class TypeAssignmentData:
+    """Data for a type→entity assignment (IfcRelDefinesByType)."""
+    entity_guid: str  # GUID of the element
+    type_guid: str    # GUID of the type object
+
+
 # =============================================================================
 # Repository Class
 # =============================================================================
@@ -219,14 +226,15 @@ class IFCRepository:
                         entity.length,
                         entity.height,
                         entity.perimeter,
+                        False,  # is_removed - default to False for new entities
                     ))
 
                 await conn.executemany(
                     """
                     INSERT INTO ifc_entities (
                         id, model_id, ifc_guid, ifc_type, name, description,
-                        storey_id, area, volume, length, height, perimeter
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                        storey_id, area, volume, length, height, perimeter, is_removed
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                     ON CONFLICT (model_id, ifc_guid) DO NOTHING
                     """,
                     records
@@ -449,6 +457,52 @@ class IFCRepository:
 
         return guid_to_id
 
+    async def bulk_insert_type_assignments(
+        self,
+        assignments: List[TypeAssignmentData],
+        entity_guid_to_id: Dict[str, str],
+        type_guid_to_id: Dict[str, str],
+    ) -> int:
+        """
+        Bulk insert type→entity assignments.
+
+        Args:
+            assignments: List of type assignment data
+            entity_guid_to_id: Map of entity GUID to entity UUID
+            type_guid_to_id: Map of type GUID to type UUID
+
+        Returns:
+            Number of assignments inserted
+        """
+        if not assignments:
+            return 0
+
+        records = []
+        for assignment in assignments:
+            entity_id = entity_guid_to_id.get(assignment.entity_guid)
+            type_id = type_guid_to_id.get(assignment.type_guid)
+
+            if entity_id and type_id:
+                records.append((
+                    uuid.UUID(entity_id),
+                    uuid.UUID(type_id),
+                ))
+
+        if not records:
+            return 0
+
+        async with get_transaction() as conn:
+            await conn.executemany(
+                """
+                INSERT INTO type_assignments (entity_id, type_id)
+                VALUES ($1, $2)
+                ON CONFLICT (entity_id, type_id) DO NOTHING
+                """,
+                records
+            )
+
+        return len(records)
+
     async def create_processing_report(
         self,
         model_id: str,
@@ -536,6 +590,18 @@ class IFCRepository:
                 model_uuid
             )
             deleted["property_sets"] = int(result.split()[-1]) if result else 0
+
+            # Type assignments reference entities and types
+            result = await conn.execute(
+                """
+                DELETE FROM type_assignments
+                WHERE entity_id IN (
+                    SELECT id FROM ifc_entities WHERE model_id = $1
+                )
+                """,
+                model_uuid
+            )
+            deleted["type_assignments"] = int(result.split()[-1]) if result else 0
 
             # Spatial hierarchy
             result = await conn.execute(

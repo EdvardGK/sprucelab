@@ -269,6 +269,13 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const container = containerRef.current;
         if (!container) return;
 
+        // Wait for container to have valid dimensions
+        if (container.clientWidth === 0 || container.clientHeight === 0) {
+          console.debug('[Viewer] Container has zero dimensions, waiting...');
+          setTimeout(() => initViewer(), 100);
+          return;
+        }
+
         // 1. Create Components instance
         const components = new OBC.Components();
         componentsRef.current = components;
@@ -1015,11 +1022,25 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         cleanupResize = () => window.removeEventListener('resize', handleResize);
 
         // Set viewer state for hooks that need components/world/Three.js objects
+        // Use try-catch for scene/renderer access as ThatOpen getters can throw
+        let threeScene = null;
+        let threeRenderer = null;
+        try {
+          threeScene = world.scene?.three || null;
+        } catch {
+          console.warn('Scene not yet available');
+        }
+        try {
+          threeRenderer = world.renderer?.three || null;
+        } catch {
+          console.warn('Renderer not yet available');
+        }
+
         setViewerState({
           components,
           world,
-          renderer: world.renderer?.three || null,
-          scene: world.scene?.three || null,
+          renderer: threeRenderer,
+          scene: threeScene,
         });
         setIsInitialized(true);
       } catch (err) {
