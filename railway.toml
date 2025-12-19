@@ -7,7 +7,9 @@ dockerfilePath = "backend/Dockerfile.django"
 watchPatterns = ["backend/**"]
 
 [deploy]
-startCommand = "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
+# Run from /app where Dockerfile copies the code
+# Timeout 120s to handle slow statistics queries
+startCommand = "cd /app && python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
 healthcheckPath = "/api/health/"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

@@ -29,4 +29,5 @@ EXPOSE 8000
 
 # Production command with gunicorn
 # Use $PORT for Railway compatibility, fallback to 8000
-CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2"]
+# Timeout 120s for slow database queries (statistics endpoints)
+CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]
