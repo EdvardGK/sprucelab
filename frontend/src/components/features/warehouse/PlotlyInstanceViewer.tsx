@@ -140,8 +140,9 @@ export function PlotlyInstanceViewer({ modelId, typeId, className }: PlotlyInsta
   }
 
   // Create Plotly data from geometry
+  // Note: Using 'as any' because plotly.js types are overly strict for mesh3d
   const plotData = geometry ? [{
-    type: 'mesh3d' as const,
+    type: 'mesh3d',
     x: geometry.vertices.map(v => v[0]),
     y: geometry.vertices.map(v => v[1]),
     z: geometry.vertices.map(v => v[2]),
@@ -158,9 +159,9 @@ export function PlotlyInstanceViewer({ modelId, typeId, className }: PlotlyInsta
       roughness: 0.5,
     },
     lightposition: { x: 100, y: 100, z: 200 },
-    hoverinfo: 'text' as const,
+    hoverinfo: 'text',
     hovertext: geometry.name || geometry.guid,
-  }] : [];
+  } as any] : [];
 
   const layout = {
     scene: {
@@ -189,6 +190,7 @@ export function PlotlyInstanceViewer({ modelId, typeId, className }: PlotlyInsta
       {/* 3D Canvas */}
       <div className="relative flex-1 min-h-[200px]">
         {geometry && (
+          // @ts-ignore - react-plotly.js types incompatible with React 18
           <Plot
             data={plotData}
             layout={layout}
