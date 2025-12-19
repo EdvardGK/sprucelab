@@ -7,7 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework import routers
 
-from .views import current_user
+from .views import current_user, health_check
 
 # API Router
 router = routers.DefaultRouter()
@@ -15,6 +15,7 @@ router = routers.DefaultRouter()
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
+    path('api/health/', health_check, name='health-check'),
     path('api/auth/me/', current_user, name='current-user'),
     path('api/projects/', include('apps.projects.urls')),
     path('api/models/', include('apps.models.urls')),
