@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # Server
     HOST: str = "0.0.0.0"
-    PORT: int = 8001
+    PORT: int = 8100
 
     # Database (Supabase PostgreSQL - shared with Django)
     DATABASE_URL: str = ""

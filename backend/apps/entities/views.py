@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from django.http import HttpResponse
+from django.db.models import Count, Min
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     ProcessingReport, IFCEntity, PropertySet, SpatialHierarchy,
@@ -436,6 +437,191 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             'ignored': ignored,
             'review': review,
             'progress_percent': round((mapped / total * 100) if total > 0 else 0, 1)
+        })
+
+    @action(detail=False, methods=['get'], url_path='consolidated')
+    def consolidated(self, request):
+        """
+        Get types consolidated by signature (ifc_type + type_name + key properties).
+
+        GET /api/entities/types/consolidated/?model={id}
+
+        Creates a "type signature" for ML-style grouping:
+        - ifc_type: IfcColumnType
+        - type_name: CFRS 150x150x10
+        - is_external: False
+        - load_bearing: True
+        - material: S355
+
+        Two types with same name but different key properties = different consolidated types.
+        """
+        model_id = request.query_params.get('model')
+        if not model_id:
+            return Response({'error': 'model parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from .models import TypeAssignment
+        from collections import defaultdict
+
+        # Key properties for type signature (order matters for consistency)
+        KEY_PROPERTIES = ['IsExternal', 'LoadBearing', 'FireRating', 'Reference']
+
+        # First pass: group by (ifc_type, type_name) to get candidate groups
+        type_groups = IFCType.objects.filter(model_id=model_id).values(
+            'ifc_type', 'type_name'
+        ).annotate(guid_count=Count('id')).order_by('ifc_type', 'type_name')
+
+        results = []
+        for group in type_groups:
+            # Get all types in this name group
+            types_in_group = IFCType.objects.filter(
+                model_id=model_id,
+                ifc_type=group['ifc_type'],
+                type_name=group['type_name']
+            )
+            type_ids = list(types_in_group.values_list('id', flat=True))
+
+            # Get entities for these types
+            entity_ids = list(TypeAssignment.objects.filter(
+                type_id__in=type_ids
+            ).values_list('entity_id', flat=True))
+
+            # Extract key property values (most common value for each property)
+            signature_props = {}
+            for prop_name in KEY_PROPERTIES:
+                values = list(PropertySet.objects.filter(
+                    entity_id__in=entity_ids,
+                    property_name=prop_name
+                ).values_list('property_value', flat=True))
+                if values:
+                    # Use most common value as the signature value
+                    from collections import Counter
+                    most_common = Counter(values).most_common(1)
+                    signature_props[prop_name.lower()] = most_common[0][0] if most_common else None
+
+            # Get representative type for mapping info
+            rep_type = types_in_group.select_related('mapping', 'mapping__ns3451').first()
+
+            # Get material from entities (common property)
+            materials = list(PropertySet.objects.filter(
+                entity_id__in=entity_ids,
+                property_name__in=['Structural Material', 'Material']
+            ).values_list('property_value', flat=True).distinct()[:3])
+
+            # Get mapping info
+            mapping_status = None
+            ns3451_code = None
+            ns3451_name = None
+            if rep_type and hasattr(rep_type, 'mapping') and rep_type.mapping:
+                mapping_status = rep_type.mapping.mapping_status
+                ns3451_code = rep_type.mapping.ns3451_code
+                if rep_type.mapping.ns3451:
+                    ns3451_name = rep_type.mapping.ns3451.name
+
+            results.append({
+                'ifc_type': group['ifc_type'],
+                'type_name': group['type_name'],
+                'guid_count': group['guid_count'],
+                'instance_count': len(entity_ids),
+                'representative_id': str(rep_type.id) if rep_type else None,
+                # Key properties for ML signature
+                'is_external': signature_props.get('isexternal'),
+                'load_bearing': signature_props.get('loadbearing'),
+                'fire_rating': signature_props.get('firerating'),
+                'reference': signature_props.get('reference'),
+                'materials': materials,
+                # Mapping info
+                'mapping_status': mapping_status,
+                'ns3451_code': ns3451_code,
+                'ns3451_name': ns3451_name,
+            })
+
+        return Response({
+            'model_id': model_id,
+            'consolidated_count': len(results),
+            'raw_type_count': IFCType.objects.filter(model_id=model_id).count(),
+            'types': results
+        })
+
+    @action(detail=False, methods=['post'], url_path='map-consolidated')
+    def map_consolidated(self, request):
+        """
+        Apply mapping to ALL types matching (ifc_type, type_name) at once.
+
+        POST /api/entities/types/map-consolidated/
+        {
+            "model_id": "uuid",
+            "ifc_type": "IfcColumnType",
+            "type_name": "CFRS 150x150x10",
+            "ns3451_code": "234",
+            "mapping_status": "mapped",
+            "representative_unit": "stk",
+            "notes": "Steel columns"
+        }
+
+        This finds all IFCType records matching (model_id, ifc_type, type_name)
+        and creates/updates TypeMapping for each one.
+
+        Returns:
+        {
+            "success": true,
+            "types_updated": 37,
+            "mapping_data": { ... }
+        }
+        """
+        model_id = request.data.get('model_id')
+        ifc_type = request.data.get('ifc_type')
+        type_name = request.data.get('type_name')
+
+        if not all([model_id, ifc_type, type_name]):
+            return Response(
+                {'error': 'model_id, ifc_type, and type_name are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Find all matching types
+        matching_types = IFCType.objects.filter(
+            model_id=model_id,
+            ifc_type=ifc_type,
+            type_name=type_name
+        )
+
+        if not matching_types.exists():
+            return Response(
+                {'error': f'No types found matching {ifc_type} / {type_name}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Extract mapping fields from request
+        mapping_fields = {}
+        for field in ['ns3451_code', 'mapping_status', 'representative_unit', 'notes', 'mapped_by']:
+            if field in request.data:
+                mapping_fields[field] = request.data[field]
+
+        # Default status to 'mapped' if ns3451_code provided
+        if 'ns3451_code' in mapping_fields and mapping_fields['ns3451_code']:
+            mapping_fields.setdefault('mapping_status', 'mapped')
+            mapping_fields['mapped_at'] = datetime.now()
+
+        # Create/update TypeMapping for each matching type
+        updated_count = 0
+        created_count = 0
+
+        for ifc_type_obj in matching_types:
+            mapping, created = TypeMapping.objects.update_or_create(
+                ifc_type=ifc_type_obj,
+                defaults=mapping_fields
+            )
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
+
+        return Response({
+            'success': True,
+            'types_matched': matching_types.count(),
+            'mappings_created': created_count,
+            'mappings_updated': updated_count,
+            'mapping_data': mapping_fields
         })
 
     @action(detail=True, methods=['get'], url_path='instances')
