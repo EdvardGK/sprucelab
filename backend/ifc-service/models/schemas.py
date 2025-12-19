@@ -164,6 +164,29 @@ class ExportResponse(BaseModel):
 
 
 # ============================================================================
+# Geometry Extraction (for Plotly viewer)
+# ============================================================================
+
+
+class MeshGeometry(BaseModel):
+    """Mesh geometry data for 3D visualization (Plotly/Three.js)."""
+
+    guid: str = Field(..., description="Element GUID")
+    ifc_type: str = Field(..., description="IFC type (e.g., IfcWall)")
+    name: Optional[str] = Field(None, description="Element name")
+    vertices: List[List[float]] = Field(
+        ...,
+        description="Vertex positions as [[x,y,z], ...] in world coordinates"
+    )
+    faces: List[List[int]] = Field(
+        ...,
+        description="Triangle faces as [[i,j,k], ...] vertex indices"
+    )
+    vertex_count: int = Field(..., description="Number of vertices")
+    face_count: int = Field(..., description="Number of triangular faces")
+
+
+# ============================================================================
 # IFC Processing (Django integration)
 # ============================================================================
 

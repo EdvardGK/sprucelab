@@ -6,7 +6,7 @@
  * and action buttons.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -18,12 +18,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Save, XCircle, Flag, FileQuestion } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Loader2, Save, XCircle, Flag, FileQuestion, Download, Upload, CheckCircle2, AlertTriangle, Leaf } from 'lucide-react';
 
 import { NS3451CascadingSelector } from './NS3451CascadingSelector';
 import { TypeInfoPanel } from './TypeInfoPanel';
-import { TypeInstanceViewer } from './TypeInstanceViewer';
+import { InstanceViewer } from './InstanceViewer';
 import { MappingProgressBar, KeyboardShortcutsHint } from './MappingProgressBar';
+import { MaterialLayerEditor } from './MaterialLayerEditor';
 
 import {
   useTypeNavigation,
@@ -34,7 +42,11 @@ import {
   useTypeMappingSummary,
   useUpdateTypeMapping,
   useCreateTypeMapping,
+  useExportTypesExcel,
+  useExportTypesReduzer,
+  useImportTypesExcel,
   type IFCType,
+  type ExcelImportResult,
 } from '@/hooks/use-warehouse';
 import { getProcurementTier } from '@/lib/procurement-tiers';
 import { cn } from '@/lib/utils';
@@ -64,6 +76,14 @@ export function TypeMappingWorkspace({
   const { data: summary } = useTypeMappingSummary(modelId);
   const updateMapping = useUpdateTypeMapping();
   const createMapping = useCreateTypeMapping();
+  const exportExcel = useExportTypesExcel();
+  const exportReduzer = useExportTypesReduzer();
+  const importExcel = useImportTypesExcel();
+
+  // Excel import state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Local form state
   const [ns3451Code, setNs3451Code] = useState<string | null>(null);
@@ -155,6 +175,54 @@ export function TypeMappingWorkspace({
   // Status counts for filter tabs
   const statusCounts = getStatusCounts(types);
 
+  // Excel export handler
+  const handleExport = useCallback(async () => {
+    try {
+      await exportExcel.mutateAsync(modelId);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  }, [exportExcel, modelId]);
+
+  // Reduzer export handler
+  const handleReduzerExport = useCallback(async () => {
+    try {
+      await exportReduzer.mutateAsync({ modelId, includeUnmapped: false });
+    } catch (error) {
+      console.error('Reduzer export failed:', error);
+    }
+  }, [exportReduzer, modelId]);
+
+  // Excel import handler
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await importExcel.mutateAsync({ modelId, file });
+      setImportResult(result);
+      setShowImportDialog(true);
+    } catch (error) {
+      console.error('Import failed:', error);
+      setImportResult({
+        success: false,
+        summary: { total_rows: 0, updated: 0, created: 0, skipped: 0, error_count: 1 },
+        errors: [{ row: 0, type_guid: '', error: String(error) }],
+        warnings: [],
+      });
+      setShowImportDialog(true);
+    } finally {
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [importExcel, modelId]);
+
   if (typesLoading) {
     return (
       <div className={cn('flex items-center justify-center py-12', className)}>
@@ -191,25 +259,81 @@ export function TypeMappingWorkspace({
           hasNext={navigation.hasNext}
         />
 
-        {/* Status Filter Tabs - Smaller */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-text-tertiary mr-1">{t('common.filter')}:</span>
-          {(['all', 'pending', 'mapped', 'review', 'followup', 'ignored'] as const).map(
-            (status) => (
-              <Button
-                key={status}
-                variant={navigation.filterStatus === status ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => navigation.setFilterStatus(status)}
-                className="text-xs h-6 px-2"
-              >
-                {status === 'all' ? t('common.all') : t(`status.${status}`)}
-                <span className="ml-1 text-text-tertiary">
-                  ({statusCounts[status]})
-                </span>
-              </Button>
-            )
-          )}
+        {/* Status Filter Tabs + Excel Buttons */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-text-tertiary mr-1">{t('common.filter')}:</span>
+            {(['all', 'pending', 'mapped', 'review', 'followup', 'ignored'] as const).map(
+              (status) => (
+                <Button
+                  key={status}
+                  variant={navigation.filterStatus === status ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => navigation.setFilterStatus(status)}
+                  className="text-xs h-6 px-2"
+                >
+                  {status === 'all' ? t('common.all') : t(`status.${status}`)}
+                  <span className="ml-1 text-text-tertiary">
+                    ({statusCounts[status]})
+                  </span>
+                </Button>
+              )
+            )}
+          </div>
+
+          {/* Excel Export/Import Buttons */}
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={exportExcel.isPending || types.length === 0}
+              className="text-xs h-6 px-2 gap-1"
+            >
+              {exportExcel.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Download className="h-3 w-3" />
+              )}
+              {t('typeMapping.exportExcel')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImportClick}
+              disabled={importExcel.isPending || types.length === 0}
+              className="text-xs h-6 px-2 gap-1"
+            >
+              {importExcel.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Upload className="h-3 w-3" />
+              )}
+              {t('typeMapping.importExcel')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReduzerExport}
+              disabled={exportReduzer.isPending || summary?.mapped === 0}
+              className="text-xs h-6 px-2 gap-1 border-green-600/30 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950"
+              title={t('typeMapping.exportReduzerTooltip', 'Export mapped types to Reduzer format for LCA')}
+            >
+              {exportReduzer.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Leaf className="h-3 w-3" />
+              )}
+              {t('typeMapping.exportReduzer')}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
         </div>
       </div>
 
@@ -228,6 +352,13 @@ export function TypeMappingWorkspace({
                   disabled={isSaving}
                 />
               </div>
+
+              {/* Material Layers - for type composition */}
+              <MaterialLayerEditor
+                typeMappingId={currentType.mapping?.id || null}
+                initialLayers={currentType.mapping?.definition_layers || []}
+                compact={true}
+              />
 
               {/* Unit + Notes in one row on larger screens */}
               <div className="flex gap-2">
@@ -309,10 +440,11 @@ export function TypeMappingWorkspace({
               />
 
               {/* 3D Instance Preview - Take all remaining space */}
-              <TypeInstanceViewer
+              <InstanceViewer
                 modelId={modelId}
                 typeId={currentType.id}
                 className="flex-1 min-h-0"
+                mode="plotly"
               />
             </div>
           </div>
@@ -327,6 +459,98 @@ export function TypeMappingWorkspace({
       <div className="flex-none border-t px-3 py-1.5 bg-background-secondary">
         <KeyboardShortcutsHint />
       </div>
+
+      {/* Excel Import Result Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {importResult?.success ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              )}
+              {t('typeMapping.importResult')}
+            </DialogTitle>
+            <DialogDescription>
+              {importResult?.success
+                ? t('typeMapping.importSuccess')
+                : t('typeMapping.importPartial')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {importResult && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex justify-between py-1 px-2 bg-background-secondary rounded">
+                  <span className="text-text-secondary">{t('typeMapping.importTotalRows')}</span>
+                  <span className="font-medium">{importResult.summary.total_rows}</span>
+                </div>
+                <div className="flex justify-between py-1 px-2 bg-green-500/10 rounded">
+                  <span className="text-text-secondary">{t('typeMapping.importUpdated')}</span>
+                  <span className="font-medium text-green-600">{importResult.summary.updated}</span>
+                </div>
+                <div className="flex justify-between py-1 px-2 bg-background-secondary rounded">
+                  <span className="text-text-secondary">{t('typeMapping.importSkipped')}</span>
+                  <span className="font-medium">{importResult.summary.skipped}</span>
+                </div>
+                <div className="flex justify-between py-1 px-2 bg-red-500/10 rounded">
+                  <span className="text-text-secondary">{t('typeMapping.importErrors')}</span>
+                  <span className="font-medium text-red-600">{importResult.summary.error_count}</span>
+                </div>
+              </div>
+
+              {/* Errors */}
+              {importResult.errors.length > 0 && (
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-red-600">{t('typeMapping.importErrorList')}</h4>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {importResult.errors.slice(0, 10).map((err, idx) => (
+                      <div key={idx} className="text-xs bg-red-500/10 p-1.5 rounded">
+                        <span className="text-text-tertiary">{t('typeMapping.importRow')} {err.row}:</span>{' '}
+                        {err.error}
+                      </div>
+                    ))}
+                    {importResult.errors.length > 10 && (
+                      <div className="text-xs text-text-tertiary">
+                        {t('typeMapping.importMoreErrors', { count: importResult.errors.length - 10 })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Warnings */}
+              {importResult.warnings.length > 0 && (
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-yellow-600">{t('typeMapping.importWarningList')}</h4>
+                  <div className="max-h-24 overflow-y-auto space-y-1">
+                    {importResult.warnings.slice(0, 5).map((warn, idx) => (
+                      <div key={idx} className="text-xs bg-yellow-500/10 p-1.5 rounded">
+                        <span className="text-text-tertiary">{t('typeMapping.importRow')} {warn.row}:</span>{' '}
+                        {warn.warning}
+                      </div>
+                    ))}
+                    {importResult.warnings.length > 5 && (
+                      <div className="text-xs text-text-tertiary">
+                        {t('typeMapping.importMoreWarnings', { count: importResult.warnings.length - 5 })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={() => setShowImportDialog(false)}
+                className="w-full"
+              >
+                {t('common.close')}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

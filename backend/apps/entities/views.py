@@ -2,19 +2,25 @@
 API views for entities app.
 """
 from datetime import datetime
+from io import BytesIO
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser
+from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     ProcessingReport, IFCEntity, PropertySet, SpatialHierarchy,
-    IFCType, Material, TypeMapping, MaterialMapping, NS3451Code
+    IFCType, Material, TypeMapping, TypeDefinitionLayer, MaterialMapping, NS3451Code
 )
 from .serializers import (
     ProcessingReportSerializer, IFCEntitySerializer,
-    NS3451CodeSerializer, TypeMappingSerializer, MaterialMappingSerializer,
-    IFCTypeWithMappingSerializer, MaterialWithMappingSerializer
+    NS3451CodeSerializer, TypeMappingSerializer, TypeDefinitionLayerSerializer,
+    MaterialMappingSerializer, IFCTypeWithMappingSerializer, MaterialWithMappingSerializer
 )
+from .services.excel_export import export_types_to_excel
+from .services.excel_import import import_types_from_excel
+from .services.reduzer_export import export_types_to_reduzer
 
 
 class ProcessingReportViewSet(viewsets.ReadOnlyModelViewSet):
@@ -471,6 +477,206 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             'instances': list(entities)
         })
 
+    @action(detail=False, methods=['get'], url_path='export-excel')
+    def export_excel(self, request):
+        """
+        Export types to Excel template for batch mapping.
+
+        GET /api/types/export-excel/?model={id}
+
+        Returns Excel file with:
+        - Editable columns (A-D): NS3451 Code, Unit, Notes, Status
+        - Read-only columns (E-R): Type metadata and aggregated properties
+        - Rows grouped by IfcEntity
+        """
+        model_id = request.query_params.get('model')
+        if not model_id:
+            return Response(
+                {'error': 'model parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check model exists and has types
+        type_count = IFCType.objects.filter(model_id=model_id).count()
+        if type_count == 0:
+            return Response(
+                {'error': 'No types found for this model'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            # Get model name for filename
+            from apps.models.models import Model
+            model = Model.objects.filter(id=model_id).first()
+            model_name = model.name if model else 'unknown'
+
+            # Generate Excel file
+            excel_buffer = export_types_to_excel(model_id)
+
+            # Build filename
+            date_str = datetime.now().strftime('%Y-%m-%d')
+            filename = f"types_{model_name}_{date_str}.xlsx"
+            # Sanitize filename
+            filename = "".join(c for c in filename if c.isalnum() or c in '._-')
+
+            # Return as file download
+            response = HttpResponse(
+                excel_buffer.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to generate Excel: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], url_path='export-reduzer')
+    def export_reduzer(self, request):
+        """
+        Export types to Reduzer-compatible Excel format for LCA import.
+
+        GET /api/entities/types/export-reduzer/?model={id}&include_unmapped=false
+
+        Returns Excel file with Reduzer import format:
+        - description: Type name
+        - NS3451:2009: Building classification code
+        - quantity: Aggregated quantity from instances
+        - unit: Unit of measurement (stk, m, m2, m3)
+        - component: Discipline or NS3451 category grouping
+        - productIDType: Product ID type (EPD, NOBB, etc.)
+        - productID: Product/EPD identifier
+        - notes: Additional notes
+
+        Only includes types with NS3451 mapping unless include_unmapped=true.
+        Types with material layers expand to multiple rows (one per EPD).
+        """
+        model_id = request.query_params.get('model')
+        include_unmapped = request.query_params.get('include_unmapped', 'false').lower() == 'true'
+
+        if not model_id:
+            return Response(
+                {'error': 'model parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check model exists
+        from apps.models.models import Model
+        model = Model.objects.filter(id=model_id).first()
+        if not model:
+            return Response(
+                {'error': 'Model not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check for mapped types
+        if not include_unmapped:
+            mapped_count = IFCType.objects.filter(
+                model_id=model_id,
+                mapping__ns3451_code__isnull=False
+            ).exclude(mapping__ns3451_code='').count()
+
+            if mapped_count == 0:
+                return Response(
+                    {'error': 'No mapped types found. Map types to NS3451 codes first or use include_unmapped=true'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+        try:
+            # Generate Reduzer Excel file
+            excel_buffer = export_types_to_reduzer(model_id, include_unmapped=include_unmapped)
+
+            # Build filename
+            date_str = datetime.now().strftime('%Y-%m-%d')
+            model_name = model.name if model else 'unknown'
+            filename = f"reduzer_{model_name}_{date_str}.xlsx"
+            # Sanitize filename
+            filename = "".join(c for c in filename if c.isalnum() or c in '._-')
+
+            # Return as file download
+            response = HttpResponse(
+                excel_buffer.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to generate Reduzer export: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['post'], url_path='import-excel', parser_classes=[MultiPartParser])
+    def import_excel(self, request):
+        """
+        Import type mappings from Excel file.
+
+        POST /api/types/import-excel/
+        Body (multipart/form-data):
+        - file: Excel file (.xlsx)
+        - model_id: UUID of the model
+
+        Returns:
+        {
+            "success": true,
+            "summary": {"total_rows": 45, "updated": 42, "created": 0, "skipped": 2, "error_count": 1},
+            "errors": [{"row": 15, "type_guid": "abc123", "error": "Invalid NS3451 code: 999"}],
+            "warnings": [{"row": 8, "type_guid": "def456", "warning": "NS3451 code empty, status set to pending"}]
+        }
+        """
+        file = request.FILES.get('file')
+        model_id = request.data.get('model_id')
+
+        if not file:
+            return Response(
+                {'error': 'file is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not model_id:
+            return Response(
+                {'error': 'model_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file type
+        if not file.name.endswith('.xlsx'):
+            return Response(
+                {'error': 'File must be an Excel file (.xlsx)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check model exists
+        type_count = IFCType.objects.filter(model_id=model_id).count()
+        if type_count == 0:
+            return Response(
+                {'error': 'No types found for this model'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            # Read file content
+            file_content = BytesIO(file.read())
+
+            # Get username if authenticated
+            username = None
+            if request.user and request.user.is_authenticated:
+                username = request.user.username or request.user.email
+
+            # Import
+            result = import_types_from_excel(model_id, file_content, username)
+
+            return Response(result.to_dict())
+
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to import Excel: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class TypeMappingViewSet(viewsets.ModelViewSet):
     """
@@ -545,6 +751,79 @@ class TypeMappingViewSet(viewsets.ModelViewSet):
             'created': created,
             'updated': updated,
             'errors': errors
+        })
+
+
+class TypeDefinitionLayerViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for type definition layers (material composition).
+
+    GET /api/type-definition-layers/?type_mapping={id} - List layers for a type mapping
+    POST /api/type-definition-layers/ - Create layer
+    PATCH /api/type-definition-layers/{id}/ - Update layer
+    DELETE /api/type-definition-layers/{id}/ - Delete layer
+
+    POST /api/type-definition-layers/bulk-update/ - Bulk create/update layers for a type
+
+    Layers define the material composition of a type (e.g., wall layers:
+    exterior cladding, insulation, structure, interior finish).
+    """
+    queryset = TypeDefinitionLayer.objects.select_related('type_mapping').all()
+    serializer_class = TypeDefinitionLayerSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['type_mapping']
+    ordering = ['type_mapping', 'layer_order']
+
+    @action(detail=False, methods=['post'], url_path='bulk-update')
+    def bulk_update(self, request):
+        """
+        Bulk create/update layers for a type mapping.
+
+        POST /api/type-definition-layers/bulk-update/
+        Body: {
+            "type_mapping_id": "uuid",
+            "layers": [
+                {"layer_order": 1, "material_name": "Gypsum board", "thickness_mm": 12.5, "epd_id": null},
+                {"layer_order": 2, "material_name": "Mineral wool", "thickness_mm": 150, "epd_id": "EPD-123"},
+                {"layer_order": 3, "material_name": "Brick", "thickness_mm": 108, "epd_id": null}
+            ]
+        }
+
+        This will:
+        1. Delete existing layers for the type mapping
+        2. Create new layers from the provided data
+        """
+        type_mapping_id = request.data.get('type_mapping_id')
+        layers_data = request.data.get('layers', [])
+
+        if not type_mapping_id:
+            return Response({'error': 'type_mapping_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            type_mapping = TypeMapping.objects.get(id=type_mapping_id)
+        except TypeMapping.DoesNotExist:
+            return Response({'error': 'TypeMapping not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Delete existing layers
+        TypeDefinitionLayer.objects.filter(type_mapping=type_mapping).delete()
+
+        # Create new layers
+        created_layers = []
+        for layer_data in layers_data:
+            layer = TypeDefinitionLayer.objects.create(
+                type_mapping=type_mapping,
+                layer_order=layer_data.get('layer_order', 1),
+                material_name=layer_data.get('material_name', ''),
+                thickness_mm=layer_data.get('thickness_mm', 0),
+                epd_id=layer_data.get('epd_id'),
+                notes=layer_data.get('notes', ''),
+            )
+            created_layers.append(TypeDefinitionLayerSerializer(layer).data)
+
+        return Response({
+            'type_mapping_id': str(type_mapping_id),
+            'layers': created_layers,
+            'count': len(created_layers)
         })
 
 

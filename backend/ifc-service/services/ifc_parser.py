@@ -22,7 +22,7 @@ import ifcopenshell
 
 from repositories.ifc_repository import (
     EntityData, PropertyData, SpatialData,
-    MaterialData, TypeData, SystemData
+    MaterialData, TypeData, SystemData, TypeAssignmentData
 )
 
 
@@ -64,6 +64,7 @@ class ParseResult:
     materials: List[MaterialData] = field(default_factory=list)
     types: List[TypeData] = field(default_factory=list)
     systems: List[SystemData] = field(default_factory=list)
+    type_assignments: List[TypeAssignmentData] = field(default_factory=list)
 
     # Counts
     element_count: int = 0
@@ -72,6 +73,7 @@ class ParseResult:
     material_count: int = 0
     type_count: int = 0
     system_count: int = 0
+    type_assignment_count: int = 0
 
     # Processing info
     stage_results: List[Dict] = field(default_factory=list)
@@ -377,6 +379,32 @@ class IFCParserService:
             })
             result.errors.extend(stage_errors)
             print(f"[Parser] Properties: {len(properties)}")
+
+            # ==================== STAGE: Type Assignments ====================
+            stage_start = time.time()
+            print("[Parser] Extracting type assignments...")
+
+            # Build type GUID set for fast lookup
+            type_guids = {t.type_guid for t in types}
+
+            type_assignments, stage_errors = self._extract_type_assignments(
+                ifc_file, entity_guids, type_guids
+            )
+            result.type_assignments = type_assignments
+            result.type_assignment_count = len(type_assignments)
+
+            result.stage_results.append({
+                'stage': 'type_assignments',
+                'status': 'success' if len(stage_errors) == 0 else 'partial',
+                'processed': len(type_assignments),
+                'skipped': 0,
+                'failed': len(stage_errors),
+                'errors': [e['message'] for e in stage_errors],
+                'duration_ms': int((time.time() - stage_start) * 1000),
+                'message': f"Extracted {len(type_assignments)} type assignments"
+            })
+            result.errors.extend(stage_errors)
+            print(f"[Parser] Type Assignments: {len(type_assignments)}")
 
             # ==================== Complete ====================
             result.success = True
@@ -738,6 +766,57 @@ class IFCParserService:
                     })
 
         return properties, errors
+
+    def _extract_type_assignments(
+        self, ifc_file, entity_guids: set, type_guids: set
+    ) -> Tuple[List[TypeAssignmentData], List[Dict]]:
+        """
+        Extract type→entity assignments from IfcRelDefinesByType relationships.
+
+        Args:
+            ifc_file: Open IFC file
+            entity_guids: Set of entity GUIDs we've extracted
+            type_guids: Set of type GUIDs we've extracted
+        """
+        assignments = []
+        errors = []
+
+        for rel in ifc_file.by_type('IfcRelDefinesByType'):
+            try:
+                relating_type = rel.RelatingType
+                if not relating_type or not hasattr(relating_type, 'GlobalId'):
+                    continue
+
+                type_guid = relating_type.GlobalId
+                if type_guid not in type_guids:
+                    continue
+
+                related_objects = rel.RelatedObjects or []
+
+                for element in related_objects:
+                    if not hasattr(element, 'GlobalId'):
+                        continue
+
+                    entity_guid = element.GlobalId
+                    if entity_guid not in entity_guids:
+                        continue
+
+                    assignments.append(TypeAssignmentData(
+                        entity_guid=entity_guid,
+                        type_guid=type_guid,
+                    ))
+
+            except Exception as e:
+                errors.append({
+                    'stage': 'type_assignments',
+                    'severity': 'warning',
+                    'message': f"Failed to extract type assignment: {str(e)}",
+                    'element_guid': None,
+                    'element_type': 'IfcRelDefinesByType',
+                    'timestamp': datetime.now().isoformat()
+                })
+
+        return assignments, errors
 
 
 # Singleton instance

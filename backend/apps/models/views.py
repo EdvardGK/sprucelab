@@ -274,28 +274,30 @@ class ModelViewSet(viewsets.ModelViewSet):
                 # Frontend can poll /api/models/{id}/status/ for completion
 
             else:
-                # FastAPI not available, use Celery LITE task
-                print(f"FastAPI not available, using Celery LITE task...")
-                result = process_ifc_lite_task.delay(
+                # FastAPI not available, use Celery FULL task for proper entity/type extraction
+                print(f"FastAPI not available, using Celery FULL task...")
+                result = process_ifc_task.delay(
                     str(model.id),
-                    full_path
+                    full_path,
+                    skip_geometry=True  # Skip geometry, we just need metadata for warehouse
                 )
                 task_id = result.id
                 model.task_id = task_id
                 model.save(update_fields=['task_id'])
-                print(f"✅ Celery LITE task queued: {task_id}")
+                print(f"✅ Celery FULL task queued: {task_id}")
 
         except Exception as e:
-            # If FastAPI call fails, fallback to Celery LITE task
-            print(f"FastAPI error ({e}), using Celery LITE task...")
-            result = process_ifc_lite_task.delay(
+            # If FastAPI call fails, fallback to Celery FULL task
+            print(f"FastAPI error ({e}), using Celery FULL task...")
+            result = process_ifc_task.delay(
                 str(model.id),
-                full_path
+                full_path,
+                skip_geometry=True  # Skip geometry, we just need metadata for warehouse
             )
             task_id = result.id
             model.task_id = task_id
             model.save(update_fields=['task_id'])
-            print(f"✅ Celery LITE task queued (fallback): {task_id}")
+            print(f"✅ Celery FULL task queued (fallback): {task_id}")
 
         # Return response with quick stats (full processing continues in background)
         response_serializer = ModelDetailSerializer(model)
@@ -863,12 +865,12 @@ class ModelViewSet(viewsets.ModelViewSet):
             'model': ModelDetailSerializer(model).data
         })
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], url_path='delete_preview')
     def delete_preview(self, request, pk=None):
         """
         Preview what will be deleted before actually deleting a model.
 
-        GET /api/models/{id}/delete-preview/
+        GET /api/models/{id}/delete_preview/
 
         Returns:
         - Model information (name, version, status, is_published)

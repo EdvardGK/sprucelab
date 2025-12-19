@@ -15,6 +15,15 @@ export interface NS3451Code {
   parent_code: string | null;
 }
 
+export interface TypeDefinitionLayer {
+  id?: string;
+  layer_order: number;
+  material_name: string;
+  thickness_mm: number;
+  epd_id: string | null;
+  notes?: string;
+}
+
 export interface TypeMapping {
   id: string;
   ifc_type: string;
@@ -31,6 +40,7 @@ export interface TypeMapping {
   mapped_at: string | null;
   created_at: string;
   updated_at: string;
+  definition_layers?: TypeDefinitionLayer[];
 }
 
 export interface NS3451HierarchyNode {
@@ -451,6 +461,166 @@ export function useCreateMaterialMapping() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: warehouseKeys.materials() });
       queryClient.invalidateQueries({ queryKey: warehouseKeys.materialMappings() });
+    },
+  });
+}
+
+// =============================================================================
+// EXCEL EXPORT/IMPORT
+// =============================================================================
+
+export interface ExcelImportSummary {
+  total_rows: number;
+  updated: number;
+  created: number;
+  skipped: number;
+  error_count: number;
+}
+
+export interface ExcelImportError {
+  row: number;
+  type_guid: string;
+  error: string;
+}
+
+export interface ExcelImportWarning {
+  row: number;
+  type_guid: string;
+  warning: string;
+}
+
+export interface ExcelImportResult {
+  success: boolean;
+  summary: ExcelImportSummary;
+  errors: ExcelImportError[];
+  warnings: ExcelImportWarning[];
+}
+
+/**
+ * Export types to Excel template for batch mapping.
+ * Triggers file download.
+ */
+export function useExportTypesExcel() {
+  return useMutation({
+    mutationFn: async (modelId: string) => {
+      const response = await apiClient.get(
+        `/entities/types/export-excel/?model=${modelId}`,
+        {
+          responseType: 'blob',
+        }
+      );
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `types_${modelId}.xlsx`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?(.+)"?/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Create download link
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, filename };
+    },
+  });
+}
+
+/**
+ * Export types to Reduzer-compatible format for LCA import.
+ * Triggers file download.
+ *
+ * @param includeUnmapped - If true, includes types without NS3451 mapping
+ */
+export function useExportTypesReduzer() {
+  return useMutation({
+    mutationFn: async ({
+      modelId,
+      includeUnmapped = false,
+    }: {
+      modelId: string;
+      includeUnmapped?: boolean;
+    }) => {
+      const params = new URLSearchParams();
+      params.append('model', modelId);
+      if (includeUnmapped) {
+        params.append('include_unmapped', 'true');
+      }
+
+      const response = await apiClient.get(
+        `/entities/types/export-reduzer/?${params}`,
+        {
+          responseType: 'blob',
+        }
+      );
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `reduzer_${modelId}.xlsx`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?(.+)"?/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Create download link
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, filename };
+    },
+  });
+}
+
+/**
+ * Import type mappings from Excel file.
+ */
+export function useImportTypesExcel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ modelId, file }: { modelId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('model_id', modelId);
+
+      const response = await apiClient.post<ExcelImportResult>(
+        '/entities/types/import-excel/',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidate types queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: warehouseKeys.types() });
+      queryClient.invalidateQueries({ queryKey: warehouseKeys.typeMappings() });
     },
   });
 }

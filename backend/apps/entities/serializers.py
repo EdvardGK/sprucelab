@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
     System, Material, IFCType, ProcessingReport,
-    NS3451Code, TypeMapping, MaterialMapping
+    NS3451Code, TypeMapping, TypeDefinitionLayer, MaterialMapping
 )
 
 
@@ -100,10 +100,23 @@ class NS3451CodeSerializer(serializers.ModelSerializer):
         fields = ['code', 'name', 'name_en', 'guidance', 'level', 'parent_code']
 
 
+class TypeDefinitionLayerSerializer(serializers.ModelSerializer):
+    """Serializer for type definition layers (material composition)."""
+
+    class Meta:
+        model = TypeDefinitionLayer
+        fields = [
+            'id', 'type_mapping', 'layer_order', 'material_name',
+            'thickness_mm', 'epd_id', 'notes', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
 class TypeMappingSerializer(serializers.ModelSerializer):
     """Serializer for type → NS3451 mappings."""
 
     ns3451_name = serializers.CharField(source='ns3451.name', read_only=True)
+    definition_layers = TypeDefinitionLayerSerializer(many=True, read_only=True)
 
     class Meta:
         model = TypeMapping
@@ -111,7 +124,8 @@ class TypeMappingSerializer(serializers.ModelSerializer):
             'id', 'ifc_type', 'ns3451_code', 'ns3451', 'ns3451_name',
             'product', 'representative_unit', 'discipline',
             'mapping_status', 'confidence', 'notes',
-            'mapped_by', 'mapped_at', 'created_at', 'updated_at'
+            'mapped_by', 'mapped_at', 'created_at', 'updated_at',
+            'definition_layers'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

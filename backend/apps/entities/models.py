@@ -387,6 +387,54 @@ class TypeMapping(models.Model):
         return f"{self.ifc_type.type_name} → {self.ns3451_code or 'unmapped'}"
 
 
+class TypeDefinitionLayer(models.Model):
+    """
+    Material layer for type definitions in the library/warehouse.
+
+    Unlike TypeLayer (which is tied to parsed IFC types), this model
+    is for user-defined type compositions in the warehouse library.
+
+    Enables defining "Wall Type A has 3 layers: plasterboard, insulation, brick"
+    with thickness and optional EPD references.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    type_mapping = models.ForeignKey(
+        TypeMapping,
+        on_delete=models.CASCADE,
+        related_name='definition_layers',
+        help_text="The type mapping (library entry) this layer belongs to"
+    )
+
+    layer_order = models.IntegerField(
+        help_text="Layer position (1 = exterior/outer, increasing inward)"
+    )
+    material_name = models.CharField(
+        max_length=255,
+        help_text="Material name (e.g., 'Gypsum board', 'Mineral wool')"
+    )
+    thickness_mm = models.FloatField(
+        help_text="Layer thickness in millimeters"
+    )
+    epd_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="EPD database reference ID (optional)"
+    )
+    notes = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'type_definition_layers'
+        ordering = ['type_mapping', 'layer_order']
+        unique_together = ['type_mapping', 'layer_order']
+
+    def __str__(self):
+        return f"Layer {self.layer_order}: {self.material_name} ({self.thickness_mm}mm)"
+
+
 class MaterialMapping(models.Model):
     """
     User mapping of IFC material to standard data.

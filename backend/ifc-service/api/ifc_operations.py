@@ -17,6 +17,7 @@ from models.schemas import (
     ElementSummary,
     ElementDetail,
     ElementListResponse,
+    MeshGeometry,
 )
 from core.auth import optional_api_key
 
@@ -183,6 +184,24 @@ async def get_element_by_express_id(file_id: str, express_id: int):
     try:
         detail = ifc_loader.get_element_by_express_id(file_id, express_id)
         return ElementDetail(**detail)
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{file_id}/geometry/{guid}", response_model=MeshGeometry)
+async def get_element_geometry(file_id: str, guid: str):
+    """
+    Get mesh geometry (vertices, faces) for a single element.
+
+    Returns triangulated mesh data suitable for Plotly Mesh3d or Three.js.
+    Coordinates are in world space.
+
+    Used by the TypeInstanceViewer for 3D previews.
+    """
+    try:
+        geometry = ifc_loader.get_element_geometry(file_id, guid)
+        return MeshGeometry(**geometry)
 
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

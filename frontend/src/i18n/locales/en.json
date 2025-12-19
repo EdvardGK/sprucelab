@@ -102,7 +102,23 @@
     "clearMapping": "-- Clear mapping --",
     "level1Categories": "Level 1 - Main categories",
     "level2Categories": "Level 2 - Subcategories",
-    "level3Categories": "Level 3 - Detailed"
+    "level3Categories": "Level 3 - Detailed",
+    "exportExcel": "Export Excel",
+    "importExcel": "Import Excel",
+    "exportReduzer": "Reduzer",
+    "exportReduzerTooltip": "Export mapped types to Reduzer format for LCA",
+    "importResult": "Import Result",
+    "importSuccess": "All type mappings were imported successfully.",
+    "importPartial": "Import completed with some issues.",
+    "importTotalRows": "Total rows",
+    "importUpdated": "Updated",
+    "importSkipped": "Skipped",
+    "importErrors": "Errors",
+    "importErrorList": "Errors",
+    "importWarningList": "Warnings",
+    "importRow": "Row",
+    "importMoreErrors": "...and {{count}} more errors",
+    "importMoreWarnings": "...and {{count}} more warnings"
   },
   "typeInfo": {
     "ifcType": "IFC Type",
@@ -204,6 +220,12 @@
     "processing": "The model has been uploaded and is being processed.",
     "invalidFileType": "Please upload an IFC file (.ifc)",
     "fileTooLarge": "File size must be less than 1GB",
-    "noFileSelected": "Please select a file"
+    "noFileSelected": "Please select a file",
+    "multipleFiles": "Multiple files allowed",
+    "selectedFiles": "Selected files",
+    "uploadingProgress": "Uploading {{current}} of {{total}}...",
+    "partialSuccess": "{{success}} uploaded, {{failed}} failed",
+    "allSuccess": "{{count}} models uploaded successfully",
+    "uploadAllButton": "Upload All ({{count}})"
   }
 }

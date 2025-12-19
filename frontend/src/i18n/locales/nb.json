@@ -102,7 +102,23 @@
     "clearMapping": "-- Fjern kartlegging --",
     "level1Categories": "Nivå 1 - Hovedkategorier",
     "level2Categories": "Nivå 2 - Underkategorier",
-    "level3Categories": "Nivå 3 - Detaljert"
+    "level3Categories": "Nivå 3 - Detaljert",
+    "exportExcel": "Eksporter Excel",
+    "importExcel": "Importer Excel",
+    "exportReduzer": "Reduzer",
+    "exportReduzerTooltip": "Eksporter kartlagte typer til Reduzer-format for LCA",
+    "importResult": "Importresultat",
+    "importSuccess": "Alle typekartlegginger ble importert.",
+    "importPartial": "Import fullført med noen problemer.",
+    "importTotalRows": "Totalt rader",
+    "importUpdated": "Oppdatert",
+    "importSkipped": "Hoppet over",
+    "importErrors": "Feil",
+    "importErrorList": "Feil",
+    "importWarningList": "Advarsler",
+    "importRow": "Rad",
+    "importMoreErrors": "...og {{count}} flere feil",
+    "importMoreWarnings": "...og {{count}} flere advarsler"
   },
   "typeInfo": {
     "ifcType": "IFC-type",
@@ -201,6 +217,15 @@
     "currentVersion": "Nåværende versjon",
     "uploadedFile": "Opplastet fil",
     "uploadedSuccess": "Modellen er lastet opp. Trykk \"Lukk\" for å fortsette.",
-    "processing": "Modellen er lastet opp og behandles."
+    "processing": "Modellen er lastet opp og behandles.",
+    "invalidFileType": "Vennligst last opp en IFC-fil (.ifc)",
+    "fileTooLarge": "Filstørrelsen må være mindre enn 1GB",
+    "noFileSelected": "Vennligst velg en fil",
+    "multipleFiles": "Flere filer tillatt",
+    "selectedFiles": "Valgte filer",
+    "uploadingProgress": "Laster opp {{current}} av {{total}}...",
+    "partialSuccess": "{{success}} lastet opp, {{failed}} feilet",
+    "allSuccess": "{{count}} modeller lastet opp",
+    "uploadAllButton": "Last opp alle ({{count}})"
   }
 }
