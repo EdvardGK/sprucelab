@@ -45,7 +45,9 @@ export function MappingProgressBar({
           {currentIndex + 1}
         </span>
         <span className="text-text-tertiary">of</span>
-        <span className="font-medium text-text-primary tabular-nums">{totalCount}</span>
+        <span className="font-medium text-text-primary tabular-nums">
+          {summary?.total ?? totalCount}
+        </span>
       </div>
 
       {/* Progress Bar */}

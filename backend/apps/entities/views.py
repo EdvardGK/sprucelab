@@ -399,9 +399,13 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
 
     Returns instance_count (how many entities use this type) and
     mapping object (NS3451 code, status, etc.)
+
+    Note: Pagination disabled - types are small and mapping workflow needs all of them.
+    Typical models have 50-500 types; even 1000+ types is fine to return at once.
     """
     queryset = IFCType.objects.select_related('mapping', 'mapping__ns3451').all()
     serializer_class = IFCTypeWithMappingSerializer
+    pagination_class = None  # Return all types - needed for mapping workflow
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['model', 'ifc_type']
     search_fields = ['type_name', 'ifc_type']

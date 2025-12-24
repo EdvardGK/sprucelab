@@ -239,10 +239,11 @@ export function useModelTypes(modelId: string, options: UseModelTypesOptions = {
       params.append('model', modelId);
       if (ifc_type) params.append('ifc_type', ifc_type);
 
-      const response = await apiClient.get<PaginatedResponse<IFCType>>(
+      // Types endpoint returns unpaginated array (pagination disabled for mapping workflow)
+      const response = await apiClient.get<IFCType[]>(
         `/entities/types/?${params}`
       );
-      return response.data.results || [];
+      return response.data || [];
     },
     enabled: !!modelId && enabled,
   });
