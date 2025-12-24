@@ -2,28 +2,57 @@
 IFC Processing Endpoint - Process IFC files and write to database.
 
 This endpoint is called by Django to process uploaded IFC files.
-It replaces the Celery task for synchronous processing.
+Replaces Celery - Django calls this directly after upload.
 
 Two-phase approach:
 1. Quick stats returned immediately (<1 second)
 2. Full processing continues in background
+3. Callback to Django when complete
 """
 
 import os
 import asyncio
+import tempfile
+import shutil
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from typing import Optional
+
+import httpx
 
 from models.schemas import ProcessRequest, ProcessResponse, QuickStatsResponse
 from services.processing_orchestrator import processing_orchestrator
 from services.ifc_parser import ifc_parser
 from core.auth import verify_api_key
+from config import settings
 
 router = APIRouter(prefix="/ifc", tags=["ifc-processing"])
 
 
 # Track background processing status
 _processing_status: dict = {}
+
+
+async def _download_ifc_file(url: str, model_id: str) -> str:
+    """
+    Download IFC file from URL to temp directory.
+
+    Returns local file path. Caller must clean up temp directory.
+    """
+    temp_dir = tempfile.mkdtemp(prefix=f"ifc_{model_id}_", dir=settings.TEMP_DIR)
+    ifc_path = os.path.join(temp_dir, "model.ifc")
+
+    print(f"Downloading IFC from {url}")
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, timeout=300.0)
+        response.raise_for_status()
+
+        with open(ifc_path, "wb") as f:
+            f.write(response.content)
+
+    file_size_mb = os.path.getsize(ifc_path) / (1024 * 1024)
+    print(f"Downloaded: {file_size_mb:.1f} MB to {ifc_path}")
+
+    return ifc_path
 
 
 @router.post("/process", response_model=QuickStatsResponse)
@@ -38,40 +67,64 @@ async def process_ifc_file(
     Two-phase approach for fast UX:
     1. IMMEDIATE (<1s): Returns quick stats (floors, element counts, top types)
     2. BACKGROUND: Full metadata extraction + database writes
-
-    The client should:
-    1. Display quick stats immediately
-    2. Poll /process/status/{model_id} for full processing completion
-    3. Or wait for webhook callback (if configured)
+    3. CALLBACK: Notifies Django when complete
 
     Args:
-        request: ProcessRequest with model_id and file_path
+        request: ProcessRequest with model_id and file_url (or file_path for local dev)
 
     Returns:
         QuickStatsResponse with immediate stats
     """
-    # Validate file exists
-    if not os.path.exists(request.file_path):
+    # Get file path - download from URL if provided, otherwise use local path
+    file_path = None
+    temp_dir = None
+
+    if request.file_url:
+        # Download from URL (cloud storage / Supabase)
+        try:
+            file_path = await _download_ifc_file(request.file_url, request.model_id)
+            temp_dir = os.path.dirname(file_path)
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to download IFC file: {str(e)}"
+            )
+    elif request.file_path:
+        # Local file path (development)
+        if not os.path.exists(request.file_path):
+            raise HTTPException(
+                status_code=400,
+                detail=f"IFC file not found: {request.file_path}"
+            )
+        file_path = request.file_path
+    else:
         raise HTTPException(
             status_code=400,
-            detail=f"IFC file not found: {request.file_path}"
+            detail="Either file_url or file_path must be provided"
         )
 
     # Validate file extension
-    if not request.file_path.lower().endswith('.ifc'):
+    if not file_path.lower().endswith('.ifc'):
+        if temp_dir:
+            shutil.rmtree(temp_dir, ignore_errors=True)
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type. Expected .ifc file, got: {request.file_path}"
+            detail=f"Invalid file type. Expected .ifc file"
         )
 
     # Phase 1: Extract quick stats (fast, synchronous)
-    quick_stats = ifc_parser.quick_stats(request.file_path)
+    quick_stats = ifc_parser.quick_stats(file_path)
 
     if not quick_stats.success:
+        if temp_dir:
+            shutil.rmtree(temp_dir, ignore_errors=True)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to extract quick stats: {quick_stats.error}"
         )
+
+    # Build callback URL
+    callback_url = request.django_callback_url or f"{settings.DJANGO_URL}/api/models/{request.model_id}/process-complete/"
 
     # Phase 2: Schedule full processing in background
     _processing_status[request.model_id] = {
@@ -84,8 +137,10 @@ async def process_ifc_file(
     background_tasks.add_task(
         _process_full,
         request.model_id,
-        request.file_path,
+        file_path,
         request.skip_geometry,
+        callback_url,
+        temp_dir,  # Pass temp_dir for cleanup
     )
 
     # Return quick stats immediately
@@ -104,8 +159,22 @@ async def process_ifc_file(
     )
 
 
-async def _process_full(model_id: str, file_path: str, skip_geometry: bool):
-    """Background task for full processing."""
+async def _process_full(
+    model_id: str,
+    file_path: str,
+    skip_geometry: bool,
+    callback_url: str,
+    temp_dir: Optional[str] = None,
+):
+    """
+    Background task for full processing.
+
+    After processing completes, calls back to Django with results.
+    Cleans up temp directory if one was created.
+    """
+    result = None
+    error_msg = None
+
     try:
         print(f"[Background] Starting full processing for {model_id}")
         result = await processing_orchestrator.process_model(
@@ -122,12 +191,52 @@ async def _process_full(model_id: str, file_path: str, skip_geometry: bool):
         print(f"[Background] Completed processing for {model_id}: {result.status}")
 
     except Exception as e:
+        error_msg = str(e)
         print(f"[Background] Failed processing for {model_id}: {e}")
         _processing_status[model_id] = {
             "status": "error",
             "result": None,
-            "error": str(e),
+            "error": error_msg,
         }
+
+    finally:
+        # Cleanup temp directory
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            print(f"[Background] Cleaned up temp dir: {temp_dir}")
+
+    # Call back to Django with results
+    try:
+        callback_data = {
+            "model_id": model_id,
+            "success": result.success if result else False,
+            "status": result.status if result else "error",
+            "element_count": result.element_count if result else 0,
+            "storey_count": result.storey_count if result else 0,
+            "system_count": result.system_count if result else 0,
+            "property_count": result.property_count if result else 0,
+            "material_count": result.material_count if result else 0,
+            "type_count": result.type_count if result else 0,
+            "ifc_schema": result.ifc_schema if result else None,
+            "processing_report_id": result.processing_report_id if result else None,
+            "duration_seconds": result.duration_seconds if result else 0,
+            "error": error_msg or (result.error if result else None),
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                callback_url,
+                json=callback_data,
+                headers={"X-API-Key": settings.IFC_SERVICE_API_KEY},
+                timeout=30.0,
+            )
+            if response.status_code != 200:
+                print(f"[Background] Django callback failed: {response.status_code} - {response.text}")
+            else:
+                print(f"[Background] Django callback successful for {model_id}")
+
+    except Exception as e:
+        print(f"[Background] Failed to call Django callback: {e}")
 
 
 @router.get("/process/status/{model_id}")
@@ -180,6 +289,31 @@ async def get_processing_status(
     }
 
 
+async def _get_file_path(request: ProcessRequest) -> tuple[str, Optional[str]]:
+    """
+    Get local file path from request, downloading if URL provided.
+
+    Returns:
+        (file_path, temp_dir) - temp_dir is set if file was downloaded
+    """
+    if request.file_url:
+        file_path = await _download_ifc_file(request.file_url, request.model_id)
+        temp_dir = os.path.dirname(file_path)
+        return file_path, temp_dir
+    elif request.file_path:
+        if not os.path.exists(request.file_path):
+            raise HTTPException(
+                status_code=400,
+                detail=f"IFC file not found: {request.file_path}"
+            )
+        return request.file_path, None
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Either file_url or file_path must be provided"
+        )
+
+
 @router.post("/process-sync", response_model=ProcessResponse)
 async def process_ifc_file_sync(
     request: ProcessRequest,
@@ -193,30 +327,26 @@ async def process_ifc_file_sync(
     in background.
 
     Args:
-        request: ProcessRequest with model_id and file_path
+        request: ProcessRequest with model_id and file_url or file_path
 
     Returns:
         ProcessResponse with full counts and status
     """
-    # Validate file exists
-    if not os.path.exists(request.file_path):
-        raise HTTPException(
-            status_code=400,
-            detail=f"IFC file not found: {request.file_path}"
-        )
-
-    # Validate file extension
-    if not request.file_path.lower().endswith('.ifc'):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid file type. Expected .ifc file, got: {request.file_path}"
-        )
-
-    # Process the file (blocking)
+    temp_dir = None
     try:
+        file_path, temp_dir = await _get_file_path(request)
+
+        # Validate file extension
+        if not file_path.lower().endswith('.ifc'):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid file type. Expected .ifc file"
+            )
+
+        # Process the file (blocking)
         result = await processing_orchestrator.process_model(
             model_id=request.model_id,
-            file_path=request.file_path,
+            file_path=file_path,
             skip_geometry=request.skip_geometry,
         )
 
@@ -238,12 +368,17 @@ async def process_ifc_file_sync(
             errors=result.errors,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[process_ifc_file_sync] Error: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Processing failed: {str(e)}"
         )
+    finally:
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @router.post("/reprocess", response_model=ProcessResponse)
@@ -262,14 +397,7 @@ async def reprocess_ifc_file(
     """
     from repositories.ifc_repository import ifc_repository
 
-    # Validate file exists
-    if not os.path.exists(request.file_path):
-        raise HTTPException(
-            status_code=400,
-            detail=f"IFC file not found: {request.file_path}"
-        )
-
-    # Delete existing data
+    # Delete existing data first
     try:
         deleted = await ifc_repository.delete_model_data(request.model_id)
         print(f"[reprocess] Deleted existing data: {deleted}")

@@ -16,7 +16,7 @@ from .serializers import (
     ModelUploadSerializer,
     IFCValidationReportSerializer
 )
-from .tasks import process_ifc_task, process_ifc_lite_task, revert_model_task
+from .tasks import revert_model_task
 from apps.projects.models import Project
 from apps.entities.models import IFCValidationReport, IFCEntity
 import json
@@ -234,72 +234,71 @@ class ModelViewSet(viewsets.ModelViewSet):
             status='processing'  # Set to processing immediately
         )
 
-        # Start IFC processing (two-phase: quick stats + background full processing)
+        # Start IFC processing via FastAPI
         # NOTE: Using skip_geometry=True for fast client-side rendering with IFC.js
         # Frontend will download the IFC file directly from Supabase Storage
-        # (full_path already defined above for timestamp extraction)
-
-        # Try FastAPI first (preferred), fallback to Celery
         from .services.fastapi_client import IFCServiceClient
 
         quick_stats = None
-        task_id = None
+
+        # Clean up temp file if we downloaded for timestamp extraction
+        if is_temp_file and os.path.exists(full_path):
+            os.unlink(full_path)
 
         try:
             client = IFCServiceClient()
 
-            # Check if FastAPI is available
-            if client.is_available():
-                print(f"Using FastAPI for IFC processing (two-phase)...")
-
-                # Phase 1: Get quick stats immediately
-                quick_stats = client.process_ifc(
-                    model_id=str(model.id),
-                    file_path=full_path,
-                    skip_geometry=True,
+            if not client.is_available():
+                print(f"❌ FastAPI service not available")
+                model.status = 'error'
+                model.processing_error = 'Processing service unavailable'
+                model.save(update_fields=['status', 'processing_error'])
+                return Response(
+                    {'error': 'Processing service unavailable. Please try again later.'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
                 )
 
-                if quick_stats.get('success'):
-                    print(f"✅ Quick stats received: {quick_stats.get('total_elements')} elements, {quick_stats.get('storey_count')} storeys")
-                    print(f"   Top types: {quick_stats.get('top_entity_types', [])[:3]}")
+            print(f"📡 Calling FastAPI for IFC processing...")
+            print(f"   File URL: {file_url}")
 
-                    # Update model with quick stats (before full processing completes)
-                    model.ifc_schema = quick_stats.get('ifc_schema', '')
-                    model.element_count = quick_stats.get('total_elements', 0)
-                    model.storey_count = quick_stats.get('storey_count', 0)
-                    model.save(update_fields=['ifc_schema', 'element_count', 'storey_count'])
+            # Build callback URL for when processing completes
+            callback_url = f"{settings.DJANGO_URL}/api/models/{model.id}/process-complete/"
 
-                else:
-                    print(f"⚠️ Quick stats failed: {quick_stats.get('error')}")
+            # Call FastAPI with file_url (not file_path)
+            quick_stats = client.process_ifc(
+                model_id=str(model.id),
+                file_url=file_url,
+                skip_geometry=True,
+                callback_url=callback_url,
+            )
 
-                # Full processing continues in FastAPI background
-                # Frontend can poll /api/models/{id}/status/ for completion
+            if quick_stats.get('success'):
+                print(f"✅ Quick stats received: {quick_stats.get('total_elements')} elements, {quick_stats.get('storey_count')} storeys")
+                print(f"   Top types: {quick_stats.get('top_entity_types', [])[:3]}")
+
+                # Update model with quick stats (before full processing completes)
+                model.ifc_schema = quick_stats.get('ifc_schema', '')
+                model.element_count = quick_stats.get('total_elements', 0)
+                model.storey_count = quick_stats.get('storey_count', 0)
+                model.save(update_fields=['ifc_schema', 'element_count', 'storey_count'])
 
             else:
-                # FastAPI not available, use Celery FULL task for proper entity/type extraction
-                print(f"FastAPI not available, using Celery FULL task...")
-                result = process_ifc_task.delay(
-                    str(model.id),
-                    full_path,
-                    skip_geometry=True  # Skip geometry, we just need metadata for warehouse
-                )
-                task_id = result.id
-                model.task_id = task_id
-                model.save(update_fields=['task_id'])
-                print(f"✅ Celery FULL task queued: {task_id}")
+                print(f"⚠️ Quick stats failed: {quick_stats.get('error')}")
+
+            # Full processing continues in FastAPI background
+            # FastAPI will call back to /api/models/{id}/process-complete/ when done
 
         except Exception as e:
-            # If FastAPI call fails, fallback to Celery FULL task
-            print(f"FastAPI error ({e}), using Celery FULL task...")
-            result = process_ifc_task.delay(
-                str(model.id),
-                full_path,
-                skip_geometry=True  # Skip geometry, we just need metadata for warehouse
+            print(f"❌ FastAPI processing error: {e}")
+            import traceback
+            traceback.print_exc()
+            model.status = 'error'
+            model.processing_error = str(e)
+            model.save(update_fields=['status', 'processing_error'])
+            return Response(
+                {'error': f'Processing failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            task_id = result.id
-            model.task_id = task_id
-            model.save(update_fields=['task_id'])
-            print(f"✅ Celery FULL task queued (fallback): {task_id}")
 
         # Return response with quick stats (full processing continues in background)
         response_serializer = ModelDetailSerializer(model)
@@ -325,9 +324,6 @@ class ModelViewSet(viewsets.ModelViewSet):
                 'stats_duration_ms': quick_stats.get('duration_ms'),
             }
             response_data['message'] = f'File uploaded. Quick stats ready ({quick_stats.get("duration_ms")}ms). Full processing in background.'
-
-        if task_id:
-            response_data['task_id'] = task_id
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
@@ -1187,6 +1183,62 @@ class ModelViewSet(viewsets.ModelViewSet):
                 'fragments_error'
             ])
             print(f"Fragments ready for {model.name}: {fragments_url}")
+
+        return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['post'], url_path='process-complete')
+    def process_complete(self, request, pk=None):
+        """
+        Callback from FastAPI when IFC processing completes.
+
+        POST /api/models/{id}/process-complete/
+
+        Request body (from FastAPI):
+            - model_id: UUID
+            - success: bool
+            - status: 'parsed' | 'error'
+            - element_count: int
+            - storey_count: int
+            - system_count: int
+            - property_count: int
+            - material_count: int
+            - type_count: int
+            - ifc_schema: str
+            - processing_report_id: UUID
+            - duration_seconds: float
+            - error: str (if failed)
+
+        This endpoint is called by FastAPI after full processing finishes.
+        """
+        from django.utils import timezone
+
+        model = self.get_object()
+
+        success = request.data.get('success', False)
+        error = request.data.get('error')
+
+        if error or not success:
+            model.status = 'error'
+            model.processing_error = error or 'Processing failed'
+            model.save(update_fields=['status', 'processing_error'])
+            print(f"❌ Processing failed for {model.name}: {error}")
+        else:
+            # Update model with processing results
+            model.status = 'ready'
+            model.element_count = request.data.get('element_count', 0)
+            model.storey_count = request.data.get('storey_count', 0)
+            model.system_count = request.data.get('system_count', 0)
+            model.ifc_schema = request.data.get('ifc_schema', '')
+            model.parsing_status = 'parsed'
+            model.processing_error = None
+            model.save(update_fields=[
+                'status', 'element_count', 'storey_count', 'system_count',
+                'ifc_schema', 'parsing_status', 'processing_error'
+            ])
+
+            duration = request.data.get('duration_seconds', 0)
+            type_count = request.data.get('type_count', 0)
+            print(f"✅ Processing complete for {model.name}: {model.element_count} elements, {type_count} types in {duration:.1f}s")
 
         return Response({'status': 'ok'})
 

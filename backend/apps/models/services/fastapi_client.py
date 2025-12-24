@@ -52,19 +52,22 @@ class IFCServiceClient:
     def process_ifc(
         self,
         model_id: str,
-        file_path: str,
+        file_url: str,
         skip_geometry: bool = True,
+        callback_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Start IFC processing - returns quick stats immediately.
 
         This returns fast stats (storeys, element counts, top types) while
-        full processing continues in the background.
+        full processing continues in the background. When processing completes,
+        FastAPI calls back to Django with the results.
 
         Args:
             model_id: UUID of the Model in Django database
-            file_path: Full path to the IFC file
+            file_url: URL to the IFC file (Supabase Storage)
             skip_geometry: Whether to skip geometry extraction
+            callback_url: Django endpoint to call when processing completes
 
         Returns:
             Dict with quick stats:
@@ -90,14 +93,19 @@ class IFCServiceClient:
         """
         url = f"{self.base_url}/api/v1/ifc/process"
 
+        payload = {
+            "model_id": str(model_id),
+            "file_url": file_url,
+            "skip_geometry": skip_geometry,
+        }
+
+        if callback_url:
+            payload["django_callback_url"] = callback_url
+
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
                 url,
-                json={
-                    "model_id": str(model_id),
-                    "file_path": file_path,
-                    "skip_geometry": skip_geometry,
-                },
+                json=payload,
                 headers={
                     "X-API-Key": self.api_key,
                     "Content-Type": "application/json",
@@ -170,18 +178,19 @@ class IFCServiceClient:
     def process_ifc_sync(
         self,
         model_id: str,
-        file_path: str,
+        file_url: str,
         skip_geometry: bool = True,
     ) -> Dict[str, Any]:
         """
         Process IFC file synchronously (waits for full completion).
 
         Use this for smaller files or when you need the full result immediately.
-        For larger files, use process_ifc() + wait_for_completion() or polling.
+        For larger files, use process_ifc() which returns quick stats and
+        processes in background with callback.
 
         Args:
             model_id: UUID of the Model in Django database
-            file_path: Full path to the IFC file
+            file_url: URL to the IFC file (Supabase Storage)
             skip_geometry: Whether to skip geometry extraction
 
         Returns:
@@ -197,7 +206,7 @@ class IFCServiceClient:
                 url,
                 json={
                     "model_id": str(model_id),
-                    "file_path": file_path,
+                    "file_url": file_url,
                     "skip_geometry": skip_geometry,
                 },
                 headers={
@@ -211,7 +220,7 @@ class IFCServiceClient:
     def reprocess_ifc(
         self,
         model_id: str,
-        file_path: str,
+        file_url: str,
         skip_geometry: bool = True,
     ) -> Dict[str, Any]:
         """
@@ -221,7 +230,7 @@ class IFCServiceClient:
 
         Args:
             model_id: UUID of the Model in Django database
-            file_path: Full path to the IFC file
+            file_url: URL to the IFC file (Supabase Storage)
             skip_geometry: Whether to skip geometry extraction
 
         Returns:
@@ -234,7 +243,7 @@ class IFCServiceClient:
                 url,
                 json={
                     "model_id": str(model_id),
-                    "file_path": file_path,
+                    "file_url": file_url,
                     "skip_geometry": skip_geometry,
                 },
                 headers={

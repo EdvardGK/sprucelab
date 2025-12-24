@@ -227,9 +227,10 @@ class ProcessRequest(BaseModel):
     """Request to process an IFC file and write metadata to database."""
 
     model_id: str = Field(..., description="UUID of the Model in Django database")
-    file_path: str = Field(..., description="Full path to the IFC file")
+    file_url: Optional[str] = Field(None, description="URL to download IFC file from (preferred for cloud storage)")
+    file_path: Optional[str] = Field(None, description="Local path to IFC file (for local development)")
     skip_geometry: bool = Field(True, description="Skip geometry extraction (always True for now)")
-    async_mode: bool = Field(False, description="Run processing in background (not implemented)")
+    django_callback_url: Optional[str] = Field(None, description="URL to call when processing completes")
 
 
 class ProcessResponse(BaseModel):

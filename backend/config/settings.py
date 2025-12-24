@@ -284,6 +284,15 @@ SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET')  # Found in Supabase Dashboard > Settings > API
 
 
+# FastAPI IFC Service Configuration
+# Used for IFC processing (replaces Celery for file processing)
+IFC_SERVICE_URL = os.getenv('IFC_SERVICE_URL', 'http://localhost:8001')
+IFC_SERVICE_API_KEY = os.getenv('IFC_SERVICE_API_KEY', 'sprucelab-ifc-service-dev-key-change-in-production')
+
+# Django base URL (used for callbacks from FastAPI)
+DJANGO_URL = os.getenv('DJANGO_URL', 'http://localhost:8000')
+
+
 # Celery Configuration
 # Uses Redis as message broker and result backend
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', os.getenv('REDIS_URL', 'redis://localhost:6379/0'))
