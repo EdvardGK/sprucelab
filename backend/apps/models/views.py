@@ -487,7 +487,7 @@ class ModelViewSet(viewsets.ModelViewSet):
             project=project,
             name=name,
             version_number=next_version,
-            file_path=file_path,
+            original_filename=filename,
             file_url=file_url,
             file_size=file_size or 0,
             status='processing',
