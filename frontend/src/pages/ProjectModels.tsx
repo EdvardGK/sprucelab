@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2 } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
@@ -10,17 +10,9 @@ import { DeleteModelDialog } from '@/components/DeleteModelDialog';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model } from '@/lib/api-types';
+import { formatFileSize } from '@/lib/format';
 
 type ViewMode = 'gallery' | 'table';
-
-// Helper function to format file size
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-}
 
 export default function ProjectModels() {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +44,13 @@ export default function ProjectModels() {
       )
     );
   }, [allModels]);
+
+  // Auto-open upload dialog when there are no models
+  useEffect(() => {
+    if (!modelsLoading && allModels && allModels.length === 0) {
+      setUploadDialogOpen(true);
+    }
+  }, [allModels, modelsLoading]);
 
   if (projectLoading || modelsLoading) {
     return (

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -51,6 +52,13 @@ export default function ProjectDashboard() {
 
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
   const { data: stats, isLoading: statsLoading, error: _statsError } = useProjectStatistics(id!);
+
+  // Redirect to models page if project has no models
+  useEffect(() => {
+    if (!statsLoading && stats && stats.model_count === 0) {
+      navigate(`/projects/${id}/models`, { replace: true });
+    }
+  }, [stats, statsLoading, id, navigate]);
 
   if (projectLoading) {
     return (
