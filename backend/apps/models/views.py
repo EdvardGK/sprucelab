@@ -3,7 +3,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 from django.conf import settings
 import os
 import tempfile
@@ -178,10 +177,13 @@ class ModelViewSet(viewsets.ModelViewSet):
             parent_model = None
 
         # Save file to storage (local or Supabase depending on settings)
+        # Stream the file directly without loading into memory (fixes OOM on large files)
         file_path = f'ifc_files/{project.id}/{uploaded_file.name}'
         try:
             print(f"📤 Uploading file to storage: {file_path}")
-            saved_path = default_storage.save(file_path, ContentFile(uploaded_file.read()))
+            # Reset file position and pass file object directly (streaming, not in-memory)
+            uploaded_file.seek(0)
+            saved_path = default_storage.save(file_path, uploaded_file)
             file_url = default_storage.url(saved_path)
             print(f"✅ File saved to: {file_url}")
         except Exception as storage_error:
@@ -388,9 +390,10 @@ class ModelViewSet(viewsets.ModelViewSet):
                 latest = Model.objects.filter(project=project, name=name).order_by('-version_number').first()
                 version_number = (latest.version_number + 1) if latest else 1
 
-            # Save file to storage
+            # Save file to storage (streaming, not in-memory)
             file_path = f'ifc_files/{project.id}/{file.name}'
-            saved_path = default_storage.save(file_path, ContentFile(file.read()))
+            file.seek(0)
+            saved_path = default_storage.save(file_path, file)
             file_url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else saved_path
 
             # Create model record with pre-parsed metadata
