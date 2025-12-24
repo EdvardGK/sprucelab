@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2, CheckCircle2 } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { useModels } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
@@ -72,11 +72,11 @@ export default function ProjectModels() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/projects/${id}`)}
+            onClick={() => navigate('/')}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
+            Back to Projects
           </Button>
 
           <div className="rounded-lg border border-error bg-error/10 p-4 text-error">
@@ -103,11 +103,11 @@ export default function ProjectModels() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/projects/${id}`)}
+            onClick={() => navigate('/')}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
+            Back to Projects
           </Button>
 
           <div className="flex items-start justify-between">
@@ -228,17 +228,31 @@ export default function ProjectModels() {
                           <span>{model.element_count.toLocaleString()} elements</span>
                           <span>•</span>
                           <span>{model.storey_count} storeys</span>
-                          {model.system_count > 0 && (
-                            <>
-                              <span>•</span>
-                              <span>{model.system_count} systems</span>
-                            </>
-                          )}
                           {model.file_size > 0 && (
                             <>
                               <span>•</span>
                               <span>{formatFileSize(model.file_size)}</span>
                             </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Type Mapping Progress */}
+                      {model.status === 'ready' && model.type_count > 0 && (
+                        <div className="flex items-center gap-2 pt-2">
+                          <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all duration-300"
+                              style={{
+                                width: `${Math.round((model.mapped_type_count / model.type_count) * 100)}%`
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs text-text-secondary whitespace-nowrap">
+                            {model.mapped_type_count}/{model.type_count} types
+                          </span>
+                          {model.mapped_type_count === model.type_count && (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
                           )}
                         </div>
                       )}
@@ -288,6 +302,7 @@ export default function ProjectModels() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Status</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">Elements</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">Storeys</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Mapping</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">File Size</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Uploaded</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">Actions</th>
@@ -328,6 +343,31 @@ export default function ProjectModels() {
                         onClick={() => navigate(`/models/${model.id}`)}
                       >
                         {model.status === 'ready' ? model.storey_count : '—'}
+                      </td>
+                      <td
+                        className="px-4 py-3 cursor-pointer"
+                        onClick={() => navigate(`/models/${model.id}`)}
+                      >
+                        {model.status === 'ready' && model.type_count > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-surface rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary rounded-full"
+                                style={{
+                                  width: `${Math.round((model.mapped_type_count / model.type_count) * 100)}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs text-text-secondary whitespace-nowrap">
+                              {model.mapped_type_count}/{model.type_count}
+                            </span>
+                            {model.mapped_type_count === model.type_count && (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-text-secondary">—</span>
+                        )}
                       </td>
                       <td
                         className="px-4 py-3 text-sm text-text-secondary text-right cursor-pointer"

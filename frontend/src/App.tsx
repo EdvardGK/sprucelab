@@ -26,8 +26,9 @@ const router = createBrowserRouter([
   { path: "/", element: <ProjectsGallery /> },
   { path: "/my-page", element: <MyPage /> },
   { path: "/projects", element: <ProjectsGallery /> },
-  { path: "/projects/:id", element: <ProjectDashboard /> },
-  { path: "/projects/:id/models", element: <ProjectModels /> },
+  { path: "/projects/:id", element: <ProjectModels /> },  // Models is now the landing page
+  { path: "/projects/:id/dashboard", element: <ProjectDashboard /> },  // Dashboard moved here
+  { path: "/projects/:id/models", element: <ProjectModels /> },  // Keep for backwards compat
   { path: "/projects/:id/my-page", element: <ProjectMyPage /> },
   { path: "/projects/:id/viewer-groups", element: <ViewerGroups /> },
   { path: "/projects/:id/viewer/:groupId", element: <FederatedViewer /> },

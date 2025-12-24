@@ -14,6 +14,7 @@ class ModelSerializer(serializers.ModelSerializer):
     fragments_generated_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S.%fZ', read_only=True)
     is_fork = serializers.BooleanField(read_only=True)
     fork_count = serializers.SerializerMethodField()
+    mapped_type_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Model
@@ -35,7 +36,7 @@ class ModelSerializer(serializers.ModelSerializer):
             'forked_at', 'is_fork', 'fork_count',
             # Aggregate stats (element details queried via FastAPI)
             'element_count', 'storey_count', 'system_count',
-            'type_count', 'material_count', 'type_summary',
+            'type_count', 'mapped_type_count', 'material_count', 'type_summary',
             'processing_error', 'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -46,13 +47,21 @@ class ModelSerializer(serializers.ModelSerializer):
             'is_published', 'ifc_timestamp', 'version_diff',
             'forked_at', 'is_fork', 'fork_count',
             'element_count', 'storey_count', 'system_count',
-            'type_count', 'material_count', 'type_summary',
+            'type_count', 'mapped_type_count', 'material_count', 'type_summary',
             'processing_error', 'created_at', 'updated_at'
         ]
 
     def get_fork_count(self, obj):
         """Get count of forks for this model."""
         return obj.forks.count()
+
+    def get_mapped_type_count(self, obj):
+        """Get count of types that have NS-3451 mappings."""
+        from apps.entities.models import IFCType
+        return IFCType.objects.filter(
+            model=obj,
+            mapping__ns3451_code__isnull=False
+        ).exclude(mapping__ns3451_code='').count()
 
 
 class ModelUploadSerializer(serializers.Serializer):

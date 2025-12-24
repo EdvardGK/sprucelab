@@ -42,6 +42,8 @@ export interface Model {
   element_count: number;
   storey_count: number;
   system_count: number;
+  type_count: number;
+  mapped_type_count: number;
   processing_error: string | null;
   task_id: string | null;
   created_at: string;
