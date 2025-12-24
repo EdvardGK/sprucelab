@@ -163,9 +163,17 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (files.length > 0 && !isUploading && !allDone) {
+      handleUpload();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]">
+        <form onSubmit={handleSubmit}>
         <DialogHeader>
           <DialogTitle>{t('modelUpload.title')}</DialogTitle>
           <DialogDescription>
@@ -197,6 +205,8 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
                 disabled={isUploading}
                 className="absolute inset-0 cursor-pointer opacity-0"
                 id="file-upload"
+                tabIndex={-1}
+                onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
               />
 
               <div className="flex flex-col items-center gap-2">
@@ -318,8 +328,7 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
                 {t('common.cancel')}
               </Button>
               <Button
-                type="button"
-                onClick={handleUpload}
+                type="submit"
                 disabled={isUploading || files.length === 0}
               >
                 {isUploading
@@ -331,6 +340,7 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
             </>
           )}
         </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
