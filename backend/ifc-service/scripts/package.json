@@ -1,0 +1,11 @@
+{
+  "name": "ifc-fragments-converter",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "IFC to Fragments converter for FastAPI service",
+  "dependencies": {
+    "@thatopen/components": "^2.4.0",
+    "@thatopen/fragments": "^3.0.0",
+    "web-ifc": "^0.0.68"
+  }
+}

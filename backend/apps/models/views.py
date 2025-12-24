@@ -1058,21 +1058,18 @@ class ModelViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def generate_fragments(self, request, pk=None):
         """
-        Generate ThatOpen Fragments file for this model.
+        Trigger ThatOpen Fragments generation for this model.
 
         POST /api/models/{id}/generate_fragments/
 
         Response:
-            - success: bool
-            - fragments_url: URL to fragments file
-            - size_mb: File size in MB
-            - element_count: Number of elements
+            - status: 'generating' or error message
+            - fragments_status: Current status
 
-        Note: This is an async operation. It may take 10-60 seconds for large models.
-        The fragments_url will be stored in the model and can be retrieved later
-        via GET /api/models/{id}/fragments/
+        Note: This is an async operation. Fragment generation runs in FastAPI
+        background task. Poll GET /api/models/{id}/fragments/ for status.
         """
-        from .services.fragments import generate_fragments_for_model
+        from .services.fragments import trigger_fragment_generation
 
         model = self.get_object()
 
@@ -1083,59 +1080,112 @@ class ModelViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # If already generating, return current status
+        if model.fragments_status == 'generating':
+            return Response({
+                'message': 'Fragment generation already in progress',
+                'fragments_status': 'generating',
+            }, status=status.HTTP_202_ACCEPTED)
+
         try:
-            # Generate fragments (this may take a while)
-            result = generate_fragments_for_model(str(model.id))
+            # Trigger async fragment generation via FastAPI
+            result = trigger_fragment_generation(str(model.id))
 
             return Response({
-                'success': True,
-                'fragments_url': result['fragments_url'],
-                'size_mb': result['size_mb'],
-                'element_count': result['element_count']
-            })
+                'message': 'Fragment generation started',
+                'fragments_status': 'generating',
+            }, status=status.HTTP_202_ACCEPTED)
 
-        except FileNotFoundError as e:
-            return Response(
-                {'error': f'File not found: {str(e)}'},
-                status=status.HTTP_404_NOT_FOUND
-            )
         except Exception as e:
             return Response(
-                {'error': f'Failed to generate fragments: {str(e)}'},
+                {'error': f'Failed to trigger fragment generation: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=True, methods=['get'])
     def fragments(self, request, pk=None):
         """
-        Get Fragments file URL for direct loading.
+        Get Fragments file URL and status.
 
         GET /api/models/{id}/fragments/
 
         Response:
-            - fragments_url: URL to fragments file (for direct download)
+            - fragments_status: 'pending', 'generating', 'completed', 'failed'
+            - fragments_url: URL to fragments file (if completed)
             - size_mb: File size in MB
             - generated_at: Timestamp when generated
+            - error: Error message (if failed)
 
-        If no fragments available, returns 404.
-        Frontend can then fallback to loading IFC file directly.
+        Returns:
+            - 200 OK: Fragments available (status=completed)
+            - 202 Accepted: Fragments generating
+            - 404 Not Found: No fragments (status=pending or failed)
         """
         model = self.get_object()
 
-        if not model.fragments_url:
-            return Response(
-                {
-                    'error': 'No Fragments file available. Generate first via POST /api/models/{id}/generate_fragments/',
-                    'has_ifc': bool(model.file_url)
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        return Response({
+        response_data = {
+            'fragments_status': model.fragments_status,
             'fragments_url': model.fragments_url,
             'size_mb': model.fragments_size_mb,
-            'generated_at': model.fragments_generated_at
-        })
+            'generated_at': model.fragments_generated_at,
+            'error': model.fragments_error,
+            'has_ifc': bool(model.file_url),
+        }
+
+        # Return 202 Accepted if still generating
+        if model.fragments_status == 'generating':
+            return Response(response_data, status=status.HTTP_202_ACCEPTED)
+
+        # Return 404 if no fragments available
+        if not model.fragments_url or model.fragments_status in ('pending', 'failed'):
+            return Response(response_data, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(response_data)
+
+    @action(detail=True, methods=['post'], url_path='fragments-complete')
+    def fragments_complete(self, request, pk=None):
+        """
+        Callback from FastAPI when fragments generation completes.
+
+        POST /api/models/{id}/fragments-complete/
+
+        Request body (from FastAPI):
+            - model_id: UUID
+            - fragments_url: URL to uploaded fragments file
+            - size_mb: File size in MB
+            - element_count: Number of elements
+            - error: Error message if failed
+
+        This endpoint is called by FastAPI after fragment conversion finishes.
+        """
+        from django.utils import timezone
+
+        model = self.get_object()
+
+        fragments_url = request.data.get('fragments_url')
+        size_mb = request.data.get('size_mb')
+        element_count = request.data.get('element_count')
+        error = request.data.get('error')
+
+        if error:
+            model.fragments_status = 'failed'
+            model.fragments_error = error
+            model.save(update_fields=['fragments_status', 'fragments_error'])
+            print(f"Fragment generation failed for {model.name}: {error}")
+        else:
+            model.fragments_status = 'completed'
+            model.fragments_url = fragments_url
+            model.fragments_size_mb = size_mb
+            model.fragments_generated_at = timezone.now()
+            model.fragments_error = None
+            model.save(update_fields=[
+                'fragments_status', 'fragments_url',
+                'fragments_size_mb', 'fragments_generated_at',
+                'fragments_error'
+            ])
+            print(f"Fragments ready for {model.name}: {fragments_url}")
+
+        return Response({'status': 'ok'})
 
     @action(detail=True, methods=['post'])
     def fork(self, request, pk=None):

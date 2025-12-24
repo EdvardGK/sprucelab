@@ -40,6 +40,13 @@ class Model(models.Model):
         ('failed', 'Failed'),
     ]
 
+    FRAGMENTS_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('generating', 'Generating'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='models')
     name = models.CharField(max_length=255)
@@ -64,6 +71,17 @@ class Model(models.Model):
         null=True,
         blank=True,
         help_text="When Fragments file was generated"
+    )
+    fragments_status = models.CharField(
+        max_length=20,
+        choices=FRAGMENTS_STATUS_CHOICES,
+        default='pending',
+        help_text="Fragment generation status"
+    )
+    fragments_error = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Error message if fragment generation failed"
     )
 
     # Legacy status field (deprecated, use stage-specific fields below)

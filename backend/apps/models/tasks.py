@@ -43,33 +43,27 @@ def _ensure_local_file(model, file_path=None):
 
 
 @shared_task(bind=True, name='apps.models.tasks.process_ifc_task')
-def process_ifc_task(self, model_id, file_path=None, skip_geometry=False, lod_level='low', target_triangles=2000):
+def process_ifc_task(self, model_id, file_path=None, **kwargs):
     """
-    Process an IFC file asynchronously using Celery (STAGED APPROACH).
+    Process an IFC file asynchronously using Celery (LITE APPROACH).
 
-    This task uses a layered architecture:
-    1. Layer 1 (Parse): Extract metadata only (fast, always succeeds)
-    2. Layer 2 (Geometry): Extract simplified geometry (LOD-LOW by default, ~2 minutes)
-    3. Layer 3 (Validate): Run quality checks (reports issues)
+    NOTE: This task now uses the lite approach - aggregate stats only.
+    For full entity extraction with types/materials in database,
+    use FastAPI's /ifc/process endpoint instead.
 
-    LOD STRATEGY:
-    - Default: Generate LOW-LOD geometry (simplified, 2k triangles per element)
-    - Protects against bad modeling (1M face vent → 2k triangles)
-    - User sees correct shapes quickly (~2 minutes)
-    - Optional: Generate HIGH-LOD (full detail) on demand later
+    The viewer loads IFC files directly via ThatOpen - no geometry
+    extraction needed in the backend.
 
     Args:
         model_id: UUID of the Model instance (as string)
-        file_path: Full path to the IFC file
-        skip_geometry: If True, skip geometry entirely (metadata only, <30s)
-        lod_level: 'low' (simplified, default) or 'high' (full detail)
-        target_triangles: Target triangle count for LOW-LOD (default: 2000)
+        file_path: Full path to the IFC file (optional, uses file_url if not provided)
+        **kwargs: Ignored (for backward compatibility with old callers)
 
     Returns:
-        dict: Processing results with counts and metadata
+        dict: Processing results with aggregate stats
     """
     from .models import Model
-    from .services import parse_ifc_metadata, extract_geometry_for_model
+    from .services import parse_ifc_stats
 
     temp_file_to_cleanup = None
 
@@ -88,92 +82,64 @@ def process_ifc_task(self, model_id, file_path=None, skip_geometry=False, lod_le
             temp_file_to_cleanup = local_path
             print(f"📥 Downloaded file from cloud storage to: {local_path}")
 
-        print(f"\n🔄 Starting LAYERED processing for model {model.name} (v{model.version_number})...")
+        print(f"\n🔄 Processing model {model.name} (v{model.version_number})...")
         print(f"   File: {local_path}")
-        print(f"   Stage 1: Parse metadata")
-        print(f"   Stage 2: Extract geometry")
-        print(f"   Stage 3: Validate (TODO)")
+        print(f"   Mode: Lite (stats only)")
 
-        # ==================== LAYER 1: Parse Metadata ====================
+        # ==================== PARSE STATS (LITE APPROACH) ====================
+        # NOTE: This task now uses the lite approach - stats only, no entity CRUD.
+        # For full entity extraction, use FastAPI's /ifc/process endpoint.
         print(f"\n{'='*80}")
-        print(f"LAYER 1: PARSING METADATA (no geometry)")
+        print(f"PARSING IFC STATS (lite approach - no entity CRUD)")
         print(f"{'='*80}")
 
-        parse_result = parse_ifc_metadata(model_id, local_path)
+        parse_result = parse_ifc_stats(local_path)
 
         # Check if parsing succeeded
         if parse_result.get('element_count', 0) == 0:
-            raise Exception("Parsing failed: No elements extracted")
+            raise Exception("Parsing failed: No elements found in file")
 
-        print(f"\n✅ Layer 1 complete:")
+        print(f"\n✅ Stats extracted:")
+        print(f"   Schema: {parse_result.get('ifc_schema', 'unknown')}")
         print(f"   Elements: {parse_result.get('element_count', 0)}")
-        print(f"   Properties: {parse_result.get('property_count', 0)}")
         print(f"   Storeys: {parse_result.get('storey_count', 0)}")
+        print(f"   Types: {parse_result.get('type_count', 0)}")
+        print(f"   Materials: {parse_result.get('material_count', 0)}")
 
-        # ==================== LAYER 2: Extract Geometry (OPTIONAL) ====================
-        geometry_result = None
-        if skip_geometry:
-            print(f"\n⏭️  LAYER 2: SKIPPED (geometry extraction deferred)")
-            print(f"   Geometry can be extracted later via API endpoint")
-            # Set geometry status to pending (will be extracted on-demand)
-            with transaction.atomic():
-                model.refresh_from_db()
-                model.geometry_status = 'pending'
-                model.save(update_fields=['geometry_status'])
-        else:
-            print(f"\n{'='*80}")
-            print(f"LAYER 2: EXTRACTING GEOMETRY")
-            print(f"{'='*80}")
+        # Note: Geometry is no longer extracted here - viewer loads IFC directly
 
-            # Sequential processing (Celery workers are already parallel)
-            # Note: Can't use multiprocessing.Pool inside Celery worker processes
-            geometry_result = extract_geometry_for_model(
-                model_id,
-                local_path,
-                parallel=False,  # Celery handles parallelism at task level
-                lod_level=lod_level,
-                target_triangles=target_triangles
-            )
-
-            print(f"\n✅ Layer 2 complete:")
-            print(f"   Geometries extracted: {geometry_result.get('succeeded', 0)}")
-            print(f"   Failed: {geometry_result.get('failed', 0)}")
-
-        # ==================== Update Legacy Status Field ====================
-        # For backward compatibility, update the legacy 'status' field
+        # ==================== Update Model with Stats ====================
         with transaction.atomic():
             model.refresh_from_db()
-
-            # Determine legacy status based on layer statuses
-            # In metadata-only architecture, models are ready when parsing completes
-            if model.parsing_status == 'parsed':
-                model.status = 'ready'  # Geometry is optional, metadata is sufficient
-            elif model.parsing_status == 'failed':
-                model.status = 'error'
-            else:
-                model.status = 'processing'
-
-            model.save(update_fields=['status'])
+            model.ifc_schema = parse_result.get('ifc_schema', '')
+            model.element_count = parse_result.get('element_count', 0)
+            model.storey_count = parse_result.get('storey_count', 0)
+            model.type_count = parse_result.get('type_count', 0)
+            model.material_count = parse_result.get('material_count', 0)
+            model.system_count = parse_result.get('system_count', 0)
+            model.type_summary = parse_result.get('type_summary', {})
+            model.parsing_status = 'parsed'
+            model.status = 'ready'  # Ready immediately - viewer loads IFC directly
+            model.save(update_fields=[
+                'ifc_schema', 'element_count', 'storey_count',
+                'type_count', 'material_count', 'system_count',
+                'type_summary', 'parsing_status', 'status'
+            ])
 
         print(f"\n{'='*80}")
-        print(f"✅ LAYERED PROCESSING COMPLETE for {model.name} (v{model.version_number})")
-        print(f"   Parsing: {model.parsing_status}")
-        print(f"   Geometry: {model.geometry_status}")
-        print(f"   Legacy status: {model.status}")
+        print(f"✅ PROCESSING COMPLETE for {model.name} (v{model.version_number})")
+        print(f"   Status: ready")
+        print(f"   Note: For full entity extraction, use FastAPI /ifc/process")
         print(f"{'='*80}\n")
 
-        # Return combined results
+        # Return results
         return {
             'model_id': str(model_id),
             'model_name': model.name,
             'version': model.version_number,
             'status': 'success',
-            'parsing_status': model.parsing_status,
-            'geometry_status': model.geometry_status,
-            'layers': {
-                'layer1_parse': parse_result,
-                'layer2_geometry': geometry_result,
-            }
+            'parsing_status': 'parsed',
+            'stats': parse_result,
         }
 
     except Exception as e:
@@ -228,8 +194,9 @@ def revert_model_task(self, old_model_id, new_model_id):
         dict: Revert results
     """
     from .models import Model
-    from .services import process_ifc_file
-    from django.core.files.storage import default_storage
+    from .services import parse_ifc_stats
+
+    temp_file_to_cleanup = None
 
     try:
         # Get both models
@@ -242,15 +209,14 @@ def revert_model_task(self, old_model_id, new_model_id):
         new_model.status = 'processing'
         new_model.save(update_fields=['status'])
 
-        # Get file path
-        file_url = old_model.file_url.replace('/media/', '') if old_model.file_url else None
-        if not file_url:
-            raise Exception("Old model has no file URL")
+        # Ensure we have a local file (download from cloud if needed)
+        local_path, is_temp = _ensure_local_file(old_model)
+        if is_temp:
+            temp_file_to_cleanup = local_path
+            print(f"📥 Downloaded file from cloud storage to: {local_path}")
 
-        full_path = default_storage.path(file_url)
-
-        # Process the file
-        result = process_ifc_file(new_model.id, full_path)
+        # Process the file using lite approach
+        result = parse_ifc_stats(local_path)
 
         # Update new model with results
         with transaction.atomic():
@@ -259,10 +225,15 @@ def revert_model_task(self, old_model_id, new_model_id):
             new_model.ifc_schema = result.get('ifc_schema', '')
             new_model.element_count = result.get('element_count', 0)
             new_model.storey_count = result.get('storey_count', 0)
+            new_model.type_count = result.get('type_count', 0)
+            new_model.material_count = result.get('material_count', 0)
             new_model.system_count = result.get('system_count', 0)
+            new_model.type_summary = result.get('type_summary', {})
+            new_model.parsing_status = 'parsed'
             new_model.save(update_fields=[
-                'status', 'ifc_schema', 'element_count',
-                'storey_count', 'system_count'
+                'status', 'ifc_schema', 'element_count', 'storey_count',
+                'type_count', 'material_count', 'system_count',
+                'type_summary', 'parsing_status'
             ])
 
         print(f"✅ Revert task complete: Created v{new_model.version_number} from v{old_model.version_number}")
@@ -272,7 +243,7 @@ def revert_model_task(self, old_model_id, new_model_id):
             'old_version': old_model.version_number,
             'new_version': new_model.version_number,
             'model_id': str(new_model.id),
-            **result
+            'stats': result
         }
 
     except Exception as e:
@@ -290,6 +261,15 @@ def revert_model_task(self, old_model_id, new_model_id):
 
         # Re-raise so Celery marks as failed
         raise
+
+    finally:
+        # Clean up temp file if we downloaded from cloud storage
+        if temp_file_to_cleanup and os.path.exists(temp_file_to_cleanup):
+            try:
+                os.unlink(temp_file_to_cleanup)
+                print(f"🗑️  Cleaned up temp file: {temp_file_to_cleanup}")
+            except Exception as cleanup_error:
+                print(f"⚠️  Could not cleanup temp file: {cleanup_error}")
 
 
 @shared_task(bind=True, name='apps.models.tasks.enrich_model_task')
@@ -540,6 +520,16 @@ def process_ifc_lite_task(self, model_id, file_path=None):
         print(f"   Note: Query IFC via FastAPI for element details")
         print(f"{'='*60}\n")
 
+        # Trigger fragment generation in background
+        # This runs async - FastAPI handles actual conversion
+        try:
+            from .tasks import generate_fragments_task
+            generate_fragments_task.delay(str(model_id))
+            print(f"📦 Triggered fragment generation for {model.name}")
+        except Exception as frag_error:
+            # Fragment generation failure should not fail the parsing task
+            print(f"⚠️  Could not trigger fragment generation: {frag_error}")
+
         return {
             'model_id': str(model_id),
             'model_name': model.name,
@@ -577,6 +567,60 @@ def process_ifc_lite_task(self, model_id, file_path=None):
                 print(f"🗑️  Cleaned up temp file: {temp_file_to_cleanup}")
             except Exception as cleanup_error:
                 print(f"⚠️  Could not cleanup temp file: {cleanup_error}")
+
+
+@shared_task(bind=True, name='apps.models.tasks.generate_fragments_task', max_retries=2)
+def generate_fragments_task(self, model_id):
+    """
+    Trigger fragment generation via FastAPI.
+
+    This task is chained after process_ifc_lite_task completes.
+    It calls FastAPI which handles the actual conversion in the background.
+
+    Args:
+        model_id: UUID of the Model instance (as string)
+
+    Returns:
+        dict: Trigger result from FastAPI
+    """
+    from .models import Model
+    from .services.fragments import trigger_fragment_generation
+
+    try:
+        model = Model.objects.get(id=model_id)
+
+        # Skip if model has no IFC file
+        if not model.file_url:
+            print(f"Skipping fragment generation for {model.name}: no IFC file")
+            return {'status': 'skipped', 'reason': 'no_ifc_file'}
+
+        # Skip if already generating or completed
+        if model.fragments_status in ('generating', 'completed'):
+            print(f"Skipping fragment generation for {model.name}: status={model.fragments_status}")
+            return {'status': 'skipped', 'reason': f'already_{model.fragments_status}'}
+
+        print(f"Triggering fragment generation for {model.name}")
+        result = trigger_fragment_generation(str(model_id))
+        return result
+
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Fragment generation trigger failed for {model_id}: {error_msg}")
+
+        # Update model status
+        try:
+            model = Model.objects.get(id=model_id)
+            model.fragments_status = 'failed'
+            model.fragments_error = error_msg
+            model.save(update_fields=['fragments_status', 'fragments_error'])
+        except Exception:
+            pass
+
+        # Retry with exponential backoff
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
+
+        return {'status': 'error', 'error': error_msg}
 
 
 @shared_task(bind=True, name='apps.models.tasks.debug_task')
