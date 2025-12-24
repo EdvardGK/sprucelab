@@ -141,6 +141,7 @@ async def process_ifc_file(
         request.skip_geometry,
         callback_url,
         temp_dir,  # Pass temp_dir for cleanup
+        request.file_url,  # Pass file_url for fragment generation
     )
 
     # Return quick stats immediately
@@ -165,18 +166,33 @@ async def _process_full(
     skip_geometry: bool,
     callback_url: str,
     temp_dir: Optional[str] = None,
+    file_url: Optional[str] = None,
 ):
     """
     Background task for full processing.
 
+    Runs fragment generation and metadata parsing in parallel.
     After processing completes, calls back to Django with results.
     Cleans up temp directory if one was created.
     """
+    from api.fragments import generate_fragments_background
+
     result = None
     error_msg = None
 
     try:
         print(f"[Background] Starting full processing for {model_id}")
+
+        # Start fragment generation in parallel if we have the file URL
+        fragments_task = None
+        if file_url:
+            fragments_callback = f"{settings.DJANGO_URL}/api/models/{model_id}/fragments-complete/"
+            print(f"[Background] Starting fragment generation in parallel")
+            fragments_task = asyncio.create_task(
+                generate_fragments_background(model_id, file_url, fragments_callback)
+            )
+
+        # Run metadata processing
         result = await processing_orchestrator.process_model(
             model_id=model_id,
             file_path=file_path,
@@ -189,6 +205,14 @@ async def _process_full(
             "error": result.error,
         }
         print(f"[Background] Completed processing for {model_id}: {result.status}")
+
+        # Wait for fragments if started (don't block on failure)
+        if fragments_task:
+            try:
+                await fragments_task
+                print(f"[Background] Fragment generation completed for {model_id}")
+            except Exception as e:
+                print(f"[Background] Fragment generation failed (non-blocking): {e}")
 
     except Exception as e:
         error_msg = str(e)
