@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Upload, X, FileText, AlertCircle, CheckCircle, Loader2, Minimize2 } from 'lucide-react';
 import {
@@ -135,11 +135,6 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
         return <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />;
     }
   };
-
-  // Overall progress for all uploading files
-  const overallProgress = projectUploads.length > 0
-    ? projectUploads.reduce((sum, u) => sum + u.progress, 0) / projectUploads.length
-    : 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
