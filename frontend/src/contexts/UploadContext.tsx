@@ -1,12 +1,15 @@
 /**
- * Upload Context - Manages background file uploads.
+ * Upload Context - Manages background file uploads with direct Supabase upload.
  *
- * Allows uploads to continue even when the upload dialog is closed.
- * Shows toast notifications when uploads complete.
+ * Uploads directly to Supabase Storage (bypassing Django) to avoid OOM issues.
+ * Flow: getUploadUrl → direct PUT to Supabase → confirmUpload
+ * Shows real upload progress and toast notifications.
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { useUploadModel } from '@/hooks/use-models';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import { getUploadUrl, confirmUpload } from '@/hooks/use-models';
+import { useQueryClient } from '@tanstack/react-query';
+import { modelKeys } from '@/hooks/use-models';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -17,7 +20,7 @@ export interface UploadFile {
   file: File;
   projectId: string;
   status: UploadStatus;
-  progress: number; // 0-100, simulated for now
+  progress: number; // 0-100, real progress from XHR
   error?: string;
 }
 
@@ -33,11 +36,53 @@ interface UploadContextValue {
 
 const UploadContext = createContext<UploadContextValue | null>(null);
 
+/**
+ * Upload a file directly to Supabase using presigned URL.
+ * Uses XMLHttpRequest for progress tracking.
+ */
+function uploadToSupabase(
+  file: File,
+  uploadUrl: string,
+  onProgress: (progress: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        const progress = Math.round((event.loaded / event.total) * 100);
+        onProgress(progress);
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.statusText}`));
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error during upload'));
+    });
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload aborted'));
+    });
+
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.send(file);
+  });
+}
+
 export function UploadProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { success, error: toastError, warning } = useToast();
   const [uploads, setUploads] = useState<UploadFile[]>([]);
-  const uploadModel = useUploadModel();
+  const queryClient = useQueryClient();
+  const isUploadingRef = useRef(false);
 
   const isUploading = uploads.some(u => u.status === 'uploading');
   const hasActiveUploads = uploads.some(u => u.status === 'pending' || u.status === 'uploading');
@@ -61,71 +106,77 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setUploads(prev => prev.filter(u => u.status === 'pending' || u.status === 'uploading'));
   }, []);
 
-  const simulateProgress = useCallback((id: string) => {
-    // Simulate upload progress with increasing speed towards the end
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15 + 5;
-      if (progress >= 90) {
-        // Hold at 90% until actual completion
-        progress = 90;
-        clearInterval(interval);
-      }
+  const uploadSingleFile = useCallback(async (upload: UploadFile): Promise<{ success: boolean; name: string; error?: string }> => {
+    try {
+      // Step 1: Get presigned URL from Django
+      const urlData = await getUploadUrl(upload.projectId, upload.file.name);
+
+      // Step 2: Upload directly to Supabase
+      await uploadToSupabase(upload.file, urlData.upload_url, (progress) => {
+        setUploads(prev =>
+          prev.map(u => (u.id === upload.id ? { ...u, progress } : u))
+        );
+      });
+
+      // Step 3: Confirm upload and trigger processing
+      await confirmUpload({
+        project_id: upload.projectId,
+        file_path: urlData.file_path,
+        file_url: urlData.file_url,
+        filename: upload.file.name,
+        file_size: upload.file.size,
+        name: upload.file.name.replace(/\.ifc$/i, ''),
+      });
+
+      // Mark as success
       setUploads(prev =>
-        prev.map(u => (u.id === id && u.status === 'uploading' ? { ...u, progress } : u))
+        prev.map(u =>
+          u.id === upload.id ? { ...u, status: 'success' as UploadStatus, progress: 100 } : u
+        )
       );
-    }, 200);
-    return () => clearInterval(interval);
-  }, []);
+
+      // Invalidate model list
+      queryClient.invalidateQueries({ queryKey: modelKeys.list(upload.projectId) });
+
+      return { success: true, name: upload.file.name };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+      setUploads(prev =>
+        prev.map(u =>
+          u.id === upload.id
+            ? { ...u, status: 'error' as UploadStatus, error: errorMsg, progress: 0 }
+            : u
+        )
+      );
+      return { success: false, name: upload.file.name, error: errorMsg };
+    }
+  }, [queryClient]);
 
   const startUpload = useCallback(async () => {
+    // Prevent concurrent upload batches
+    if (isUploadingRef.current) return;
+
     const pendingUploads = uploads.filter(u => u.status === 'pending');
     if (pendingUploads.length === 0) return;
+
+    isUploadingRef.current = true;
 
     // Mark all pending as uploading
     setUploads(prev =>
       prev.map(u => (u.status === 'pending' ? { ...u, status: 'uploading' as UploadStatus } : u))
     );
 
-    // Start progress simulation for each file
-    const cleanupFns = pendingUploads.map(upload => simulateProgress(upload.id));
-
     // Upload all in parallel
     const results = await Promise.allSettled(
-      pendingUploads.map(async upload => {
-        try {
-          await uploadModel.mutateAsync({
-            file: upload.file,
-            project: upload.projectId,
-            name: upload.file.name.replace(/\.ifc$/i, ''),
-          });
-
-          setUploads(prev =>
-            prev.map(u =>
-              u.id === upload.id ? { ...u, status: 'success' as UploadStatus, progress: 100 } : u
-            )
-          );
-
-          return { id: upload.id, success: true, name: upload.file.name };
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : 'Upload failed';
-          setUploads(prev =>
-            prev.map(u =>
-              u.id === upload.id
-                ? { ...u, status: 'error' as UploadStatus, error: errorMsg, progress: 0 }
-                : u
-            )
-          );
-          return { id: upload.id, success: false, name: upload.file.name, error: errorMsg };
-        }
-      })
+      pendingUploads.map(upload => uploadSingleFile(upload))
     );
 
-    // Clean up progress simulations
-    cleanupFns.forEach(cleanup => cleanup());
+    isUploadingRef.current = false;
 
     // Show toast summary
-    const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const successCount = results.filter(
+      r => r.status === 'fulfilled' && r.value.success
+    ).length;
     const failCount = results.length - successCount;
 
     if (successCount > 0 && failCount === 0) {
@@ -135,7 +186,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     } else if (failCount > 0) {
       toastError(t('modelUpload.toastFailed', { count: failCount }));
     }
-  }, [uploads, uploadModel, simulateProgress, t, success, warning, toastError]);
+  }, [uploads, uploadSingleFile, t, success, warning, toastError]);
 
   return (
     <UploadContext.Provider

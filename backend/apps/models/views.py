@@ -322,6 +322,236 @@ class ModelViewSet(viewsets.ModelViewSet):
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['post'], url_path='get-upload-url')
+    def get_upload_url(self, request):
+        """
+        Get a presigned URL for direct upload to Supabase Storage.
+
+        This allows the frontend to upload large files directly to storage,
+        bypassing Django and avoiding OOM issues.
+
+        POST /api/models/get-upload-url/
+
+        Request body:
+            - project_id: UUID of the project
+            - filename: Name of the file (e.g., "building.ifc")
+            - content_type: MIME type (default: application/octet-stream)
+
+        Response:
+            - upload_url: Presigned URL for PUT request
+            - file_path: Storage path (needed for confirm-upload)
+            - file_url: Public URL where file will be accessible
+            - expires_in: Seconds until URL expires
+        """
+        import boto3
+        from botocore.config import Config
+        import uuid
+
+        project_id = request.data.get('project_id')
+        filename = request.data.get('filename')
+        content_type = request.data.get('content_type', 'application/octet-stream')
+
+        if not project_id or not filename:
+            return Response(
+                {'error': 'project_id and filename are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate project exists
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Project not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Validate file extension
+        if not filename.lower().endswith('.ifc'):
+            return Response(
+                {'error': 'Only IFC files are allowed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Generate unique file path
+        file_path = f'ifc_files/{project_id}/{filename}'
+
+        # Check if using Supabase storage
+        if not getattr(settings, 'USE_SUPABASE_STORAGE', False):
+            return Response(
+                {'error': 'Direct upload only supported with cloud storage'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get Supabase S3 config
+        supabase_ref = os.getenv('SUPABASE_URL', '').replace('https://', '').split('.')[0]
+        bucket_name = os.getenv('SUPABASE_STORAGE_BUCKET', 'ifc-files')
+        endpoint_url = f"https://{supabase_ref}.storage.supabase.co/storage/v1/s3"
+
+        # Create S3 client for presigned URL generation
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=endpoint_url,
+            aws_access_key_id=os.getenv('SUPABASE_S3_ACCESS_KEY'),
+            aws_secret_access_key=os.getenv('SUPABASE_S3_SECRET_KEY'),
+            region_name='us-east-1',
+            config=Config(signature_version='s3v4')
+        )
+
+        # Generate presigned URL for PUT (upload)
+        expires_in = 3600  # 1 hour
+        try:
+            upload_url = s3_client.generate_presigned_url(
+                'put_object',
+                Params={
+                    'Bucket': bucket_name,
+                    'Key': file_path,
+                    'ContentType': content_type,
+                },
+                ExpiresIn=expires_in,
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to generate upload URL: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Public URL where file will be accessible
+        file_url = f"https://{supabase_ref}.supabase.co/storage/v1/object/public/{bucket_name}/{file_path}"
+
+        return Response({
+            'upload_url': upload_url,
+            'file_path': file_path,
+            'file_url': file_url,
+            'expires_in': expires_in,
+        })
+
+    @action(detail=False, methods=['post'], url_path='confirm-upload')
+    def confirm_upload(self, request):
+        """
+        Confirm that a file has been uploaded directly to storage.
+
+        Called by frontend after successful direct upload to Supabase.
+        Creates the Model record and triggers FastAPI processing.
+
+        POST /api/models/confirm-upload/
+
+        Request body:
+            - project_id: UUID of the project
+            - file_path: Storage path returned from get-upload-url
+            - file_url: Public URL returned from get-upload-url
+            - name: Model name (optional, defaults to filename without extension)
+            - file_size: File size in bytes (optional)
+
+        Response:
+            - model: Created Model object
+            - message: Success message
+        """
+        from .services.fastapi_client import IFCServiceClient
+
+        project_id = request.data.get('project_id')
+        file_path = request.data.get('file_path')
+        file_url = request.data.get('file_url')
+        name = request.data.get('name')
+        file_size = request.data.get('file_size')
+
+        if not all([project_id, file_path, file_url]):
+            return Response(
+                {'error': 'project_id, file_path, and file_url are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate project exists
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Project not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Extract filename from path
+        filename = os.path.basename(file_path)
+        if not name:
+            name = filename.replace('.ifc', '').replace('.IFC', '')
+
+        # Get next version number
+        existing_versions = Model.objects.filter(
+            project=project,
+            name__iexact=name
+        ).values_list('version_number', flat=True)
+        next_version = max(existing_versions, default=0) + 1
+
+        # Create model record
+        model = Model.objects.create(
+            project=project,
+            name=name,
+            version_number=next_version,
+            file_path=file_path,
+            file_url=file_url,
+            file_size=file_size or 0,
+            status='processing',
+            parsing_status='pending',
+        )
+
+        print(f"✅ Model created: {model.name} v{model.version_number}")
+
+        # Trigger FastAPI processing
+        quick_stats = None
+        try:
+            client = IFCServiceClient()
+
+            if not client.is_available():
+                print(f"❌ FastAPI service not available")
+                model.status = 'error'
+                model.processing_error = 'Processing service unavailable'
+                model.save(update_fields=['status', 'processing_error'])
+                return Response(
+                    {'error': 'Processing service unavailable. Model created but processing failed.'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+
+            print(f"📡 Calling FastAPI for IFC processing...")
+            callback_url = f"{settings.DJANGO_URL}/api/models/{model.id}/process-complete/"
+
+            quick_stats = client.process_ifc(
+                model_id=str(model.id),
+                file_url=file_url,
+                skip_geometry=True,
+                callback_url=callback_url,
+            )
+
+            if quick_stats.get('success'):
+                print(f"✅ Quick stats: {quick_stats.get('total_elements')} elements")
+                model.ifc_schema = quick_stats.get('ifc_schema', '')
+                model.element_count = quick_stats.get('total_elements', 0)
+                model.storey_count = quick_stats.get('storey_count', 0)
+                model.save(update_fields=['ifc_schema', 'element_count', 'storey_count'])
+
+        except Exception as e:
+            print(f"❌ FastAPI error: {e}")
+            model.status = 'error'
+            model.processing_error = str(e)
+            model.save(update_fields=['status', 'processing_error'])
+
+        # Return response
+        response_serializer = ModelDetailSerializer(model)
+        response_data = {
+            'model': response_serializer.data,
+            'message': 'Upload confirmed. Processing started.',
+        }
+
+        if quick_stats and quick_stats.get('success'):
+            response_data['quick_stats'] = {
+                'ifc_schema': quick_stats.get('ifc_schema'),
+                'total_elements': quick_stats.get('total_elements'),
+                'storey_count': quick_stats.get('storey_count'),
+                'type_count': quick_stats.get('type_count'),
+                'material_count': quick_stats.get('material_count'),
+            }
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='upload-with-metadata')
     def upload_with_metadata(self, request):
         """

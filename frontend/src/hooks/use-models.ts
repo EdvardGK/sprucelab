@@ -83,7 +83,7 @@ export interface UploadResponse {
   task_id?: string;
 }
 
-// Upload model mutation
+// Upload model mutation (legacy - uploads through Django)
 export function useUploadModel() {
   const queryClient = useQueryClient();
 
@@ -104,6 +104,50 @@ export function useUploadModel() {
       // Return full response including version_warning
       return response.data;
     },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: modelKeys.list(data.model.project) });
+    },
+  });
+}
+
+// Direct upload types
+export interface UploadUrlResponse {
+  upload_url: string;
+  file_path: string;
+  file_url: string;
+  expires_in: number;
+}
+
+export interface ConfirmUploadRequest {
+  project_id: string;
+  file_path: string;
+  file_url: string;
+  filename: string;
+  file_size: number;
+  name?: string;
+}
+
+// Get presigned URL for direct Supabase upload
+export async function getUploadUrl(projectId: string, filename: string): Promise<UploadUrlResponse> {
+  const response = await apiClient.post<UploadUrlResponse>('/models/get-upload-url/', {
+    project_id: projectId,
+    filename,
+  });
+  return response.data;
+}
+
+// Confirm upload after direct upload to Supabase
+export async function confirmUpload(data: ConfirmUploadRequest): Promise<UploadResponse> {
+  const response = await apiClient.post<UploadResponse>('/models/confirm-upload/', data);
+  return response.data;
+}
+
+// Hook for confirming upload with query invalidation
+export function useConfirmUpload() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: confirmUpload,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: modelKeys.list(data.model.project) });
     },
