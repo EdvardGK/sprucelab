@@ -2,6 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { queryClient } from './lib/query-client';
 import { Toaster } from './components/ui/toaster';
+import { UploadProvider } from './contexts/UploadContext';
 import MyPage from './pages/MyPage';
 import ProjectsGallery from './pages/ProjectsGallery';
 import ProjectDashboard from './pages/ProjectDashboard';
@@ -46,8 +47,10 @@ const router = createBrowserRouter([
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster />
-      <RouterProvider router={router} />
+      <UploadProvider>
+        <Toaster />
+        <RouterProvider router={router} />
+      </UploadProvider>
     </QueryClientProvider>
   );
 }

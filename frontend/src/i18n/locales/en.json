@@ -226,6 +226,10 @@
     "uploadingProgress": "Uploading {{current}} of {{total}}...",
     "partialSuccess": "{{success}} uploaded, {{failed}} failed",
     "allSuccess": "{{count}} models uploaded successfully",
-    "uploadAllButton": "Upload All ({{count}})"
+    "uploadAllButton": "Upload All ({{count}})",
+    "minimize": "Minimize",
+    "toastSuccess": "{{count}} model(s) uploaded successfully",
+    "toastPartial": "{{success}} uploaded, {{failed}} failed",
+    "toastFailed": "{{count}} upload(s) failed"
   }
 }

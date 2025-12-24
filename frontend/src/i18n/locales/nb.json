@@ -226,6 +226,10 @@
     "uploadingProgress": "Laster opp {{current}} av {{total}}...",
     "partialSuccess": "{{success}} lastet opp, {{failed}} feilet",
     "allSuccess": "{{count}} modeller lastet opp",
-    "uploadAllButton": "Last opp alle ({{count}})"
+    "uploadAllButton": "Last opp alle ({{count}})",
+    "minimize": "Minimer",
+    "toastSuccess": "{{count}} modell(er) lastet opp",
+    "toastPartial": "{{success}} lastet opp, {{failed}} feilet",
+    "toastFailed": "{{count}} opplasting(er) feilet"
   }
 }

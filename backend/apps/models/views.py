@@ -43,18 +43,20 @@ def _get_local_file_path(storage_path: str, file_url: str = None) -> str:
         # Local storage - use path() method
         return default_storage.path(storage_path)
     else:
-        # Cloud storage - download to temp file
+        # Cloud storage - download to temp file (streaming to avoid OOM)
         import requests
 
         if not file_url:
             file_url = default_storage.url(storage_path)
 
-        response = requests.get(file_url)
+        # Stream download to avoid loading entire file into memory
+        response = requests.get(file_url, stream=True)
         response.raise_for_status()
 
         # Create temp file with .ifc extension
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.ifc')
-        temp_file.write(response.content)
+        for chunk in response.iter_content(chunk_size=8192):
+            temp_file.write(chunk)
         temp_file.close()
 
         return temp_file.name
