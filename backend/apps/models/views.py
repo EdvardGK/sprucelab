@@ -197,13 +197,10 @@ class ModelViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        # Get local file path for IFC processing
-        # For cloud storage, this downloads to a temp file
-        full_path = _get_local_file_path(saved_path, file_url)
-        is_temp_file = getattr(settings, 'USE_SUPABASE_STORAGE', False)
-
-        # Quick extract IFC timestamp for version comparison
-        new_ifc_timestamp = _quick_extract_ifc_timestamp(full_path)
+        # Skip timestamp extraction to avoid OOM on large files
+        # FastAPI will extract metadata after downloading
+        new_ifc_timestamp = None
+        is_temp_file = False
 
         # Build version warning if uploading older file
         version_warning = None
@@ -242,10 +239,6 @@ class ModelViewSet(viewsets.ModelViewSet):
         from .services.fastapi_client import IFCServiceClient
 
         quick_stats = None
-
-        # Clean up temp file if we downloaded for timestamp extraction
-        if is_temp_file and os.path.exists(full_path):
-            os.unlink(full_path)
 
         try:
             client = IFCServiceClient()
