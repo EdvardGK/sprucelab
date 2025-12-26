@@ -28,11 +28,14 @@ MANIFEST
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+database.sqlite
+database.sqlite-journal
 /media
 /staticfiles
 /backend/logs/
 /backend/media/
 /backend/staticfiles/
+/backend/database.sqlite*
 
 # Flask
 instance/
@@ -257,6 +260,10 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
+frontend/.env.production
+backend/.env*
+dev.sh
 
 # Test coverage
 htmlcov/
