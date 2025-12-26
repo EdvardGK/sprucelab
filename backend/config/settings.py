@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'apps.scripting',
     'apps.bep',
     'apps.viewers',
+    'apps.automation',
 ]
 
 MIDDLEWARE = [

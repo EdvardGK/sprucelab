@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/bep/', include('apps.bep.urls')),
     path('api/viewers/', include('apps.viewers.urls')),
     path('api/', include('apps.scripting.urls')),
+    path('api/automation/', include('apps.automation.urls')),
 ]
 
 # Serve media files in development
