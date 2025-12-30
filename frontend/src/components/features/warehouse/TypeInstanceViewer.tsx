@@ -340,7 +340,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     );
   }, []);
 
-  // Highlight and isolate instances when they change
+  // Highlight instances when they change (no hiding for now - just highlight)
   useEffect(() => {
     if (!fragmentsGroupRef.current || !componentsRef.current || instances.length === 0) {
       return;
@@ -348,86 +348,55 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
     const components = componentsRef.current;
     const highlighter = highlighterRef.current;
-    const hider = hiderRef.current;
 
-    if (!highlighter || !hider) return;
+    if (!highlighter) return;
 
-    const applyFiltering = async () => {
-      try {
-        const fragmentsManager = components.get(OBC.FragmentsManager);
+    try {
+      const fragmentsManager = components.get(OBC.FragmentsManager);
 
-        // Clear previous highlights
-        highlighter.clear('current');
+      // Clear previous highlights
+      highlighter.clear('current');
 
-        if (showAll) {
-          // Show All mode: show all instances of this type
-          const instanceGuids = instances.map(inst => inst.ifc_guid);
-          const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(instanceGuids);
-          const hasMatches = Object.keys(fragmentIdMap).length > 0;
+      if (showAll) {
+        // Show All mode: highlight all instances of this type
+        const instanceGuids = instances.map(inst => inst.ifc_guid);
+        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(instanceGuids);
+        const hasMatches = Object.keys(fragmentIdMap).length > 0;
 
-          console.log('[TypeInstanceViewer] Show all mode:', {
-            instanceGuids: instanceGuids.slice(0, 3),
-            fragmentIdMapKeys: Object.keys(fragmentIdMap),
-            hasMatches,
+        console.log('[TypeInstanceViewer] Show all mode:', {
+          instanceGuids: instanceGuids.slice(0, 3),
+          fragmentIdMapKeys: Object.keys(fragmentIdMap),
+          hasMatches,
+        });
+
+        if (hasMatches) {
+          // Highlight all instances
+          highlighter.highlightByID('current', fragmentIdMap, false, false);
+          // Zoom to fit all
+          zoomToAllInstances();
+        }
+      } else {
+        // Single instance mode: highlight only the current instance
+        if (currentInstance) {
+          const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
+          const hasMatch = Object.keys(currentFragIdMap).length > 0;
+
+          console.log('[TypeInstanceViewer] Single instance mode:', {
+            guid: currentInstance.ifc_guid,
+            fragmentIdMapKeys: Object.keys(currentFragIdMap),
+            hasMatch,
           });
 
-          if (hasMatches) {
-            // Use isolate to show only matching elements (hides everything else)
-            await hider.isolate(fragmentIdMap);
-
-            // Highlight current instance
-            if (currentInstance) {
-              const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
-              if (Object.keys(currentFragIdMap).length > 0) {
-                highlighter.highlightByID('current', currentFragIdMap, false, false);
-              }
-            }
-
-            // Zoom to fit all
-            zoomToAllInstances();
-          } else {
-            console.warn('[TypeInstanceViewer] No fragment matches for GUIDs:', instanceGuids.slice(0, 5));
-            await hider.set(true); // Show all as fallback
+          if (hasMatch) {
+            highlighter.highlightByID('current', currentFragIdMap, false, false);
+            // Zoom to this instance
+            zoomToElement(currentFragIdMap);
           }
-        } else {
-          // Single instance mode: show only the current instance
-          if (currentInstance) {
-            const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
-            const hasMatch = Object.keys(currentFragIdMap).length > 0;
-
-            console.log('[TypeInstanceViewer] Single instance mode:', {
-              guid: currentInstance.ifc_guid,
-              fragmentIdMapKeys: Object.keys(currentFragIdMap),
-              hasMatch,
-            });
-
-            if (hasMatch) {
-              // Use isolate to show only current element
-              await hider.isolate(currentFragIdMap);
-              highlighter.highlightByID('current', currentFragIdMap, false, false);
-
-              // Zoom to this instance
-              zoomToElement(currentFragIdMap);
-            } else {
-              console.warn('[TypeInstanceViewer] No fragment match for GUID:', currentInstance.ifc_guid);
-              await hider.set(true); // Show all as fallback
-            }
-          } else {
-            await hider.set(true); // Show all
-          }
-        }
-      } catch (err) {
-        console.error('[TypeInstanceViewer] Filtering failed:', err);
-        // Show all on error
-        try {
-          await hider?.set(true);
-        } catch {
-          // Ignore cleanup errors
         }
       }
-    };
-
-    applyFiltering();
+    } catch (err) {
+      console.error('[TypeInstanceViewer] Highlighting failed:', err);
+    }
   }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToElement, zoomToAllInstances]);
 
   // Navigation handlers
