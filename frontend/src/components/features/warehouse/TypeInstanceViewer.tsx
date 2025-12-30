@@ -269,21 +269,18 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       const fragment = group.items.find(f => f.id === fragmentId);
       if (!fragment) continue;
 
-      for (const expressId of expressIds) {
-        const mesh = fragment.mesh;
-        if (mesh) {
-          // Get the instance matrix for this expressId
-          const instanceId = fragment.getInstanceId(expressId);
-          if (instanceId !== null && instanceId !== undefined) {
-            const matrix = new THREE.Matrix4();
-            mesh.getMatrixAt(instanceId, matrix);
-
-            // Create a temporary box from the geometry and transform it
-            const geomBox = new THREE.Box3().setFromBufferAttribute(
-              mesh.geometry.attributes.position as THREE.BufferAttribute
-            );
-            geomBox.applyMatrix4(matrix);
-            bbox.union(geomBox);
+      // Get the fragment mesh and compute bounding box from visible instances
+      const mesh = fragment.mesh;
+      if (mesh && mesh.geometry) {
+        // For each expressId, add geometry bounds to overall bbox
+        // Since we can't easily get individual instance transforms,
+        // use the mesh's world bounding box as approximation
+        for (const _expressId of expressIds) {
+          mesh.geometry.computeBoundingBox();
+          if (mesh.geometry.boundingBox) {
+            const worldBox = mesh.geometry.boundingBox.clone();
+            worldBox.applyMatrix4(mesh.matrixWorld);
+            bbox.union(worldBox);
             hasElements = true;
           }
         }
@@ -317,10 +314,10 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
   }, []);
 
   // Zoom to all visible instances
-  const zoomToAllInstances = useCallback((fragmentMap: Record<string, Set<number>>) => {
+  const zoomToAllInstances = useCallback(() => {
     if (!worldRef.current || !fragmentsGroupRef.current) return;
 
-    // Simpler approach: just use the fragment group's bounding box for visible items
+    // Use the fragment group's bounding box for visible items
     const group = fragmentsGroupRef.current;
     const bbox = new THREE.Box3().setFromObject(group);
 
@@ -382,7 +379,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
           }
 
           // Zoom to fit all
-          zoomToAllInstances(fragmentMap);
+          zoomToAllInstances();
         } else {
           hider.set(true);
         }
