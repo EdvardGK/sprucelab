@@ -70,14 +70,18 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       try {
         const container = containerRef.current;
         if (!container) {
+          console.log('[TypeInstanceViewer] No container ref');
           return;
         }
 
         // Check for valid dimensions
         if (container.clientWidth === 0 || container.clientHeight === 0) {
+          console.log('[TypeInstanceViewer] Container has zero dimensions, retrying...');
           setTimeout(() => initViewer(), 100);
           return;
         }
+
+        console.log('[TypeInstanceViewer] Initializing viewer, container:', container.clientWidth, 'x', container.clientHeight);
 
         // 1. Create Components
         const components = new OBC.Components();
@@ -256,7 +260,8 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
   }, [isInitialized, modelId]);
 
   // Zoom to a specific element by its fragment ID map
-  const zoomToElement = useCallback((fragmentIdMap: Record<string, Set<number>>) => {
+  // TODO: Re-enable when filtering is fixed
+  /* const zoomToElement = useCallback((fragmentIdMap: Record<string, Set<number>>) => {
     if (!worldRef.current || !fragmentsGroupRef.current) return;
 
     const group = fragmentsGroupRef.current;
@@ -309,7 +314,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       center.x, center.y, center.z,
       true // Animate
     );
-  }, []);
+  }, []); */
 
   // Zoom to all visible instances
   const zoomToAllInstances = useCallback(() => {
@@ -340,64 +345,20 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     );
   }, []);
 
-  // Highlight instances when they change (no hiding for now - just highlight)
+  // Highlight instances when they change - DISABLED FOR DEBUGGING
   useEffect(() => {
     if (!fragmentsGroupRef.current || !componentsRef.current || instances.length === 0) {
       return;
     }
 
-    const components = componentsRef.current;
-    const highlighter = highlighterRef.current;
+    console.log('[TypeInstanceViewer] Filtering effect - DISABLED for debugging');
+    // TODO: Re-enable after fixing the issue
 
-    if (!highlighter) return;
-
-    try {
-      const fragmentsManager = components.get(OBC.FragmentsManager);
-
-      // Clear previous highlights
-      highlighter.clear('current');
-
-      if (showAll) {
-        // Show All mode: highlight all instances of this type
-        const instanceGuids = instances.map(inst => inst.ifc_guid);
-        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(instanceGuids);
-        const hasMatches = Object.keys(fragmentIdMap).length > 0;
-
-        console.log('[TypeInstanceViewer] Show all mode:', {
-          instanceGuids: instanceGuids.slice(0, 3),
-          fragmentIdMapKeys: Object.keys(fragmentIdMap),
-          hasMatches,
-        });
-
-        if (hasMatches) {
-          // Highlight all instances
-          highlighter.highlightByID('current', fragmentIdMap, false, false);
-          // Zoom to fit all
-          zoomToAllInstances();
-        }
-      } else {
-        // Single instance mode: highlight only the current instance
-        if (currentInstance) {
-          const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
-          const hasMatch = Object.keys(currentFragIdMap).length > 0;
-
-          console.log('[TypeInstanceViewer] Single instance mode:', {
-            guid: currentInstance.ifc_guid,
-            fragmentIdMapKeys: Object.keys(currentFragIdMap),
-            hasMatch,
-          });
-
-          if (hasMatch) {
-            highlighter.highlightByID('current', currentFragIdMap, false, false);
-            // Zoom to this instance
-            zoomToElement(currentFragIdMap);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[TypeInstanceViewer] Highlighting failed:', err);
+    // Just zoom to the model without any highlighting
+    if (instances.length > 0) {
+      zoomToAllInstances();
     }
-  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToElement, zoomToAllInstances]);
+  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToAllInstances]);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {
