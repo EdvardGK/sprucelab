@@ -465,63 +465,13 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               setSelectedElement(element);
               onSelectionChange?.(element);
               return;
-            } catch {
-              // FastAPI failed, fall back to Django
+            } catch (err) {
+              // FastAPI failed - continue to minimal fallback
+              console.warn('FastAPI property fetch failed:', err);
             }
           }
 
-          // Fall back to Django entity API
-          try {
-            const response = await fetch(`${API_BASE}/entities/entities/by-express-id/?model=${backendModelId}&express_id=${expressID}`);
-            if (response.ok) {
-              const entity = await response.json();
-
-              // Transform property_sets from array format to object format for the panel
-              // Backend returns: { "Pset_Name": [{ name, value, type }, ...] }
-              // Panel expects: { "Pset_Name": { prop_name: prop_value, ... } }
-              const psets: Record<string, Record<string, any>> = {};
-              if (entity.property_sets) {
-                for (const [psetName, props] of Object.entries(entity.property_sets)) {
-                  psets[psetName] = {};
-                  for (const prop of props as Array<{ name: string; value: any }>) {
-                    psets[psetName][prop.name] = prop.value;
-                  }
-                }
-              }
-
-              const element: ElementProperties = {
-                expressID,
-                type: entity.ifc_type || 'Unknown',
-                predefinedType: entity.predefined_type,
-                objectType: entity.object_type,
-                name: entity.name,
-                description: entity.description,
-                guid: entity.ifc_guid,
-                modelId: backendModelId,
-                modelName: loadedModel?.name,
-                // Location (resolved names from backend)
-                storey: entity.storey_name,
-                building: entity.building_name,
-                site: entity.site_name,
-                space: entity.spaces?.length > 0 ? entity.spaces.join(', ') : undefined,
-                // Quantities
-                area: entity.area,
-                volume: entity.volume,
-                length: entity.length,
-                height: entity.height,
-                perimeter: entity.perimeter,
-                // Property sets (transformed)
-                psets,
-              };
-              setSelectedElement(element);
-              onSelectionChange?.(element);
-              return;
-            }
-          } catch (err) {
-            console.error('Failed to fetch properties:', err);
-          }
-
-          // Fallback: Show element with just express ID
+          // Minimal fallback: Show element with just express ID
           const element: ElementProperties = {
             expressID,
             type: 'Unknown',

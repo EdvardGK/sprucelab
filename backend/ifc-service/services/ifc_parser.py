@@ -110,6 +110,35 @@ class QuickStats:
     error: Optional[str] = None
 
 
+@dataclass
+class TypesOnlyResult:
+    """
+    Result of fast types-only extraction.
+
+    This is the simplified extraction that only gets types + counts.
+    Used for the new architecture where we don't store entities in DB.
+    """
+    success: bool = False
+    ifc_schema: str = ""
+    file_size_bytes: int = 0
+
+    # Types with instance counts
+    types: List[TypeData] = field(default_factory=list)
+    materials: List[MaterialData] = field(default_factory=list)
+
+    # Summary counts
+    type_count: int = 0
+    material_count: int = 0
+    element_count: int = 0  # Total elements (for stats, not stored)
+    storey_count: int = 0
+
+    # Timing
+    duration_seconds: float = 0.0
+
+    # Error if failed
+    error: Optional[str] = None
+
+
 class IFCParserService:
     """
     Parse IFC files and extract metadata.
@@ -187,6 +216,97 @@ class IFCParserService:
 
         stats.duration_ms = int((time.time() - start_time) * 1000)
         return stats
+
+    def parse_types_only(self, file_path: str) -> TypesOnlyResult:
+        """
+        Fast type extraction (~2 seconds).
+
+        This is the simplified extraction for the new architecture where
+        we only store types in the database, not individual entities.
+
+        Instance counts are computed directly from IfcRelDefinesByType
+        relationships rather than storing and counting individual entity rows.
+
+        Args:
+            file_path: Path to the IFC file
+
+        Returns:
+            TypesOnlyResult with types (including instance counts) and materials
+        """
+        result = TypesOnlyResult()
+        start_time = time.time()
+
+        try:
+            # Open the file
+            ifc_file = ifcopenshell.open(file_path)
+            result.ifc_schema = ifc_file.schema
+            result.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+
+            # Count elements for stats (quick scan)
+            element_count = 0
+            for product in ifc_file.by_type('IfcProduct'):
+                if product.is_a() not in ('IfcSite', 'IfcBuilding', 'IfcBuildingStorey', 'IfcSpace'):
+                    element_count += 1
+            result.element_count = element_count
+
+            # Count storeys
+            result.storey_count = len(ifc_file.by_type('IfcBuildingStorey'))
+
+            # Extract types with instance counts
+            types = []
+            for type_element in ifc_file.by_type('IfcTypeObject'):
+                try:
+                    # Count instances via IfcRelDefinesByType relationship
+                    instance_count = 0
+                    if hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+                        # ObjectTypeOf is a list of IfcRelDefinesByType relationships
+                        for rel in type_element.ObjectTypeOf:
+                            if rel.RelatedObjects:
+                                instance_count += len(rel.RelatedObjects)
+
+                    # Extract predefined_type if available
+                    predefined_type = None
+                    if hasattr(type_element, 'PredefinedType') and type_element.PredefinedType:
+                        predefined_type = str(type_element.PredefinedType)
+
+                    # Extract material from type's material association
+                    material = self._extract_type_material(type_element)
+
+                    types.append(TypeData(
+                        type_guid=type_element.GlobalId,
+                        type_name=type_element.Name or '',
+                        ifc_type=type_element.is_a(),
+                        predefined_type=predefined_type or 'NOTDEFINED',
+                        material=material,
+                        instance_count=instance_count,
+                    ))
+
+                except Exception as e:
+                    # Log but continue - don't fail entire parse for one bad type
+                    print(f"[Parser] Warning: Failed to extract type {getattr(type_element, 'GlobalId', 'unknown')}: {e}")
+
+            result.types = types
+            result.type_count = len(types)
+
+            # Extract materials
+            materials, _ = self._extract_materials(ifc_file)
+            result.materials = materials
+            result.material_count = len(materials)
+
+            result.success = True
+            result.duration_seconds = time.time() - start_time
+
+            print(f"[Parser] Types-only extraction complete in {result.duration_seconds:.2f}s")
+            print(f"  Types: {result.type_count} (with instance counts)")
+            print(f"  Materials: {result.material_count}")
+            print(f"  Total elements: {result.element_count}")
+
+        except Exception as e:
+            result.success = False
+            result.error = str(e)
+            result.duration_seconds = time.time() - start_time
+
+        return result
 
     def parse_file(self, file_path: str) -> ParseResult:
         """
@@ -741,10 +861,23 @@ class IFCParserService:
                             storey_guid = rel.RelatingStructure.GlobalId
                             break
 
+                # Get element metadata
+                element_name = element.Name or ''
+                element_type = element.is_a()
+                object_type = getattr(element, 'ObjectType', None) or ''
+
+                # Detect geometry-only entities (no meaningful metadata)
+                # These are typically IfcBuildingElementProxy with no name, type, or properties
+                is_geometry_only = (
+                    not element_name and
+                    not object_type and
+                    element_type == 'IfcBuildingElementProxy'
+                )
+
                 entities.append(EntityData(
                     ifc_guid=element.GlobalId,
-                    ifc_type=element.is_a(),
-                    name=element.Name or '',
+                    ifc_type=element_type,
+                    name=element_name,
                     description=getattr(element, 'Description', None),
                     storey_id=storey_guid,  # Store GUID, will be converted to UUID by orchestrator
                     area=quantities['area'],
@@ -752,6 +885,7 @@ class IFCParserService:
                     length=quantities['length'],
                     height=quantities['height'],
                     perimeter=quantities['perimeter'],
+                    is_geometry_only=is_geometry_only,
                 ))
 
             except Exception as e:

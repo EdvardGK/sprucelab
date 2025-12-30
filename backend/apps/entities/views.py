@@ -133,6 +133,13 @@ class IFCEntityViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint for IFC entities.
 
+    DEPRECATED: This ViewSet is deprecated as of the types-only architecture migration.
+    Entity data is no longer stored in the database. The viewer fetches properties
+    directly from FastAPI which queries the IFC file.
+
+    This endpoint may return empty results or stale data.
+    Use FastAPI /ifc/{file_id}/elements/by-express-id/{express_id} instead.
+
     list: Get entities (use ?model={id} to filter by model, ?express_id={id} for specific entity)
     retrieve: Get a single entity with full property sets
 
@@ -419,6 +426,21 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_fields = ['model', 'ifc_type']
     search_fields = ['type_name', 'ifc_type']
     ordering = ['ifc_type', 'type_name']
+
+    def get_queryset(self):
+        """
+        Filter types by default to exclude those with 0 instances.
+
+        Use ?include_unused=true to show all types including unused ones.
+        This reduces noise from template types that have no instances in the model.
+        """
+        qs = super().get_queryset()
+
+        include_unused = self.request.query_params.get('include_unused', 'false').lower() == 'true'
+        if not include_unused:
+            qs = qs.filter(_instance_count__gt=0)
+
+        return qs
 
     @action(detail=False, methods=['get'], url_path='summary')
     def mapping_summary(self, request):

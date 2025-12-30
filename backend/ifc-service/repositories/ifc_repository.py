@@ -31,6 +31,7 @@ class EntityData:
     length: Optional[float] = None
     height: Optional[float] = None
     perimeter: Optional[float] = None
+    is_geometry_only: bool = False  # True if entity has no type, name, or properties
 
 
 @dataclass
@@ -70,6 +71,7 @@ class TypeData:
     predefined_type: Optional[str] = None  # From IfcTypeObject PredefinedType
     material: Optional[str] = None  # Primary material name for TypeBank identity
     properties: Optional[Dict] = None
+    instance_count: int = 0  # Number of instances of this type
 
 
 @dataclass
@@ -229,14 +231,16 @@ class IFCRepository:
                         entity.height,
                         entity.perimeter,
                         False,  # is_removed - default to False for new entities
+                        entity.is_geometry_only,
                     ))
 
                 await conn.executemany(
                     """
                     INSERT INTO ifc_entities (
                         id, model_id, ifc_guid, ifc_type, name, description,
-                        storey_id, area, volume, length, height, perimeter, is_removed
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                        storey_id, area, volume, length, height, perimeter, is_removed,
+                        is_geometry_only
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                     ON CONFLICT (model_id, ifc_guid) DO NOTHING
                     """,
                     records
@@ -401,14 +405,15 @@ class IFCRepository:
                 type_data.ifc_type,
                 type_data.predefined_type,
                 json.dumps(type_data.properties or {}),
+                type_data.instance_count,
             ))
 
         async with get_transaction() as conn:
             await conn.executemany(
                 """
                 INSERT INTO ifc_types (
-                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties, instance_count
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 ON CONFLICT (model_id, type_guid) DO NOTHING
                 """,
                 records
@@ -525,6 +530,7 @@ class IFCRepository:
         failure_exception: Optional[str] = None,
         failure_traceback: Optional[str] = None,
         summary: Optional[str] = None,
+        verification_data: Optional[Dict] = None,
     ) -> str:
         """
         Create a processing report.
@@ -543,9 +549,10 @@ class IFCRepository:
                     overall_status, ifc_schema, file_size_bytes,
                     stage_results, total_entities_processed, total_entities_skipped,
                     total_entities_failed, errors, catastrophic_failure,
-                    failure_stage, failure_exception, failure_traceback, summary
+                    failure_stage, failure_exception, failure_traceback, summary,
+                    verification_data
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
                 )
                 """,
                 report_id,
@@ -566,6 +573,7 @@ class IFCRepository:
                 failure_exception,
                 failure_traceback,
                 summary,
+                json.dumps(verification_data or {}),
             )
 
         return str(report_id)

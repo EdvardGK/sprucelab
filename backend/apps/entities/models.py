@@ -46,6 +46,12 @@ class IFCEntity(models.Model):
         help_text="Soft delete: entity not present in latest model version"
     )
 
+    # === Data quality flags ===
+    is_geometry_only = models.BooleanField(
+        default=False,
+        help_text="Entity has no type, name, or properties - geometry only (typically IfcBuildingElementProxy)"
+    )
+
     # === Quantities (for analysis & BEP validation) ===
     area = models.FloatField(
         null=True,
@@ -82,6 +88,7 @@ class IFCEntity(models.Model):
             models.Index(fields=['storey_id']),
             models.Index(fields=['express_id']),
             models.Index(fields=['is_removed']),
+            models.Index(fields=['is_geometry_only']),
         ]
 
     def __str__(self):
@@ -220,6 +227,12 @@ class IFCType(models.Model):
         help_text="IFC PredefinedType (STANDARD, USERDEFINED, NOTDEFINED)"
     )
     properties = models.JSONField(default=dict, blank=True)
+
+    # Instance count - stored directly instead of computed from TypeAssignment joins
+    instance_count = models.IntegerField(
+        default=0,
+        help_text="Number of instances of this type in the model"
+    )
 
     class Meta:
         db_table = 'ifc_types'
@@ -637,6 +650,16 @@ class ProcessingReport(models.Model):
 
     # Summary text
     summary = models.TextField(blank=True, null=True)
+
+    # Verification metadata (for audit trail)
+    # Structure: {types_total, types_with_instances, types_without_instances,
+    #             entities_total, entities_with_type, entities_geometry_only,
+    #             verified_at, verification_method}
+    verification_data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Verification stats from ifcopenshell parsing"
+    )
 
     class Meta:
         db_table = 'processing_reports'

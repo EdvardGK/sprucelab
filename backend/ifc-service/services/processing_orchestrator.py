@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor
 
-from services.ifc_parser import IFCParserService, ParseResult
+from services.ifc_parser import IFCParserService, ParseResult, TypesOnlyResult
 from repositories.ifc_repository import (
     IFCRepository, EntityData, PropertyData, SpatialData
 )
@@ -277,9 +277,17 @@ class ProcessingOrchestrator:
             result.status = 'ready'
             result.duration_seconds = time.time() - start_time
 
+            # ==================== Calculate Verification Data ====================
+            verification_data = self._calculate_verification_data(
+                parse_result, type_assignment_count
+            )
+            print(f"[Orchestrator] Verification: {verification_data['types_with_instances']}/{verification_data['types_total']} types have instances, "
+                  f"{verification_data['entities_geometry_only']}/{verification_data['entities_total']} geometry-only")
+
             # ==================== Create Processing Report ====================
             result.processing_report_id = await self._create_report(
-                model_id, start_time, result, parse_result, is_failure=False
+                model_id, start_time, result, parse_result, is_failure=False,
+                verification_data=verification_data
             )
 
             print(f"\n[Orchestrator] Complete in {result.duration_seconds:.2f}s")
@@ -328,6 +336,237 @@ class ProcessingOrchestrator:
 
             return result
 
+    async def process_model_types_only(
+        self,
+        model_id: str,
+        file_path: str,
+    ) -> ProcessingResult:
+        """
+        Simplified processing - types only, no entity storage.
+
+        This is the new architecture where we only store types in the database.
+        Properties and entity details are queried directly from IFC when needed.
+
+        Flow:
+        1. Update model status to 'parsing'
+        2. Parse types only (fast - ~2 seconds)
+        3. Write materials
+        4. Write types (with instance_count)
+        5. Link types to TypeBank
+        6. Write systems
+        7. Update model status to 'ready'
+        8. Create processing report
+
+        Args:
+            model_id: UUID of the Model record in Django database
+            file_path: Path to the IFC file
+
+        Returns:
+            ProcessingResult with counts and status
+        """
+        result = ProcessingResult(model_id=model_id)
+        start_time = time.time()
+
+        try:
+            # ==================== Update Status: Parsing ====================
+            print(f"\n[Orchestrator] Processing model {model_id} (types-only mode)")
+            print(f"[Orchestrator] File: {file_path}")
+
+            await self.repository.update_model_status(
+                model_id,
+                status='processing',
+                parsing_status='parsing',
+            )
+
+            # ==================== Parse Types Only ====================
+            # Run parser in thread pool since ifcopenshell is blocking
+            loop = __import__('asyncio').get_event_loop()
+            parse_result: TypesOnlyResult = await loop.run_in_executor(
+                self._executor,
+                self.parser.parse_types_only,
+                file_path
+            )
+
+            result.ifc_schema = parse_result.ifc_schema
+
+            if not parse_result.success:
+                # Parsing failed
+                error_msg = parse_result.error or "IFC parsing failed"
+                result.error = error_msg
+                result.status = 'error'
+
+                await self.repository.update_model_status(
+                    model_id,
+                    status='error',
+                    parsing_status='failed',
+                    processing_error=error_msg,
+                )
+
+                # Create a failure report
+                result.processing_report_id = await self._create_types_only_report(
+                    model_id, start_time, result, parse_result, is_failure=True
+                )
+
+                return result
+
+            # ==================== Write to Database ====================
+            print("[Orchestrator] Writing types and materials to database...")
+
+            # Step 1: Write materials
+            print(f"[Orchestrator] Writing {len(parse_result.materials)} materials...")
+            await self.repository.bulk_insert_materials(model_id, parse_result.materials)
+            result.material_count = len(parse_result.materials)
+
+            # Step 2: Write types (with instance_count from parse_result)
+            print(f"[Orchestrator] Writing {len(parse_result.types)} types...")
+            type_guid_to_id = await self.repository.bulk_insert_types(
+                model_id, parse_result.types
+            )
+            result.type_count = len(parse_result.types)
+
+            # Step 3: Link types to TypeBank (create entries and observations)
+            print(f"[Orchestrator] Linking types to TypeBank...")
+            typebank_stats = await self.repository.link_types_to_typebank(
+                model_id, parse_result.types, type_guid_to_id
+            )
+            print(f"[Orchestrator] TypeBank: {typebank_stats['entries_created']} new entries, "
+                  f"{typebank_stats['entries_reused']} reused, "
+                  f"{typebank_stats['observations_created']} observations")
+
+            # Store stats for reporting
+            result.storey_count = parse_result.storey_count
+            result.element_count = parse_result.element_count  # Total elements (not stored, just for stats)
+
+            # ==================== Update Status: Ready ====================
+            await self.repository.update_model_status(
+                model_id,
+                status='ready',
+                parsing_status='parsed',
+                geometry_status='skipped',  # Viewer loads IFC directly
+                ifc_schema=parse_result.ifc_schema,
+                element_count=parse_result.element_count,  # Keep for display, even though not stored
+                storey_count=parse_result.storey_count,
+                processing_error='',
+            )
+
+            result.success = True
+            result.status = 'ready'
+            result.duration_seconds = time.time() - start_time
+
+            # ==================== Create Processing Report ====================
+            result.processing_report_id = await self._create_types_only_report(
+                model_id, start_time, result, parse_result, is_failure=False
+            )
+
+            print(f"\n[Orchestrator] Complete in {result.duration_seconds:.2f}s")
+            print(f"  Types: {result.type_count} (with instance counts)")
+            print(f"  Materials: {result.material_count}")
+            print(f"  Total elements (not stored): {result.element_count}")
+            print(f"  Report ID: {result.processing_report_id}")
+
+            return result
+
+        except Exception as e:
+            # Catastrophic failure
+            result.error = str(e)
+            result.status = 'error'
+            result.duration_seconds = time.time() - start_time
+
+            print(f"\n[Orchestrator] FAILED: {e}")
+
+            await self.repository.update_model_status(
+                model_id,
+                status='error',
+                parsing_status='failed',
+                processing_error=str(e),
+            )
+
+            # Create failure report
+            try:
+                result.processing_report_id = await self.repository.create_processing_report(
+                    model_id=model_id,
+                    started_at=datetime.fromtimestamp(start_time, tz=timezone.utc),
+                    completed_at=datetime.now(timezone.utc),
+                    duration_seconds=result.duration_seconds,
+                    overall_status='failed',
+                    stage_results=[],
+                    errors=[{
+                        'stage': 'orchestrator',
+                        'severity': 'critical',
+                        'message': str(e),
+                        'timestamp': datetime.now().isoformat(),
+                    }],
+                    catastrophic_failure=True,
+                    failure_exception=str(e),
+                    summary=f"CATASTROPHIC FAILURE: {e}",
+                )
+            except Exception:
+                pass  # Don't fail on report creation failure
+
+            return result
+
+    async def _create_types_only_report(
+        self,
+        model_id: str,
+        start_time: float,
+        result: ProcessingResult,
+        parse_result: TypesOnlyResult,
+        is_failure: bool,
+    ) -> str:
+        """Create a processing report for types-only processing."""
+        completed_at = datetime.now(timezone.utc)
+        started_at = datetime.fromtimestamp(start_time, tz=timezone.utc)
+
+        # Calculate types with instances
+        types_with_instances = sum(1 for t in parse_result.types if t.instance_count > 0)
+        total_instances = sum(t.instance_count for t in parse_result.types)
+
+        summary = f"""
+IFC Processing {'FAILED' if is_failure else 'Complete'} (Types-Only Mode)
+========================================
+Duration: {result.duration_seconds:.2f}s
+IFC Schema: {result.ifc_schema or 'Unknown'}
+
+Types: {result.type_count} ({types_with_instances} with instances)
+Total Type Instances: {total_instances}
+Materials: {result.material_count}
+Storeys: {result.storey_count}
+Total Elements: {result.element_count} (not stored)
+
+Mode: Types-only (no entity storage)
+"""
+
+        verification_data = {
+            'types_total': result.type_count,
+            'types_with_instances': types_with_instances,
+            'types_without_instances': result.type_count - types_with_instances,
+            'total_instances': total_instances,
+            'entities_total': result.element_count,
+            'entities_stored': 0,  # We don't store entities in this mode
+            'verified_at': datetime.now(timezone.utc).isoformat(),
+            'verification_method': 'ifcopenshell',
+            'processing_mode': 'types_only',
+        }
+
+        return await self.repository.create_processing_report(
+            model_id=model_id,
+            started_at=started_at,
+            completed_at=completed_at,
+            duration_seconds=result.duration_seconds,
+            overall_status='failed' if is_failure else 'success',
+            ifc_schema=result.ifc_schema,
+            file_size_bytes=parse_result.file_size_bytes if parse_result else 0,
+            stage_results=[],  # Simplified mode doesn't have stages
+            total_entities_processed=result.type_count + result.material_count,
+            total_entities_skipped=0,
+            total_entities_failed=0,
+            errors=[],
+            catastrophic_failure=is_failure and result.error is not None,
+            failure_exception=result.error if is_failure else None,
+            summary=summary,
+            verification_data=verification_data,
+        )
+
     def _get_ifc_type_for_hierarchy(self, level: str) -> str:
         """Get the IFC type for a hierarchy level."""
         type_map = {
@@ -338,6 +577,46 @@ class ProcessingOrchestrator:
         }
         return type_map.get(level, 'IfcSpatialStructureElement')
 
+    def _calculate_verification_data(
+        self,
+        parse_result: ParseResult,
+        type_assignment_count: int,
+    ) -> Dict:
+        """
+        Calculate verification stats for audit trail.
+
+        This provides transparency about data quality, showing:
+        - How many types have instances vs. are empty
+        - How many entities are geometry-only (no meaningful metadata)
+        - Verification timestamp and method
+        """
+        # Count types with instances (from type assignments)
+        types_with_assignments = set()
+        for assignment in parse_result.type_assignments:
+            types_with_assignments.add(assignment.type_guid)
+
+        types_total = len(parse_result.types)
+        types_with_instances = len(types_with_assignments)
+        types_without_instances = types_total - types_with_instances
+
+        # Count entities
+        entities_total = len(parse_result.entities)
+        entities_geometry_only = sum(
+            1 for e in parse_result.entities if e.is_geometry_only
+        )
+        entities_with_type = type_assignment_count
+
+        return {
+            'types_total': types_total,
+            'types_with_instances': types_with_instances,
+            'types_without_instances': types_without_instances,
+            'entities_total': entities_total,
+            'entities_with_type': entities_with_type,
+            'entities_geometry_only': entities_geometry_only,
+            'verified_at': datetime.now(timezone.utc).isoformat(),
+            'verification_method': 'ifcopenshell',
+        }
+
     async def _create_report(
         self,
         model_id: str,
@@ -345,6 +624,7 @@ class ProcessingOrchestrator:
         result: ProcessingResult,
         parse_result: ParseResult,
         is_failure: bool,
+        verification_data: Optional[Dict] = None,
     ) -> str:
         """Create a processing report."""
         completed_at = datetime.now(timezone.utc)
@@ -390,6 +670,7 @@ Errors: {len(result.errors)}
             catastrophic_failure=is_failure and result.error is not None,
             failure_exception=result.error if is_failure else None,
             summary=summary,
+            verification_data=verification_data or {},
         )
 
 

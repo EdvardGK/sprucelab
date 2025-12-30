@@ -192,11 +192,10 @@ async def _process_full(
                 generate_fragments_background(model_id, file_url, fragments_callback)
             )
 
-        # Run metadata processing
-        result = await processing_orchestrator.process_model(
+        # Run metadata processing (types-only mode - no entity storage)
+        result = await processing_orchestrator.process_model_types_only(
             model_id=model_id,
             file_path=file_path,
-            skip_geometry=skip_geometry,
         )
 
         _processing_status[model_id] = {
@@ -367,11 +366,10 @@ async def process_ifc_file_sync(
                 detail="Invalid file type. Expected .ifc file"
             )
 
-        # Process the file (blocking)
-        result = await processing_orchestrator.process_model(
+        # Process the file (types-only mode - no entity storage)
+        result = await processing_orchestrator.process_model_types_only(
             model_id=request.model_id,
             file_path=file_path,
-            skip_geometry=request.skip_geometry,
         )
 
         return ProcessResponse(
