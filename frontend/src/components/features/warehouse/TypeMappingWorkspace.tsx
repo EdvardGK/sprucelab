@@ -25,11 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, Save, XCircle, Flag, FileQuestion, Download, Upload, CheckCircle2, AlertTriangle, Leaf } from 'lucide-react';
+import { Loader2, Save, XCircle, Flag, FileQuestion, Download, Upload, CheckCircle2, AlertTriangle, Leaf, Maximize2, Minimize2, Box, LayoutGrid } from 'lucide-react';
 
 import { NS3451CascadingSelector } from './NS3451CascadingSelector';
 import { TypeInfoPanel } from './TypeInfoPanel';
-import { InstanceViewer } from './InstanceViewer';
+import { InstanceViewer, type ViewerMode } from './InstanceViewer';
 import { MappingProgressBar, KeyboardShortcutsHint } from './MappingProgressBar';
 import { MaterialLayerEditor } from './MaterialLayerEditor';
 
@@ -84,6 +84,10 @@ export function TypeMappingWorkspace({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+
+  // Viewer state
+  const [viewerMode, setViewerMode] = useState<ViewerMode>('plotly');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Local form state
   const [ns3451Code, setNs3451Code] = useState<string | null>(null);
@@ -174,6 +178,33 @@ export function TypeMappingWorkspace({
 
   // Status counts for filter tabs
   const statusCounts = getStatusCounts(types);
+
+  // Viewer keyboard shortcuts (V = toggle mode, F11 = fullscreen)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input/textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key === 'v' || e.key === 'V') {
+        setViewerMode(mode => mode === 'plotly' ? 'thatopen' : 'plotly');
+      } else if (e.key === 'F11' || (e.key === 'f' && e.shiftKey)) {
+        e.preventDefault();
+        setIsFullscreen(prev => !prev);
+      } else if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
+  // Toggle fullscreen handler
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => !prev);
+  }, []);
 
   // Excel export handler
   const handleExport = useCallback(async () => {
@@ -440,12 +471,54 @@ export function TypeMappingWorkspace({
               />
 
               {/* 3D Instance Preview - Take all remaining space */}
-              <InstanceViewer
-                modelId={modelId}
-                typeId={currentType.id}
-                className="flex-1 min-h-0"
-                mode="plotly"
-              />
+              <div className="flex-1 min-h-0 flex flex-col rounded-lg border bg-background overflow-hidden">
+                {/* Viewer Toolbar */}
+                <div className="flex items-center justify-between px-2 py-1 border-b bg-background-secondary">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant={viewerMode === 'plotly' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewerMode('plotly')}
+                      className="h-6 px-2 text-xs gap-1"
+                      title={t('typeMapping.viewerPlotly', '2D Scatter View')}
+                    >
+                      <LayoutGrid className="h-3 w-3" />
+                      2D
+                    </Button>
+                    <Button
+                      variant={viewerMode === 'thatopen' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewerMode('thatopen')}
+                      className="h-6 px-2 text-xs gap-1"
+                      title={t('typeMapping.viewer3D', '3D Fragments Viewer')}
+                    >
+                      <Box className="h-3 w-3" />
+                      3D
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-text-tertiary">
+                      <kbd className="px-1 bg-background-tertiary rounded">V</kbd> {t('common.toggle', 'toggle')}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={toggleFullscreen}
+                      className="h-6 w-6 p-0"
+                      title={t('typeMapping.fullscreen', 'Fullscreen (Shift+F)')}
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                {/* Viewer Content */}
+                <InstanceViewer
+                  modelId={modelId}
+                  typeId={currentType.id}
+                  className="flex-1 min-h-0"
+                  mode={viewerMode}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -459,6 +532,84 @@ export function TypeMappingWorkspace({
       <div className="flex-none border-t px-3 py-1.5 bg-background-secondary">
         <KeyboardShortcutsHint />
       </div>
+
+      {/* Fullscreen Viewer Overlay */}
+      {isFullscreen && currentType && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          {/* Fullscreen Header */}
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-background-secondary">
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-medium text-text-primary">
+                {currentType.type_name || currentType.ifc_type}
+              </h3>
+              <span className="text-xs text-text-tertiary">
+                {currentType.instance_count} {t('common.instances', 'instances')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Mode toggle in fullscreen */}
+              <div className="flex items-center gap-1 mr-2">
+                <Button
+                  variant={viewerMode === 'plotly' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewerMode('plotly')}
+                  className="h-7 px-3 text-xs gap-1.5"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  2D Scatter
+                </Button>
+                <Button
+                  variant={viewerMode === 'thatopen' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewerMode('thatopen')}
+                  className="h-7 px-3 text-xs gap-1.5"
+                >
+                  <Box className="h-3.5 w-3.5" />
+                  3D Fragments
+                </Button>
+              </div>
+              <span className="text-xs text-text-tertiary">
+                <kbd className="px-1.5 py-0.5 bg-background-tertiary rounded">Esc</kbd> {t('common.close', 'close')}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleFullscreen}
+                className="h-7 w-7 p-0"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          {/* Fullscreen Viewer */}
+          <div className="flex-1 min-h-0">
+            <InstanceViewer
+              modelId={modelId}
+              typeId={currentType.id}
+              className="h-full w-full"
+              mode={viewerMode}
+            />
+          </div>
+          {/* Fullscreen Footer - Type Info */}
+          <div className="flex items-center justify-between px-4 py-2 border-t bg-background-secondary text-xs">
+            <div className="flex items-center gap-4">
+              <span className="text-text-secondary">
+                <span className="text-text-tertiary">{t('typeMapping.ifcType', 'IFC Type')}:</span> {currentType.ifc_type}
+              </span>
+              {currentType.mapping?.ns3451_code && (
+                <span className="text-text-secondary">
+                  <span className="text-text-tertiary">NS3451:</span> {currentType.mapping.ns3451_code}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-text-tertiary">
+                <kbd className="px-1 bg-background-tertiary rounded">V</kbd> {t('typeMapping.switchViewer', 'switch viewer')}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Excel Import Result Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
