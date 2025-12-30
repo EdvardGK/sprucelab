@@ -34,7 +34,7 @@ trimesh>=4.0.0
 tqdm==4.66.1
 python-dateutil==2.8.2
 requests==2.31.0
-httpx>=0.25.0
+httpx>=0.24.0,<0.25.0
 
 # Production Server
 gunicorn==21.2.0
