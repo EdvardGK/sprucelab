@@ -167,12 +167,8 @@ class IFCTypeWithMappingSerializer(serializers.ModelSerializer):
         ]
 
     def get_instance_count(self, obj):
-        """Get instance count from annotated queryset (avoids N+1)."""
-        # Use annotated count if available (set by ViewSet queryset)
-        if hasattr(obj, '_instance_count'):
-            return obj._instance_count
-        # Fallback for direct model access
-        return obj.assignments.count()
+        """Get instance count from stored field (populated during parsing)."""
+        return obj.instance_count
 
 
 class MaterialMappingSerializer(serializers.ModelSerializer):

@@ -417,8 +417,6 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         'mapping', 'mapping__ns3451'
     ).prefetch_related(
         Prefetch('mapping__definition_layers', queryset=TypeDefinitionLayer.objects.order_by('layer_order'))
-    ).annotate(
-        _instance_count=Count('assignments')
     ).all()
     serializer_class = IFCTypeWithMappingSerializer
     pagination_class = None  # Return all types - needed for mapping workflow
@@ -438,7 +436,8 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
 
         include_unused = self.request.query_params.get('include_unused', 'false').lower() == 'true'
         if not include_unused:
-            qs = qs.filter(_instance_count__gt=0)
+            # Use stored instance_count field (populated during parsing)
+            qs = qs.filter(instance_count__gt=0)
 
         return qs
 
