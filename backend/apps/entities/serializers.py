@@ -166,7 +166,11 @@ class IFCTypeWithMappingSerializer(serializers.ModelSerializer):
         ]
 
     def get_instance_count(self, obj):
-        """Count how many entities use this type."""
+        """Get instance count from annotated queryset (avoids N+1)."""
+        # Use annotated count if available (set by ViewSet queryset)
+        if hasattr(obj, '_instance_count'):
+            return obj._instance_count
+        # Fallback for direct model access
         return obj.assignments.count()
 
 

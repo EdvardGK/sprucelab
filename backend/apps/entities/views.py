@@ -8,7 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from django.http import HttpResponse
-from django.db.models import Count, Min
+from django.db.models import Count, Min, Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     ProcessingReport, IFCEntity, PropertySet, SpatialHierarchy,
@@ -403,7 +403,13 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
     Note: Pagination disabled - types are small and mapping workflow needs all of them.
     Typical models have 50-500 types; even 1000+ types is fine to return at once.
     """
-    queryset = IFCType.objects.select_related('mapping', 'mapping__ns3451').all()
+    queryset = IFCType.objects.select_related(
+        'mapping', 'mapping__ns3451'
+    ).prefetch_related(
+        Prefetch('mapping__definition_layers', queryset=TypeDefinitionLayer.objects.order_by('layer_order'))
+    ).annotate(
+        _instance_count=Count('assignments')
+    ).all()
     serializer_class = IFCTypeWithMappingSerializer
     pagination_class = None  # Return all types - needed for mapping workflow
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
