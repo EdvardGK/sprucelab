@@ -74,6 +74,28 @@ class ElementListResponse(BaseModel):
 
 
 # ============================================================================
+# Type Instances (for viewer filtering)
+# ============================================================================
+
+
+class TypeInstance(BaseModel):
+    """Single instance of a type."""
+
+    ifc_guid: str = Field(..., description="IFC GlobalId of the instance")
+    name: Optional[str] = Field(None, description="Element name")
+    ifc_type: str = Field(..., description="IFC type (e.g., IfcBeam, IfcWall)")
+    storey: Optional[str] = Field(None, description="Building storey name")
+
+
+class TypeInstancesResponse(BaseModel):
+    """List of instances for a specific type."""
+
+    instances: List[TypeInstance]
+    total_count: int = Field(..., description="Total number of instances")
+    type_guid: str = Field(..., description="GUID of the type queried")
+
+
+# ============================================================================
 # Bulk Property Editing
 # ============================================================================
 

@@ -18,6 +18,8 @@ from models.schemas import (
     ElementDetail,
     ElementListResponse,
     MeshGeometry,
+    TypeInstance,
+    TypeInstancesResponse,
 )
 from core.auth import optional_api_key
 
@@ -202,6 +204,28 @@ async def get_element_geometry(file_id: str, guid: str):
     try:
         geometry = ifc_loader.get_element_geometry(file_id, guid)
         return MeshGeometry(**geometry)
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{file_id}/types/{type_guid}/instances", response_model=TypeInstancesResponse)
+async def get_type_instances(file_id: str, type_guid: str):
+    """
+    Get all instances (occurrences) of a specific IFC type.
+
+    Queries the IFC file directly using IfcRelDefinesByType relationship.
+    Returns list of instance GUIDs and basic info for filtering in the viewer.
+
+    Used by TypeInstanceViewer to filter model to show only instances of selected type.
+    """
+    try:
+        instances, total = ifc_loader.get_type_instances(file_id, type_guid)
+        return TypeInstancesResponse(
+            instances=[TypeInstance(**inst) for inst in instances],
+            total_count=total,
+            type_guid=type_guid,
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

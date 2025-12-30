@@ -494,6 +494,49 @@ class IFCLoaderService:
         """Get list of currently loaded file IDs."""
         return list(self._cache.keys())
 
+    def get_type_instances(self, file_id: str, type_guid: str) -> Tuple[List[Dict[str, Any]], int]:
+        """
+        Get all instances (occurrences) of a specific type by querying the IFC file.
+
+        This queries the IFC directly using IfcRelDefinesByType relationship,
+        avoiding the need to store instance GUIDs in the database.
+
+        Args:
+            file_id: ID of loaded file
+            type_guid: GUID of the type object (IfcTypeObject)
+
+        Returns:
+            (instances_list, total_count) tuple where instances have guid, name, ifc_type, storey
+        """
+        ifc_file = self._cache.get(file_id)
+        if not ifc_file:
+            raise ValueError(f"File {file_id} not loaded")
+
+        try:
+            type_element = ifc_file.by_guid(type_guid)
+        except RuntimeError:
+            raise ValueError(f"Type with GUID {type_guid} not found")
+
+        # Verify it's a type object
+        if not type_element.is_a("IfcTypeObject"):
+            raise ValueError(f"Element {type_guid} is not an IfcTypeObject (is {type_element.is_a()})")
+
+        # Get instances via ObjectTypeOf relationship (IfcRelDefinesByType)
+        instances = []
+        if hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+            for rel in type_element.ObjectTypeOf:
+                if rel.RelatedObjects:
+                    for obj in rel.RelatedObjects:
+                        storey = self._get_element_storey(obj)
+                        instances.append({
+                            "ifc_guid": obj.GlobalId,
+                            "name": obj.Name,
+                            "ifc_type": obj.is_a(),
+                            "storey": storey,
+                        })
+
+        return instances, len(instances)
+
 
 # Singleton instance
 ifc_loader = IFCLoaderService()

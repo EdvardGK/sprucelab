@@ -664,41 +664,81 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         Get entity instances for a type (for viewer navigation).
 
         GET /api/types/{id}/instances/
-        GET /api/types/{id}/instances/?limit=50&offset=0
 
-        Returns list of entities assigned to this type with their GUIDs and metadata.
+        Queries the IFC file directly via FastAPI to get instance GUIDs.
         Used by the Instance Viewer to navigate through type instances.
         """
+        import httpx
+        from django.conf import settings
+
         ifc_type = self.get_object()
 
-        # Get pagination params
-        limit = int(request.query_params.get('limit', 100))
-        offset = int(request.query_params.get('offset', 0))
+        # Get the model's IFC file URL
+        model = ifc_type.model
+        if not model.file_url:
+            return Response({
+                'type_id': str(ifc_type.id),
+                'type_name': ifc_type.type_name,
+                'type_guid': ifc_type.type_guid,
+                'ifc_type': ifc_type.ifc_type,
+                'model_id': str(model.id),
+                'total_count': 0,
+                'instances': [],
+                'error': 'No IFC file available for this model'
+            })
 
-        # Query entities by matching object_type to type_name (direct lookup)
-        # This avoids dependency on TypeAssignment join table
-        entities_qs = IFCEntity.objects.filter(
-            model=ifc_type.model,
-            object_type=ifc_type.type_name
-        ).order_by('name', 'ifc_guid')
+        # Get FastAPI base URL from settings (matches IFCServiceClient)
+        fastapi_url = getattr(settings, 'IFC_SERVICE_URL', 'http://localhost:8001')
 
-        total_count = entities_qs.count()
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                # Step 1: Load the IFC file into FastAPI (idempotent - returns cached file_id)
+                open_response = client.post(
+                    f"{fastapi_url}/ifc/open/url",
+                    json={"file_url": model.file_url}
+                )
+                open_response.raise_for_status()
+                file_id = open_response.json()['file_id']
 
-        entities = entities_qs.values(
-            'id', 'ifc_guid', 'name', 'ifc_type', 'storey_id'
-        )[offset:offset + limit]
+                # Step 2: Get type instances
+                instances_response = client.get(
+                    f"{fastapi_url}/ifc/{file_id}/types/{ifc_type.type_guid}/instances"
+                )
+                instances_response.raise_for_status()
+                data = instances_response.json()
 
-        return Response({
-            'type_id': str(ifc_type.id),
-            'type_name': ifc_type.type_name,
-            'type_guid': ifc_type.type_guid,
-            'ifc_type': ifc_type.ifc_type,
-            'model_id': str(ifc_type.model_id),
-            'total_count': total_count,
-            'offset': offset,
-            'limit': limit,
-            'instances': list(entities)
-        })
+                return Response({
+                    'type_id': str(ifc_type.id),
+                    'type_name': ifc_type.type_name,
+                    'type_guid': ifc_type.type_guid,
+                    'ifc_type': ifc_type.ifc_type,
+                    'model_id': str(model.id),
+                    'total_count': data['total_count'],
+                    'instances': data['instances']
+                })
+
+        except httpx.HTTPStatusError as e:
+            return Response({
+                'type_id': str(ifc_type.id),
+                'type_name': ifc_type.type_name,
+                'type_guid': ifc_type.type_guid,
+                'ifc_type': ifc_type.ifc_type,
+                'model_id': str(model.id),
+                'total_count': 0,
+                'instances': [],
+                'error': f'FastAPI error: {e.response.status_code} - {e.response.text}'
+            }, status=e.response.status_code)
+        except Exception as e:
+            return Response({
+                'type_id': str(ifc_type.id),
+                'type_name': ifc_type.type_name,
+                'type_guid': ifc_type.type_guid,
+                'ifc_type': ifc_type.ifc_type,
+                'model_id': str(model.id),
+                'total_count': 0,
+                'instances': [],
+                'error': f'Failed to query IFC file: {str(e)}'
+            }, status=500)
 
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
