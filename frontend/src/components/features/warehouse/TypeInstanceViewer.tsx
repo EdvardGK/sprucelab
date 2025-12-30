@@ -65,6 +65,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     if (!containerRef.current) return;
 
     let cleanupResize: (() => void) | null = null;
+    let cleanupMouseHandlers: (() => void) | null = null;
 
     const initViewer = async () => {
       try {
@@ -110,11 +111,23 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         // 6. Initialize Components
         components.init();
 
-        // Configure camera
+        // Configure camera controls (matching UnifiedBIMViewer)
         const controls = world.camera.controls;
         controls.dollySpeed = 1.5;
-        controls.minDistance = 0.5;
-        controls.maxDistance = 500;
+        controls.minDistance = 0.1;  // Allow very close zoom for detail inspection
+        controls.maxDistance = 2000; // Allow far zoom for large models
+
+        // Set near/far clipping planes (matching UnifiedBIMViewer)
+        const threeCamera = world.camera.three;
+        if (threeCamera instanceof THREE.PerspectiveCamera) {
+          threeCamera.near = 0.01; // 1cm - allows very close inspection
+          threeCamera.far = 5000;  // 5km - handles large site models
+          threeCamera.updateProjectionMatrix();
+        } else if (threeCamera instanceof THREE.OrthographicCamera) {
+          threeCamera.near = 0.01;
+          threeCamera.far = 5000;
+          threeCamera.updateProjectionMatrix();
+        }
 
         // Initial camera position
         await controls.setLookAt(20, 20, 20, 0, 0, 0);
@@ -150,6 +163,157 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         const hider = components.get(OBC.Hider);
         hiderRef.current = hider;
 
+        // 11. Setup mouse interaction handlers (matching UnifiedBIMViewer patterns)
+
+        // Click detection thresholds (matching UnifiedBIMViewer)
+        const CLICK_THRESHOLD_PX = 5;
+        const CLICK_THRESHOLD_MS = 250;
+        let mouseDownPos = { x: 0, y: 0 };
+        let mouseDownTime = 0;
+
+        const handleMouseDown = (event: MouseEvent) => {
+          if (event.button !== 0) return; // Only left button
+          mouseDownPos = { x: event.clientX, y: event.clientY };
+          mouseDownTime = Date.now();
+        };
+
+        const handleMouseUp = async (event: MouseEvent) => {
+          if (event.button !== 0) return; // Only left button
+
+          // Check if this was a true click (not a drag)
+          const dx = Math.abs(event.clientX - mouseDownPos.x);
+          const dy = Math.abs(event.clientY - mouseDownPos.y);
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const elapsed = Date.now() - mouseDownTime;
+
+          if (distance > CLICK_THRESHOLD_PX || elapsed > CLICK_THRESHOLD_MS) {
+            return; // Was a drag, not a click
+          }
+
+          // Select element on click
+          try {
+            await highlighter.highlight('current', true, false);
+          } catch (err) {
+            console.error('[TypeInstanceViewer] Selection error:', err);
+          }
+        };
+
+        // Double-click to zoom to element (matching UnifiedBIMViewer)
+        const handleDoubleClick = async (event: MouseEvent) => {
+          if (event.button !== 0) return; // Only left button
+
+          try {
+            // Highlight without zoom (we'll do custom zoom)
+            await highlighter.highlight('current', true, false);
+
+            // Get the selection
+            const selection = highlighter.selection['current'];
+            if (!selection || Object.keys(selection).length === 0) return;
+
+            // Get fragments manager
+            const fragmentsManager = components.get(OBC.FragmentsManager);
+            if (!fragmentsManager) return;
+
+            // Collect visible fragment meshes from selection
+            const meshes: THREE.Mesh[] = [];
+            for (const fragId of Object.keys(selection)) {
+              const fragment = fragmentsManager.list.get(fragId);
+              if (fragment?.mesh) {
+                meshes.push(fragment.mesh);
+              }
+            }
+
+            // Zoom to selected elements
+            if (meshes.length > 0) {
+              // Temporarily make meshes visible for bounding box calculation
+              const wasVisible = meshes.map(m => m.visible);
+              meshes.forEach(m => m.visible = true);
+
+              const bbox = new THREE.Box3();
+              meshes.forEach(mesh => {
+                const meshBbox = new THREE.Box3().setFromObject(mesh);
+                if (!meshBbox.isEmpty()) {
+                  bbox.union(meshBbox);
+                }
+              });
+
+              // Restore visibility
+              meshes.forEach((m, i) => m.visible = wasVisible[i]);
+
+              if (!bbox.isEmpty() && world.camera?.controls) {
+                const center = new THREE.Vector3();
+                bbox.getCenter(center);
+
+                const size = new THREE.Vector3();
+                bbox.getSize(size);
+
+                const maxDim = Math.max(size.x, size.y, size.z, 2);
+                const dist = Math.max(maxDim * 2.0, 5);
+
+                const camera = world.camera.three;
+                const currentDir = new THREE.Vector3();
+                camera.getWorldDirection(currentDir);
+
+                const cameraPos = center.clone().sub(currentDir.multiplyScalar(dist));
+
+                world.camera.controls.setLookAt(
+                  cameraPos.x, cameraPos.y, cameraPos.z,
+                  center.x, center.y, center.z,
+                  true // Enable transition animation
+                );
+              }
+            }
+          } catch (err) {
+            console.error('[TypeInstanceViewer] Double-click zoom error:', err);
+          }
+        };
+
+        // Middle mouse double-click to fit all to view
+        let lastMiddleClickTime = 0;
+        const handleAuxClick = (event: MouseEvent) => {
+          if (event.button === 1) { // Middle mouse button
+            const now = Date.now();
+            if (now - lastMiddleClickTime < 300) {
+              // Double-click detected
+              event.preventDefault();
+              if (fragmentsGroupRef.current) {
+                const bbox = new THREE.Box3().setFromObject(fragmentsGroupRef.current);
+                if (!bbox.isEmpty()) {
+                  const center = new THREE.Vector3();
+                  bbox.getCenter(center);
+                  const size = new THREE.Vector3();
+                  bbox.getSize(size);
+                  const maxDim = Math.max(size.x, size.y, size.z);
+                  const distance = maxDim * 1.5;
+                  const cameraPos = new THREE.Vector3(
+                    center.x + distance * 0.7,
+                    center.y + distance * 0.5,
+                    center.z + distance * 0.7
+                  );
+                  world.camera?.controls?.setLookAt(
+                    cameraPos.x, cameraPos.y, cameraPos.z,
+                    center.x, center.y, center.z,
+                    true
+                  );
+                }
+              }
+            }
+            lastMiddleClickTime = now;
+          }
+        };
+
+        container.addEventListener('mousedown', handleMouseDown);
+        container.addEventListener('mouseup', handleMouseUp);
+        container.addEventListener('dblclick', handleDoubleClick);
+        container.addEventListener('auxclick', handleAuxClick);
+
+        cleanupMouseHandlers = () => {
+          container.removeEventListener('mousedown', handleMouseDown);
+          container.removeEventListener('mouseup', handleMouseUp);
+          container.removeEventListener('dblclick', handleDoubleClick);
+          container.removeEventListener('auxclick', handleAuxClick);
+        };
+
         // Handle resize
         const handleResize = () => {
           world.renderer?.resize();
@@ -166,6 +330,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     initViewer();
 
     return () => {
+      cleanupMouseHandlers?.();
       cleanupResize?.();
 
       if (componentsRef.current) {
@@ -259,93 +424,63 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     loadModel();
   }, [isInitialized, modelId]);
 
-  // Zoom to a specific element by its fragment ID map
-  // TODO: Re-enable when filtering is fixed
-  /* const zoomToElement = useCallback((fragmentIdMap: Record<string, Set<number>>) => {
+  // Zoom to visible instances with double-click style behavior
+  // Uses 2x bounding box multiplier and maintains camera viewing angle
+  const zoomToVisibleInstances = useCallback(() => {
     if (!worldRef.current || !fragmentsGroupRef.current) return;
 
     const group = fragmentsGroupRef.current;
 
-    // Get bounding box of the selected elements
+    // Compute bounding box from visible items only
     const bbox = new THREE.Box3();
-    let hasElements = false;
+    let hasVisibleItems = false;
 
-    for (const [fragmentId, expressIds] of Object.entries(fragmentIdMap)) {
-      const fragment = group.items.find(f => f.id === fragmentId);
-      if (!fragment) continue;
-
-      // Get the fragment mesh and compute bounding box from visible instances
-      const mesh = fragment.mesh;
-      if (mesh && mesh.geometry) {
-        // For each expressId, add geometry bounds to overall bbox
-        for (const _expressId of expressIds) {
-          mesh.geometry.computeBoundingBox();
-          if (mesh.geometry.boundingBox) {
-            const worldBox = mesh.geometry.boundingBox.clone();
-            worldBox.applyMatrix4(mesh.matrixWorld);
-            bbox.union(worldBox);
-            hasElements = true;
-          }
+    for (const fragment of group.items) {
+      if (fragment.mesh?.visible) {
+        const meshBbox = new THREE.Box3().setFromObject(fragment.mesh);
+        if (!meshBbox.isEmpty()) {
+          bbox.union(meshBbox);
+          hasVisibleItems = true;
         }
       }
     }
 
-    if (!hasElements) {
-      // Fallback: zoom to entire group
+    // Fallback to entire group if no visible items
+    if (!hasVisibleItems) {
       bbox.setFromObject(group);
     }
 
-    const center = new THREE.Vector3();
-    const size = new THREE.Vector3();
-    bbox.getCenter(center);
-    bbox.getSize(size);
-
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = Math.max(maxDim * 2, 5);
-
-    const cameraPos = new THREE.Vector3(
-      center.x + distance * 0.7,
-      center.y + distance * 0.5,
-      center.z + distance * 0.7
-    );
-
-    worldRef.current.camera?.controls?.setLookAt(
-      cameraPos.x, cameraPos.y, cameraPos.z,
-      center.x, center.y, center.z,
-      true // Animate
-    );
-  }, []); */
-
-  // Zoom to all visible instances
-  const zoomToAllInstances = useCallback(() => {
-    if (!worldRef.current || !fragmentsGroupRef.current) return;
-
-    // Use the fragment group's bounding box for visible items
-    const group = fragmentsGroupRef.current;
-    const bbox = new THREE.Box3().setFromObject(group);
+    if (bbox.isEmpty()) return;
 
     const center = new THREE.Vector3();
-    const size = new THREE.Vector3();
     bbox.getCenter(center);
+
+    const size = new THREE.Vector3();
     bbox.getSize(size);
 
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 1.5;
+    // Use 2x multiplier for comfortable viewing (matching UnifiedBIMViewer double-click)
+    const maxDim = Math.max(size.x, size.y, size.z, 2); // Minimum 2m
+    const distance = Math.max(maxDim * 2.0, 5); // At least 5m away
 
-    const cameraPos = new THREE.Vector3(
-      center.x + distance * 0.7,
-      center.y + distance * 0.5,
-      center.z + distance * 0.7
-    );
+    // Get current camera direction to maintain viewing angle
+    const camera = worldRef.current.camera?.three;
+    if (camera && worldRef.current.camera?.controls) {
+      const currentDir = new THREE.Vector3();
+      camera.getWorldDirection(currentDir);
 
-    worldRef.current.camera?.controls?.setLookAt(
-      cameraPos.x, cameraPos.y, cameraPos.z,
-      center.x, center.y, center.z,
-      true // Animate
-    );
+      // Position camera at distance from center, opposite to view direction
+      const cameraPos = center.clone().sub(currentDir.multiplyScalar(distance));
+
+      worldRef.current.camera.controls.setLookAt(
+        cameraPos.x, cameraPos.y, cameraPos.z,
+        center.x, center.y, center.z,
+        true // Animate transition
+      );
+    }
   }, []);
 
   // Highlight and isolate instances when they change
+  // Instance changes behave like double-click (animated zoom to element)
   useEffect(() => {
     if (!fragmentsGroupRef.current || !componentsRef.current || instances.length === 0) {
       return;
@@ -353,12 +488,11 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
     const components = componentsRef.current;
     const highlighter = highlighterRef.current;
-    const hider = hiderRef.current;
     const group = fragmentsGroupRef.current;
 
     if (!highlighter) {
       console.log('[TypeInstanceViewer] No highlighter, just zooming');
-      zoomToAllInstances();
+      zoomToVisibleInstances();
       return;
     }
 
@@ -374,7 +508,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         : currentInstance ? [currentInstance.ifc_guid] : [];
 
       if (guidsToShow.length === 0) {
-        zoomToAllInstances();
+        zoomToVisibleInstances();
         return;
       }
 
@@ -388,7 +522,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         hasMatches,
       });
 
-      if (hasMatches && hider) {
+      if (hasMatches) {
         // Use Three.js visibility directly on fragment meshes
         // First, hide all fragment items
         for (const fragment of group.items) {
@@ -402,8 +536,6 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
           const fragment = group.items.find(f => f.id === fragmentId);
           if (fragment?.mesh) {
             fragment.mesh.visible = true;
-            // For more granular control, we'd need to use instancedMesh visibility
-            // but for now showing the whole fragment is a start
           }
         }
 
@@ -416,13 +548,13 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         }
       }
 
-      // Zoom to visible elements
-      zoomToAllInstances();
+      // Zoom to visible elements (behaves like double-click - animated zoom with 2x multiplier)
+      zoomToVisibleInstances();
     } catch (err) {
       console.error('[TypeInstanceViewer] Filtering failed:', err);
-      zoomToAllInstances();
+      zoomToVisibleInstances();
     }
-  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToAllInstances]);
+  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToVisibleInstances]);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {
