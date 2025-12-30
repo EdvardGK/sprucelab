@@ -345,7 +345,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     );
   }, []);
 
-  // Highlight instances when they change
+  // Highlight and isolate instances when they change
   useEffect(() => {
     if (!fragmentsGroupRef.current || !componentsRef.current || instances.length === 0) {
       return;
@@ -353,6 +353,8 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
     const components = componentsRef.current;
     const highlighter = highlighterRef.current;
+    const hider = hiderRef.current;
+    const group = fragmentsGroupRef.current;
 
     if (!highlighter) {
       console.log('[TypeInstanceViewer] No highlighter, just zooming');
@@ -364,30 +366,60 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       const fragmentsManager = components.get(OBC.FragmentsManager);
 
       // Clear previous highlights
-      console.log('[TypeInstanceViewer] Clearing highlights...');
       highlighter.clear('current');
 
-      // Get the current instance to highlight
-      if (currentInstance) {
-        const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
-        const hasMatch = Object.keys(currentFragIdMap).length > 0;
+      // Get GUIDs to show based on mode
+      const guidsToShow = showAll
+        ? instances.map(inst => inst.ifc_guid)
+        : currentInstance ? [currentInstance.ifc_guid] : [];
 
-        console.log('[TypeInstanceViewer] Highlighting:', {
-          guid: currentInstance.ifc_guid,
-          fragmentIdMapKeys: Object.keys(currentFragIdMap),
-          hasMatch,
-        });
+      if (guidsToShow.length === 0) {
+        zoomToAllInstances();
+        return;
+      }
 
-        if (hasMatch) {
-          console.log('[TypeInstanceViewer] Calling highlightByID...');
-          highlighter.highlightByID('current', currentFragIdMap, false, false);
+      const fragmentIdMapToShow = fragmentsManager.guidToFragmentIdMap(guidsToShow);
+      const hasMatches = Object.keys(fragmentIdMapToShow).length > 0;
+
+      console.log('[TypeInstanceViewer] Isolating:', {
+        mode: showAll ? 'showAll' : 'single',
+        guidsCount: guidsToShow.length,
+        fragmentIdMapKeys: Object.keys(fragmentIdMapToShow),
+        hasMatches,
+      });
+
+      if (hasMatches && hider) {
+        // Use Three.js visibility directly on fragment meshes
+        // First, hide all fragment items
+        for (const fragment of group.items) {
+          if (fragment.mesh) {
+            fragment.mesh.visible = false;
+          }
+        }
+
+        // Then show only the ones we want
+        for (const [fragmentId] of Object.entries(fragmentIdMapToShow)) {
+          const fragment = group.items.find(f => f.id === fragmentId);
+          if (fragment?.mesh) {
+            fragment.mesh.visible = true;
+            // For more granular control, we'd need to use instancedMesh visibility
+            // but for now showing the whole fragment is a start
+          }
+        }
+
+        // Highlight current instance
+        if (currentInstance) {
+          const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
+          if (Object.keys(currentFragIdMap).length > 0) {
+            highlighter.highlightByID('current', currentFragIdMap, false, false);
+          }
         }
       }
 
-      // Zoom to model
+      // Zoom to visible elements
       zoomToAllInstances();
     } catch (err) {
-      console.error('[TypeInstanceViewer] Highlighting failed:', err);
+      console.error('[TypeInstanceViewer] Filtering failed:', err);
       zoomToAllInstances();
     }
   }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToAllInstances]);
