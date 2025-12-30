@@ -694,7 +694,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             with httpx.Client(timeout=60.0) as client:
                 # Step 1: Load the IFC file into FastAPI (idempotent - returns cached file_id)
                 open_response = client.post(
-                    f"{fastapi_url}/ifc/open/url",
+                    f"{fastapi_url}/api/v1/ifc/open/url",
                     json={"file_url": model.file_url}
                 )
                 open_response.raise_for_status()
@@ -702,7 +702,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
 
                 # Step 2: Get type instances
                 instances_response = client.get(
-                    f"{fastapi_url}/ifc/{file_id}/types/{ifc_type.type_guid}/instances"
+                    f"{fastapi_url}/api/v1/ifc/{file_id}/types/{ifc_type.type_guid}/instances"
                 )
                 instances_response.raise_for_status()
                 data = instances_response.json()
