@@ -503,6 +503,12 @@ python manage.py load_bep_templates --template=all
 python django-test/verify_mmi_templates.py
 ```
 
+**Git Push** (when authentication fails):
+```bash
+# Use GITHUB_SECRET from .env
+git push https://<GITHUB_SECRET>@github.com/EdvardGK/sprucelab.git main
+```
+
 ---
 
 ## Important Constraints
