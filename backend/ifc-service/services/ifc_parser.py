@@ -545,16 +545,35 @@ class IFCParserService:
         return materials, errors
 
     def _extract_types(self, ifc_file) -> Tuple[List[TypeData], List[Dict]]:
-        """Extract type objects."""
+        """
+        Extract type objects with TypeBank identity fields.
+
+        Extracts:
+        - type_guid: GlobalId
+        - type_name: IfcTypeObject.Name (clean, from type definition)
+        - ifc_type: Entity class (IfcWallType, etc.)
+        - predefined_type: Schema enum (STANDARD, USERDEFINED, NOTDEFINED)
+        - material: Primary material name from type's material association
+        """
         types = []
         errors = []
 
         for type_element in ifc_file.by_type('IfcTypeObject'):
             try:
+                # Extract predefined_type if available
+                predefined_type = None
+                if hasattr(type_element, 'PredefinedType') and type_element.PredefinedType:
+                    predefined_type = str(type_element.PredefinedType)
+
+                # Extract material from type's material association
+                material = self._extract_type_material(type_element)
+
                 types.append(TypeData(
                     type_guid=type_element.GlobalId,
-                    type_name=type_element.Name or 'Unnamed Type',
+                    type_name=type_element.Name or '',
                     ifc_type=type_element.is_a(),
+                    predefined_type=predefined_type or 'NOTDEFINED',
+                    material=material,
                 ))
             except Exception as e:
                 errors.append({
@@ -567,6 +586,56 @@ class IFCParserService:
                 })
 
         return types, errors
+
+    def _extract_type_material(self, type_element) -> str:
+        """
+        Extract primary material name from type's material association.
+
+        Checks HasAssociations for IfcRelAssociatesMaterial relationships.
+        Returns the first material name found, or empty string.
+        """
+        try:
+            if not hasattr(type_element, 'HasAssociations'):
+                return ''
+
+            for assoc in type_element.HasAssociations:
+                if assoc.is_a('IfcRelAssociatesMaterial'):
+                    material = assoc.RelatingMaterial
+
+                    # Direct IfcMaterial
+                    if material.is_a('IfcMaterial'):
+                        return material.Name or ''
+
+                    # IfcMaterialLayerSet - get first layer's material
+                    if material.is_a('IfcMaterialLayerSet'):
+                        layers = material.MaterialLayers
+                        if layers and layers[0].Material:
+                            return layers[0].Material.Name or ''
+
+                    # IfcMaterialLayerSetUsage
+                    if material.is_a('IfcMaterialLayerSetUsage'):
+                        layer_set = material.ForLayerSet
+                        if layer_set and layer_set.MaterialLayers:
+                            first_layer = layer_set.MaterialLayers[0]
+                            if first_layer.Material:
+                                return first_layer.Material.Name or ''
+
+                    # IfcMaterialList - get first material
+                    if material.is_a('IfcMaterialList'):
+                        materials = material.Materials
+                        if materials:
+                            return materials[0].Name or ''
+
+                    # IfcMaterialConstituentSet (IFC4+)
+                    if hasattr(material, 'MaterialConstituents'):
+                        constituents = material.MaterialConstituents
+                        if constituents and constituents[0].Material:
+                            return constituents[0].Material.Name or ''
+
+            return ''
+
+        except Exception:
+            return ''
 
     def _extract_systems(self, ifc_file) -> Tuple[List[SystemData], List[Dict]]:
         """Extract systems."""

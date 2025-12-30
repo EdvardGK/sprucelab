@@ -67,6 +67,8 @@ class TypeData:
     type_guid: str
     type_name: Optional[str]
     ifc_type: str
+    predefined_type: Optional[str] = None  # From IfcTypeObject PredefinedType
+    material: Optional[str] = None  # Primary material name for TypeBank identity
     properties: Optional[Dict] = None
 
 
@@ -397,6 +399,7 @@ class IFCRepository:
                 type_data.type_guid,
                 type_data.type_name,
                 type_data.ifc_type,
+                type_data.predefined_type,
                 json.dumps(type_data.properties or {}),
             ))
 
@@ -404,8 +407,8 @@ class IFCRepository:
             await conn.executemany(
                 """
                 INSERT INTO ifc_types (
-                    id, model_id, type_guid, type_name, ifc_type, properties
-                ) VALUES ($1, $2, $3, $4, $5, $6)
+                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (model_id, type_guid) DO NOTHING
                 """,
                 records
@@ -639,6 +642,214 @@ class IFCRepository:
             deleted["entities"] = int(result.split()[-1]) if result else 0
 
         return deleted
+
+    async def link_types_to_typebank(
+        self,
+        model_id: str,
+        types: List[TypeData],
+        type_guid_to_id: Dict[str, str],
+    ) -> Dict[str, int]:
+        """
+        Link extracted types to TypeBank (create entries and observations).
+
+        For each TypeData:
+        1. Get or create TypeBankEntry based on identity tuple
+        2. Create TypeBankObservation linking to the model's IFCType
+
+        Args:
+            model_id: UUID of the model being processed
+            types: List of extracted TypeData
+            type_guid_to_id: Map of type GUID to type UUID (from bulk_insert_types)
+
+        Returns:
+            Dict with stats: entries_created, entries_reused, observations_created
+        """
+        stats = {
+            'entries_created': 0,
+            'entries_reused': 0,
+            'observations_created': 0,
+        }
+
+        if not types:
+            return stats
+
+        model_uuid = uuid.UUID(model_id)
+        now = datetime.now(timezone.utc)
+
+        async with get_transaction() as conn:
+            for type_data in types:
+                try:
+                    # Look up or create TypeBankEntry
+                    # Identity: (ifc_class, type_name, predefined_type, material)
+                    entry_row = await conn.fetchrow(
+                        """
+                        SELECT id FROM type_bank_entries
+                        WHERE ifc_class = $1
+                          AND type_name = $2
+                          AND predefined_type = $3
+                          AND material = $4
+                        """,
+                        type_data.ifc_type,
+                        type_data.type_name or '',
+                        type_data.predefined_type or 'NOTDEFINED',
+                        type_data.material or '',
+                    )
+
+                    if entry_row:
+                        entry_id = entry_row['id']
+                        stats['entries_reused'] += 1
+                    else:
+                        # Create new TypeBankEntry
+                        entry_id = uuid.uuid4()
+                        await conn.execute(
+                            """
+                            INSERT INTO type_bank_entries (
+                                id, ifc_class, type_name, predefined_type, material,
+                                mapping_status, source_model_count, total_instance_count,
+                                created_by, created_at, updated_at
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                            """,
+                            entry_id,
+                            type_data.ifc_type,
+                            type_data.type_name or '',
+                            type_data.predefined_type or 'NOTDEFINED',
+                            type_data.material or '',
+                            'pending',
+                            1,  # source_model_count
+                            0,  # total_instance_count (updated later)
+                            'ifc_parser',
+                            now,
+                            now,
+                        )
+                        stats['entries_created'] += 1
+
+                    # Get the IFCType UUID for this type
+                    type_id_str = type_guid_to_id.get(type_data.type_guid)
+                    if not type_id_str:
+                        continue
+
+                    type_uuid = uuid.UUID(type_id_str)
+
+                    # Check if observation already exists
+                    existing_obs = await conn.fetchrow(
+                        """
+                        SELECT id FROM type_bank_observations
+                        WHERE type_bank_entry_id = $1 AND source_type_id = $2
+                        """,
+                        entry_id,
+                        type_uuid,
+                    )
+
+                    if not existing_obs:
+                        # Create TypeBankObservation
+                        obs_id = uuid.uuid4()
+                        await conn.execute(
+                            """
+                            INSERT INTO type_bank_observations (
+                                id, type_bank_entry_id, source_model_id, source_type_id,
+                                instance_count, property_variations, observed_at
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                            """,
+                            obs_id,
+                            entry_id,
+                            model_uuid,
+                            type_uuid,
+                            0,  # instance_count (updated after type assignments)
+                            json.dumps({}),
+                            now,
+                        )
+                        stats['observations_created'] += 1
+
+                        # Update source_model_count on TypeBankEntry
+                        await conn.execute(
+                            """
+                            UPDATE type_bank_entries
+                            SET source_model_count = (
+                                SELECT COUNT(DISTINCT source_model_id)
+                                FROM type_bank_observations
+                                WHERE type_bank_entry_id = $1
+                            ),
+                            updated_at = $2
+                            WHERE id = $1
+                            """,
+                            entry_id,
+                            now,
+                        )
+
+                except Exception as e:
+                    # Log error but continue processing
+                    print(f"[TypeBank] Error linking type {type_data.type_guid}: {e}")
+
+        return stats
+
+    async def update_typebank_instance_counts(self, model_id: str) -> int:
+        """
+        Update instance counts on TypeBankEntry and TypeBankObservation.
+
+        Called after type_assignments are inserted.
+        Counts how many entities are assigned to each type.
+
+        Returns:
+            Number of observations updated
+        """
+        model_uuid = uuid.UUID(model_id)
+        now = datetime.now(timezone.utc)
+        updated = 0
+
+        async with get_transaction() as conn:
+            # Get all observations for this model
+            observations = await conn.fetch(
+                """
+                SELECT o.id, o.type_bank_entry_id, o.source_type_id
+                FROM type_bank_observations o
+                WHERE o.source_model_id = $1
+                """,
+                model_uuid
+            )
+
+            for obs in observations:
+                # Count type assignments for this type
+                count_row = await conn.fetchrow(
+                    """
+                    SELECT COUNT(*) as cnt
+                    FROM type_assignments
+                    WHERE type_id = $1
+                    """,
+                    obs['source_type_id']
+                )
+                instance_count = count_row['cnt'] if count_row else 0
+
+                # Update observation
+                await conn.execute(
+                    """
+                    UPDATE type_bank_observations
+                    SET instance_count = $1
+                    WHERE id = $2
+                    """,
+                    instance_count,
+                    obs['id']
+                )
+                updated += 1
+
+            # Update total_instance_count on TypeBankEntries
+            entry_ids = set(obs['type_bank_entry_id'] for obs in observations)
+            for entry_id in entry_ids:
+                await conn.execute(
+                    """
+                    UPDATE type_bank_entries
+                    SET total_instance_count = (
+                        SELECT COALESCE(SUM(instance_count), 0)
+                        FROM type_bank_observations
+                        WHERE type_bank_entry_id = $1
+                    ),
+                    updated_at = $2
+                    WHERE id = $1
+                    """,
+                    entry_id,
+                    now
+                )
+
+        return updated
 
 
 # Singleton instance

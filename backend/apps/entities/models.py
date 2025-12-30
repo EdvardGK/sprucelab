@@ -205,12 +205,20 @@ class MaterialAssignment(models.Model):
 class IFCType(models.Model):
     """
     IFC type objects (WallType, DoorType, etc.).
+
+    Extended with predefined_type for TypeBank identity matching.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='types')
     type_guid = models.CharField(max_length=22)
     type_name = models.CharField(max_length=255, blank=True, null=True)
     ifc_type = models.CharField(max_length=100)  # IfcWallType, etc.
+    predefined_type = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="IFC PredefinedType (STANDARD, USERDEFINED, NOTDEFINED)"
+    )
     properties = models.JSONField(default=dict, blank=True)
 
     class Meta:
@@ -494,48 +502,7 @@ class MaterialMapping(models.Model):
         return f"{self.material.name} → {self.standard_name or 'unmapped'}"
 
 
-class TypeLayer(models.Model):
-    """
-    Layer composition for composite types (walls, floors, roofs).
-    Enables 'sandwich' view of composite elements.
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    ifc_type = models.ForeignKey(IFCType, on_delete=models.CASCADE, related_name='layers')
-
-    layer_order = models.IntegerField(help_text="Layer position (1 = exterior/bottom)")
-    material = models.ForeignKey(
-        Material,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='type_layers'
-    )
-    material_name = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        help_text="Material name (if material not in DB)"
-    )
-    thickness_mm = models.FloatField(help_text="Layer thickness in millimeters")
-
-    # Optional properties
-    is_structural = models.BooleanField(default=False)
-    is_ventilated = models.BooleanField(default=False)
-    notes = models.TextField(blank=True, null=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'type_layers'
-        ordering = ['ifc_type', 'layer_order']
-        unique_together = ['ifc_type', 'layer_order']
-
-    def __str__(self):
-        mat_name = self.material.name if self.material else self.material_name or 'Unknown'
-        return f"Layer {self.layer_order}: {mat_name} ({self.thickness_mm}mm)"
-
-
+# TypeLayer removed - superseded by TypeDefinitionLayer in warehouse system
 # Geometry model removed - no longer storing 3D mesh data in database
 # IFC is the source of truth - stream geometry on demand
 
@@ -560,55 +527,8 @@ class GraphEdge(models.Model):
         ]
 
 
-class ChangeLog(models.Model):
-    """
-    Change tracking between model versions.
-    """
-    CHANGE_TYPES = [
-        ('added', 'Added'),
-        ('removed', 'Removed'),
-        ('modified', 'Modified'),
-        ('geometry_changed', 'Geometry Changed'),
-        ('property_changed', 'Property Changed'),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='changes')
-    previous_model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='next_changes', null=True)
-    ifc_guid = models.CharField(max_length=22)
-    change_type = models.CharField(max_length=20, choices=CHANGE_TYPES)
-    change_details = models.JSONField(default=dict, blank=True)
-    detected_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'change_log'
-        indexes = [
-            models.Index(fields=['change_type']),
-            models.Index(fields=['ifc_guid']),
-        ]
-
-
-class StorageMetrics(models.Model):
-    """
-    File size breakdown for analysis.
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='storage_metrics')
-    measured_at = models.DateTimeField(auto_now_add=True)
-
-    # Size breakdown in bytes
-    spatial_structure_bytes = models.BigIntegerField(default=0)
-    elements_metadata_bytes = models.BigIntegerField(default=0)
-    properties_bytes = models.BigIntegerField(default=0)
-    systems_bytes = models.BigIntegerField(default=0)
-    materials_bytes = models.BigIntegerField(default=0)
-    relationships_bytes = models.BigIntegerField(default=0)
-    geometry_original_bytes = models.BigIntegerField(default=0)
-    geometry_simplified_bytes = models.BigIntegerField(default=0)
-    total_bytes = models.BigIntegerField(default=0)
-
-    class Meta:
-        db_table = 'storage_metrics'
+# ChangeLog removed - not currently used
+# StorageMetrics removed - not currently used
 
 
 class IFCValidationReport(models.Model):
@@ -728,3 +648,270 @@ class ProcessingReport(models.Model):
 
     def __str__(self):
         return f"Processing {self.overall_status.upper()} - {self.model.name} ({self.started_at})"
+
+
+# =============================================================================
+# TYPE BANK - Collaborative Type Labeling System
+# =============================================================================
+
+class TypeBankEntry(models.Model):
+    """
+    A canonical type in the shared Type Bank.
+
+    Identity is based on (ifc_class, type_name, predefined_type, material) tuple.
+    All fields come from IfcTypeObject to avoid instance-level pollution.
+
+    This model REPLACES TypeMapping for cross-model type classification.
+    """
+    MAPPING_STATUS = [
+        ('pending', 'Pending'),
+        ('mapped', 'Mapped'),
+        ('ignored', 'Ignored'),
+        ('review', 'Needs Review'),
+        ('followup', 'Follow-up'),
+    ]
+
+    CONFIDENCE_CHOICES = [
+        ('auto', 'Auto-detected'),
+        ('manual', 'Manually labeled'),
+        ('verified', 'Expert verified'),
+        ('disputed', 'Disputed'),
+    ]
+
+    REPRESENTATIVE_UNIT = [
+        ('pcs', 'Piece count'),
+        ('m', 'Linear meter'),
+        ('m2', 'Square meter'),
+        ('m3', 'Cubic meter'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # === Core identity tuple (exact match, from IfcTypeObject only) ===
+    ifc_class = models.CharField(
+        max_length=100,
+        help_text="IFC entity class (IfcWall, IfcColumn, etc.)"
+    )
+    type_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text="From IfcTypeObject.Name (clean, no instance IDs)"
+    )
+    predefined_type = models.CharField(
+        max_length=50,
+        blank=True,
+        default='NOTDEFINED',
+        help_text="Schema enum: STANDARD, USERDEFINED, NOTDEFINED"
+    )
+    material = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text="Primary IfcMaterial name from type"
+    )
+
+    # === Classification (labels applied by experts) ===
+    ns3451_code = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="NS-3451 building part code"
+    )
+    ns3451 = models.ForeignKey(
+        NS3451Code,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='type_bank_entries',
+        help_text="Reference to NS-3451 code lookup"
+    )
+    discipline = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="BIM discipline code (ARK, RIB, RIV, RIE, etc.)"
+    )
+
+    # === Metadata ===
+    canonical_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Human-readable normalized name"
+    )
+    description = models.TextField(blank=True, null=True)
+    representative_unit = models.CharField(
+        max_length=10,
+        choices=REPRESENTATIVE_UNIT,
+        blank=True,
+        null=True,
+        help_text="Procurement-based unit (pcs, m, m2, m3)"
+    )
+
+    # === Instance context statistics (aggregated across observations) ===
+    total_instance_count = models.IntegerField(
+        default=0,
+        help_text="Total instances observed across all models"
+    )
+    pct_is_external = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="% of instances with IsExternal=True"
+    )
+    pct_load_bearing = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="% of instances with LoadBearing=True"
+    )
+    pct_fire_rated = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="% of instances with non-empty FireRating"
+    )
+
+    # === Provenance ===
+    source_model_count = models.IntegerField(
+        default=1,
+        help_text="How many models contributed observations"
+    )
+    mapping_status = models.CharField(
+        max_length=20,
+        choices=MAPPING_STATUS,
+        default='pending'
+    )
+    confidence = models.CharField(
+        max_length=20,
+        choices=CONFIDENCE_CHOICES,
+        blank=True,
+        null=True
+    )
+    notes = models.TextField(blank=True, null=True)
+
+    # === Audit ===
+    created_by = models.CharField(max_length=255, blank=True, null=True)
+    mapped_by = models.CharField(max_length=255, blank=True, null=True)
+    mapped_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'type_bank_entries'
+        unique_together = ['ifc_class', 'type_name', 'predefined_type', 'material']
+        indexes = [
+            models.Index(fields=['ifc_class']),
+            models.Index(fields=['mapping_status']),
+            models.Index(fields=['ns3451_code']),
+        ]
+        verbose_name = 'Type Bank Entry'
+        verbose_name_plural = 'Type Bank Entries'
+
+    def __str__(self):
+        name = self.canonical_name or self.type_name or self.ifc_class
+        return f"{name} ({self.ifc_class})"
+
+
+class TypeBankObservation(models.Model):
+    """
+    Records where a TypeBankEntry was observed in a specific model.
+
+    Links the global Type Bank to per-model IFCType records.
+    Tracks instance counts and property variations per observation.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    type_bank_entry = models.ForeignKey(
+        TypeBankEntry,
+        on_delete=models.CASCADE,
+        related_name='observations',
+        help_text="The canonical type this observation links to"
+    )
+    source_model = models.ForeignKey(
+        'models.Model',
+        on_delete=models.CASCADE,
+        related_name='type_bank_observations',
+        help_text="The model where this type was observed"
+    )
+    source_type = models.ForeignKey(
+        IFCType,
+        on_delete=models.CASCADE,
+        related_name='type_bank_observation',
+        help_text="The original IFCType record from this model"
+    )
+
+    # === Statistics for this observation ===
+    instance_count = models.IntegerField(
+        default=0,
+        help_text="Number of instances using this type in this model"
+    )
+
+    # Instance property stats for this observation
+    pct_is_external = models.FloatField(null=True, blank=True)
+    pct_load_bearing = models.FloatField(null=True, blank=True)
+    pct_fire_rated = models.FloatField(null=True, blank=True)
+
+    # Optional: capture any property variations observed
+    property_variations = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Property value distributions observed (e.g., {'IsExternal': {'True': 85, 'False': 15}})"
+    )
+
+    observed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'type_bank_observations'
+        unique_together = ['type_bank_entry', 'source_type']
+        indexes = [
+            models.Index(fields=['source_model']),
+            models.Index(fields=['observed_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.type_bank_entry} in {self.source_model.name}"
+
+
+class TypeBankAlias(models.Model):
+    """
+    Alternative names for the same canonical type.
+
+    Experts manually link naming variations (e.g., "GU13" ↔ "Gyproc GU 13mm").
+    No auto-merging - all aliases are explicit.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    canonical = models.ForeignKey(
+        TypeBankEntry,
+        on_delete=models.CASCADE,
+        related_name='aliases',
+        help_text="The canonical type this is an alias for"
+    )
+    alias_type_name = models.CharField(
+        max_length=255,
+        help_text="The alternative type_name that maps to canonical"
+    )
+    alias_ifc_class = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="IFC class for alias (if different from canonical)"
+    )
+    alias_source = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Which software/project produced this alias"
+    )
+
+    created_by = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'type_bank_aliases'
+        indexes = [
+            models.Index(fields=['alias_type_name']),
+        ]
+
+    def __str__(self):
+        return f"'{self.alias_type_name}' → {self.canonical}"

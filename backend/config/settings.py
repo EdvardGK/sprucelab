@@ -41,9 +41,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',  # PostgreSQL-specific fields (ArrayField)
 
     # Third party
     'rest_framework',
+    'django_filters',  # DRF filtering backend
     'corsheaders',
     'django_celery_results',  # Store task results in database
     'storages',  # Cloud storage (Supabase/S3)

@@ -2,7 +2,8 @@ from rest_framework import serializers
 from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
     System, Material, IFCType, ProcessingReport,
-    NS3451Code, TypeMapping, TypeDefinitionLayer, MaterialMapping
+    NS3451Code, TypeMapping, TypeDefinitionLayer, MaterialMapping,
+    TypeBankEntry, TypeBankObservation, TypeBankAlias
 )
 
 
@@ -203,3 +204,149 @@ class MaterialWithMappingSerializer(serializers.ModelSerializer):
     def get_usage_count(self, obj):
         """Count how many entities use this material."""
         return obj.assignments.count()
+
+
+# =============================================================================
+# TYPE BANK SERIALIZERS - Global Type Classification System
+# =============================================================================
+
+class TypeBankAliasSerializer(serializers.ModelSerializer):
+    """Serializer for type aliases (naming variations)."""
+
+    class Meta:
+        model = TypeBankAlias
+        fields = [
+            'id', 'canonical', 'alias_type_name', 'alias_ifc_class',
+            'alias_source', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class TypeBankObservationSerializer(serializers.ModelSerializer):
+    """Serializer for type observations (where a type was found)."""
+
+    source_model_name = serializers.CharField(source='source_model.name', read_only=True)
+    source_model_project = serializers.CharField(source='source_model.project.name', read_only=True)
+    source_type_name = serializers.CharField(source='source_type.type_name', read_only=True)
+
+    class Meta:
+        model = TypeBankObservation
+        fields = [
+            'id', 'type_bank_entry', 'source_model', 'source_model_name',
+            'source_model_project', 'source_type', 'source_type_name',
+            'instance_count', 'pct_is_external', 'pct_load_bearing',
+            'pct_fire_rated', 'property_variations', 'observed_at'
+        ]
+        read_only_fields = ['id', 'observed_at']
+
+
+class TypeBankEntrySerializer(serializers.ModelSerializer):
+    """
+    Full serializer for TypeBankEntry with nested relationships.
+    Used for detail views and classification workflows.
+    """
+
+    ns3451_name = serializers.CharField(source='ns3451.name', read_only=True)
+    observations = TypeBankObservationSerializer(many=True, read_only=True)
+    aliases = TypeBankAliasSerializer(many=True, read_only=True)
+    observation_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TypeBankEntry
+        fields = [
+            # Identity tuple
+            'id', 'ifc_class', 'type_name', 'predefined_type', 'material',
+            # Classification (expert labels)
+            'ns3451_code', 'ns3451', 'ns3451_name', 'discipline',
+            'canonical_name', 'description', 'representative_unit',
+            # Instance context statistics (aggregated)
+            'total_instance_count', 'pct_is_external', 'pct_load_bearing', 'pct_fire_rated',
+            # Provenance
+            'source_model_count', 'mapping_status', 'confidence',
+            'created_by', 'notes', 'created_at', 'updated_at',
+            # Nested
+            'observations', 'aliases', 'observation_count'
+        ]
+        read_only_fields = [
+            'id', 'created_at', 'updated_at',
+            'total_instance_count', 'pct_is_external', 'pct_load_bearing', 'pct_fire_rated',
+            'source_model_count'
+        ]
+
+    def get_observation_count(self, obj):
+        """Number of models where this type was observed."""
+        if hasattr(obj, '_observation_count'):
+            return obj._observation_count
+        return obj.observations.count()
+
+    def create(self, validated_data):
+        # Auto-link ns3451 FK when ns3451_code is provided
+        ns3451_code = validated_data.get('ns3451_code')
+        if ns3451_code and not validated_data.get('ns3451'):
+            try:
+                validated_data['ns3451'] = NS3451Code.objects.get(code=ns3451_code)
+            except NS3451Code.DoesNotExist:
+                pass
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Auto-link ns3451 FK when ns3451_code is provided
+        ns3451_code = validated_data.get('ns3451_code')
+        if ns3451_code:
+            try:
+                validated_data['ns3451'] = NS3451Code.objects.get(code=ns3451_code)
+            except NS3451Code.DoesNotExist:
+                validated_data['ns3451'] = None
+        elif 'ns3451_code' in validated_data and ns3451_code is None:
+            validated_data['ns3451'] = None
+        return super().update(instance, validated_data)
+
+
+class TypeBankEntryListSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for TypeBankEntry list views.
+    Excludes nested observations/aliases for performance.
+    """
+
+    ns3451_name = serializers.CharField(source='ns3451.name', read_only=True)
+    observation_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TypeBankEntry
+        fields = [
+            'id', 'ifc_class', 'type_name', 'predefined_type', 'material',
+            'ns3451_code', 'ns3451_name', 'discipline', 'canonical_name',
+            'representative_unit', 'total_instance_count', 'source_model_count',
+            'mapping_status', 'confidence', 'observation_count'
+        ]
+
+    def get_observation_count(self, obj):
+        if hasattr(obj, '_observation_count'):
+            return obj._observation_count
+        return obj.observations.count()
+
+
+class TypeBankEntryUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating TypeBankEntry classification labels.
+    Only exposes fields that experts should modify.
+    """
+
+    class Meta:
+        model = TypeBankEntry
+        fields = [
+            'ns3451_code', 'discipline', 'canonical_name', 'description',
+            'representative_unit', 'mapping_status', 'confidence', 'notes'
+        ]
+
+    def update(self, instance, validated_data):
+        # Auto-link ns3451 FK when ns3451_code is provided
+        ns3451_code = validated_data.get('ns3451_code')
+        if ns3451_code:
+            try:
+                validated_data['ns3451'] = NS3451Code.objects.get(code=ns3451_code)
+            except NS3451Code.DoesNotExist:
+                validated_data['ns3451'] = None
+        elif 'ns3451_code' in validated_data and ns3451_code is None:
+            validated_data['ns3451'] = None
+        return super().update(instance, validated_data)

@@ -193,6 +193,15 @@ class ProcessingOrchestrator:
             )
             result.type_count = len(parse_result.types)
 
+            # Step 4b: Link types to TypeBank (create entries and observations)
+            print(f"[Orchestrator] Linking types to TypeBank...")
+            typebank_stats = await self.repository.link_types_to_typebank(
+                model_id, parse_result.types, type_guid_to_id
+            )
+            print(f"[Orchestrator] TypeBank: {typebank_stats['entries_created']} new entries, "
+                  f"{typebank_stats['entries_reused']} reused, "
+                  f"{typebank_stats['observations_created']} observations")
+
             # Step 5: Write systems
             print(f"[Orchestrator] Writing {len(parse_result.systems)} systems...")
             system_guid_to_id = await self.repository.bulk_insert_systems(
@@ -226,6 +235,11 @@ class ProcessingOrchestrator:
                 type_guid_to_id,    # type GUID → DB ID
             )
             print(f"[Orchestrator] Created {type_assignment_count} type assignments")
+
+            # Step 7b: Update TypeBank instance counts
+            print(f"[Orchestrator] Updating TypeBank instance counts...")
+            obs_updated = await self.repository.update_typebank_instance_counts(model_id)
+            print(f"[Orchestrator] Updated {obs_updated} TypeBank observations")
 
             # Step 8: Write properties (with entity references resolved)
             print(f"[Orchestrator] Writing {len(parse_result.properties)} properties...")
