@@ -1320,12 +1320,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         hiderRef.current.set(false);
       } else {
         // Show only visible types
-        const fragmentMap = fragmentsManager.guidToFragmentIdMap(visibleGuids);
+        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(visibleGuids);
         hiderRef.current.set(false); // Hide all first
-        hiderRef.current.set(true, fragmentMap); // Show filtered
+        hiderRef.current.set(true, fragmentIdMap); // Show filtered
       }
-    } catch {
-      // Filtering failed, elements remain visible
+    } catch (err) {
+      console.error('Type visibility filtering failed:', err);
+      // Filtering failed, show all elements
+      hiderRef.current.set(true);
     }
   }, [typeVisibility, typeInfo, viewerState.components]);
 

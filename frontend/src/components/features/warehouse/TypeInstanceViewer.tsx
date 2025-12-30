@@ -255,8 +255,8 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     loadModel();
   }, [isInitialized, modelId]);
 
-  // Zoom to a specific element by its fragment map
-  const zoomToElement = useCallback((fragmentMap: Record<string, Set<number>>) => {
+  // Zoom to a specific element by its fragment ID map
+  const zoomToElement = useCallback((fragmentIdMap: Record<string, Set<number>>) => {
     if (!worldRef.current || !fragmentsGroupRef.current) return;
 
     const group = fragmentsGroupRef.current;
@@ -265,7 +265,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     const bbox = new THREE.Box3();
     let hasElements = false;
 
-    for (const [fragmentId, expressIds] of Object.entries(fragmentMap)) {
+    for (const [fragmentId, expressIds] of Object.entries(fragmentIdMap)) {
       const fragment = group.items.find(f => f.id === fragmentId);
       if (!fragment) continue;
 
@@ -273,8 +273,6 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       const mesh = fragment.mesh;
       if (mesh && mesh.geometry) {
         // For each expressId, add geometry bounds to overall bbox
-        // Since we can't easily get individual instance transforms,
-        // use the mesh's world bounding box as approximation
         for (const _expressId of expressIds) {
           mesh.geometry.computeBoundingBox();
           if (mesh.geometry.boundingBox) {
@@ -298,7 +296,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     bbox.getSize(size);
 
     const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = Math.max(maxDim * 2, 5); // Minimum distance of 5
+    const distance = Math.max(maxDim * 2, 5);
 
     const cameraPos = new THREE.Vector3(
       center.x + distance * 0.7,
@@ -363,47 +361,62 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       if (showAll) {
         // Show All mode: show all instances of this type
         const instanceGuids = instances.map(inst => inst.ifc_guid);
-        const fragmentMap = fragmentsManager.guidToFragmentIdMap(instanceGuids);
-        const hasMatches = Object.keys(fragmentMap).length > 0;
+        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(instanceGuids);
+        const hasMatches = Object.keys(fragmentIdMap).length > 0;
+
+        console.log('[TypeInstanceViewer] Show all mode:', {
+          instanceGuids: instanceGuids.slice(0, 3),
+          fragmentIdMapKeys: Object.keys(fragmentIdMap),
+          hasMatches,
+        });
 
         if (hasMatches) {
           hider.set(false); // Hide all
-          hider.set(true, fragmentMap); // Show only matching
+          hider.set(true, fragmentIdMap); // Show only matching
 
           // Highlight current instance
           if (currentInstance) {
-            const currentFragMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
-            if (Object.keys(currentFragMap).length > 0) {
-              highlighter.highlightByID('current', currentFragMap, false, false);
+            const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
+            if (Object.keys(currentFragIdMap).length > 0) {
+              highlighter.highlightByID('current', currentFragIdMap, false, false);
             }
           }
 
           // Zoom to fit all
           zoomToAllInstances();
         } else {
+          console.warn('[TypeInstanceViewer] No fragment matches for GUIDs:', instanceGuids.slice(0, 5));
           hider.set(true);
         }
       } else {
         // Single instance mode: show only the current instance
         if (currentInstance) {
-          const currentFragMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
-          const hasMatch = Object.keys(currentFragMap).length > 0;
+          const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
+          const hasMatch = Object.keys(currentFragIdMap).length > 0;
+
+          console.log('[TypeInstanceViewer] Single instance mode:', {
+            guid: currentInstance.ifc_guid,
+            fragmentIdMapKeys: Object.keys(currentFragIdMap),
+            hasMatch,
+          });
 
           if (hasMatch) {
             hider.set(false); // Hide all
-            hider.set(true, currentFragMap); // Show only current
-            highlighter.highlightByID('current', currentFragMap, false, false);
+            hider.set(true, currentFragIdMap); // Show only current
+            highlighter.highlightByID('current', currentFragIdMap, false, false);
 
             // Zoom to this instance
-            zoomToElement(currentFragMap);
+            zoomToElement(currentFragIdMap);
           } else {
+            console.warn('[TypeInstanceViewer] No fragment match for GUID:', currentInstance.ifc_guid);
             hider.set(true);
           }
         } else {
           hider.set(true);
         }
       }
-    } catch {
+    } catch (err) {
+      console.error('[TypeInstanceViewer] Filtering failed:', err);
       // Show all on error
       hider?.set(true);
     }
