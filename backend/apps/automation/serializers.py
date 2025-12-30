@@ -2,6 +2,7 @@
 Serializers for Automation Pipeline API.
 """
 from rest_framework import serializers
+from apps.projects.models import Project
 from .models import (
     Pipeline,
     PipelineStep,
@@ -224,7 +225,7 @@ class AgentRegistrationSerializer(serializers.ModelSerializer):
     """Serializer for agent registration."""
     project_ids = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=None,  # Set in __init__
+        queryset=Project.objects.all(),
         source='projects',
         required=False
     )
@@ -236,11 +237,6 @@ class AgentRegistrationSerializer(serializers.ModelSerializer):
             'is_active', 'last_seen_at', 'created_at'
         ]
         read_only_fields = ['id', 'last_seen_at', 'created_at']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        from apps.projects.models import Project
-        self.fields['project_ids'].queryset = Project.objects.all()
 
 
 class AgentRegistrationCreateSerializer(serializers.ModelSerializer):
