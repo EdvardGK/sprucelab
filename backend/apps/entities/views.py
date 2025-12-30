@@ -675,13 +675,16 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         limit = int(request.query_params.get('limit', 100))
         offset = int(request.query_params.get('offset', 0))
 
-        # Get total count
-        total_count = ifc_type.assignments.count()
+        # Query entities by matching object_type to type_name (direct lookup)
+        # This avoids dependency on TypeAssignment join table
+        entities_qs = IFCEntity.objects.filter(
+            model=ifc_type.model,
+            object_type=ifc_type.type_name
+        ).order_by('name', 'ifc_guid')
 
-        # Get entities through TypeAssignment relationship
-        entities = IFCEntity.objects.filter(
-            type_assignments__type=ifc_type
-        ).order_by('name', 'ifc_guid').values(
+        total_count = entities_qs.count()
+
+        entities = entities_qs.values(
             'id', 'ifc_guid', 'name', 'ifc_type', 'storey_id'
         )[offset:offset + limit]
 
