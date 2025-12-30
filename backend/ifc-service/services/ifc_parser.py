@@ -252,19 +252,17 @@ class IFCParserService:
             # Count storeys
             result.storey_count = len(ifc_file.by_type('IfcBuildingStorey'))
 
-            # Extract types with instance counts and GUIDs
+            # Extract types with instance counts
             types = []
             for type_element in ifc_file.by_type('IfcTypeObject'):
                 try:
-                    # Collect instance GUIDs via IfcRelDefinesByType relationship
-                    instance_guids = []
+                    # Count instances via IfcRelDefinesByType relationship
+                    instance_count = 0
                     if hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
                         # ObjectTypeOf is a list of IfcRelDefinesByType relationships
                         for rel in type_element.ObjectTypeOf:
                             if rel.RelatedObjects:
-                                for obj in rel.RelatedObjects:
-                                    if hasattr(obj, 'GlobalId'):
-                                        instance_guids.append(obj.GlobalId)
+                                instance_count += len(rel.RelatedObjects)
 
                     # Extract predefined_type if available
                     predefined_type = None
@@ -280,8 +278,7 @@ class IFCParserService:
                         ifc_type=type_element.is_a(),
                         predefined_type=predefined_type or 'NOTDEFINED',
                         material=material,
-                        instance_count=len(instance_guids),
-                        instance_guids=instance_guids,
+                        instance_count=instance_count,
                     ))
 
                 except Exception as e:

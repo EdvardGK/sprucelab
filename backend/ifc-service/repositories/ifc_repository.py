@@ -72,7 +72,6 @@ class TypeData:
     material: Optional[str] = None  # Primary material name for TypeBank identity
     properties: Optional[Dict] = None
     instance_count: int = 0  # Number of instances of this type
-    instance_guids: Optional[List[str]] = None  # GUIDs of instances for viewer filtering
 
 
 @dataclass
@@ -398,11 +397,6 @@ class IFCRepository:
             type_id = uuid.uuid4()
             guid_to_id[type_data.type_guid] = str(type_id)
 
-            # Store instance_guids in properties for viewer filtering
-            properties = type_data.properties or {}
-            if type_data.instance_guids:
-                properties['instance_guids'] = type_data.instance_guids
-
             records.append((
                 type_id,
                 model_uuid,
@@ -410,7 +404,7 @@ class IFCRepository:
                 type_data.type_name,
                 type_data.ifc_type,
                 type_data.predefined_type,
-                json.dumps(properties),
+                json.dumps(type_data.properties or {}),
                 type_data.instance_count,
             ))
 

@@ -666,8 +666,8 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         GET /api/types/{id}/instances/
         GET /api/types/{id}/instances/?limit=50&offset=0
 
-        Returns instance GUIDs stored during IFC parsing (from IfcRelDefinesByType).
-        Used by the Instance Viewer to filter and navigate through type instances.
+        Returns list of entities assigned to this type with their GUIDs and metadata.
+        Used by the Instance Viewer to navigate through type instances.
         """
         ifc_type = self.get_object()
 
@@ -675,16 +675,18 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         limit = int(request.query_params.get('limit', 100))
         offset = int(request.query_params.get('offset', 0))
 
-        # Get instance GUIDs from properties (stored during parsing)
-        instance_guids = ifc_type.properties.get('instance_guids', []) if ifc_type.properties else []
-        total_count = len(instance_guids)
+        # Query entities by matching object_type to type_name (direct lookup)
+        # This avoids dependency on TypeAssignment join table
+        entities_qs = IFCEntity.objects.filter(
+            model=ifc_type.model,
+            object_type=ifc_type.type_name
+        ).order_by('name', 'ifc_guid')
 
-        # Paginate the GUIDs
-        paginated_guids = instance_guids[offset:offset + limit]
+        total_count = entities_qs.count()
 
-        # Return instances as simple objects with ifc_guid for viewer filtering
-        instances = [{'ifc_guid': guid, 'name': None, 'ifc_type': None, 'storey_id': None}
-                     for guid in paginated_guids]
+        entities = entities_qs.values(
+            'id', 'ifc_guid', 'name', 'ifc_type', 'storey_id'
+        )[offset:offset + limit]
 
         return Response({
             'type_id': str(ifc_type.id),
@@ -695,7 +697,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             'total_count': total_count,
             'offset': offset,
             'limit': limit,
-            'instances': instances
+            'instances': list(entities)
         })
 
     @action(detail=False, methods=['get'], url_path='export-excel')
