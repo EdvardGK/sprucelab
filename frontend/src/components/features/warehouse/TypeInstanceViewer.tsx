@@ -345,17 +345,49 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     );
   }, []);
 
-  // Highlight instances when they change - DISABLED FOR DEBUGGING
+  // Highlight instances when they change
   useEffect(() => {
     if (!fragmentsGroupRef.current || !componentsRef.current || instances.length === 0) {
       return;
     }
 
-    console.log('[TypeInstanceViewer] Filtering effect - DISABLED for debugging');
-    // TODO: Re-enable after fixing the issue
+    const components = componentsRef.current;
+    const highlighter = highlighterRef.current;
 
-    // Just zoom to the model without any highlighting
-    if (instances.length > 0) {
+    if (!highlighter) {
+      console.log('[TypeInstanceViewer] No highlighter, just zooming');
+      zoomToAllInstances();
+      return;
+    }
+
+    try {
+      const fragmentsManager = components.get(OBC.FragmentsManager);
+
+      // Clear previous highlights
+      console.log('[TypeInstanceViewer] Clearing highlights...');
+      highlighter.clear('current');
+
+      // Get the current instance to highlight
+      if (currentInstance) {
+        const currentFragIdMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
+        const hasMatch = Object.keys(currentFragIdMap).length > 0;
+
+        console.log('[TypeInstanceViewer] Highlighting:', {
+          guid: currentInstance.ifc_guid,
+          fragmentIdMapKeys: Object.keys(currentFragIdMap),
+          hasMatch,
+        });
+
+        if (hasMatch) {
+          console.log('[TypeInstanceViewer] Calling highlightByID...');
+          highlighter.highlightByID('current', currentFragIdMap, false, false);
+        }
+      }
+
+      // Zoom to model
+      zoomToAllInstances();
+    } catch (err) {
+      console.error('[TypeInstanceViewer] Highlighting failed:', err);
       zoomToAllInstances();
     }
   }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToAllInstances]);
