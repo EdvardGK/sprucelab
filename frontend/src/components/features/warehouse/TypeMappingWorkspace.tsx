@@ -25,11 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, Save, XCircle, Flag, FileQuestion, Download, Upload, CheckCircle2, AlertTriangle, Leaf, Maximize2, Minimize2, Box, LayoutGrid } from 'lucide-react';
+import { Loader2, Save, XCircle, Flag, FileQuestion, Download, Upload, CheckCircle2, AlertTriangle, Leaf, Maximize2, Minimize2, Box } from 'lucide-react';
 
 import { NS3451CascadingSelector } from './NS3451CascadingSelector';
 import { TypeInfoPanel } from './TypeInfoPanel';
-import { InstanceViewer, type ViewerMode } from './InstanceViewer';
+import { InstanceViewer } from './InstanceViewer';
 import { MappingProgressBar, KeyboardShortcutsHint } from './MappingProgressBar';
 import { MaterialLayerEditor } from './MaterialLayerEditor';
 
@@ -86,7 +86,6 @@ export function TypeMappingWorkspace({
   const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Viewer state
-  const [viewerMode, setViewerMode] = useState<ViewerMode>('plotly');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Local form state
@@ -179,7 +178,7 @@ export function TypeMappingWorkspace({
   // Status counts for filter tabs
   const statusCounts = getStatusCounts(types);
 
-  // Viewer keyboard shortcuts (V = toggle mode, F11 = fullscreen)
+  // Viewer keyboard shortcuts (F11/Shift+F = fullscreen)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if typing in an input/textarea
@@ -187,9 +186,7 @@ export function TypeMappingWorkspace({
         return;
       }
 
-      if (e.key === 'v' || e.key === 'V') {
-        setViewerMode(mode => mode === 'plotly' ? 'thatopen' : 'plotly');
-      } else if (e.key === 'F11' || (e.key === 'f' && e.shiftKey)) {
+      if (e.key === 'F11' || (e.key === 'f' && e.shiftKey)) {
         e.preventDefault();
         setIsFullscreen(prev => !prev);
       } else if (e.key === 'Escape' && isFullscreen) {
@@ -472,51 +469,27 @@ export function TypeMappingWorkspace({
 
               {/* 3D Instance Preview - Take all remaining space */}
               <div className="flex-1 min-h-0 flex flex-col rounded-lg border bg-background overflow-hidden">
-                {/* Viewer Toolbar */}
+                {/* Viewer Toolbar - Minimal */}
                 <div className="flex items-center justify-between px-2 py-1 border-b bg-background-secondary">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant={viewerMode === 'plotly' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewerMode('plotly')}
-                      className="h-6 px-2 text-xs gap-1"
-                      title={t('typeMapping.viewerPlotly', '2D Scatter View')}
-                    >
-                      <LayoutGrid className="h-3 w-3" />
-                      2D
-                    </Button>
-                    <Button
-                      variant={viewerMode === 'thatopen' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewerMode('thatopen')}
-                      className="h-6 px-2 text-xs gap-1"
-                      title={t('typeMapping.viewer3D', '3D Fragments Viewer')}
-                    >
-                      <Box className="h-3 w-3" />
-                      3D
-                    </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Box className="h-3 w-3 text-text-tertiary" />
+                    <span className="text-xs text-text-secondary">{t('typeMapping.viewer3D', '3D Preview')}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-text-tertiary">
-                      <kbd className="px-1 bg-background-tertiary rounded">V</kbd> {t('common.toggle', 'toggle')}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleFullscreen}
-                      className="h-6 w-6 p-0"
-                      title={t('typeMapping.fullscreen', 'Fullscreen (Shift+F)')}
-                    >
-                      <Maximize2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleFullscreen}
+                    className="h-6 w-6 p-0"
+                    title={t('typeMapping.fullscreen', 'Fullscreen (Shift+F)')}
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
                 {/* Viewer Content */}
                 <InstanceViewer
                   modelId={modelId}
                   typeId={currentType.id}
                   className="flex-1 min-h-0"
-                  mode={viewerMode}
                 />
               </div>
             </div>
@@ -539,6 +512,7 @@ export function TypeMappingWorkspace({
           {/* Fullscreen Header */}
           <div className="flex items-center justify-between px-4 py-2 border-b bg-background-secondary">
             <div className="flex items-center gap-3">
+              <Box className="h-4 w-4 text-text-tertiary" />
               <h3 className="text-sm font-medium text-text-primary">
                 {currentType.type_name || currentType.ifc_type}
               </h3>
@@ -547,27 +521,6 @@ export function TypeMappingWorkspace({
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {/* Mode toggle in fullscreen */}
-              <div className="flex items-center gap-1 mr-2">
-                <Button
-                  variant={viewerMode === 'plotly' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewerMode('plotly')}
-                  className="h-7 px-3 text-xs gap-1.5"
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  2D Scatter
-                </Button>
-                <Button
-                  variant={viewerMode === 'thatopen' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewerMode('thatopen')}
-                  className="h-7 px-3 text-xs gap-1.5"
-                >
-                  <Box className="h-3.5 w-3.5" />
-                  3D Fragments
-                </Button>
-              </div>
               <span className="text-xs text-text-tertiary">
                 <kbd className="px-1.5 py-0.5 bg-background-tertiary rounded">Esc</kbd> {t('common.close', 'close')}
               </span>
@@ -587,7 +540,6 @@ export function TypeMappingWorkspace({
               modelId={modelId}
               typeId={currentType.id}
               className="h-full w-full"
-              mode={viewerMode}
             />
           </div>
           {/* Fullscreen Footer - Type Info */}
@@ -604,7 +556,7 @@ export function TypeMappingWorkspace({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-text-tertiary">
-                <kbd className="px-1 bg-background-tertiary rounded">V</kbd> {t('typeMapping.switchViewer', 'switch viewer')}
+                {t('typeMapping.useArrowKeys', 'Use arrow keys to navigate instances')}
               </span>
             </div>
           </div>

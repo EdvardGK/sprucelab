@@ -2,13 +2,14 @@
  * Type Instance Viewer
  *
  * Standalone mini-viewer for displaying instances of a selected IFC type.
- * Based on the original Streamlit ifc_preview.py from sidequests.
+ * Uses ThatOpen Components fragments viewer for fast 3D preview.
  *
  * Features:
  * - Loads model fragments independently
- * - Highlights current instance
- * - Prev/Next navigation between instances
- * - Fits camera to current instance
+ * - Shows only instances of the selected type
+ * - Zooms to current instance with Prev/Next navigation
+ * - "Show All" mode to see all instances at once
+ * - Keyboard navigation (arrow keys)
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -17,8 +18,9 @@ import * as OBCF from '@thatopen/components-front';
 import * as THREE from 'three';
 import type { FragmentsGroup } from '@thatopen/fragments';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Loader2, AlertCircle, Box } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, AlertCircle, Box, Layers } from 'lucide-react';
 import { useTypeInstances } from '@/hooks/use-warehouse';
+import { cn } from '@/lib/utils';
 
 // API base URL - use env var for production, fallback to relative path for local dev
 const API_BASE = import.meta.env.VITE_API_URL
@@ -43,6 +45,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showAll, setShowAll] = useState(false);
 
   // Fetch instances for the selected type
   const { data: instanceData, isLoading: isLoadingInstances } = useTypeInstances(typeId);
@@ -51,9 +54,10 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
   const totalCount = instanceData?.total_count || 0;
   const currentInstance = instances[currentIndex];
 
-  // Reset index when type changes
+  // Reset index and showAll when type changes
   useEffect(() => {
     setCurrentIndex(0);
+    setShowAll(false);
   }, [typeId]);
 
   // Initialize viewer
@@ -131,7 +135,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         // 9. Setup Highlighter
         const highlighter = components.get(OBCF.Highlighter);
         highlighter.setup({ world });
-        highlighter.zoomToSelection = true; // Zoom to highlighted element
+        highlighter.zoomToSelection = false; // We'll handle zoom manually
 
         // Add highlight style (orange for current instance)
         const orange = new THREE.Color(0xff6600);
@@ -217,9 +221,6 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
             worldRef.current?.scene.three.add(group);
             fragmentsGroupRef.current = group;
 
-            // Fit to view
-            fitToModel(group);
-
             setIsLoading(false);
             return;
           }
@@ -242,9 +243,6 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         worldRef.current?.scene.three.add(group);
         fragmentsGroupRef.current = group;
 
-        // Fit to view
-        fitToModel(group);
-
         // Trigger fragment generation for next time
         fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, { method: 'POST' });
       } catch (err) {
@@ -256,6 +254,96 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
     loadModel();
   }, [isInitialized, modelId]);
+
+  // Zoom to a specific element by its fragment map
+  const zoomToElement = useCallback((fragmentMap: Record<string, Set<number>>) => {
+    if (!worldRef.current || !fragmentsGroupRef.current) return;
+
+    const group = fragmentsGroupRef.current;
+
+    // Get bounding box of the selected elements
+    const bbox = new THREE.Box3();
+    let hasElements = false;
+
+    for (const [fragmentId, expressIds] of Object.entries(fragmentMap)) {
+      const fragment = group.items.find(f => f.id === fragmentId);
+      if (!fragment) continue;
+
+      for (const expressId of expressIds) {
+        const mesh = fragment.mesh;
+        if (mesh) {
+          // Get the instance matrix for this expressId
+          const instanceId = fragment.getInstanceId(expressId);
+          if (instanceId !== null && instanceId !== undefined) {
+            const matrix = new THREE.Matrix4();
+            mesh.getMatrixAt(instanceId, matrix);
+
+            // Create a temporary box from the geometry and transform it
+            const geomBox = new THREE.Box3().setFromBufferAttribute(
+              mesh.geometry.attributes.position as THREE.BufferAttribute
+            );
+            geomBox.applyMatrix4(matrix);
+            bbox.union(geomBox);
+            hasElements = true;
+          }
+        }
+      }
+    }
+
+    if (!hasElements) {
+      // Fallback: zoom to entire group
+      bbox.setFromObject(group);
+    }
+
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    bbox.getCenter(center);
+    bbox.getSize(size);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const distance = Math.max(maxDim * 2, 5); // Minimum distance of 5
+
+    const cameraPos = new THREE.Vector3(
+      center.x + distance * 0.7,
+      center.y + distance * 0.5,
+      center.z + distance * 0.7
+    );
+
+    worldRef.current.camera?.controls?.setLookAt(
+      cameraPos.x, cameraPos.y, cameraPos.z,
+      center.x, center.y, center.z,
+      true // Animate
+    );
+  }, []);
+
+  // Zoom to all visible instances
+  const zoomToAllInstances = useCallback((fragmentMap: Record<string, Set<number>>) => {
+    if (!worldRef.current || !fragmentsGroupRef.current) return;
+
+    // Simpler approach: just use the fragment group's bounding box for visible items
+    const group = fragmentsGroupRef.current;
+    const bbox = new THREE.Box3().setFromObject(group);
+
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    bbox.getCenter(center);
+    bbox.getSize(size);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const distance = maxDim * 1.5;
+
+    const cameraPos = new THREE.Vector3(
+      center.x + distance * 0.7,
+      center.y + distance * 0.5,
+      center.z + distance * 0.7
+    );
+
+    worldRef.current.camera?.controls?.setLookAt(
+      cameraPos.x, cameraPos.y, cameraPos.z,
+      center.x, center.y, center.z,
+      true // Animate
+    );
+  }, []);
 
   // Highlight and isolate instances when they change
   useEffect(() => {
@@ -272,64 +360,57 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     try {
       const fragmentsManager = components.get(OBC.FragmentsManager);
 
-      // Get all instance GUIDs for this type
-      const instanceGuids = instances.map(inst => inst.ifc_guid);
-
-      // Use ThatOpen's built-in guidToFragmentIdMap
-      const fragmentMap = fragmentsManager.guidToFragmentIdMap(instanceGuids);
-
       // Clear previous highlights
       highlighter.clear('current');
 
-      // Check if we found any matching elements
-      const hasMatches = Object.keys(fragmentMap).length > 0;
+      if (showAll) {
+        // Show All mode: show all instances of this type
+        const instanceGuids = instances.map(inst => inst.ifc_guid);
+        const fragmentMap = fragmentsManager.guidToFragmentIdMap(instanceGuids);
+        const hasMatches = Object.keys(fragmentMap).length > 0;
 
-      if (hasMatches) {
-        // Isolate: hide all, then show only matching
-        hider.set(false); // Hide all
-        hider.set(true, fragmentMap); // Show only matching
+        if (hasMatches) {
+          hider.set(false); // Hide all
+          hider.set(true, fragmentMap); // Show only matching
 
-        // Highlight current instance specifically
-        if (currentInstance) {
-          const currentFragMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
-          if (Object.keys(currentFragMap).length > 0) {
-            highlighter.highlightByID('current', currentFragMap, false, true);
+          // Highlight current instance
+          if (currentInstance) {
+            const currentFragMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
+            if (Object.keys(currentFragMap).length > 0) {
+              highlighter.highlightByID('current', currentFragMap, false, false);
+            }
           }
+
+          // Zoom to fit all
+          zoomToAllInstances(fragmentMap);
+        } else {
+          hider.set(true);
         }
       } else {
-        hider.set(true); // Show all if no matches
+        // Single instance mode: show only the current instance
+        if (currentInstance) {
+          const currentFragMap = fragmentsManager.guidToFragmentIdMap([currentInstance.ifc_guid]);
+          const hasMatch = Object.keys(currentFragMap).length > 0;
+
+          if (hasMatch) {
+            hider.set(false); // Hide all
+            hider.set(true, currentFragMap); // Show only current
+            highlighter.highlightByID('current', currentFragMap, false, false);
+
+            // Zoom to this instance
+            zoomToElement(currentFragMap);
+          } else {
+            hider.set(true);
+          }
+        } else {
+          hider.set(true);
+        }
       }
     } catch {
       // Show all on error
       hider?.set(true);
     }
-  }, [instances, currentInstance, isLoading]);
-
-  // Fit camera to model
-  const fitToModel = useCallback((group: FragmentsGroup) => {
-    if (!worldRef.current) return;
-
-    const bbox = new THREE.Box3().setFromObject(group);
-    const center = new THREE.Vector3();
-    const size = new THREE.Vector3();
-
-    bbox.getCenter(center);
-    bbox.getSize(size);
-
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 1.5;
-
-    const cameraPos = new THREE.Vector3(
-      center.x + distance * 0.7,
-      center.y + distance * 0.5,
-      center.z + distance * 0.7
-    );
-
-    worldRef.current.camera?.controls?.setLookAt(
-      cameraPos.x, cameraPos.y, cameraPos.z,
-      center.x, center.y, center.z
-    );
-  }, []);
+  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToElement, zoomToAllInstances]);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {
@@ -340,9 +421,18 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     setCurrentIndex(i => Math.min(totalCount - 1, i + 1));
   }, [totalCount]);
 
+  const toggleShowAll = useCallback(() => {
+    setShowAll(prev => !prev);
+  }, []);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input/textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
       if (e.key === 'ArrowLeft') {
         goToPrev();
       } else if (e.key === 'ArrowRight') {
@@ -357,7 +447,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
   // Placeholder when no type selected
   if (!typeId) {
     return (
-      <div className={`flex flex-col items-center justify-center bg-background-secondary rounded-lg ${className}`}>
+      <div className={cn('flex flex-col items-center justify-center bg-background-secondary rounded-lg', className)}>
         <Box className="h-12 w-12 text-text-tertiary mb-2" />
         <p className="text-sm text-text-secondary">Select a type to preview instances</p>
       </div>
@@ -365,7 +455,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
   }
 
   return (
-    <div className={`flex flex-col bg-background-secondary rounded-lg overflow-hidden ${className}`}>
+    <div className={cn('flex flex-col bg-background-secondary rounded-lg overflow-hidden', className)}>
       {/* 3D Canvas */}
       <div className="relative flex-1 min-h-[200px]">
         <div ref={containerRef} className="absolute inset-0" />
@@ -387,25 +477,37 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       </div>
 
       {/* Instance navigation */}
-      <div className="flex items-center justify-between p-3 border-t border-border-primary">
+      <div className="flex items-center justify-between p-2 border-t border-border-primary bg-background">
         <Button
           variant="outline"
           size="sm"
           onClick={goToPrev}
-          disabled={currentIndex === 0 || isLoading}
+          disabled={currentIndex === 0 || isLoading || showAll}
+          className="h-7 px-2"
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Prev
+          <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        <div className="text-center">
-          <span className="text-sm font-medium text-text-primary">
-            {totalCount > 0 ? `${currentIndex + 1} of ${totalCount}` : 'No instances'}
-          </span>
-          {currentInstance && (
-            <p className="text-xs text-text-secondary truncate max-w-[150px]">
-              {currentInstance.name || currentInstance.ifc_guid}
-            </p>
+        <div className="flex items-center gap-2">
+          {/* Instance counter */}
+          <div className="text-center min-w-[80px]">
+            <span className="text-xs font-medium text-text-primary">
+              {totalCount > 0 ? (showAll ? `All ${totalCount}` : `${currentIndex + 1} / ${totalCount}`) : 'No instances'}
+            </span>
+          </div>
+
+          {/* Show All toggle */}
+          {totalCount > 1 && (
+            <Button
+              variant={showAll ? 'default' : 'outline'}
+              size="sm"
+              onClick={toggleShowAll}
+              className="h-7 px-2 gap-1"
+              title={showAll ? 'Show one at a time' : 'Show all instances'}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              <span className="text-xs">{showAll ? 'One' : 'All'}</span>
+            </Button>
           )}
         </div>
 
@@ -413,10 +515,10 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
           variant="outline"
           size="sm"
           onClick={goToNext}
-          disabled={currentIndex >= totalCount - 1 || isLoading}
+          disabled={currentIndex >= totalCount - 1 || isLoading || showAll}
+          className="h-7 px-2"
         >
-          Next
-          <ChevronRight className="h-4 w-4 ml-1" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
     </div>
