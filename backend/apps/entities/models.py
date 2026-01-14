@@ -211,13 +211,20 @@ class MaterialAssignment(models.Model):
 
 class IFCType(models.Model):
     """
-    IFC type objects (WallType, DoorType, etc.).
+    IFC type definitions derived from element ObjectType attributes.
 
-    Extended with predefined_type for TypeBank identity matching.
+    Types are enumerated from unique ObjectType values (primary source).
+    When an IfcTypeObject exists with matching name, metadata is enriched from it.
+
+    - has_ifc_type_object=True: Backed by real IfcTypeObject, type_guid is GlobalId
+    - has_ifc_type_object=False: Synthetic from ObjectType, type_guid is generated hash
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='types')
-    type_guid = models.CharField(max_length=22)
+    type_guid = models.CharField(
+        max_length=50,  # Increased to accommodate synthetic GUIDs
+        help_text="IFC GlobalId or synthetic hash for types without IfcTypeObject"
+    )
     type_name = models.CharField(max_length=255, blank=True, null=True)
     ifc_type = models.CharField(max_length=100)  # IfcWallType, etc.
     predefined_type = models.CharField(
@@ -232,6 +239,12 @@ class IFCType(models.Model):
     instance_count = models.IntegerField(
         default=0,
         help_text="Number of instances of this type in the model"
+    )
+
+    # Track whether this type is backed by an IfcTypeObject
+    has_ifc_type_object = models.BooleanField(
+        default=True,
+        help_text="True if backed by IfcTypeObject, False if synthetic from ObjectType"
     )
 
     class Meta:

@@ -19,6 +19,8 @@ from typing import List, Dict, Optional, Tuple, Any
 from concurrent.futures import ThreadPoolExecutor
 
 import ifcopenshell
+from collections import defaultdict
+import hashlib
 
 from repositories.ifc_repository import (
     EntityData, PropertyData, SpatialData,
@@ -504,11 +506,8 @@ class IFCParserService:
             stage_start = time.time()
             print("[Parser] Extracting type assignments...")
 
-            # Build type GUID set for fast lookup
-            type_guids = {t.type_guid for t in types}
-
             type_assignments, stage_errors = self._extract_type_assignments(
-                ifc_file, entity_guids, type_guids
+                ifc_file, entity_guids, types
             )
             result.type_assignments = type_assignments
             result.type_assignment_count = len(type_assignments)
@@ -666,46 +665,140 @@ class IFCParserService:
 
     def _extract_types(self, ifc_file) -> Tuple[List[TypeData], List[Dict]]:
         """
-        Extract type objects with TypeBank identity fields.
+        Extract types by grouping elements by their ObjectType attribute.
 
-        Extracts:
-        - type_guid: GlobalId
-        - type_name: IfcTypeObject.Name (clean, from type definition)
-        - ifc_type: Entity class (IfcWallType, etc.)
-        - predefined_type: Schema enum (STANDARD, USERDEFINED, NOTDEFINED)
-        - material: Primary material name from type's material association
+        ObjectType is the PRIMARY source for type enumeration:
+        - Always populated by Revit regardless of export settings
+        - More reliable than IfcTypeObject which depends on export configuration
+
+        IfcTypeObject is SECONDARY - used to enrich type data when available:
+        - GlobalId, PredefinedType, Material associations
+        - When ObjectType matches IfcTypeObject.Name, link them
+
+        This approach ensures:
+        - No empty types (only created when ObjectType exists)
+        - No orphan types (instance count from actual elements)
+        - Better coverage (elements without IfcRelDefinesByType included)
         """
         types = []
         errors = []
 
-        for type_element in ifc_file.by_type('IfcTypeObject'):
-            try:
-                # Extract predefined_type if available
-                predefined_type = None
-                if hasattr(type_element, 'PredefinedType') and type_element.PredefinedType:
-                    predefined_type = str(type_element.PredefinedType)
+        # ==================== PASS 1: Group elements by ObjectType ====================
+        # Key: ObjectType string, Value: dict with element GUIDs and IFC class info
+        object_type_groups = defaultdict(lambda: {
+            'guids': [],
+            'ifc_classes': set(),  # Track which IFC classes use this type
+        })
 
-                # Extract material from type's material association
-                material = self._extract_type_material(type_element)
+        try:
+            for element in ifc_file.by_type('IfcElement'):
+                object_type = getattr(element, 'ObjectType', None)
+                if object_type:  # Only count typed elements
+                    object_type_groups[object_type]['guids'].append(element.GlobalId)
+                    object_type_groups[object_type]['ifc_classes'].add(element.is_a())
+        except Exception as e:
+            errors.append({
+                'stage': 'types',
+                'severity': 'warning',
+                'message': f"Error grouping elements by ObjectType: {str(e)}",
+                'element_guid': None,
+                'element_type': 'IfcElement',
+                'timestamp': datetime.now().isoformat()
+            })
+
+        # ==================== PASS 2: Build IfcTypeObject lookup ====================
+        # Key: IfcTypeObject.Name, Value: IfcTypeObject entity
+        type_object_lookup = {}
+
+        try:
+            for type_element in ifc_file.by_type('IfcTypeObject'):
+                type_name = type_element.Name
+                if type_name:
+                    # If multiple IfcTypeObjects have same name, prefer the one with instances
+                    if type_name not in type_object_lookup:
+                        type_object_lookup[type_name] = type_element
+                    else:
+                        # Check which one has instances linked
+                        existing = type_object_lookup[type_name]
+                        existing_instances = self._count_type_instances(existing)
+                        new_instances = self._count_type_instances(type_element)
+                        if new_instances > existing_instances:
+                            type_object_lookup[type_name] = type_element
+        except Exception as e:
+            errors.append({
+                'stage': 'types',
+                'severity': 'warning',
+                'message': f"Error building IfcTypeObject lookup: {str(e)}",
+                'element_guid': None,
+                'element_type': 'IfcTypeObject',
+                'timestamp': datetime.now().isoformat()
+            })
+
+        # ==================== PASS 3: Create TypeData for each unique ObjectType ====================
+        for object_type, group_data in object_type_groups.items():
+            try:
+                type_object = type_object_lookup.get(object_type)
+                instance_count = len(group_data['guids'])
+                ifc_classes = group_data['ifc_classes']
+
+                # Determine IFC type class (e.g., IfcWallType from IfcWall)
+                if type_object:
+                    # Use actual IfcTypeObject class
+                    ifc_type_class = type_object.is_a()
+                    type_guid = type_object.GlobalId
+                    has_ifc_type_object = True
+                else:
+                    # Infer type class from element class (IfcWall -> IfcWallType)
+                    # Use most common element class in this group
+                    most_common_class = max(ifc_classes, key=lambda c: sum(1 for e in group_data['guids']))
+                    ifc_type_class = most_common_class + 'Type' if not most_common_class.endswith('Type') else most_common_class
+                    # Generate synthetic GUID from ObjectType (deterministic)
+                    type_guid = 'synth_' + hashlib.md5(object_type.encode()).hexdigest()[:18]
+                    has_ifc_type_object = False
+
+                # Extract metadata from IfcTypeObject if available
+                predefined_type = 'NOTDEFINED'
+                material = ''
+
+                if type_object:
+                    if hasattr(type_object, 'PredefinedType') and type_object.PredefinedType:
+                        predefined_type = str(type_object.PredefinedType)
+                    material = self._extract_type_material(type_object)
 
                 types.append(TypeData(
-                    type_guid=type_element.GlobalId,
-                    type_name=type_element.Name or '',
-                    ifc_type=type_element.is_a(),
-                    predefined_type=predefined_type or 'NOTDEFINED',
+                    type_guid=type_guid,
+                    type_name=object_type,  # Use ObjectType as canonical name
+                    ifc_type=ifc_type_class,
+                    predefined_type=predefined_type,
                     material=material,
+                    instance_count=instance_count,
+                    has_ifc_type_object=has_ifc_type_object,
                 ))
+
             except Exception as e:
                 errors.append({
                     'stage': 'types',
                     'severity': 'warning',
-                    'message': f"Failed to extract type: {str(e)}",
-                    'element_guid': getattr(type_element, 'GlobalId', None),
-                    'element_type': getattr(type_element, 'is_a', lambda: 'IfcTypeObject')(),
+                    'message': f"Failed to create type for ObjectType '{object_type}': {str(e)}",
+                    'element_guid': None,
+                    'element_type': 'TypeData',
                     'timestamp': datetime.now().isoformat()
                 })
 
         return types, errors
+
+    def _count_type_instances(self, type_element) -> int:
+        """Count instances linked to an IfcTypeObject via ObjectTypeOf."""
+        try:
+            if hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+                count = 0
+                for rel in type_element.ObjectTypeOf:
+                    if hasattr(rel, 'RelatedObjects') and rel.RelatedObjects:
+                        count += len(rel.RelatedObjects)
+                return count
+        except Exception:
+            pass
+        return 0
 
     def _extract_type_material(self, type_element) -> str:
         """
@@ -971,53 +1064,66 @@ class IFCParserService:
         return properties, errors
 
     def _extract_type_assignments(
-        self, ifc_file, entity_guids: set, type_guids: set
+        self, ifc_file, entity_guids: set, types: List[TypeData]
     ) -> Tuple[List[TypeAssignmentData], List[Dict]]:
         """
-        Extract type→entity assignments from IfcRelDefinesByType relationships.
+        Extract type->entity assignments by matching ObjectType attribute.
+
+        This replaces the previous approach of using IfcRelDefinesByType.
+        Elements are assigned to types based on their ObjectType value matching
+        the type_name (which is derived from ObjectType in _extract_types).
 
         Args:
             ifc_file: Open IFC file
             entity_guids: Set of entity GUIDs we've extracted
-            type_guids: Set of type GUIDs we've extracted
+            types: List of TypeData from _extract_types (ObjectType-primary)
         """
         assignments = []
         errors = []
 
-        for rel in ifc_file.by_type('IfcRelDefinesByType'):
-            try:
-                relating_type = rel.RelatingType
-                if not relating_type or not hasattr(relating_type, 'GlobalId'):
+        # Build lookup: ObjectType -> type_guid
+        object_type_to_guid = {t.type_name: t.type_guid for t in types}
+
+        try:
+            for element in ifc_file.by_type('IfcElement'):
+                entity_guid = element.GlobalId
+
+                # Skip elements we don't have in our entity set
+                if entity_guid not in entity_guids:
                     continue
 
-                type_guid = relating_type.GlobalId
-                if type_guid not in type_guids:
+                # Get ObjectType and match to type
+                object_type = getattr(element, 'ObjectType', None)
+                if not object_type:
+                    continue  # Element has no type - skip
+
+                type_guid = object_type_to_guid.get(object_type)
+                if not type_guid:
+                    # This shouldn't happen if _extract_types worked correctly
+                    errors.append({
+                        'stage': 'type_assignments',
+                        'severity': 'warning',
+                        'message': f"ObjectType '{object_type}' not found in types list",
+                        'element_guid': entity_guid,
+                        'element_type': element.is_a(),
+                        'timestamp': datetime.now().isoformat()
+                    })
                     continue
 
-                related_objects = rel.RelatedObjects or []
+                assignments.append(TypeAssignmentData(
+                    entity_guid=entity_guid,
+                    type_guid=type_guid,
+                ))
 
-                for element in related_objects:
-                    if not hasattr(element, 'GlobalId'):
-                        continue
-
-                    entity_guid = element.GlobalId
-                    if entity_guid not in entity_guids:
-                        continue
-
-                    assignments.append(TypeAssignmentData(
-                        entity_guid=entity_guid,
-                        type_guid=type_guid,
-                    ))
-
-            except Exception as e:
-                errors.append({
-                    'stage': 'type_assignments',
-                    'severity': 'warning',
-                    'message': f"Failed to extract type assignment: {str(e)}",
-                    'element_guid': None,
-                    'element_type': 'IfcRelDefinesByType',
-                    'timestamp': datetime.now().isoformat()
-                })
+        except Exception as e:
+            errors.append({
+                'stage': 'type_assignments',
+                'severity': 'error',
+                'message': f"Failed to extract type assignments: {str(e)}",
+                'element_guid': None,
+                'element_type': 'IfcElement',
+                'timestamp': datetime.now().isoformat()
+            })
 
         return assignments, errors
 

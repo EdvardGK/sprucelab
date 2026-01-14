@@ -64,7 +64,11 @@ class MaterialData:
 
 @dataclass
 class TypeData:
-    """Data for an IFC type."""
+    """Data for an IFC type.
+
+    Types are enumerated from element ObjectType attributes (primary source).
+    When an IfcTypeObject exists with matching name, metadata is enriched from it.
+    """
     type_guid: str
     type_name: Optional[str]
     ifc_type: str
@@ -72,6 +76,7 @@ class TypeData:
     material: Optional[str] = None  # Primary material name for TypeBank identity
     properties: Optional[Dict] = None
     instance_count: int = 0  # Number of instances of this type
+    has_ifc_type_object: bool = True  # True if backed by IfcTypeObject, False if synthetic from ObjectType
 
 
 @dataclass
@@ -383,6 +388,9 @@ class IFCRepository:
         """
         Bulk insert IFC types.
 
+        Types are derived from element ObjectType attributes (primary source).
+        has_ifc_type_object indicates whether the type is backed by a real IfcTypeObject.
+
         Returns:
             Dict mapping type_guid to type_id (UUID)
         """
@@ -406,14 +414,15 @@ class IFCRepository:
                 type_data.predefined_type,
                 json.dumps(type_data.properties or {}),
                 type_data.instance_count,
+                type_data.has_ifc_type_object,
             ))
 
         async with get_transaction() as conn:
             await conn.executemany(
                 """
                 INSERT INTO ifc_types (
-                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties, instance_count
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties, instance_count, has_ifc_type_object
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 ON CONFLICT (model_id, type_guid) DO NOTHING
                 """,
                 records
