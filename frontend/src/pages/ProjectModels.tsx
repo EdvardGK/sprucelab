@@ -31,21 +31,20 @@ export default function ProjectModels() {
   const [reprocessingModelId, setReprocessingModelId] = useState<string | null>(null);
 
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
-  const { refetch: refetchModels } = useModels(id);
+  const { data: allModels, isLoading: modelsLoading, refetch: refetchModels } = useModels(id);
 
   const handleReprocess = async (modelId: string) => {
     setReprocessingModelId(modelId);
     try {
       await apiClient.post(`/models/${modelId}/reprocess/`);
       // Refetch models to update status
-      refetchModels();
+      await refetchModels();
     } catch (error) {
       console.error('Failed to reprocess model:', error);
     } finally {
       setReprocessingModelId(null);
     }
   };
-  const { data: allModels, isLoading: modelsLoading } = useModels(id);
 
   // Filter to show only the latest version of each model
   const models = useMemo(() => {
