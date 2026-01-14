@@ -1468,6 +1468,69 @@ class ModelViewSet(viewsets.ModelViewSet):
         return Response({'status': 'ok'})
 
     @action(detail=True, methods=['post'])
+    def reprocess(self, request, pk=None):
+        """
+        Re-process an IFC model.
+
+        POST /api/models/{id}/reprocess/
+
+        This will:
+        1. Delete existing parsed data (entities, types, etc.)
+        2. Re-trigger the IFC parsing pipeline
+
+        Useful when:
+        - Parsing logic has been updated and you want fresh data
+        - A parsing error occurred and you want to retry
+        - Type mapping algorithm has changed
+        """
+        from .services.fastapi_client import IFCServiceClient
+
+        model = self.get_object()
+
+        # Check if model has a file
+        if not model.file_url and not model.file:
+            return Response(
+                {'error': 'Model has no file to reprocess'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Set status to processing
+        model.status = 'processing'
+        model.processing_error = None
+        model.save(update_fields=['status', 'processing_error'])
+
+        # Get file URL
+        file_url = model.file_url
+        if not file_url and model.file:
+            file_url = default_storage.url(model.file.name)
+
+        # Call FastAPI reprocess endpoint (deletes existing data first)
+        try:
+            client = IFCServiceClient()
+            result = client.reprocess_ifc(
+                model_id=str(model.id),
+                file_url=file_url,
+                skip_geometry=True,  # Skip geometry for faster reprocessing
+            )
+
+            # FastAPI handles the rest asynchronously, calls back to process-complete
+            return Response({
+                'status': 'processing',
+                'message': 'Reprocessing started. Existing data will be replaced.',
+                'model_id': str(model.id),
+            })
+
+        except Exception as e:
+            print(f"❌ Reprocess failed for {model.name}: {e}")
+            model.status = 'error'
+            model.processing_error = f'Reprocessing failed: {str(e)}'
+            model.save(update_fields=['status', 'processing_error'])
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
     def fork(self, request, pk=None):
         """
         Create a fork of this model.

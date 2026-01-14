@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2, CheckCircle2, MoreVertical, RefreshCw } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { useModels } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,16 @@ import { ModelUploadDialog } from '@/components/ModelUploadDialog';
 import { DeleteModelDialog } from '@/components/DeleteModelDialog';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { AppLayout } from '@/components/Layout/AppLayout';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Model } from '@/lib/api-types';
 import { formatFileSize } from '@/lib/format';
+import apiClient from '@/lib/api-client';
 
 type ViewMode = 'gallery' | 'table';
 
@@ -20,8 +28,23 @@ export default function ProjectModels() {
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
   const [modelToDelete, setModelToDelete] = useState<{ id: string; name: string } | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [reprocessingModelId, setReprocessingModelId] = useState<string | null>(null);
 
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
+  const { refetch: refetchModels } = useModels(id);
+
+  const handleReprocess = async (modelId: string) => {
+    setReprocessingModelId(modelId);
+    try {
+      await apiClient.post(`/models/${modelId}/reprocess/`);
+      // Refetch models to update status
+      refetchModels();
+    } catch (error) {
+      console.error('Failed to reprocess model:', error);
+    } finally {
+      setReprocessingModelId(null);
+    }
+  };
   const { data: allModels, isLoading: modelsLoading } = useModels(id);
 
   // Filter to show only the latest version of each model
@@ -202,20 +225,7 @@ export default function ProjectModels() {
                         <p className="text-sm font-medium text-text-primary truncate pr-8">
                           {model.name}
                         </p>
-                        <div className="flex items-center gap-1">
-                          <ModelStatusBadge status={model.status} />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 hover:bg-error/10 hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setModelToDelete({ id: model.id, name: model.name });
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                        <ModelStatusBadge status={model.status} />
                       </div>
 
                       <span className="text-xs text-text-secondary">
@@ -279,6 +289,45 @@ export default function ProjectModels() {
                           </div>
                         </div>
                       )}
+                    </div>
+
+                    {/* Bottom-right actions: Three-dot menu */}
+                    <div className="absolute right-2 bottom-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-hover"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReprocess(model.id);
+                            }}
+                            disabled={reprocessingModelId === model.id || model.status === 'processing'}
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${reprocessingModelId === model.id ? 'animate-spin' : ''}`} />
+                            Re-process
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setModelToDelete({ id: model.id, name: model.name });
+                            }}
+                            className="text-error focus:text-error focus:bg-error/10"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
 
                     {/* Chevron indicator */}
@@ -382,17 +431,41 @@ export default function ProjectModels() {
                         {new Date(model.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-error/10 hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setModelToDelete({ id: model.id, name: model.name });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReprocess(model.id);
+                              }}
+                              disabled={reprocessingModelId === model.id || model.status === 'processing'}
+                            >
+                              <RefreshCw className={`h-4 w-4 mr-2 ${reprocessingModelId === model.id ? 'animate-spin' : ''}`} />
+                              Re-process
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setModelToDelete({ id: model.id, name: model.name });
+                              }}
+                              className="text-error focus:text-error focus:bg-error/10"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
