@@ -637,6 +637,13 @@ class IFCRepository:
             )
             deleted["systems"] = int(result.split()[-1]) if result else 0
 
+            # Type bank observations (references ifc_types, must delete first)
+            result = await conn.execute(
+                "DELETE FROM type_bank_observations WHERE source_model_id = $1",
+                model_uuid
+            )
+            deleted["type_bank_observations"] = int(result.split()[-1]) if result else 0
+
             # Types
             result = await conn.execute(
                 "DELETE FROM ifc_types WHERE model_id = $1",
