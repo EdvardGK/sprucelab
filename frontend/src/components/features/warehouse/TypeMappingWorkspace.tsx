@@ -173,7 +173,7 @@ export function TypeMappingWorkspace({
     if (currentType) {
       resetForm(currentType);
     }
-  }, [currentType?.id, resetForm]);
+  }, [currentType, resetForm]);
 
   // Status counts for filter tabs
   const statusCounts = getStatusCounts(types);
@@ -487,6 +487,7 @@ export function TypeMappingWorkspace({
                 </div>
                 {/* Viewer Content */}
                 <InstanceViewer
+                  key={currentType.id}
                   modelId={modelId}
                   typeId={currentType.id}
                   className="flex-1 min-h-0"
@@ -537,6 +538,7 @@ export function TypeMappingWorkspace({
           {/* Fullscreen Viewer */}
           <div className="flex-1 min-h-0">
             <InstanceViewer
+              key={`fullscreen-${currentType.id}`}
               modelId={modelId}
               typeId={currentType.id}
               className="h-full w-full"

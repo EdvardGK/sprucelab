@@ -1467,6 +1467,180 @@ class ModelViewSet(viewsets.ModelViewSet):
 
         return Response({'status': 'ok'})
 
+    @action(detail=True, methods=['post'], url_path='validation-complete')
+    def validation_complete(self, request, pk=None):
+        """
+        Callback from FastAPI when IFC validation completes.
+
+        POST /api/models/{id}/validation-complete/
+
+        Request body (from FastAPI):
+            - model_id: UUID
+            - success: bool
+            - overall_status: 'pass' | 'warning' | 'fail' | 'error'
+            - total_elements: int
+            - elements_with_issues: int
+            - error_count: int
+            - warning_count: int
+            - info_count: int
+            - duration_seconds: float
+            - summary: str
+            - validation_report: Full validation result (JSON)
+
+        This endpoint is called by FastAPI after validation finishes.
+        Creates or updates an IFCValidationReport.
+        """
+        from django.utils import timezone
+
+        model = self.get_object()
+
+        success = request.data.get('success', False)
+        overall_status = request.data.get('overall_status', 'fail')
+        error_count = request.data.get('error_count', 0)
+        warning_count = request.data.get('warning_count', 0)
+        total_elements = request.data.get('total_elements', 0)
+        elements_with_issues = request.data.get('elements_with_issues', 0)
+        summary = request.data.get('summary', '')
+        validation_report = request.data.get('validation_report', {})
+        duration_seconds = request.data.get('duration_seconds', 0)
+
+        # Map overall_status to IFCValidationReport status choices
+        status_map = {
+            'info': 'pass',
+            'warning': 'warning',
+            'error': 'fail',
+        }
+        db_status = status_map.get(overall_status, 'fail')
+
+        # Extract issues by type from full report
+        all_issues = validation_report.get('all_issues', [])
+        guid_issues = [i for i in all_issues if i.get('rule_type') == 'guid']
+        property_issues = [i for i in all_issues if i.get('rule_type') == 'property']
+        naming_issues = [i for i in all_issues if i.get('rule_type') == 'naming']
+
+        # Create or update validation report
+        try:
+            validation_report_obj, created = IFCValidationReport.objects.update_or_create(
+                model=model,
+                defaults={
+                    'overall_status': db_status,
+                    'schema_valid': error_count == 0,
+                    'total_elements': total_elements,
+                    'elements_with_issues': elements_with_issues,
+                    'guid_issues': guid_issues,
+                    'property_issues': property_issues,
+                    'summary': summary,
+                    'schema_errors': [i for i in all_issues if i.get('severity') == 'error'],
+                    'schema_warnings': [i for i in all_issues if i.get('severity') == 'warning'],
+                }
+            )
+
+            action = 'created' if created else 'updated'
+            print(f"✅ Validation report {action} for {model.name}: {db_status} ({error_count} errors, {warning_count} warnings)")
+
+            # Update model validation_status
+            model.validation_status = 'completed' if success else 'failed'
+            model.save(update_fields=['validation_status'])
+
+        except Exception as e:
+            print(f"❌ Failed to save validation report for {model.name}: {e}")
+            return Response(
+                {'status': 'error', 'message': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response({
+            'status': 'ok',
+            'validation_report_id': str(validation_report_obj.id),
+            'overall_status': db_status,
+            'error_count': error_count,
+            'warning_count': warning_count,
+        })
+
+    @action(detail=True, methods=['post'], url_path='validate')
+    def trigger_validation(self, request, pk=None):
+        """
+        Trigger validation for this model via FastAPI.
+
+        POST /api/models/{id}/validate/
+
+        Request body (optional):
+            - bep_id: UUID of BEP to validate against (optional)
+            - mmi_level: MMI level to filter rules (optional)
+            - rule_types: List of rule types to run (optional)
+            - async_mode: Run in background (default: true)
+
+        Response:
+            - status: 'started' | 'error'
+            - message: Success message
+        """
+        from .services.fastapi_client import IFCServiceClient
+
+        model = self.get_object()
+
+        # Check if model has a file
+        if not model.file_url:
+            return Response(
+                {'error': 'Model has no file to validate'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if model is ready
+        if model.status != 'ready':
+            return Response(
+                {'error': f'Model status is "{model.status}". Only "ready" models can be validated.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get validation options
+        bep_id = request.data.get('bep_id')
+        mmi_level = request.data.get('mmi_level')
+        rule_types = request.data.get('rule_types')
+        async_mode = request.data.get('async_mode', True)
+
+        try:
+            client = IFCServiceClient()
+
+            if not client.is_available():
+                return Response(
+                    {'error': 'Validation service unavailable'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+
+            # Build callback URL
+            callback_url = f"{settings.DJANGO_URL}/api/models/{model.id}/validation-complete/"
+
+            # Update model validation status
+            model.validation_status = 'validating'
+            model.save(update_fields=['validation_status'])
+
+            # Call FastAPI validation endpoint
+            result = client.validate_ifc(
+                model_id=str(model.id),
+                file_url=model.file_url,
+                bep_id=bep_id,
+                mmi_level=mmi_level,
+                rule_types=rule_types,
+                async_mode=async_mode,
+                callback_url=callback_url,
+            )
+
+            return Response({
+                'status': 'started',
+                'message': 'Validation started. Results will be available at /api/models/{id}/validation/',
+                'model_id': str(model.id),
+                'async': async_mode,
+            })
+
+        except Exception as e:
+            print(f"❌ Validation trigger failed for {model.name}: {e}")
+            model.validation_status = 'failed'
+            model.save(update_fields=['validation_status'])
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['post'])
     def reprocess(self, request, pk=None):
         """

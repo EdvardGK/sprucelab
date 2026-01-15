@@ -254,6 +254,97 @@ class IFCServiceClient:
             response.raise_for_status()
             return response.json()
 
+    def validate_ifc(
+        self,
+        model_id: str,
+        file_url: str,
+        bep_id: Optional[str] = None,
+        mmi_level: Optional[int] = None,
+        rule_types: Optional[list] = None,
+        async_mode: bool = True,
+        callback_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Trigger IFC validation against BEP rules.
+
+        Args:
+            model_id: UUID of the Model in Django database
+            file_url: URL to the IFC file (Supabase Storage)
+            bep_id: Optional BEP ID to validate against (uses project default if not provided)
+            mmi_level: Optional MMI level to filter rules
+            rule_types: Optional list of rule types to run (guid, property, naming)
+            async_mode: Run in background (default: True)
+            callback_url: Django endpoint to call when validation completes
+
+        Returns:
+            Dict with validation status/result:
+            {
+                'model_id': '...',
+                'validation_status': 'pending' | 'running' | 'completed' | 'failed',
+                'overall_status': 'info' | 'warning' | 'error',
+                'error_count': 0,
+                'warning_count': 0,
+                ...
+            }
+
+        Raises:
+            httpx.HTTPError: If the request fails
+        """
+        url = f"{self.base_url}/api/v1/ifc/validate"
+
+        payload = {
+            "model_id": str(model_id),
+            "file_url": file_url,
+            "async_mode": async_mode,
+        }
+
+        if bep_id:
+            payload["bep_id"] = str(bep_id)
+        if mmi_level is not None:
+            payload["mmi_level"] = mmi_level
+        if rule_types:
+            payload["rule_types"] = rule_types
+        if callback_url:
+            payload["callback_url"] = callback_url
+
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                url,
+                json=payload,
+                headers={
+                    "X-API-Key": self.api_key,
+                    "Content-Type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            return response.json()
+
+    def get_validation_status(self, model_id: str) -> Dict[str, Any]:
+        """
+        Get the status of async validation.
+
+        Args:
+            model_id: UUID of the Model
+
+        Returns:
+            Dict with status:
+            {
+                'model_id': '...',
+                'status': 'pending' | 'running' | 'completed' | 'failed',
+                'result': {...} if completed,
+                'error': '...' if failed,
+            }
+        """
+        url = f"{self.base_url}/api/v1/ifc/validate/{model_id}/status"
+
+        with httpx.Client(timeout=30.0) as client:
+            response = client.get(
+                url,
+                headers={"X-API-Key": self.api_key},
+            )
+            response.raise_for_status()
+            return response.json()
+
     def health_check(self) -> Dict[str, Any]:
         """Check if FastAPI service is healthy."""
         url = f"{self.base_url}/api/v1/health"

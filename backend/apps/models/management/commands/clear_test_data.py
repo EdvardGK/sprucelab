@@ -20,9 +20,9 @@ from django.db import transaction
 from apps.projects.models import Project
 from apps.models.models import Model
 from apps.entities.models import (
-    IFCEntity, Geometry, PropertySet, SpatialHierarchy,
-    System, Material, IFCType, GraphEdge, ChangeLog,
-    StorageMetrics, IFCValidationReport, ProcessingReport
+    IFCEntity, PropertySet, SpatialHierarchy,
+    System, Material, IFCType, GraphEdge,
+    IFCValidationReport, ProcessingReport
 )
 from apps.bep.models import (
     BEPConfiguration, TechnicalRequirement, MMIScaleDefinition,
@@ -69,7 +69,7 @@ class Command(BaseCommand):
                 project_count = Project.objects.count()
                 model_count = Model.objects.count()
                 entity_count = IFCEntity.objects.count()
-                geometry_count = Geometry.objects.count()
+                # Note: Geometry model removed - viewer loads IFC directly
                 property_count = PropertySet.objects.count()
                 bep_count = BEPConfiguration.objects.count()
                 viewer_group_count = ViewerGroup.objects.count()
@@ -79,7 +79,6 @@ class Command(BaseCommand):
                 self.stdout.write(f'  - {project_count} projects')
                 self.stdout.write(f'  - {model_count} models')
                 self.stdout.write(f'  - {entity_count} entities')
-                self.stdout.write(f'  - {geometry_count} geometry records')
                 self.stdout.write(f'  - {property_count} properties')
                 self.stdout.write(f'  - {bep_count} BEP configurations')
                 self.stdout.write(f'  - {viewer_group_count} viewer groups')
@@ -113,20 +112,11 @@ class Command(BaseCommand):
                 self.stdout.write('Deleting validation reports...')
                 IFCValidationReport.objects.all().delete()
 
-                self.stdout.write('Deleting storage metrics...')
-                StorageMetrics.objects.all().delete()
-
-                self.stdout.write('Deleting change logs...')
-                ChangeLog.objects.all().delete()
-
                 self.stdout.write('Deleting graph edges...')
                 GraphEdge.objects.all().delete()
 
                 self.stdout.write('Deleting property sets...')
                 PropertySet.objects.all().delete()
-
-                self.stdout.write('Deleting geometry...')
-                Geometry.objects.all().delete()
 
                 self.stdout.write('Deleting spatial hierarchy...')
                 SpatialHierarchy.objects.all().delete()
@@ -176,7 +166,6 @@ class Command(BaseCommand):
                 self.stdout.write(f'  - {project_count} projects')
                 self.stdout.write(f'  - {model_count} models')
                 self.stdout.write(f'  - {entity_count} entities')
-                self.stdout.write(f'  - {geometry_count} geometry records')
                 self.stdout.write(f'  - {property_count} properties')
                 self.stdout.write(f'  - {bep_count} BEP configurations')
                 self.stdout.write(f'  - {viewer_group_count} viewer groups')

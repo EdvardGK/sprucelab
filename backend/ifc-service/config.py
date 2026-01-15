@@ -39,6 +39,9 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:8000",
+        "https://sprucelab.vercel.app",
+        "https://www.sprucelab.no",
+        "https://sprucelab.no",
     ]
 
     # IFC Processing limits

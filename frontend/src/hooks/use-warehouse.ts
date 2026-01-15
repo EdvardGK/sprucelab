@@ -315,9 +315,17 @@ export function useUpdateTypeMapping() {
       return response.data;
     },
     onSuccess: () => {
-      // Invalidate types and mappings queries
+      // Invalidate types (includes typeInstances due to prefix matching) and mappings queries
       queryClient.invalidateQueries({ queryKey: warehouseKeys.types() });
       queryClient.invalidateQueries({ queryKey: warehouseKeys.typeMappings() });
+      // Explicitly invalidate all typeInstances queries to ensure viewer updates
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'warehouse' &&
+          query.queryKey[1] === 'types' &&
+          query.queryKey[2] === 'instances'
+      });
     },
   });
 }

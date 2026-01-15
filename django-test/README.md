@@ -26,6 +26,27 @@ python ../django-test/check_model_status.py
 
 This helps diagnose issues with IFC file processing.
 
+### reset_stuck_model.py
+
+Reset a model stuck in "processing" state back to "error" so it can be re-uploaded.
+
+**Usage:**
+```bash
+# Reset model by name (default: G55_RIE)
+python django-test/reset_stuck_model.py
+
+# Reset specific model by name
+python django-test/reset_stuck_model.py "Your Model Name"
+```
+
+**What it does:**
+- Finds the most recent model with the given name stuck in `processing` state
+- Shows how long it's been stuck
+- Resets status to `error` with timeout message
+- Allows re-upload or investigation
+
+**When to use:** When a model appears stuck in "processing" state for extended periods (Celery worker crashed, timeout, etc.)
+
 ### test_scripts.py
 
 Test the script execution system with real models and scripts.

@@ -101,6 +101,24 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     setShowAll(false);
   }, [typeId]);
 
+  // Cleanup highlighter/hider state when type changes
+  useEffect(() => {
+    return () => {
+      // Clear highlights and show all fragments when switching types
+      if (highlighterRef.current) {
+        highlighterRef.current.clear('current');
+      }
+      // Reset visibility on all fragments
+      if (fragmentsGroupRef.current) {
+        for (const fragment of fragmentsGroupRef.current.items) {
+          if (fragment.mesh) {
+            fragment.mesh.visible = true;
+          }
+        }
+      }
+    };
+  }, [typeId]);
+
   // Initialize viewer
   useEffect(() => {
     if (!containerRef.current) return;
@@ -869,7 +887,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       console.error('[TypeInstanceViewer] Filtering failed:', err);
       zoomToVisibleInstances();
     }
-  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToVisibleInstances]);
+  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToVisibleInstances, typeId]);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {

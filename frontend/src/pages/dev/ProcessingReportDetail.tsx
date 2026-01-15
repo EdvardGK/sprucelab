@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProcessingStatusBadge } from '@/components/ProcessingStatusBadge';
 import { useProcessingReport } from '@/hooks/use-processing-reports';
 import { cn } from '@/lib/utils';
+import { formatFileSize } from '@/lib/format';
 
 export default function ProcessingReportDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,14 +21,6 @@ export default function ProcessingReportDetail() {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
   };
 
   const getStageIcon = (status: string) => {
