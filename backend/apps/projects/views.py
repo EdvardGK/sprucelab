@@ -1,10 +1,24 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Count, Sum, Q, F
 from django.db.models.functions import Coalesce
-from .models import Project
-from .serializers import ProjectSerializer
+from django.http import JsonResponse
+import json
+import yaml
+
+from .models import Project, ProjectConfig
+from .serializers import (
+    ProjectSerializer,
+    ProjectConfigSerializer,
+    ProjectConfigListSerializer,
+    ProjectConfigDetailSerializer,
+    ProjectConfigUpdateSerializer,
+    ProjectConfigImportSerializer,
+    ProjectConfigCreateFromTemplateSerializer,
+    ConfigValidationSerializer,
+)
+from .services.bep_defaults import BEPDefaults, get_bep_template
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -261,3 +275,270 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     'model_name': model.name,
                 }
         return None
+
+
+class ProjectConfigViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for project configurations.
+
+    Provides CRUD operations plus:
+    - create_from_template: Create config from BEP template
+    - validate: Validate config structure without saving
+    - export: Export config as JSON or YAML
+    - import_config: Import config from JSON/YAML
+    - get_template: Get blank BEP template
+    - get_mmi_scale: Get default MMI scale
+    """
+    queryset = ProjectConfig.objects.all()
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProjectConfigListSerializer
+        elif self.action in ['update', 'partial_update']:
+            return ProjectConfigUpdateSerializer
+        elif self.action == 'retrieve':
+            return ProjectConfigDetailSerializer
+        return ProjectConfigSerializer
+
+    def get_queryset(self):
+        """Optionally filter by project."""
+        queryset = ProjectConfig.objects.select_related('project')
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        return queryset
+
+    @action(detail=False, methods=['post'], url_path='from-template')
+    def create_from_template(self, request):
+        """
+        Create a new config from BEP template.
+
+        POST /api/project-configs/from-template/
+        {
+            "project": "uuid",
+            "project_code": "ST28",
+            "name": "Initial BEP Config",
+            "activate": true,
+            "customize": {
+                "bep": {"target_mmi": 400}
+            }
+        }
+        """
+        project_id = request.data.get('project')
+        if not project_id:
+            return Response(
+                {'error': 'project is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            project = Project.objects.get(pk=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Project not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ProjectConfigCreateFromTemplateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate config from template
+        config = serializer.create_config(project)
+
+        # Get next version number
+        last_config = ProjectConfig.objects.filter(project=project).order_by('-version').first()
+        next_version = (last_config.version + 1) if last_config else 1
+
+        # Create the config
+        project_config = ProjectConfig.objects.create(
+            project=project,
+            version=next_version,
+            name=serializer.validated_data.get('name', f'BEP v{next_version}'),
+            config=config,
+            is_active=serializer.validated_data.get('activate', True),
+            created_by=request.user.username if request.user.is_authenticated else None,
+            notes=f"Created from BEP template (code: {serializer.validated_data['project_code']})"
+        )
+
+        return Response(
+            ProjectConfigDetailSerializer(project_config).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=False, methods=['post'])
+    def validate(self, request):
+        """
+        Validate a config structure without saving.
+
+        POST /api/project-configs/validate/
+        {
+            "config": {...}
+        }
+        """
+        serializer = ConfigValidationSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response(serializer.get_validation_result())
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'])
+    def export(self, request, pk=None):
+        """
+        Export config as JSON or YAML.
+
+        GET /api/project-configs/{id}/export/?format=json
+        GET /api/project-configs/{id}/export/?format=yaml
+        """
+        config = self.get_object()
+        export_format = request.query_params.get('format', 'json').lower()
+
+        if export_format == 'yaml':
+            content = yaml.dump(config.config, allow_unicode=True, default_flow_style=False)
+            content_type = 'application/x-yaml'
+            filename = f'{config.project.name}_config_v{config.version}.yaml'
+        else:
+            content = json.dumps(config.config, indent=2, ensure_ascii=False)
+            content_type = 'application/json'
+            filename = f'{config.project.name}_config_v{config.version}.json'
+
+        response = Response(
+            config.config if export_format == 'json' else content,
+            content_type=content_type
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    @action(detail=False, methods=['post'], url_path='import')
+    def import_config(self, request):
+        """
+        Import config from JSON/YAML.
+
+        POST /api/project-configs/import/
+        {
+            "project": "uuid",
+            "config": {...},
+            "name": "Imported Config",
+            "activate": true
+        }
+        """
+        project_id = request.data.get('project')
+        if not project_id:
+            return Response(
+                {'error': 'project is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            project = Project.objects.get(pk=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Project not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ProjectConfigImportSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get next version number
+        last_config = ProjectConfig.objects.filter(project=project).order_by('-version').first()
+        next_version = (last_config.version + 1) if last_config else 1
+
+        # Create the config
+        project_config = ProjectConfig.objects.create(
+            project=project,
+            version=next_version,
+            name=serializer.validated_data.get('name', f'Imported v{next_version}'),
+            config=serializer.validated_data['config'],
+            is_active=serializer.validated_data.get('activate', True),
+            created_by=request.user.username if request.user.is_authenticated else None,
+            notes='Imported from JSON/YAML'
+        )
+
+        return Response(
+            ProjectConfigDetailSerializer(project_config).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=False, methods=['get'])
+    def template(self, request):
+        """
+        Get blank BEP template.
+
+        GET /api/project-configs/template/?code=ST28
+        """
+        project_code = request.query_params.get('code', 'PRJ')
+        template = get_bep_template(project_code)
+        return Response(template)
+
+    @action(detail=False, methods=['get'], url_path='mmi-scale')
+    def mmi_scale(self, request):
+        """
+        Get default MMI scale definition.
+
+        GET /api/project-configs/mmi-scale/
+        """
+        return Response(BEPDefaults.get_mmi_scale())
+
+    @action(detail=False, methods=['get'], url_path='validation-rules')
+    def validation_rules(self, request):
+        """
+        Get default validation rules.
+
+        GET /api/project-configs/validation-rules/
+        """
+        return Response(BEPDefaults.get_validation_rules())
+
+    @action(detail=False, methods=['get'], url_path='naming-conventions')
+    def naming_conventions(self, request):
+        """
+        Get default naming conventions.
+
+        GET /api/project-configs/naming-conventions/
+        """
+        return Response(BEPDefaults.get_naming_conventions())
+
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        """
+        Set this config as active (deactivates others for same project).
+
+        POST /api/project-configs/{id}/activate/
+        """
+        config = self.get_object()
+        config.is_active = True
+        config.save()  # save() handles deactivating others
+        return Response(ProjectConfigDetailSerializer(config).data)
+
+    @action(detail=True, methods=['post'])
+    def duplicate(self, request, pk=None):
+        """
+        Create a new version by duplicating this config.
+
+        POST /api/project-configs/{id}/duplicate/
+        {
+            "name": "New Version Name"
+        }
+        """
+        source_config = self.get_object()
+
+        # Get next version number
+        last_config = ProjectConfig.objects.filter(
+            project=source_config.project
+        ).order_by('-version').first()
+        next_version = last_config.version + 1
+
+        new_config = ProjectConfig.objects.create(
+            project=source_config.project,
+            version=next_version,
+            name=request.data.get('name', f'Copy of {source_config.name or f"v{source_config.version}"}'),
+            config=source_config.config.copy(),  # Deep copy
+            is_active=False,  # Don't auto-activate
+            created_by=request.user.username if request.user.is_authenticated else None,
+            notes=f"Duplicated from v{source_config.version}"
+        )
+
+        return Response(
+            ProjectConfigDetailSerializer(new_config).data,
+            status=status.HTTP_201_CREATED
+        )

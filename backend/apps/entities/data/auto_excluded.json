@@ -1,0 +1,107 @@
+{
+  "description": "Default auto-excluded entities and patterns for scope management",
+  "version": "1.0",
+
+  "entities": {
+    "description": "IFC entity classes that are auto-excluded from all validation scopes",
+    "list": [
+      "IfcSite",
+      "IfcBuilding",
+      "IfcBuildingStorey",
+      "IfcSpace",
+      "IfcZone",
+      "IfcGrid",
+      "IfcGridAxis",
+      "IfcAnnotation",
+      "IfcOpeningElement",
+      "IfcVirtualElement",
+      "IfcDistributionPort",
+      "IfcFeatureElement",
+      "IfcProject"
+    ]
+  },
+
+  "type_patterns": {
+    "description": "Type name patterns that are auto-excluded (supports * wildcard)",
+    "list": [
+      "ProvisionForVoid*",
+      "Direct Shape:*",
+      "Enscape*",
+      "RPC*",
+      "*_Entourage*",
+      "Default",
+      "Unnamed"
+    ]
+  },
+
+  "measurement_rules": {
+    "description": "Default measurement units by IFC class",
+    "count": [
+      "IfcDoor",
+      "IfcWindow",
+      "IfcLightFixture",
+      "IfcValve",
+      "IfcTerminal",
+      "IfcSensor",
+      "IfcActuator",
+      "IfcController",
+      "IfcAlarm",
+      "IfcFireSuppressionTerminal",
+      "IfcSanitaryTerminal",
+      "IfcOutlet",
+      "IfcJunctionBox",
+      "IfcElectricAppliance"
+    ],
+    "length": [
+      "IfcPipeSegment",
+      "IfcDuctSegment",
+      "IfcCableSegment",
+      "IfcCableCarrierSegment",
+      "IfcBeam",
+      "IfcColumn",
+      "IfcMember",
+      "IfcRailing",
+      "IfcPile"
+    ],
+    "area": [
+      "IfcSlab",
+      "IfcRoof",
+      "IfcCovering",
+      "IfcPlate",
+      "IfcCurtainWall"
+    ],
+    "volume": [
+      "IfcFooting",
+      "IfcWall",
+      "IfcWallStandardCase"
+    ]
+  },
+
+  "scope_defaults": {
+    "description": "Default scope settings per validation type",
+    "tfm": {
+      "active_keywords": [
+        "motor", "fan", "pump", "sensor", "actuator", "controller",
+        "chiller", "boiler", "coil", "heater", "cooler", "compressor",
+        "damper", "valve"
+      ],
+      "passive_entities": [
+        "IfcFlowSegment",
+        "IfcFlowFitting",
+        "IfcCovering",
+        "IfcBuildingElementProxy"
+      ]
+    },
+    "lca": {
+      "include_all_physical": true,
+      "exclude_temporary": true
+    },
+    "qto": {
+      "include_all_measurable": true
+    },
+    "clash": {
+      "include_all_solid": true,
+      "exclude_openings": true
+    }
+  }
+}

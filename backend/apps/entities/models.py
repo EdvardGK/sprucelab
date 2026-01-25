@@ -951,3 +951,117 @@ class TypeBankAlias(models.Model):
 
     def __str__(self):
         return f"'{self.alias_type_name}' → {self.canonical}"
+
+
+class TypeBankScope(models.Model):
+    """
+    Scope status for a type within a specific validation context.
+
+    A single type can have different scopes for different purposes:
+    - TFM: In scope (needs FM marking) vs out (passive infrastructure)
+    - LCA: In scope (needs environmental data) vs out (not quantified)
+    - Costing: In scope (needs pricing) vs out (included elsewhere)
+
+    This enables flexible validation per use case.
+    """
+    SCOPE_TYPE_CHOICES = [
+        ('tfm', 'TFM (FM Marking)'),
+        ('lca', 'LCA (Life Cycle Assessment)'),
+        ('qto', 'QTO (Quantity Takeoff)'),
+        ('clash', 'Clash Control'),
+        ('custom', 'Custom'),
+    ]
+
+    SCOPE_STATUS_CHOICES = [
+        ('in', 'In Scope'),
+        ('out', 'Out of Scope'),
+        ('auto_excluded', 'Auto-excluded'),
+        ('unknown', 'Unknown'),
+    ]
+
+    VALIDATION_STATUS_CHOICES = [
+        ('complete', 'Complete'),
+        ('partial', 'Partial'),
+        ('missing', 'Missing'),
+        ('dirty', 'Dirty (has data but should not)'),
+        ('invalid', 'Invalid format'),
+        ('na', 'Not applicable'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    type_bank_entry = models.ForeignKey(
+        TypeBankEntry,
+        on_delete=models.CASCADE,
+        related_name='scopes',
+        help_text="The type this scope applies to"
+    )
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        related_name='type_scopes',
+        help_text="Project this scope is defined for"
+    )
+
+    # Scope definition
+    scope_type = models.CharField(
+        max_length=20,
+        choices=SCOPE_TYPE_CHOICES,
+        help_text="What validation context this scope applies to"
+    )
+    scope_type_custom = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Custom scope type name (when scope_type='custom')"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=SCOPE_STATUS_CHOICES,
+        default='unknown',
+        help_text="In/out of scope for this context"
+    )
+    reason = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Why this scope was assigned (config, auto_entity, auto_pattern, manual)"
+    )
+    comment = models.TextField(
+        blank=True,
+        null=True,
+        help_text="User comment about scope decision"
+    )
+
+    # Validation status (for scopes that track compliance)
+    validation_status = models.CharField(
+        max_length=20,
+        choices=VALIDATION_STATUS_CHOICES,
+        default='na',
+        help_text="Validation status within this scope"
+    )
+    coverage = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Coverage percentage (0.0-1.0) for scopes that track completeness"
+    )
+
+    # Audit
+    created_by = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'type_bank_scopes'
+        unique_together = ['type_bank_entry', 'project', 'scope_type']
+        indexes = [
+            models.Index(fields=['scope_type']),
+            models.Index(fields=['status']),
+            models.Index(fields=['validation_status']),
+        ]
+        verbose_name = 'Type Bank Scope'
+        verbose_name_plural = 'Type Bank Scopes'
+
+    def __str__(self):
+        scope_name = self.scope_type_custom if self.scope_type == 'custom' else self.scope_type
+        return f"{self.type_bank_entry} - {scope_name}: {self.status}"

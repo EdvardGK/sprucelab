@@ -3,7 +3,7 @@ from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
     System, Material, IFCType, ProcessingReport,
     NS3451Code, TypeMapping, TypeDefinitionLayer, MaterialMapping,
-    TypeBankEntry, TypeBankObservation, TypeBankAlias
+    TypeBankEntry, TypeBankObservation, TypeBankAlias, TypeBankScope
 )
 
 
@@ -346,3 +346,79 @@ class TypeBankEntryUpdateSerializer(serializers.ModelSerializer):
         elif 'ns3451_code' in validated_data and ns3451_code is None:
             validated_data['ns3451'] = None
         return super().update(instance, validated_data)
+
+
+# === Type Bank Scope Serializers ===
+
+class TypeBankScopeSerializer(serializers.ModelSerializer):
+    """
+    Serializer for type scope within a validation context.
+
+    Supports multiple scopes per type (TFM, LCA, QTO, Clash).
+    """
+
+    type_name = serializers.CharField(source='type_bank_entry.type_name', read_only=True)
+    ifc_class = serializers.CharField(source='type_bank_entry.ifc_class', read_only=True)
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    scope_type_display = serializers.CharField(source='get_scope_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    validation_status_display = serializers.CharField(source='get_validation_status_display', read_only=True)
+
+    class Meta:
+        model = TypeBankScope
+        fields = [
+            'id', 'type_bank_entry', 'type_name', 'ifc_class',
+            'project', 'project_name',
+            'scope_type', 'scope_type_display', 'scope_type_custom',
+            'status', 'status_display', 'reason', 'comment',
+            'validation_status', 'validation_status_display', 'coverage',
+            'created_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class TypeBankScopeUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating scope status and comment.
+    """
+
+    class Meta:
+        model = TypeBankScope
+        fields = ['status', 'reason', 'comment', 'validation_status', 'coverage']
+
+
+class TypeBankScopeBulkSerializer(serializers.Serializer):
+    """
+    Serializer for bulk scope updates.
+
+    Example payload:
+    {
+        "type_bank_entry_ids": ["uuid1", "uuid2"],
+        "scope_type": "tfm",
+        "status": "out",
+        "reason": "manual",
+        "comment": "Not relevant for FDV"
+    }
+    """
+    type_bank_entry_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        help_text="List of TypeBankEntry IDs to update"
+    )
+    scope_type = serializers.ChoiceField(
+        choices=TypeBankScope.SCOPE_TYPE_CHOICES,
+        help_text="Validation context"
+    )
+    status = serializers.ChoiceField(
+        choices=TypeBankScope.SCOPE_STATUS_CHOICES,
+        help_text="New scope status"
+    )
+    reason = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        default='manual'
+    )
+    comment = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
