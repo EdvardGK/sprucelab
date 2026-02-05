@@ -1,4 +1,4 @@
-# Sprucelab - IFC Property Editing Platform
+# Sprucelab - Type-Centric BIM Intelligence Platform
 
 > **For detailed project status, session history, and planning documents:**
 > See `/docs/` directory
@@ -7,94 +7,109 @@
 
 ## Project Overview
 
-**IFC property editing and data manipulation platform** with bulk editing, material/type library ("IFC Warehouse"), LCA workflows, and validation.
+**"Drop your IFC → See all your types → Verify, classify, and track."**
+
+A platform for BIM professionals who **USE** models, not create them. IFC is treated as a simple "Layer 1" data source that powers BIM-centric workflows.
+
+**Core Insight**: Types are the unit of coordination in BIM, not individual entities. A building has 50,000 entities but only 300-500 unique types.
 
 **Core Value Proposition:**
-- Bulk edit IFC properties across thousands of objects
-- Bidirectional Excel ↔ IFC workflows
-- Material/Type library with LCA data and state tracking
-- Custom validation rules (Norwegian standards: MMI, NS-3451)
-- Create IFC objects from structured data (CSV/Excel/JSON)
-- LCA scenarios with embodied carbon tracking
+- **Type Warehouse**: Extract, classify, and track types across models
+- **Verification Engine**: Core rules + custom rules (per-project via ProjectConfig)
+- **TypeBank**: Cross-project type intelligence (classify once, apply everywhere)
+- **Excel Workflows**: Bidirectional type classification via Excel
+- **LCA Export**: Material layers → Reduzer/OneClickLCA
+- **3D Viewer**: Type instance navigation and filtering
+
+**What We Are NOT:**
+- NOT a modeling tool (we don't create IFC)
+- NOT a clash detection platform (Solibri/Navisworks territory)
+- NOT a general property editor (too broad, Excel workflows sufficient)
 
 **Tech Stack:**
-- **Backend**: Django 5.0 + DRF (API, database, project management) + **FastAPI microservice** (IFC processing)
+- **Backend**: Django 5.0 + DRF (TypeBank, TypeMapping, ProjectConfig) + **FastAPI** (IFC parsing, validation)
 - **Database**: PostgreSQL (Supabase)
-- **IFC Processing**: ifcopenshell 0.8.x (existing scripts wrapped with UI)
+- **IFC Processing**: ifcopenshell 0.8.x (types-only extraction, 2 seconds)
 - **Frontend**: React 18 + TypeScript + Vite, Tailwind v4 + shadcn/ui
-- **Viewer**: ThatOpen Components + Three.js (federated multi-model)
-- **Infrastructure**: Celery + Redis (async tasks), Docker (FastAPI service)
+- **Viewer**: ThatOpen Components + Three.js (load IFC directly, type filtering)
 
-**Current Phase**: MVP rebuild - Property editing focus, debugging existing viewer/parsing
+**Current Phase**: MVP - Type Dashboard, Verification Engine, Sandwich View
 
 **Key Documentation**:
+- **PRD v2.0**: `docs/plans/PRD_v2.md` ⭐
 - Project status: `docs/worklog/` (latest session)
 - Planning docs: `docs/plans/`
 - TODO lists: `docs/todos/`
-- Architecture: `docs/plans/session-002-bim-coordinator-platform.md`
-- **Layered Processing**: `docs/knowledge/LAYERED_ARCHITECTURE_IMPLEMENTATION.md` ⭐
 
 ---
 
-## ⭐ Layered Architecture (Updated for Property Editing)
+## ⭐ Types-Only Architecture
 
-### **Processing Model: Parse → Enrich → Validate → Export**
+### **Processing Model: Parse → Classify → Validate → Export**
 
-**CRITICAL:** All IFC processing uses a **layered architecture**:
+**CRITICAL:** Sprucelab uses a **types-only architecture** (Session 031 breakthrough):
 
 ```
-Layer 1 (Parse):    Extract metadata ONLY (GUID, type, name, properties)
-                    → ALWAYS succeeds (unless file corrupt)
-                    → Fast: 5-15 seconds
-                    → NO GEOMETRY (viewer loads IFC/Fragments directly)
-                    → Service: Django services/parse.py OR FastAPI /ifc/open
+Layer 1 (Parse):    Extract TYPES ONLY (not individual entities)
+                    → Fast: 2 seconds for 100MB model
+                    → Stores: IFCType + instance_count + key properties
+                    → Links to TypeBank (global type intelligence)
+                    → Service: FastAPI /ifc/parse
 
-Layer 2 (Enrich):   Add/edit properties, assign to warehouse library, Excel import
-                    → Bulk property editing
-                    → Material/Type assignment
-                    → State tracking (New/Reused/Waste)
-                    → Service: FastAPI /ifc/properties/bulk-edit
+Layer 2 (Classify): Type → NS3451/OmniClass classification
+                    → Per-model TypeMapping
+                    → Material layer composition
+                    → Excel import/export
+                    → Service: Django /api/types/
 
-Layer 3 (Validate): Quality checks (custom rules, required Psets, value ranges)
-                    → REPORTS issues, doesn't fail
-                    → Fast: 5-30 seconds
+Layer 3 (Validate): Per-type verification against ProjectConfig rules
+                    → Core rules (required Psets, properties)
+                    → Custom rules (JSON/YAML or GUI)
+                    → Reports issues per type
                     → Service: FastAPI /ifc/validate
 
-Layer 4 (Export):   Write modified IFC with updated properties
-                    → GUID preservation
-                    → Incremental updates (only changed properties)
-                    → Service: FastAPI /ifc/export
+Layer 4 (Export):   LCA export (Reduzer, OneClickLCA)
+                    → BCF export (Phase 2)
+                    → Service: Django /api/types/export-*
 ```
 
-### **Status Tracking:**
+### **What We DON'T Store:**
 
-**Model-level statuses:**
-- `parsing_status`: pending/parsing/parsed/failed (Layer 1)
-- `enrichment_status`: pending/enriching/enriched/failed (Layer 2) - NEW
-- `validation_status`: pending/validating/completed/failed (Layer 3)
-- `export_status`: pending/exporting/exported/failed (Layer 4) - NEW
-- `geometry_status`: DEPRECATED (viewer loads directly)
+- Individual entity data (viewer loads IFC directly)
+- Entity-level properties (query FastAPI on-demand)
+- Geometry (viewer handles this)
 
-**Entity-level status:**
-- `IFCEntity.enrichment_status`: pending/enriched/manual_review - NEW
-- `IFCEntity.validation_status`: valid/invalid/warning - NEW
+### **Key Models:**
+
+- `IFCType`: Per-model type with instance_count
+- `TypeMapping`: Type → classification (NS3451, unit, notes)
+- `TypeDefinitionLayer`: Material sandwich composition
+- `TypeBankEntry`: Global canonical type (cross-project)
+- `TypeBankObservation`: Where types were observed
+- `ProjectConfig`: Per-project validation rules
+
+### **Performance Gains:**
+
+| Metric | Before (Session 030) | After (Session 031) |
+|--------|---------------------|---------------------|
+| Parse time | 10-30 seconds | 2 seconds |
+| DB rows per model | 1000s | ~100-500 types |
+| Type consolidation | N/A | 63% reduction (974 → 357) |
 
 ### **Key Benefits:**
-- ✅ Metadata persists even if geometry fails
-- ✅ 10-100x faster metadata extraction (bulk inserts)
-- ✅ Bulk property editing across thousands of objects
-- ✅ Excel ↔ IFC bidirectional workflow
-- ✅ Validation before export prevents broken files
-- ✅ Optional/deferred geometry extraction
+- ✅ 10-15x faster parsing (types only, not entities)
+- ✅ TypeBank accumulates knowledge across projects
+- ✅ Excel ↔ type classification bidirectional workflow
+- ✅ Verification at type level (not entity level)
+- ✅ Viewer loads IFC directly (no preprocessing)
 
-### **Files:**
-- `backend/apps/models/services/parse.py` - Layer 1 (Django)
-- `backend/ifc-service/` - Layers 2-4 (FastAPI microservice)
-  - `endpoints/ifc_operations.py` - IFC CRUD operations
-  - `services/property_editor.py` - Bulk property editing
-  - `services/validator.py` - Validation engine
-  - `services/exporter.py` - IFC reconstruction
-- `docs/knowledge/LAYERED_ARCHITECTURE_IMPLEMENTATION.md` - Full documentation
+### **Key Files:**
+- `backend/apps/entities/models.py` - IFCType, TypeMapping, TypeBank models
+- `backend/apps/projects/models.py` - ProjectConfig (validation rules)
+- `backend/ifc-service/` - FastAPI microservice
+  - `endpoints/` - IFC parsing, property queries
+  - `services/` - Validation engine (to be built)
+- `frontend/src/components/features/warehouse/` - Type UI components
 
 ---
 
@@ -130,133 +145,146 @@ Layer 4 (Export):   Write modified IFC with updated properties
 - Geometry NOT returned in list endpoints (too large)
 - Use pagination for large element lists (100 per page)
 
-### 3. IFC Warehouse (Material/Type Library) ⭐
+### 3. Type Warehouse (TypeBank Architecture) ⭐
 
-**Purpose:** Database-backed library of materials and types with LCA data, state tracking, and instance tracking.
+**Purpose:** Type-centric classification and cross-project intelligence.
 
-**MaterialLibrary Model:**
-- Name, category (Concrete, Steel, Wood, etc.), manufacturer
-- Flexible properties (JSON field)
-- LCA data: embodied_carbon (kg CO2e/unit), EPD reference
-- Media: photos (URLs), documents (datasheets, certificates)
-- State: New, Existing Kept, Reused, Existing Waste
+**Per-Model Types:**
 
-**TypeLibrary Model:**
-- Name, IFC type (IfcWall, IfcColumn, etc.), type name
-- Material link (FK to MaterialLibrary)
-- Parametric geometry: `{type: "box", width: 200, height: 3000, ...}`
-- Default Psets (property templates for this type)
-- Preview image (3D preview render using Three.js)
-- Instance tracking: `[{project_id, model_id, guid}, ...]`
+**IFCType** - Types extracted from each model:
+- `type_guid`, `type_name`, `ifc_type` (IfcWallType, etc.)
+- `instance_count` - How many entities use this type
+- `has_ifc_type_object` - Whether type exists in IFC schema
 
-**WarehouseInstance Model:**
-- Links warehouse items to actual IFC objects in projects
-- FK to TypeLibrary, MaterialLibrary, Project, Model
-- `ifc_guid` (22-char GlobalId)
-- Custom properties (instance-specific overrides)
-- Location (XYZ, floor, zone)
-- Comments, photos (instance-specific)
+**TypeMapping** - Classification per type:
+- `ns3451_code` - Norwegian building classification
+- `representative_unit` - pcs/m/m2/m3
+- `discipline` - Derived from NS3451 (ARK/RIB/RIV/RIE)
+- `mapping_status` - pending/mapped/ignored/review/followup
+
+**TypeDefinitionLayer** - Material sandwich:
+- `layer_order`, `material_name`, `thickness_mm`
+- `epd_id` - Link to EPD for LCA
+- Compose type's material breakdown
+
+**Global TypeBank:**
+
+**TypeBankEntry** - Canonical type definition:
+- Identity: `(ifc_class, type_name, predefined_type, material)`
+- Classification: `ns3451_code`, `discipline`, `canonical_name`
+- Statistics: `total_instance_count`, `source_model_count`
+- Confidence scoring based on observation count
+
+**TypeBankObservation** - Where types appear:
+- Links TypeBankEntry ↔ IFCType
+- Tracks instances per observation
+
+**TypeBankAlias** - Alternative names for same type
 
 **Key Rules:**
-- Each instance MUST have a WarehouseInstance record if linked to library
-- GUIDs from IFC objects are immutable and used for tracking
+- Types are identified by signature tuple, not GUID
+- Same type across projects → classify once, reuse everywhere
+- TypeBank is classification-only; verification rules are in ProjectConfig
 - Materials/Types can exist in library WITHOUT instances (templates)
 - Instances can exist WITHOUT library link (unmatched objects)
 
-### 4. Bulk Property Editing ⭐
+### 4. Type Classification Workflow ⭐
 
 **Core Workflow:**
-1. User selects IFC file or model in database
-2. Query builder: Filter elements (type, floor, material, custom query)
-3. Property table: Show selected elements × properties (editable grid)
-4. Bulk edit: Select column, apply value to all rows
-5. Preview changes before applying
-6. Export modified IFC
+1. Upload IFC → types extracted in 2 seconds
+2. Dashboard shows all types grouped by IFC class
+3. User classifies types (NS3451 code, unit, notes)
+4. Excel export for batch classification
+5. Excel import to apply classifications
 
-**Features:**
-- Multi-select elements (by filter or manual selection)
-- Edit single property across 100s/1000s of elements
-- Add/remove entire Psets (e.g., add Pset_WallCommon to all walls)
-- Undo/redo support
-- Validation before write (prevents broken IFC files)
+**Classification UI Modes:**
+- **Focused View**: One type at a time, keyboard shortcuts (arrow keys, A=save, I=ignore)
+- **Grid View**: Airtable-style editable grid for power users
+- **List View**: Grouped by IFC class with 3D preview
 
-**Backend:** FastAPI microservice `/ifc/properties/bulk-edit`
-**Frontend:** React data grid (TanStack Table) with cell editing
-
-**Rule:** ALWAYS validate property types/values before writing to IFC (use validation layer)
+**Keyboard Shortcuts:**
+- Arrow keys: Navigate types
+- `A`: Save and advance
+- `F`: Flag for follow-up
+- `I`: Mark as ignored
+- `Shift+F`: Fullscreen viewer
 
 ### 5. Excel Integration ⭐
 
-**Bidirectional Workflow:**
+**Bidirectional Type Classification:**
 
-**IFC → Excel:**
-1. User selects IFC file
-2. Choose elements (filter or all)
-3. Generate Excel template with columns: GUID, Type, Name, Properties...
-4. User edits in Excel (familiar tool)
-5. Re-upload Excel to apply changes
+**Types → Excel:**
+1. Select model
+2. Export types to Excel template
+3. Template columns: IFC Class, Type Name, Instance Count, NS3451 Code, Unit, Notes, Status
+4. 4 editable columns, 14 read-only metadata columns
 
-**Excel → IFC:**
-1. User downloads Excel template (pre-configured columns)
-2. Fills template with data (Type, Material, X, Y, Z, Floor, Properties...)
-3. Uploads filled template
-4. Backend creates IFC objects using ifcopenshell scripts
-5. Preview in viewer (Matplotlib/Plotly scatter plot)
-6. Export IFC
+**Excel → Types:**
+1. Fill NS3451 codes in Excel (familiar tool)
+2. Upload Excel
+3. Backend bulk-updates TypeMapping records
+4. Result dialog shows imported/updated/skipped counts
 
-**Template Format:**
-- Required columns: Type, Name (or GUID for existing objects)
-- Optional columns: Material, X, Y, Z, Floor, custom properties
-- Each row = one IFC object
-- Pset columns: `Pset_WallCommon.FireRating`, `Pset_WallCommon.IsExternal`
+**Endpoints:**
+- `GET /api/types/export-excel/?model={id}` - Download template
+- `POST /api/types/import-excel/` - Upload classifications
 
-**Rule:** Column mapping MUST be flexible (fuzzy matching for common variations)
+**Rule:** Excel workflow is for TYPE CLASSIFICATION, not property editing
 
-### 6. LCA Workflows ⭐
+### 6. LCA Export (Type-Based) ⭐
 
-**Design Scenarios:**
-- Create multiple scenarios (Scenario A, B, C) per project
-- Each scenario assigns status + material/type to objects
-- Status: New, Existing Kept, Reused, Existing Waste
+**Material Composition:**
+- Each type can have material layers (TypeDefinitionLayer)
+- Layers define: material name, thickness (mm), EPD reference
+- "Sandwich view" shows composition visually (2D diagram)
 
-**ScenarioAssignment Model:**
-- FK to DesignScenario, WarehouseInstance
-- Status override (New/Reused/Waste)
-- Material override (FK to MaterialLibrary - "what if we use timber instead of concrete?")
-- Type override (FK to TypeLibrary)
+**Export Workflow:**
+1. Classify types with NS3451 codes
+2. Define material layers per type
+3. Link layers to EPD data (optional)
+4. Export to LCA tools
 
-**Dashboards (Plotly/Grafana-style):**
-- Scenario comparison (A vs B vs C)
-- Embodied carbon by material + status
-- Material breakdown (pie charts)
-- Reuse percentage: Reused / (Reused + New)
-- Cost comparison (if cost data in material library)
+**Export Formats:**
+- **Reduzer**: Type, Material, Quantity (instance_count × unit), EPD
+- **OneClickLCA**: Similar structure with OneClickLCA field mapping
 
-**Export Templates:**
-- OneClickLCA format: Material, Quantity, Unit, Embodied Carbon, Status
-- Reduzer format: Similar structure, Reduzer-compatible column names
+**Endpoint:** `GET /api/types/export-reduzer/?model={id}`
 
-**Rule:** LCA data is OPTIONAL - warehouse can be used without embodied carbon data
+**Rule:** LCA export requires:
+- NS3451 classification (for categorization)
+- Material layers (for carbon calculation)
+- Representative unit (pcs/m/m2/m3)
 
-### 7. BEP System (Session 010+) - NOT MVP PRIORITY
+**Note:** Design scenarios (A/B/C comparison) are Phase 2
 
-**MMI Scale**:
-- Based on Norwegian MMI-veileder 2.0 (October 2022)
-- Flexible range: 0-2000 (standard uses 25-point increments)
-- Official scale: 19 levels (0, 100, 125, 150...500, 600)
-- Projects can define custom levels
-- Database stores: mmi_level, name, name_en, description, color_hex, color_rgb
+### 7. Verification Engine (MVP Priority) ⭐
 
-**BEP Components** (7 models):
-1. BEPConfiguration - Main BEP document
-2. TechnicalRequirement - IFC schema, coordinate system, units
-3. MMIScaleDefinition - Model maturity levels (0-2000 range)
-4. NamingConvention - File/element naming rules
-5. RequiredPropertySet - Required Psets per IFC type
-6. ValidationRule - Quality control checks
-7. SubmissionMilestone - Delivery milestones
+**Per-Project Rules via ProjectConfig:**
+- Core rules (built-in): Required Psets, required properties, classification completeness
+- Custom rules (user-defined): Property constraints, naming conventions
 
-### 8. Development Workflow
+**Rule Configuration:**
+- GUI builder for visual rule editing
+- JSON/YAML config files for power users and version control
+- Both read/write same ProjectConfig model
+
+**Output:**
+- Per-type validation status (green/yellow/red)
+- Issue list with rule ID, message, severity
+- Health score (% types verified)
+
+**Phase 2:** BCF export from verification failures
+
+### 8. BEP System - DEPRIORITIZED
+
+*The BEP system (Session 010) is too complex for MVP. Core validation concepts moved to simpler ProjectConfig + Verification Engine.*
+
+**If needed later:**
+- MMI Scale based on Norwegian MMI-veileder 2.0
+- 7 BEP models exist in codebase (BEPConfiguration, ValidationRule, etc.)
+- Can be re-enabled if market demands full BEP compliance
+
+### 9. Development Workflow
 
 **Before Writing Code**:
 1. Create planning document in `/docs/plans/` with timestamp format: `yyyy-mm-dd-hh-mm_Description.md`
