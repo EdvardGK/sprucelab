@@ -940,6 +940,227 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'], url_path='dashboard-metrics')
+    def dashboard_metrics(self, request):
+        """
+        Get dashboard metrics for a project or specific model.
+
+        GET /api/types/dashboard-metrics/?project_id={id}
+        GET /api/types/dashboard-metrics/?model_id={id}
+
+        Returns:
+        - project_summary: Overall health score, status counts
+        - models: Per-model breakdown with health scores
+        - by_discipline: Aggregated by discipline (ARK, RIB, etc.)
+
+        Health Score Formula (0-100):
+        - Classification score (40%): types with NS3451 code
+        - Unit score (20%): types with representative_unit
+        - Material score (40%): types with at least 1 material layer with quantity
+
+        Status thresholds:
+        - healthy (green): >= 80
+        - warning (yellow): >= 50
+        - critical (red): < 50
+        """
+        from django.db.models import Count, Q, Exists, OuterRef
+        from apps.models.models import Model
+
+        project_id = request.query_params.get('project_id')
+        model_id = request.query_params.get('model_id')
+
+        if not project_id and not model_id:
+            return Response(
+                {'error': 'project_id or model_id parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        def calculate_health_score(types_qs):
+            """Calculate health score for a queryset of types."""
+            total = types_qs.count()
+            if total == 0:
+                return {
+                    'total': 0,
+                    'health_score': 0,
+                    'status': 'critical',
+                    'classification_score': 0,
+                    'unit_score': 0,
+                    'material_score': 0,
+                }
+
+            # Classification score (40%): types with NS3451 code
+            with_ns3451 = types_qs.filter(
+                mapping__ns3451_code__isnull=False
+            ).exclude(mapping__ns3451_code='').count()
+            classification_score = (with_ns3451 / total) * 100
+
+            # Unit score (20%): types with representative_unit
+            with_unit = types_qs.filter(
+                mapping__representative_unit__isnull=False
+            ).exclude(mapping__representative_unit='').count()
+            unit_score = (with_unit / total) * 100
+
+            # Material score (40%): types with at least 1 material layer with quantity > 0
+            # Use subquery to check if any definition_layer exists with quantity_per_unit > 0
+            has_material_layer = TypeDefinitionLayer.objects.filter(
+                type_mapping=OuterRef('mapping'),
+                quantity_per_unit__gt=0
+            )
+            with_materials = types_qs.filter(
+                mapping__isnull=False
+            ).annotate(
+                has_layers=Exists(has_material_layer)
+            ).filter(has_layers=True).count()
+            material_score = (with_materials / total) * 100
+
+            # Composite health score
+            health_score = round(
+                classification_score * 0.4 +
+                unit_score * 0.2 +
+                material_score * 0.4,
+                1
+            )
+
+            # Status threshold
+            if health_score >= 80:
+                health_status = 'healthy'
+            elif health_score >= 50:
+                health_status = 'warning'
+            else:
+                health_status = 'critical'
+
+            return {
+                'total': total,
+                'health_score': health_score,
+                'status': health_status,
+                'classification_score': round(classification_score, 1),
+                'unit_score': round(unit_score, 1),
+                'material_score': round(material_score, 1),
+            }
+
+        def get_status_counts(types_qs):
+            """Get mapping status counts."""
+            total = types_qs.count()
+            mapped = types_qs.filter(mapping__mapping_status='mapped').count()
+            pending = types_qs.filter(
+                Q(mapping__mapping_status='pending') | Q(mapping__isnull=True)
+            ).count()
+            ignored = types_qs.filter(mapping__mapping_status='ignored').count()
+            review = types_qs.filter(mapping__mapping_status='review').count()
+            followup = types_qs.filter(mapping__mapping_status='followup').count()
+
+            return {
+                'total': total,
+                'mapped': mapped,
+                'pending': pending,
+                'ignored': ignored,
+                'review': review,
+                'followup': followup,
+                'progress_percent': round((mapped / total * 100) if total > 0 else 0, 1),
+            }
+
+        # Single model mode
+        if model_id:
+            types_qs = IFCType.objects.filter(model_id=model_id, instance_count__gt=0)
+            model = Model.objects.filter(id=model_id).first()
+
+            if not model:
+                return Response({'error': 'Model not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            health = calculate_health_score(types_qs)
+            counts = get_status_counts(types_qs)
+
+            return Response({
+                'mode': 'model',
+                'model_id': model_id,
+                'model_name': model.name,
+                **health,
+                **counts,
+            })
+
+        # Project mode - aggregate across all models
+        models = Model.objects.filter(project_id=project_id)
+        if not models.exists():
+            return Response({'error': 'No models found for this project'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Project-level aggregation
+        all_types = IFCType.objects.filter(
+            model__project_id=project_id,
+            instance_count__gt=0
+        )
+        project_health = calculate_health_score(all_types)
+        project_counts = get_status_counts(all_types)
+
+        # Per-model breakdown
+        model_breakdown = []
+        for model in models:
+            model_types = IFCType.objects.filter(model=model, instance_count__gt=0)
+            if model_types.count() == 0:
+                continue  # Skip models with no types
+
+            m_health = calculate_health_score(model_types)
+            m_counts = get_status_counts(model_types)
+
+            # Get discipline from model name or mapping
+            discipline = None
+            if model.name:
+                # Try to extract discipline from model name (e.g., "ARK_Model.ifc")
+                for disc in ['ARK', 'RIB', 'RIV', 'RIE', 'RIBE', 'RIRV']:
+                    if disc in model.name.upper():
+                        discipline = disc
+                        break
+
+            model_breakdown.append({
+                'id': str(model.id),
+                'name': model.name,
+                'discipline': discipline,
+                'total_types': m_health['total'],
+                'mapped': m_counts['mapped'],
+                'pending': m_counts['pending'],
+                'health_score': m_health['health_score'],
+                'status': m_health['status'],
+            })
+
+        # Sort by health score (worst first for attention)
+        model_breakdown.sort(key=lambda x: x['health_score'])
+
+        # By discipline aggregation
+        by_discipline = {}
+        for model_data in model_breakdown:
+            disc = model_data['discipline'] or 'Unknown'
+            if disc not in by_discipline:
+                by_discipline[disc] = {
+                    'total': 0,
+                    'mapped': 0,
+                    'model_count': 0,
+                    'health_scores': [],
+                }
+            by_discipline[disc]['total'] += model_data['total_types']
+            by_discipline[disc]['mapped'] += model_data['mapped']
+            by_discipline[disc]['model_count'] += 1
+            by_discipline[disc]['health_scores'].append(model_data['health_score'])
+
+        # Calculate average health score per discipline
+        for disc, data in by_discipline.items():
+            if data['health_scores']:
+                data['health_score'] = round(
+                    sum(data['health_scores']) / len(data['health_scores']), 1
+                )
+            else:
+                data['health_score'] = 0
+            del data['health_scores']
+
+        return Response({
+            'mode': 'project',
+            'project_id': project_id,
+            'project_summary': {
+                **project_health,
+                **project_counts,
+            },
+            'models': model_breakdown,
+            'by_discipline': by_discipline,
+        })
+
 
 class TypeMappingViewSet(viewsets.ModelViewSet):
     """

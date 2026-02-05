@@ -169,6 +169,22 @@
     "noMaterials": "No materials loaded",
     "noMaterialsDesc": "Upload an IFC model to extract materials"
   },
+  "warehouse": {
+    "layers": {
+      "title": "Material Layers",
+      "empty": "No layers defined",
+      "addHint": "Click \"Add\" to add material layers",
+      "materialPlaceholder": "Material name",
+      "quantityHelp": "Quantity per 1 type unit",
+      "ns3457Placeholder": "NS3457",
+      "ns3457Help": "NS3457-8 material classification",
+      "thicknessOptional": "mm (opt)",
+      "thicknessHelp": "Visual thickness for sandwich diagram (optional)",
+      "epdPlaceholder": "EPD ID",
+      "unsaved": "Unsaved changes",
+      "saved": "All changes saved"
+    }
+  },
   "stats": {
     "title": "Mapping Progress",
     "description": "Track type and material mapping progress across the project",
@@ -215,6 +231,27 @@
     "selectModelDesc": "Choose a model from the dropdown above to view its types",
     "noModels": "No models in project",
     "noModelsDesc": "Upload an IFC model to extract types"
+  },
+  "dashboard": {
+    "title": "Type Dashboard",
+    "healthScore": "Health Score",
+    "mapped": "Mapped",
+    "pending": "Pending",
+    "review": "Review",
+    "ignored": "Ignored",
+    "totalTypes": "Total Types",
+    "progressByStatus": "Progress by Status",
+    "completeness": "Completeness",
+    "classification": "Classification",
+    "classificationHelp": "Types with NS3451 code",
+    "units": "Units",
+    "unitsHelp": "Types with measurement unit",
+    "materials": "Materials",
+    "materialsHelp": "Types with material layers",
+    "models": "Models",
+    "noTypes": "No types found",
+    "complete": "complete",
+    "error": "Failed to load dashboard metrics"
   },
   "modelUpload": {
     "title": "Upload IFC Model",

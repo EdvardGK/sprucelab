@@ -6,17 +6,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { TypeLibraryPanel } from '@/components/features/warehouse/TypeLibraryPanel';
+import { TypeDashboard } from '@/components/features/warehouse/TypeDashboard';
 import { MMITableMaker } from '@/components/features/bep/MMITableMaker';
 
-type ViewId = 'types' | 'materials' | 'stats' | 'bep' | 'scripting';
+type ViewId = 'dashboard' | 'types' | 'materials' | 'stats' | 'bep' | 'scripting';
 
 export default function BIMWorkbench() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: project, isLoading } = useProject(id!);
 
-  const activeView = (searchParams.get('view') || 'types') as ViewId;
+  // Dashboard is the default landing view
+  const activeView = (searchParams.get('view') || 'dashboard') as ViewId;
+
+  // Handler for navigating to type list for a specific model
+  const handleModelSelect = (modelId: string) => {
+    setSearchParams({ view: 'types', model: modelId });
+  };
 
   if (isLoading) {
     return (
@@ -43,6 +50,12 @@ export default function BIMWorkbench() {
       <div className="flex h-full flex-col bg-background text-foreground overflow-hidden">
         {/* Content - Full height, no scrolling at container level */}
         <div className="flex-1 overflow-hidden">
+          {activeView === 'dashboard' && (
+            <TypeDashboard
+              projectId={project.id}
+              onModelSelect={handleModelSelect}
+            />
+          )}
           {activeView === 'types' && <TypeLibraryPanel projectId={project.id} />}
           {activeView === 'materials' && <MaterialLibraryPanel projectId={project.id} />}
           {activeView === 'stats' && <MappingStatsPanel projectId={project.id} />}

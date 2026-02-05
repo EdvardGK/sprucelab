@@ -351,6 +351,12 @@ class TypeMapping(models.Model):
         ('m3', 'Cubic meter'),
     ]
 
+    TYPE_CATEGORY_CHOICES = [
+        ('generic', 'Generic (early stage)'),       # "Concrete Wall 250mm"
+        ('specific', 'Specific (detailed design)'),  # "Skanska CW-250-A"
+        ('product', 'Product (manufacturer)'),       # "Gyproc GU13 Fire"
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ifc_type = models.OneToOneField(IFCType, on_delete=models.CASCADE, related_name='mapping')
 
@@ -394,6 +400,14 @@ class TypeMapping(models.Model):
         help_text="BIM discipline code (ARK, RIB, RIV, RIE, etc.)"
     )
 
+    # Type category (generalization level)
+    type_category = models.CharField(
+        max_length=20,
+        choices=TYPE_CATEGORY_CHOICES,
+        default='specific',
+        help_text="Level of type specificity (generic/specific/product)"
+    )
+
     # Status tracking
     mapping_status = models.CharField(max_length=20, choices=MAPPING_STATUS, default='pending')
     confidence = models.CharField(
@@ -423,14 +437,27 @@ class TypeMapping(models.Model):
 
 class TypeDefinitionLayer(models.Model):
     """
-    Material layer for type definitions in the library/warehouse.
+    Material layer/inventory for type definitions in the library/warehouse.
 
-    Unlike TypeLayer (which is tied to parsed IFC types), this model
-    is for user-defined type compositions in the warehouse library.
+    Implements a two-level unit system:
+    - Component (parent type): measured in representative_unit (m², m, pcs)
+    - Inventory (this layer): material quantity per 1 type unit ("recipe ratio")
 
-    Enables defining "Wall Type A has 3 layers: plasterboard, insulation, brick"
-    with thickness and optional EPD references.
+    Example: Wall type measured in m² contains per m²:
+    - 0.25 m³ concrete (quantity_per_unit=0.25, material_unit=m3)
+    - 20 kg rebar (quantity_per_unit=20, material_unit=kg)
+    - 2.0 m² gypsum (quantity_per_unit=2.0, material_unit=m2) - 4 layers
+
+    Thickness_mm is optional for sandwich view visualization.
     """
+    MATERIAL_UNIT_CHOICES = [
+        ('m2', 'm²'),
+        ('m', 'm'),
+        ('m3', 'm³'),
+        ('kg', 'kg'),
+        ('pcs', 'pcs'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type_mapping = models.ForeignKey(
         TypeMapping,
@@ -446,9 +473,41 @@ class TypeDefinitionLayer(models.Model):
         max_length=255,
         help_text="Material name (e.g., 'Gypsum board', 'Mineral wool')"
     )
-    thickness_mm = models.FloatField(
-        help_text="Layer thickness in millimeters"
+
+    # === Material classification (NS3457-8) ===
+    ns3457_code = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="NS3457-8 material classification code"
     )
+    ns3457_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="NS3457-8 material name (auto-filled from code)"
+    )
+
+    # === Quantity per type unit (the "recipe ratio") ===
+    quantity_per_unit = models.FloatField(
+        default=1.0,
+        help_text="Amount of this material per 1 type unit (e.g., 0.25 m³/m²)"
+    )
+    material_unit = models.CharField(
+        max_length=10,
+        choices=MATERIAL_UNIT_CHOICES,
+        default='m2',
+        help_text="Unit for this material quantity (must match EPD expected unit)"
+    )
+
+    # === Visual thickness for sandwich diagram (optional) ===
+    thickness_mm = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Visual thickness in mm for sandwich diagram (optional)"
+    )
+
+    # === EPD/LCA reference ===
     epd_id = models.CharField(
         max_length=100,
         blank=True,

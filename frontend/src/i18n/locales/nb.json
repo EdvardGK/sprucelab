@@ -169,6 +169,22 @@
     "noMaterials": "Ingen materialer lastet",
     "noMaterialsDesc": "Last opp en IFC-modell for å trekke ut materialer"
   },
+  "warehouse": {
+    "layers": {
+      "title": "Materiallag",
+      "empty": "Ingen lag definert",
+      "addHint": "Klikk \"Legg til\" for å legge til materiallag",
+      "materialPlaceholder": "Materialnavn",
+      "quantityHelp": "Mengde per 1 typeenhet",
+      "ns3457Placeholder": "NS3457",
+      "ns3457Help": "NS3457-8 materialklassifisering",
+      "thicknessOptional": "mm (valgfritt)",
+      "thicknessHelp": "Visuell tykkelse for snittdiagram (valgfritt)",
+      "epdPlaceholder": "EPD-ID",
+      "unsaved": "Ulagrede endringer",
+      "saved": "Alle endringer lagret"
+    }
+  },
   "stats": {
     "title": "Kartleggingsfremdrift",
     "description": "Spor fremdrift for type- og materialkartlegging i prosjektet",
@@ -215,6 +231,27 @@
     "selectModelDesc": "Velg en modell fra rullegardinmenyen ovenfor for å se typene",
     "noModels": "Ingen modeller i prosjektet",
     "noModelsDesc": "Last opp en IFC-modell for å trekke ut typer"
+  },
+  "dashboard": {
+    "title": "Typedashbord",
+    "healthScore": "Helsescore",
+    "mapped": "Kartlagt",
+    "pending": "Venter",
+    "review": "Gjennomgang",
+    "ignored": "Ignorert",
+    "totalTypes": "Totalt typer",
+    "progressByStatus": "Fremdrift etter status",
+    "completeness": "Komplettering",
+    "classification": "Klassifisering",
+    "classificationHelp": "Typer med NS3451-kode",
+    "units": "Enheter",
+    "unitsHelp": "Typer med måleenhet",
+    "materials": "Materialer",
+    "materialsHelp": "Typer med materiallag",
+    "models": "Modeller",
+    "noTypes": "Ingen typer funnet",
+    "complete": "fullført",
+    "error": "Kunne ikke laste dashbord-metrikker"
   },
   "modelUpload": {
     "title": "Last opp IFC-modell",

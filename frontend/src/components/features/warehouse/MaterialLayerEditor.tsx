@@ -31,10 +31,26 @@ export interface Layer {
   id?: string;
   layer_order: number;
   material_name: string;
-  thickness_mm: number;
+  // Material classification (NS3457-8)
+  ns3457_code: string | null;
+  ns3457_name: string | null;
+  // Quantity per type unit (recipe ratio)
+  quantity_per_unit: number;
+  material_unit: 'm2' | 'm' | 'm3' | 'kg' | 'pcs';
+  // Visual thickness for sandwich diagram (optional)
+  thickness_mm: number | null;
+  // EPD/LCA reference
   epd_id: string | null;
   notes?: string;
 }
+
+const MATERIAL_UNIT_OPTIONS: { value: Layer['material_unit']; label: string }[] = [
+  { value: 'm2', label: 'm²' },
+  { value: 'm', label: 'm' },
+  { value: 'm3', label: 'm³' },
+  { value: 'kg', label: 'kg' },
+  { value: 'pcs', label: 'pcs' },
+];
 
 interface MaterialLayerEditorProps {
   typeMappingId: string | null;
@@ -82,7 +98,11 @@ export function MaterialLayerEditor({
       {
         layer_order: newOrder,
         material_name: '',
-        thickness_mm: 0,
+        ns3457_code: null,
+        ns3457_name: null,
+        quantity_per_unit: 1.0,
+        material_unit: 'm2',
+        thickness_mm: null,
         epd_id: null,
       },
     ]);
@@ -141,7 +161,11 @@ export function MaterialLayerEditor({
           layers: layers.map(l => ({
             layer_order: l.layer_order,
             material_name: l.material_name,
-            thickness_mm: l.thickness_mm,
+            ns3457_code: l.ns3457_code || null,
+            ns3457_name: l.ns3457_name || null,
+            quantity_per_unit: l.quantity_per_unit,
+            material_unit: l.material_unit,
+            thickness_mm: l.thickness_mm || null,
             epd_id: l.epd_id || null,
             notes: l.notes || '',
           })),
@@ -239,74 +263,119 @@ export function MaterialLayerEditor({
           layers.map((layer, index) => (
             <div
               key={`${layer.layer_order}-${index}`}
-              className="flex items-center gap-2 p-2 bg-background-secondary rounded border border-border-primary"
+              className="flex flex-col gap-2 p-2 bg-background-secondary rounded border border-border-primary"
             >
-              {/* Drag handle / order indicator */}
-              <div className="flex flex-col items-center gap-0.5">
-                <button
-                  onClick={() => moveLayer(index, 'up')}
-                  disabled={index === 0}
-                  className="p-0.5 hover:bg-background-primary rounded disabled:opacity-30"
-                >
-                  <ChevronUp className="h-3 w-3" />
-                </button>
-                <span className="text-xs text-text-tertiary font-mono w-4 text-center">
-                  {layer.layer_order}
-                </span>
-                <button
-                  onClick={() => moveLayer(index, 'down')}
-                  disabled={index === layers.length - 1}
-                  className="p-0.5 hover:bg-background-primary rounded disabled:opacity-30"
-                >
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </div>
+              {/* Row 1: Order, Material name, Quantity, Unit, Remove */}
+              <div className="flex items-center gap-2">
+                {/* Drag handle / order indicator */}
+                <div className="flex flex-col items-center gap-0.5">
+                  <button
+                    onClick={() => moveLayer(index, 'up')}
+                    disabled={index === 0}
+                    className="p-0.5 hover:bg-background-primary rounded disabled:opacity-30"
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </button>
+                  <span className="text-xs text-text-tertiary font-mono w-4 text-center">
+                    {layer.layer_order}
+                  </span>
+                  <button
+                    onClick={() => moveLayer(index, 'down')}
+                    disabled={index === layers.length - 1}
+                    className="p-0.5 hover:bg-background-primary rounded disabled:opacity-30"
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </div>
 
-              {/* Material name */}
-              <div className="flex-1 min-w-0">
-                <Input
-                  value={layer.material_name}
-                  onChange={(e) => updateLayer(index, 'material_name', e.target.value)}
-                  placeholder={t('warehouse.layers.materialPlaceholder', 'Material name')}
-                  className="h-8 text-sm"
-                />
-              </div>
+                {/* Material name */}
+                <div className="flex-1 min-w-0">
+                  <Input
+                    value={layer.material_name}
+                    onChange={(e) => updateLayer(index, 'material_name', e.target.value)}
+                    placeholder={t('warehouse.layers.materialPlaceholder', 'Material name')}
+                    className="h-8 text-sm"
+                  />
+                </div>
 
-              {/* Thickness */}
-              <div className="w-24">
-                <div className="relative">
+                {/* Quantity per unit (recipe ratio) */}
+                <div className="w-20">
                   <Input
                     type="number"
-                    value={layer.thickness_mm || ''}
-                    onChange={(e) => updateLayer(index, 'thickness_mm', parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="h-8 text-sm pr-8"
+                    step="0.01"
+                    min="0"
+                    value={layer.quantity_per_unit || ''}
+                    onChange={(e) => updateLayer(index, 'quantity_per_unit', parseFloat(e.target.value) || 0)}
+                    placeholder="1.0"
+                    className="h-8 text-sm"
+                    title={t('warehouse.layers.quantityHelp', 'Quantity per 1 type unit')}
                   />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-tertiary">
-                    mm
-                  </span>
+                </div>
+
+                {/* Material unit */}
+                <div className="w-20">
+                  <select
+                    value={layer.material_unit}
+                    onChange={(e) => updateLayer(index, 'material_unit', e.target.value as Layer['material_unit'])}
+                    className="h-8 w-full text-sm rounded border border-input bg-background px-2"
+                  >
+                    {MATERIAL_UNIT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Remove button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeLayer(index)}
+                  className="h-8 w-8 p-0 text-text-tertiary hover:text-status-error"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Row 2: NS3457 code, Thickness (optional), EPD ID */}
+              <div className="flex items-center gap-2 pl-8">
+                {/* NS3457-8 Code */}
+                <div className="w-28">
+                  <Input
+                    value={layer.ns3457_code || ''}
+                    onChange={(e) => updateLayer(index, 'ns3457_code', e.target.value || null)}
+                    placeholder={t('warehouse.layers.ns3457Placeholder', 'NS3457')}
+                    className="h-7 text-xs"
+                    title={t('warehouse.layers.ns3457Help', 'NS3457-8 material classification')}
+                  />
+                </div>
+
+                {/* Thickness (optional, for sandwich view) */}
+                <div className="w-24">
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={layer.thickness_mm ?? ''}
+                      onChange={(e) => updateLayer(index, 'thickness_mm', e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder={t('warehouse.layers.thicknessOptional', 'mm')}
+                      className="h-7 text-xs pr-8"
+                      title={t('warehouse.layers.thicknessHelp', 'Visual thickness for sandwich diagram (optional)')}
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-tertiary">
+                      mm
+                    </span>
+                  </div>
+                </div>
+
+                {/* EPD ID */}
+                <div className="flex-1">
+                  <Input
+                    value={layer.epd_id || ''}
+                    onChange={(e) => updateLayer(index, 'epd_id', e.target.value || null)}
+                    placeholder={t('warehouse.layers.epdPlaceholder', 'EPD ID')}
+                    className="h-7 text-xs"
+                  />
                 </div>
               </div>
-
-              {/* EPD ID */}
-              <div className="w-32">
-                <Input
-                  value={layer.epd_id || ''}
-                  onChange={(e) => updateLayer(index, 'epd_id', e.target.value || null)}
-                  placeholder={t('warehouse.layers.epdPlaceholder', 'EPD ID')}
-                  className="h-8 text-sm"
-                />
-              </div>
-
-              {/* Remove button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeLayer(index)}
-                className="h-8 w-8 p-0 text-text-tertiary hover:text-status-error"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           ))
         )}

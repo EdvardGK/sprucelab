@@ -17,11 +17,22 @@ export interface NS3451Code {
 
 export interface TypeDefinitionLayer {
   id?: string;
+  type_mapping?: string;
   layer_order: number;
   material_name: string;
-  thickness_mm: number;
+  // Material classification (NS3457-8)
+  ns3457_code: string | null;
+  ns3457_name: string | null;
+  // Quantity per type unit (recipe ratio)
+  quantity_per_unit: number;
+  material_unit: 'm2' | 'm' | 'm3' | 'kg' | 'pcs';
+  // Visual thickness for sandwich diagram (optional)
+  thickness_mm: number | null;
+  // EPD/LCA reference
   epd_id: string | null;
   notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface TypeMapping {
@@ -33,6 +44,8 @@ export interface TypeMapping {
   product: string | null;
   representative_unit: 'pcs' | 'm' | 'm2' | 'm3' | null;
   discipline: string | null;
+  // Type category (generalization level)
+  type_category: 'generic' | 'specific' | 'product';
   mapping_status: 'pending' | 'mapped' | 'ignored' | 'review' | 'followup';
   confidence: number | null;
   notes: string | null;
@@ -98,6 +111,47 @@ export interface MappingSummary {
   ignored: number;
   review: number;
   progress_percent: number;
+}
+
+// Dashboard Metrics Types
+export interface ModelHealthMetrics {
+  id: string;
+  name: string;
+  discipline: string | null;
+  total_types: number;
+  mapped: number;
+  pending: number;
+  ignored: number;
+  review: number;
+  types_with_unit: number;
+  types_with_materials: number;
+  health_score: number;
+  status: 'healthy' | 'warning' | 'critical';
+}
+
+export interface DisciplineMetrics {
+  total: number;
+  mapped: number;
+  pending: number;
+  health_score: number;
+}
+
+export interface DashboardMetrics {
+  project_summary: {
+    total_types: number;
+    mapped: number;
+    pending: number;
+    ignored: number;
+    review: number;
+    types_with_unit: number;
+    types_with_materials: number;
+    health_score: number;
+    classification_percent: number;
+    unit_percent: number;
+    material_percent: number;
+  };
+  models: ModelHealthMetrics[];
+  by_discipline: Record<string, DisciplineMetrics>;
 }
 
 export interface BulkUpdateMapping {
@@ -171,6 +225,10 @@ export const warehouseKeys = {
   materialMappings: () => [...warehouseKeys.all, 'material-mappings'] as const,
   materialMappingsList: (modelId: string) =>
     [...warehouseKeys.materialMappings(), 'list', modelId] as const,
+
+  // Dashboard Metrics
+  dashboardMetrics: (projectId?: string, modelId?: string) =>
+    [...warehouseKeys.all, 'dashboard-metrics', { projectId, modelId }] as const,
 };
 
 // =============================================================================
@@ -631,5 +689,39 @@ export function useImportTypesExcel() {
       queryClient.invalidateQueries({ queryKey: warehouseKeys.types() });
       queryClient.invalidateQueries({ queryKey: warehouseKeys.typeMappings() });
     },
+  });
+}
+
+// =============================================================================
+// DASHBOARD METRICS
+// =============================================================================
+
+interface UseDashboardMetricsOptions {
+  projectId?: string;
+  modelId?: string;
+  enabled?: boolean;
+}
+
+/**
+ * Fetch dashboard metrics for project-level health scores.
+ * Returns aggregated metrics across all models in a project.
+ */
+export function useDashboardMetrics(options: UseDashboardMetricsOptions = {}) {
+  const { projectId, modelId, enabled = true } = options;
+
+  return useQuery({
+    queryKey: warehouseKeys.dashboardMetrics(projectId, modelId),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (projectId) params.append('project_id', projectId);
+      if (modelId) params.append('model_id', modelId);
+
+      const response = await apiClient.get<DashboardMetrics>(
+        `/entities/types/dashboard-metrics/?${params}`
+      );
+      return response.data;
+    },
+    enabled: enabled && !!(projectId || modelId),
+    staleTime: 30_000, // Refresh every 30 seconds
   });
 }

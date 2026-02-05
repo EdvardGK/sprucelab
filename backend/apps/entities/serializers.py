@@ -102,13 +102,26 @@ class NS3451CodeSerializer(serializers.ModelSerializer):
 
 
 class TypeDefinitionLayerSerializer(serializers.ModelSerializer):
-    """Serializer for type definition layers (material composition)."""
+    """
+    Serializer for type definition layers (material composition/inventory).
+
+    Implements two-level unit system:
+    - Parent type has representative_unit (m², m, pcs)
+    - Each layer has quantity_per_unit (recipe ratio) and material_unit
+    """
 
     class Meta:
         model = TypeDefinitionLayer
         fields = [
             'id', 'type_mapping', 'layer_order', 'material_name',
-            'thickness_mm', 'epd_id', 'notes', 'created_at', 'updated_at'
+            # Material classification (NS3457-8)
+            'ns3457_code', 'ns3457_name',
+            # Quantity per type unit (recipe ratio)
+            'quantity_per_unit', 'material_unit',
+            # Visual thickness for sandwich diagram (optional)
+            'thickness_mm',
+            # EPD/LCA reference
+            'epd_id', 'notes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -124,6 +137,8 @@ class TypeMappingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'ifc_type', 'ns3451_code', 'ns3451', 'ns3451_name',
             'product', 'representative_unit', 'discipline',
+            # Type category (generalization level)
+            'type_category',
             'mapping_status', 'confidence', 'notes',
             'mapped_by', 'mapped_at', 'created_at', 'updated_at',
             'definition_layers'
