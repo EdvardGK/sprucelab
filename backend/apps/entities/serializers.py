@@ -2,7 +2,8 @@ from rest_framework import serializers
 from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
     System, Material, IFCType, ProcessingReport,
-    NS3451Code, TypeMapping, TypeDefinitionLayer, MaterialMapping,
+    NS3451Code, SemanticType, SemanticTypeIFCMapping,
+    TypeMapping, TypeDefinitionLayer, MaterialMapping,
     TypeBankEntry, TypeBankObservation, TypeBankAlias, TypeBankScope,
     MaterialLibrary, ProductLibrary, ProductComposition
 )
@@ -100,6 +101,70 @@ class NS3451CodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = NS3451Code
         fields = ['code', 'name', 'name_en', 'guidance', 'level', 'parent_code']
+
+
+# =============================================================================
+# SEMANTIC TYPE SERIALIZERS - PA0802/IFC Normalization
+# =============================================================================
+
+class SemanticTypeIFCMappingSerializer(serializers.ModelSerializer):
+    """Serializer for IFC class to semantic type mappings."""
+
+    class Meta:
+        model = SemanticTypeIFCMapping
+        fields = [
+            'id', 'semantic_type', 'ifc_class', 'predefined_type',
+            'is_primary', 'is_common_misuse', 'confidence_hint', 'note'
+        ]
+        read_only_fields = ['id']
+
+
+class SemanticTypeSerializer(serializers.ModelSerializer):
+    """
+    Full serializer for SemanticType with IFC mappings.
+
+    Represents canonical semantic types based on PA0802/NS3451.
+    """
+
+    ifc_mappings = SemanticTypeIFCMappingSerializer(many=True, read_only=True)
+    type_bank_entry_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SemanticType
+        fields = [
+            'id', 'code', 'name_no', 'name_en', 'category',
+            'canonical_ifc_class', 'alternative_ifc_classes',
+            'suggested_ns3451_codes', 'name_patterns',
+            'description', 'is_active',
+            'ifc_mappings', 'type_bank_entry_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_type_bank_entry_count(self, obj):
+        """Count TypeBankEntries linked to this semantic type."""
+        return obj.type_bank_entries.count()
+
+
+class SemanticTypeListSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for SemanticType list views.
+    Excludes nested IFC mappings and patterns for performance.
+    """
+
+    type_bank_entry_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SemanticType
+        fields = [
+            'id', 'code', 'name_no', 'name_en', 'category',
+            'canonical_ifc_class', 'is_active', 'type_bank_entry_count'
+        ]
+
+    def get_type_bank_entry_count(self, obj):
+        if hasattr(obj, '_type_bank_entry_count'):
+            return obj._type_bank_entry_count
+        return obj.type_bank_entries.count()
 
 
 class TypeDefinitionLayerSerializer(serializers.ModelSerializer):
@@ -262,6 +327,10 @@ class TypeBankEntrySerializer(serializers.ModelSerializer):
     observations = TypeBankObservationSerializer(many=True, read_only=True)
     aliases = TypeBankAliasSerializer(many=True, read_only=True)
     observation_count = serializers.SerializerMethodField()
+    # Semantic type fields
+    semantic_type_data = SemanticTypeListSerializer(source='semantic_type', read_only=True)
+    semantic_type_code = serializers.CharField(source='semantic_type.code', read_only=True)
+    semantic_type_name = serializers.CharField(source='semantic_type.name_en', read_only=True)
 
     class Meta:
         model = TypeBankEntry
@@ -271,6 +340,9 @@ class TypeBankEntrySerializer(serializers.ModelSerializer):
             # Classification (expert labels)
             'ns3451_code', 'ns3451', 'ns3451_name', 'discipline',
             'canonical_name', 'description', 'representative_unit',
+            # Semantic type (PA0802 normalization)
+            'semantic_type', 'semantic_type_data', 'semantic_type_code', 'semantic_type_name',
+            'semantic_type_source', 'semantic_type_confidence',
             # Instance context statistics (aggregated)
             'total_instance_count', 'pct_is_external', 'pct_load_bearing', 'pct_fire_rated',
             # Provenance
@@ -322,6 +394,9 @@ class TypeBankEntryListSerializer(serializers.ModelSerializer):
 
     ns3451_name = serializers.CharField(source='ns3451.name', read_only=True)
     observation_count = serializers.SerializerMethodField()
+    # Semantic type fields (lightweight)
+    semantic_type_code = serializers.CharField(source='semantic_type.code', read_only=True)
+    semantic_type_name = serializers.CharField(source='semantic_type.name_en', read_only=True)
 
     class Meta:
         model = TypeBankEntry
@@ -329,7 +404,10 @@ class TypeBankEntryListSerializer(serializers.ModelSerializer):
             'id', 'ifc_class', 'type_name', 'predefined_type', 'material',
             'ns3451_code', 'ns3451_name', 'discipline', 'canonical_name',
             'representative_unit', 'total_instance_count', 'source_model_count',
-            'mapping_status', 'confidence', 'observation_count'
+            'mapping_status', 'confidence', 'observation_count',
+            # Semantic type
+            'semantic_type', 'semantic_type_code', 'semantic_type_name',
+            'semantic_type_source', 'semantic_type_confidence'
         ]
 
     def get_observation_count(self, obj):

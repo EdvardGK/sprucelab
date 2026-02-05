@@ -13,18 +13,21 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     ProcessingReport, IFCEntity, PropertySet, SpatialHierarchy,
     IFCType, Material, TypeMapping, TypeDefinitionLayer, MaterialMapping, NS3451Code,
+    SemanticType, SemanticTypeIFCMapping,
     TypeBankEntry, TypeBankObservation, TypeBankAlias,
     MaterialLibrary, ProductLibrary, ProductComposition
 )
 from .serializers import (
     ProcessingReportSerializer, IFCEntitySerializer,
-    NS3451CodeSerializer, TypeMappingSerializer, TypeDefinitionLayerSerializer,
+    NS3451CodeSerializer, SemanticTypeSerializer, SemanticTypeListSerializer,
+    TypeMappingSerializer, TypeDefinitionLayerSerializer,
     MaterialMappingSerializer, IFCTypeWithMappingSerializer, MaterialWithMappingSerializer,
     TypeBankEntrySerializer, TypeBankEntryListSerializer, TypeBankEntryUpdateSerializer,
     TypeBankObservationSerializer, TypeBankAliasSerializer,
     MaterialLibrarySerializer, MaterialLibraryListSerializer,
     ProductLibrarySerializer, ProductLibraryListSerializer, ProductCompositionSerializer
 )
+from .services.semantic_normalizer import get_normalizer
 from .services.excel_export import export_types_to_excel
 from .services.excel_import import import_types_from_excel
 from .services.reduzer_export import export_types_to_reduzer
@@ -400,6 +403,102 @@ class NS3451CodeViewSet(viewsets.ReadOnlyModelViewSet):
                             hierarchy[parent_l1]['children'][parent_l2]['children'][parent_l3]['children'][code] = node
 
         return Response(hierarchy)
+
+
+class SemanticTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for semantic types (PA0802/IFC normalization reference data).
+
+    GET /api/semantic-types/ - List all active semantic types
+    GET /api/semantic-types/{id}/ - Get single semantic type with IFC mappings
+    GET /api/semantic-types/?category=A-Structural - Filter by category
+    GET /api/semantic-types/?search=beam - Search by name
+
+    Actions:
+    GET /api/semantic-types/by-category/ - Get types grouped by category
+    GET /api/semantic-types/for-ifc-class/?ifc_class=IfcBeamType - Get types for IFC class
+    """
+    queryset = SemanticType.objects.filter(is_active=True).prefetch_related('ifc_mappings')
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['category', 'is_active', 'canonical_ifc_class']
+    search_fields = ['code', 'name_no', 'name_en', 'description']
+    ordering = ['category', 'code']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return SemanticTypeListSerializer
+        return SemanticTypeSerializer
+
+    @action(detail=False, methods=['get'], url_path='by-category')
+    def by_category(self, request):
+        """
+        Get semantic types grouped by category.
+
+        GET /api/semantic-types/by-category/
+
+        Returns:
+        {
+            "A-Structural": [
+                {"code": "AB", "name_en": "Beam", ...},
+                {"code": "AS", "name_en": "Column", ...}
+            ],
+            "D-Openings": [...]
+        }
+        """
+        types = self.get_queryset()
+        grouped = {}
+
+        for st in types:
+            if st.category not in grouped:
+                grouped[st.category] = []
+            grouped[st.category].append(SemanticTypeListSerializer(st).data)
+
+        return Response(grouped)
+
+    @action(detail=False, methods=['get'], url_path='for-ifc-class')
+    def for_ifc_class(self, request):
+        """
+        Get semantic types that match a given IFC class.
+
+        GET /api/semantic-types/for-ifc-class/?ifc_class=IfcBeamType
+
+        Returns list of matching semantic types with mapping info.
+        """
+        ifc_class = request.query_params.get('ifc_class')
+        if not ifc_class:
+            return Response(
+                {'error': 'ifc_class query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Normalize IFC class (remove Type suffix)
+        normalized_class = ifc_class
+        if ifc_class.endswith('Type'):
+            normalized_class = ifc_class[:-4]
+
+        # Find mappings for this IFC class
+        mappings = SemanticTypeIFCMapping.objects.filter(
+            ifc_class__in=[ifc_class, normalized_class]
+        ).select_related('semantic_type').order_by('-is_primary', '-confidence_hint')
+
+        result = []
+        seen_codes = set()
+
+        for mapping in mappings:
+            if mapping.semantic_type.code not in seen_codes:
+                result.append({
+                    'code': mapping.semantic_type.code,
+                    'name_no': mapping.semantic_type.name_no,
+                    'name_en': mapping.semantic_type.name_en,
+                    'category': mapping.semantic_type.category,
+                    'is_primary': mapping.is_primary,
+                    'is_common_misuse': mapping.is_common_misuse,
+                    'confidence_hint': mapping.confidence_hint,
+                    'note': mapping.note,
+                })
+                seen_codes.add(mapping.semantic_type.code)
+
+        return Response(result)
 
 
 class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -1761,6 +1860,180 @@ class TypeBankEntryViewSet(viewsets.ModelViewSet):
             'target_id': str(target.id),
             'source_id_deleted': source_id_str,
             'observations_moved': observations_moved,
+        })
+
+    # =========================================================================
+    # SEMANTIC TYPE ACTIONS (PA0802/IFC Normalization)
+    # =========================================================================
+
+    @action(detail=False, methods=['post'], url_path='auto-normalize')
+    def auto_normalize(self, request):
+        """
+        Bulk auto-normalize unclassified TypeBankEntries.
+
+        POST /api/type-bank/auto-normalize/
+        Body (optional): {
+            "overwrite": false,  // Overwrite existing semantic_type assignments
+            "ifc_class": "IfcBeamType"  // Only normalize this IFC class
+        }
+
+        Returns:
+        {
+            "normalized": 150,
+            "skipped": 20
+        }
+        """
+        overwrite = request.data.get('overwrite', False)
+        ifc_class = request.data.get('ifc_class')
+
+        queryset = TypeBankEntry.objects.all()
+        if ifc_class:
+            queryset = queryset.filter(ifc_class=ifc_class)
+
+        normalizer = get_normalizer()
+        stats = normalizer.bulk_normalize(queryset, overwrite=overwrite)
+
+        return Response(stats)
+
+    @action(detail=True, methods=['post'], url_path='set-semantic-type')
+    def set_semantic_type(self, request, pk=None):
+        """
+        Manually set semantic type for a TypeBankEntry.
+
+        POST /api/type-bank/{id}/set-semantic-type/
+        Body: {
+            "semantic_type_code": "AB"  // PA0802 code
+        }
+        """
+        entry = self.get_object()
+        semantic_type_code = request.data.get('semantic_type_code')
+
+        if not semantic_type_code:
+            return Response(
+                {'error': 'semantic_type_code is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            semantic_type = SemanticType.objects.get(code=semantic_type_code)
+            entry.semantic_type = semantic_type
+            entry.semantic_type_source = 'manual'
+            entry.semantic_type_confidence = 1.0
+            entry.save(update_fields=['semantic_type', 'semantic_type_source', 'semantic_type_confidence'])
+            return Response({
+                'status': 'ok',
+                'semantic_type_code': semantic_type.code,
+                'semantic_type_name': semantic_type.name_en,
+            })
+        except SemanticType.DoesNotExist:
+            return Response(
+                {'error': f'Invalid semantic type code: {semantic_type_code}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'], url_path='verify-semantic-type')
+    def verify_semantic_type(self, request, pk=None):
+        """
+        Verify/confirm the current semantic type assignment.
+
+        POST /api/type-bank/{id}/verify-semantic-type/
+
+        Changes source to 'verified' and confidence to 1.0.
+        """
+        entry = self.get_object()
+
+        if not entry.semantic_type:
+            return Response(
+                {'error': 'No semantic type to verify'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        entry.semantic_type_source = 'verified'
+        entry.semantic_type_confidence = 1.0
+        entry.save(update_fields=['semantic_type_source', 'semantic_type_confidence'])
+
+        return Response({
+            'status': 'verified',
+            'semantic_type_code': entry.semantic_type.code,
+            'semantic_type_name': entry.semantic_type.name_en,
+        })
+
+    @action(detail=True, methods=['get'], url_path='suggest-semantic-types')
+    def suggest_semantic_types(self, request, pk=None):
+        """
+        Get suggested semantic types for a TypeBankEntry.
+
+        GET /api/type-bank/{id}/suggest-semantic-types/
+
+        Returns list of suggestions with confidence scores.
+        """
+        entry = self.get_object()
+        normalizer = get_normalizer()
+
+        suggestions = normalizer.suggest_semantic_type(
+            ifc_class=entry.ifc_class,
+            type_name=entry.type_name or '',
+            predefined_type=entry.predefined_type or ''
+        )
+
+        # Convert SemanticType objects to serializable dicts
+        result = []
+        for s in suggestions:
+            result.append({
+                'code': s['code'],
+                'name_en': s['name_en'],
+                'source': s['source'],
+                'confidence': s['confidence'],
+                'is_primary': s['is_primary'],
+                'is_common_misuse': s['is_common_misuse'],
+                'note': s['note'],
+            })
+
+        return Response(result)
+
+    @action(detail=False, methods=['get'], url_path='semantic-summary')
+    def semantic_summary(self, request):
+        """
+        Get semantic type assignment summary.
+
+        GET /api/type-bank/semantic-summary/
+
+        Returns:
+        {
+            "total": 332,
+            "with_semantic_type": 320,
+            "without_semantic_type": 12,
+            "by_source": {"auto_rule": 280, "auto_pattern": 30, "manual": 5, "verified": 5},
+            "by_semantic_type": {"AB": 150, "AS": 50, ...}
+        }
+        """
+        total = TypeBankEntry.objects.count()
+        with_st = TypeBankEntry.objects.filter(semantic_type__isnull=False).count()
+        without_st = TypeBankEntry.objects.filter(semantic_type__isnull=True).count()
+
+        # By source
+        by_source = dict(
+            TypeBankEntry.objects.filter(semantic_type_source__isnull=False)
+            .values('semantic_type_source')
+            .annotate(count=Count('id'))
+            .values_list('semantic_type_source', 'count')
+        )
+
+        # By semantic type
+        by_semantic_type = dict(
+            TypeBankEntry.objects.filter(semantic_type__isnull=False)
+            .values('semantic_type__code', 'semantic_type__name_en')
+            .annotate(count=Count('id'))
+            .values_list('semantic_type__code', 'count')
+        )
+
+        return Response({
+            'total': total,
+            'with_semantic_type': with_st,
+            'without_semantic_type': without_st,
+            'coverage_percent': round((with_st / total * 100) if total > 0 else 0, 1),
+            'by_source': by_source,
+            'by_semantic_type': by_semantic_type,
         })
 
 

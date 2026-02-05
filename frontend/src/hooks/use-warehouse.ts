@@ -123,8 +123,7 @@ export interface ModelHealthMetrics {
   pending: number;
   ignored: number;
   review: number;
-  types_with_unit: number;
-  types_with_materials: number;
+  followup: number;
   health_score: number;
   status: 'healthy' | 'warning' | 'critical';
 }
@@ -143,8 +142,8 @@ export interface DashboardMetrics {
     pending: number;
     ignored: number;
     review: number;
-    types_with_unit: number;
-    types_with_materials: number;
+    followup: number;
+    progress_percent: number;
     health_score: number;
     classification_percent: number;
     unit_percent: number;
