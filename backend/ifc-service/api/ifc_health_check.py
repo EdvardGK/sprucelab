@@ -17,7 +17,7 @@ import logging
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
-from config import verify_api_key
+from core.auth import verify_api_key
 from models.health_check_schemas import (
     HealthCheckRequest,
     HealthCheckResponse,
