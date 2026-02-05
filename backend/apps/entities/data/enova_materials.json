@@ -1,0 +1,421 @@
+{
+  "_meta": {
+    "description": "Canonical Enova EPD material categories for Norwegian LCA calculations",
+    "source": "Enova EPD database, magna-reduzer normalization",
+    "version": "1.0",
+    "last_updated": "2026-02-05",
+    "notes": "GWP values are A1-A3 (cradle-to-gate). Negative values indicate carbon storage."
+  },
+  "materials": [
+    {
+      "category": "steel_structural",
+      "name": "Konstruksjonsstål, valseprofil",
+      "name_en": "Structural Steel, Rolled Profile",
+      "unit": "kg",
+      "density_kg_m3": 7850,
+      "gwp_a1_a3": 1.55,
+      "reduzer_product_id": "Reduzer Enova Konstruksjonsstål, valseprofil - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "rebar",
+      "name": "Armeringstål",
+      "name_en": "Reinforcement Steel",
+      "unit": "kg",
+      "density_kg_m3": 7850,
+      "gwp_a1_a3": 0.65,
+      "reduzer_product_id": "Reduzer Enova Armeringsstål - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "concrete_cast",
+      "name": "Plasstøpt betong B35",
+      "name_en": "Cast-in-place Concrete B35",
+      "unit": "m3",
+      "density_kg_m3": 2400,
+      "gwp_a1_a3": 280,
+      "reduzer_product_id": "Reduzer Enova Plasstøpt betong B35 M60 - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "concrete_hollowcore",
+      "name": "Hulldekke 265",
+      "name_en": "Hollow Core Slab 265",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 35,
+      "reduzer_product_id": "Reduzer Enova Hulldekke 265 - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "wood_glulam",
+      "name": "Limtre",
+      "name_en": "Glulam",
+      "unit": "m3",
+      "density_kg_m3": 450,
+      "gwp_a1_a3": -550,
+      "reduzer_product_id": "Reduzer Enova Limtre - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "wood_clt",
+      "name": "Massivtre",
+      "name_en": "CLT/Massivtre",
+      "unit": "m3",
+      "density_kg_m3": 470,
+      "gwp_a1_a3": -500,
+      "reduzer_product_id": "Reduzer Enova Massivtre - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "wood_structural",
+      "name": "Høvellast og konstruksjonsvirke",
+      "name_en": "Structural Timber",
+      "unit": "m3",
+      "density_kg_m3": 470,
+      "gwp_a1_a3": -600,
+      "reduzer_product_id": "Reduzer Enova Høvellast og konstruksjonsvirke - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "wood_treated",
+      "name": "Impregnert treverk",
+      "name_en": "Treated Wood",
+      "unit": "m3",
+      "density_kg_m3": 550,
+      "gwp_a1_a3": -400,
+      "reduzer_product_id": "Reduzer Enova Impregnert treverk - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "gypsum_standard",
+      "name": "Gipsplate normal",
+      "name_en": "Gypsum Board Standard",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 3.5,
+      "reduzer_product_id": "Reduzer Enova Gipsplate normal - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "gypsum_wetroom",
+      "name": "Gipsplate våtrom (GU-X)",
+      "name_en": "Gypsum Board Wetroom",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 4.2,
+      "reduzer_product_id": "Reduzer Enova Gipsplate våtrom - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "osb",
+      "name": "OSB plate",
+      "name_en": "OSB Board",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 3.8,
+      "reduzer_product_id": "Reduzer Enova OSB plate - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "chipboard",
+      "name": "Sponplate",
+      "name_en": "Chipboard",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 4.0,
+      "reduzer_product_id": "Reduzer Enova Sponplate - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "mineral_wool_inner",
+      "name": "Mineralull, innervegg",
+      "name_en": "Mineral Wool Inner Wall",
+      "unit": "m3",
+      "density_kg_m3": 30,
+      "gwp_a1_a3": 42,
+      "reduzer_product_id": "Reduzer Enova Mineralull innervegg - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "mineral_wool_outer",
+      "name": "Mineralull, yttervegg",
+      "name_en": "Mineral Wool Outer Wall",
+      "unit": "m3",
+      "density_kg_m3": 35,
+      "gwp_a1_a3": 48,
+      "reduzer_product_id": "Reduzer Enova Mineralull yttervegg - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "mineral_wool_roof",
+      "name": "Mineralull, trykkfast tak",
+      "name_en": "Mineral Wool Roof (Compression-resistant)",
+      "unit": "m3",
+      "density_kg_m3": 100,
+      "gwp_a1_a3": 75,
+      "reduzer_product_id": "Reduzer Enova Mineralull trykkfast tak - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "glass_wool",
+      "name": "Trinnlydplate, glassull",
+      "name_en": "Glass Wool (Impact Sound)",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 2.5,
+      "reduzer_product_id": "Reduzer Enova Trinnlydplate glassull - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "insulation_eps",
+      "name": "EPS isolasjon",
+      "name_en": "EPS Insulation",
+      "unit": "m3",
+      "density_kg_m3": 25,
+      "gwp_a1_a3": 95,
+      "reduzer_product_id": "Reduzer Enova EPS isolasjon - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "insulation_xps",
+      "name": "XPS isolasjon",
+      "name_en": "XPS Insulation",
+      "unit": "m3",
+      "density_kg_m3": 35,
+      "gwp_a1_a3": 105,
+      "reduzer_product_id": "Reduzer Enova XPS isolasjon - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "paint_interior",
+      "name": "Innvendig maling",
+      "name_en": "Interior Paint",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 0.5,
+      "reduzer_product_id": "Reduzer Enova Innvendig maling - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "paint_exterior",
+      "name": "Maling for utvendig kledning",
+      "name_en": "Exterior Paint",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 0.8,
+      "reduzer_product_id": "Reduzer Enova Utvendig maling - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "tile_ceramic",
+      "name": "Keramisk flis",
+      "name_en": "Ceramic Tile",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 15,
+      "reduzer_product_id": "Reduzer Enova Keramisk flis - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "tile_adhesive",
+      "name": "Flislim",
+      "name_en": "Tile Adhesive",
+      "unit": "kg",
+      "density_kg_m3": 1500,
+      "gwp_a1_a3": 0.35,
+      "reduzer_product_id": "Reduzer Enova Flislim - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "parquet",
+      "name": "Parkett",
+      "name_en": "Parquet",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 8,
+      "reduzer_product_id": "Reduzer Enova Parkett - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "linoleum",
+      "name": "Linoleum",
+      "name_en": "Linoleum",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 5,
+      "reduzer_product_id": "Reduzer Enova Linoleum - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "vinyl",
+      "name": "Vinyl",
+      "name_en": "Vinyl Flooring",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 8,
+      "reduzer_product_id": "Reduzer Enova Vinyl - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "carpet",
+      "name": "Teppe",
+      "name_en": "Carpet",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 12,
+      "reduzer_product_id": "Reduzer Enova Teppe - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "screed",
+      "name": "Avrettingsmasse",
+      "name_en": "Screed/Levelling",
+      "unit": "kg",
+      "density_kg_m3": 1800,
+      "gwp_a1_a3": 0.18,
+      "reduzer_product_id": "Reduzer Enova Avrettingsmasse - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "vapor_barrier",
+      "name": "Dampsperre",
+      "name_en": "Vapor Barrier",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 2.5,
+      "reduzer_product_id": "Reduzer Enova Dampsperre - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "wetroom_membrane",
+      "name": "Våtromsmembran",
+      "name_en": "Wetroom Membrane",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 3.2,
+      "reduzer_product_id": "Reduzer Enova Våtromsmembran - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "pvc_roof",
+      "name": "PVC undertak",
+      "name_en": "PVC Roofing Membrane",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 8,
+      "reduzer_product_id": "Reduzer Enova PVC undertak - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "window",
+      "name": "Vindu",
+      "name_en": "Window",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 45,
+      "reduzer_product_id": "Reduzer Enova Vindu - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "door_interior",
+      "name": "Innerdør",
+      "name_en": "Interior Door",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 25,
+      "reduzer_product_id": "Reduzer Enova Innerdør - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "glass_facade",
+      "name": "Glassfasade",
+      "name_en": "Glass Facade",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 65,
+      "reduzer_product_id": "Reduzer Enova Glassfasade - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "glass_wall_interior",
+      "name": "Innvendig glassvegg",
+      "name_en": "Interior Glass Wall",
+      "unit": "m2",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 35,
+      "reduzer_product_id": "Reduzer Enova Innvendig glassvegg - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "block_lightweight",
+      "name": "Lettklinkerblokk",
+      "name_en": "Lightweight Block",
+      "unit": "m3",
+      "density_kg_m3": 600,
+      "gwp_a1_a3": 180,
+      "reduzer_product_id": "Reduzer Enova Lettklinkerblokk - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "brick",
+      "name": "Tegl",
+      "name_en": "Brick",
+      "unit": "m3",
+      "density_kg_m3": 1800,
+      "gwp_a1_a3": 210,
+      "reduzer_product_id": "Reduzer Enova Tegl - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "aggregate",
+      "name": "Pukk",
+      "name_en": "Aggregate/Pukk",
+      "unit": "kg",
+      "density_kg_m3": 1600,
+      "gwp_a1_a3": 0.005,
+      "reduzer_product_id": "Reduzer Enova Pukk - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "aluminium",
+      "name": "Aluminium",
+      "name_en": "Aluminium",
+      "unit": "kg",
+      "density_kg_m3": 2700,
+      "gwp_a1_a3": 8.5,
+      "reduzer_product_id": "Reduzer Enova Aluminium - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "copper",
+      "name": "Kobber",
+      "name_en": "Copper",
+      "unit": "kg",
+      "density_kg_m3": 8900,
+      "gwp_a1_a3": 3.8,
+      "reduzer_product_id": "Reduzer Enova Kobber - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "pvc_pipe",
+      "name": "PVC rør",
+      "name_en": "PVC (pipes)",
+      "unit": "m",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 2.8,
+      "reduzer_product_id": "Reduzer Enova PVC rør - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    },
+    {
+      "category": "pe_pipe",
+      "name": "PE rør",
+      "name_en": "PE (pipes)",
+      "unit": "m",
+      "density_kg_m3": null,
+      "gwp_a1_a3": 1.8,
+      "reduzer_product_id": "Reduzer Enova PE rør - typisk verdi",
+      "reduzer_product_id_type": "EPDno"
+    }
+  ]
+}

@@ -13,14 +13,17 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     ProcessingReport, IFCEntity, PropertySet, SpatialHierarchy,
     IFCType, Material, TypeMapping, TypeDefinitionLayer, MaterialMapping, NS3451Code,
-    TypeBankEntry, TypeBankObservation, TypeBankAlias
+    TypeBankEntry, TypeBankObservation, TypeBankAlias,
+    MaterialLibrary, ProductLibrary, ProductComposition
 )
 from .serializers import (
     ProcessingReportSerializer, IFCEntitySerializer,
     NS3451CodeSerializer, TypeMappingSerializer, TypeDefinitionLayerSerializer,
     MaterialMappingSerializer, IFCTypeWithMappingSerializer, MaterialWithMappingSerializer,
     TypeBankEntrySerializer, TypeBankEntryListSerializer, TypeBankEntryUpdateSerializer,
-    TypeBankObservationSerializer, TypeBankAliasSerializer
+    TypeBankObservationSerializer, TypeBankAliasSerializer,
+    MaterialLibrarySerializer, MaterialLibraryListSerializer,
+    ProductLibrarySerializer, ProductLibraryListSerializer, ProductCompositionSerializer
 )
 from .services.excel_export import export_types_to_excel
 from .services.excel_import import import_types_from_excel
@@ -1030,12 +1033,12 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 health_status = 'critical'
 
             return {
-                'total': total,
+                'total_types': total,
                 'health_score': health_score,
                 'status': health_status,
-                'classification_score': round(classification_score, 1),
-                'unit_score': round(unit_score, 1),
-                'material_score': round(material_score, 1),
+                'classification_percent': round(classification_score, 1),
+                'unit_percent': round(unit_score, 1),
+                'material_percent': round(material_score, 1),
             }
 
         def get_status_counts(types_qs):
@@ -1114,9 +1117,12 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'id': str(model.id),
                 'name': model.name,
                 'discipline': discipline,
-                'total_types': m_health['total'],
+                'total_types': m_health['total_types'],
                 'mapped': m_counts['mapped'],
                 'pending': m_counts['pending'],
+                'ignored': m_counts['ignored'],
+                'review': m_counts['review'],
+                'followup': m_counts['followup'],
                 'health_score': m_health['health_score'],
                 'status': m_health['status'],
             })
@@ -1787,3 +1793,308 @@ class TypeBankAliasViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['canonical']
     search_fields = ['alias_type_name']
+
+
+# =============================================================================
+# MATERIAL & PRODUCT LIBRARY VIEWSETS
+# =============================================================================
+
+class MaterialLibraryViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for MaterialLibrary (global canonical materials).
+
+    MaterialLibrary contains Enova EPD material categories with:
+    - Physical properties (density, thermal conductivity)
+    - EPD data (GWP, Reduzer ProductID)
+    - Unit of measurement (m³, m², m, kg)
+
+    List endpoints:
+    GET /api/material-library/ - List all materials (paginated)
+    GET /api/material-library/?category=gypsum_standard - Filter by category
+    GET /api/material-library/?source=enova - Filter by source
+    GET /api/material-library/?search=concrete - Search by name
+
+    Detail endpoints:
+    GET /api/material-library/{id}/ - Get material details
+    POST /api/material-library/ - Create material
+    PATCH /api/material-library/{id}/ - Update material
+    DELETE /api/material-library/{id}/ - Delete material
+
+    Actions:
+    GET /api/material-library/categories/ - List available categories
+    GET /api/material-library/summary/ - Get summary statistics
+    """
+
+    queryset = MaterialLibrary.objects.all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['category', 'source', 'unit', 'reused_status']
+    search_fields = ['name', 'category', 'description', 'manufacturer', 'product_name']
+    ordering_fields = ['name', 'category', 'gwp_a1_a3', 'density_kg_m3', 'created_at']
+    ordering = ['category', 'name']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return MaterialLibraryListSerializer
+        return MaterialLibrarySerializer
+
+    @action(detail=False, methods=['get'], url_path='categories')
+    def categories(self, request):
+        """
+        List all material categories with counts.
+
+        GET /api/material-library/categories/
+
+        Returns list of {category, category_display, count} for populated categories.
+        """
+        from django.db.models import Count
+
+        categories = MaterialLibrary.objects.values('category').annotate(
+            count=Count('id')
+        ).order_by('category')
+
+        # Add display names
+        category_choices = dict(MaterialLibrary.CATEGORY_CHOICES)
+        result = []
+        for cat in categories:
+            result.append({
+                'category': cat['category'],
+                'category_display': category_choices.get(cat['category'], cat['category']),
+                'count': cat['count'],
+            })
+
+        # Also include empty categories (for reference)
+        populated_categories = {cat['category'] for cat in categories}
+        for code, display in MaterialLibrary.CATEGORY_CHOICES:
+            if code not in populated_categories:
+                result.append({
+                    'category': code,
+                    'category_display': display,
+                    'count': 0,
+                })
+
+        return Response(sorted(result, key=lambda x: x['category']))
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """
+        Get MaterialLibrary summary statistics.
+
+        GET /api/material-library/summary/
+
+        Returns:
+        - total: Total materials
+        - by_source: Count per source
+        - by_unit: Count per unit
+        - with_epd: Count with Reduzer ProductID
+        - with_gwp: Count with GWP data
+        """
+        total = MaterialLibrary.objects.count()
+
+        by_source = dict(
+            MaterialLibrary.objects.filter(source__isnull=False)
+            .exclude(source='')
+            .values('source')
+            .annotate(count=Count('id'))
+            .values_list('source', 'count')
+        )
+
+        by_unit = dict(
+            MaterialLibrary.objects.values('unit')
+            .annotate(count=Count('id'))
+            .values_list('unit', 'count')
+        )
+
+        with_epd = MaterialLibrary.objects.filter(
+            reduzer_product_id__isnull=False
+        ).exclude(reduzer_product_id='').count()
+
+        with_gwp = MaterialLibrary.objects.filter(
+            gwp_a1_a3__isnull=False
+        ).count()
+
+        return Response({
+            'total': total,
+            'by_source': by_source,
+            'by_unit': by_unit,
+            'with_epd': with_epd,
+            'with_gwp': with_gwp,
+            'epd_coverage_percent': round((with_epd / total * 100) if total > 0 else 0, 1),
+        })
+
+
+class ProductLibraryViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for ProductLibrary (discrete components).
+
+    ProductLibrary contains products (windows, doors, fixtures) that are:
+    - Counted in pieces (pcs/stk), not quantity (m³, m², kg)
+    - Either homogeneous (single material) or composite (multiple materials)
+    - Linked to manufacturer specs, dimensions, datasheets
+
+    List endpoints:
+    GET /api/product-library/ - List all products (paginated)
+    GET /api/product-library/?category=window - Filter by category
+    GET /api/product-library/?manufacturer=Velux - Filter by manufacturer
+    GET /api/product-library/?is_composite=true - Filter composite products
+    GET /api/product-library/?search=skylight - Search by name
+
+    Detail endpoints:
+    GET /api/product-library/{id}/ - Get product details with compositions
+    POST /api/product-library/ - Create product
+    PATCH /api/product-library/{id}/ - Update product
+    DELETE /api/product-library/{id}/ - Delete product
+
+    Composition actions:
+    GET /api/product-library/{id}/compositions/ - Get material composition
+    POST /api/product-library/{id}/compositions/ - Add material to composition
+    POST /api/product-library/{id}/set-compositions/ - Replace all compositions
+    """
+
+    queryset = ProductLibrary.objects.annotate(
+        _composition_count=Count('compositions')
+    ).all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['category', 'manufacturer', 'is_composite', 'material_category', 'reused_status']
+    search_fields = ['name', 'category', 'manufacturer', 'product_code', 'description']
+    ordering_fields = ['name', 'category', 'manufacturer', 'created_at']
+    ordering = ['category', 'name']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProductLibraryListSerializer
+        return ProductLibrarySerializer
+
+    @action(detail=True, methods=['get'], url_path='compositions')
+    def compositions(self, request, pk=None):
+        """
+        Get material compositions for a product.
+
+        GET /api/product-library/{id}/compositions/
+
+        Returns list of ProductComposition entries for this product.
+        """
+        product = self.get_object()
+        compositions = ProductComposition.objects.filter(
+            product=product
+        ).select_related('material').order_by('layer_order')
+
+        serializer = ProductCompositionSerializer(compositions, many=True)
+        return Response({
+            'product_id': str(product.id),
+            'product_name': product.name,
+            'is_composite': product.is_composite,
+            'compositions': serializer.data,
+        })
+
+    @action(detail=True, methods=['post'], url_path='set-compositions')
+    def set_compositions(self, request, pk=None):
+        """
+        Replace all compositions for a product.
+
+        POST /api/product-library/{id}/set-compositions/
+        Body: {
+            "compositions": [
+                {"material_id": "uuid", "quantity": 1.5, "unit": "kg", "layer_order": 1},
+                {"material_id": "uuid", "quantity": 0.5, "unit": "m2", "layer_order": 2}
+            ]
+        }
+
+        This will:
+        1. Delete existing compositions
+        2. Create new compositions from provided data
+        3. Auto-set is_composite=True if multiple compositions
+        """
+        product = self.get_object()
+        compositions_data = request.data.get('compositions', [])
+
+        # Delete existing compositions
+        ProductComposition.objects.filter(product=product).delete()
+
+        # Create new compositions
+        created = []
+        for i, comp_data in enumerate(compositions_data):
+            material_id = comp_data.get('material_id')
+            if not material_id:
+                continue
+
+            try:
+                material = MaterialLibrary.objects.get(id=material_id)
+            except MaterialLibrary.DoesNotExist:
+                continue
+
+            comp = ProductComposition.objects.create(
+                product=product,
+                material=material,
+                quantity=comp_data.get('quantity', 1.0),
+                unit=comp_data.get('unit', 'kg'),
+                layer_order=comp_data.get('layer_order', i + 1),
+                notes=comp_data.get('notes', ''),
+            )
+            created.append(comp)
+
+        # Update is_composite flag
+        product.is_composite = len(created) > 1
+        product.save(update_fields=['is_composite'])
+
+        serializer = ProductCompositionSerializer(created, many=True)
+        return Response({
+            'product_id': str(product.id),
+            'product_name': product.name,
+            'is_composite': product.is_composite,
+            'compositions': serializer.data,
+            'created_count': len(created),
+        })
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """
+        Get ProductLibrary summary statistics.
+
+        GET /api/product-library/summary/
+
+        Returns:
+        - total: Total products
+        - by_category: Count per category
+        - composite: Count of composite products
+        - with_compositions: Count with material compositions defined
+        """
+        total = ProductLibrary.objects.count()
+
+        by_category = dict(
+            ProductLibrary.objects.filter(category__isnull=False)
+            .exclude(category='')
+            .values('category')
+            .annotate(count=Count('id'))
+            .values_list('category', 'count')
+        )
+
+        composite = ProductLibrary.objects.filter(is_composite=True).count()
+
+        with_compositions = ProductLibrary.objects.annotate(
+            comp_count=Count('compositions')
+        ).filter(comp_count__gt=0).count()
+
+        return Response({
+            'total': total,
+            'by_category': by_category,
+            'composite': composite,
+            'homogeneous': total - composite,
+            'with_compositions': with_compositions,
+        })
+
+
+class ProductCompositionViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for ProductComposition (product → material links).
+
+    GET /api/product-compositions/?product={id} - Get compositions for a product
+    POST /api/product-compositions/ - Add material to product
+    PATCH /api/product-compositions/{id}/ - Update composition
+    DELETE /api/product-compositions/{id}/ - Remove material from product
+    """
+
+    queryset = ProductComposition.objects.select_related('product', 'material').all()
+    serializer_class = ProductCompositionSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['product', 'material']
+    ordering = ['product', 'layer_order']

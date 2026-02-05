@@ -3,7 +3,8 @@ from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
     System, Material, IFCType, ProcessingReport,
     NS3451Code, TypeMapping, TypeDefinitionLayer, MaterialMapping,
-    TypeBankEntry, TypeBankObservation, TypeBankAlias, TypeBankScope
+    TypeBankEntry, TypeBankObservation, TypeBankAlias, TypeBankScope,
+    MaterialLibrary, ProductLibrary, ProductComposition
 )
 
 
@@ -437,3 +438,180 @@ class TypeBankScopeBulkSerializer(serializers.Serializer):
         required=False,
         allow_blank=True
     )
+
+
+# =============================================================================
+# MATERIAL & PRODUCT LIBRARY SERIALIZERS
+# =============================================================================
+
+class MaterialLibrarySerializer(serializers.ModelSerializer):
+    """
+    Serializer for global MaterialLibrary entries (Enova EPD categories).
+
+    Used for LCA calculations and material normalization.
+    """
+
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    unit_display = serializers.CharField(source='get_unit_display', read_only=True)
+    reused_status_display = serializers.CharField(source='get_reused_status_display', read_only=True)
+
+    class Meta:
+        model = MaterialLibrary
+        fields = [
+            'id', 'name', 'category', 'category_display',
+            'unit', 'unit_display',
+            # Physical properties
+            'density_kg_m3', 'thermal_conductivity',
+            # EPD data
+            'normalized_epd_id', 'specific_epd_id', 'gwp_a1_a3',
+            # Reduzer integration
+            'reduzer_product_id', 'reduzer_product_id_type',
+            # Manufacturer info
+            'manufacturer', 'product_name', 'manufacturer_product_id',
+            # Reused status
+            'reused_status', 'reused_status_display',
+            # Metadata
+            'description', 'source', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class MaterialLibraryListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for MaterialLibrary list views."""
+
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    unit_display = serializers.CharField(source='get_unit_display', read_only=True)
+
+    class Meta:
+        model = MaterialLibrary
+        fields = [
+            'id', 'name', 'category', 'category_display',
+            'unit', 'unit_display', 'gwp_a1_a3', 'density_kg_m3',
+            'reduzer_product_id', 'source'
+        ]
+
+
+class ProductCompositionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for ProductComposition (materials that make up a product).
+
+    Links ProductLibrary to MaterialLibrary for composite products.
+    """
+
+    material_name = serializers.CharField(source='material.name', read_only=True)
+    material_category = serializers.CharField(source='material.category', read_only=True)
+    unit_display = serializers.CharField(source='get_unit_display', read_only=True)
+
+    class Meta:
+        model = ProductComposition
+        fields = [
+            'id', 'product', 'material', 'material_name', 'material_category',
+            'quantity', 'unit', 'unit_display', 'layer_order', 'notes'
+        ]
+        read_only_fields = ['id']
+
+
+class ProductLibrarySerializer(serializers.ModelSerializer):
+    """
+    Serializer for ProductLibrary (discrete components).
+
+    Supports both homogeneous products (single material) and composite
+    products (multiple materials via ProductComposition).
+    """
+
+    material_category_display = serializers.CharField(
+        source='get_material_category_display', read_only=True
+    )
+    reused_status_display = serializers.CharField(
+        source='get_reused_status_display', read_only=True
+    )
+    compositions = ProductCompositionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProductLibrary
+        fields = [
+            'id', 'name', 'category', 'manufacturer', 'product_code', 'description',
+            # Material classification
+            'material_category', 'material_category_display', 'is_composite',
+            # Manufacturer info
+            'manufacturer_product_id',
+            # Dimensions/specs
+            'dimensions', 'specifications', 'datasheet_url',
+            # EPD/Reduzer
+            'epd_data', 'reduzer_product_id', 'reduzer_product_id_type',
+            # Reused status
+            'reused_status', 'reused_status_display',
+            # Compositions (for composite products)
+            'compositions',
+            # Timestamps
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ProductLibraryListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for ProductLibrary list views."""
+
+    material_category_display = serializers.CharField(
+        source='get_material_category_display', read_only=True
+    )
+    composition_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductLibrary
+        fields = [
+            'id', 'name', 'category', 'manufacturer', 'product_code',
+            'material_category', 'material_category_display', 'is_composite',
+            'composition_count'
+        ]
+
+    def get_composition_count(self, obj):
+        """Number of materials in product composition."""
+        if hasattr(obj, '_composition_count'):
+            return obj._composition_count
+        return obj.compositions.count()
+
+
+class MaterialWithLibrarySerializer(serializers.ModelSerializer):
+    """
+    Enhanced Material serializer with library links.
+
+    Links per-model IFC Material to global MaterialLibrary and ProductLibrary.
+    """
+
+    material_library = MaterialLibraryListSerializer(read_only=True)
+    product_library = ProductLibraryListSerializer(read_only=True)
+    reused_status_display = serializers.CharField(
+        source='get_reused_status_display', read_only=True
+    )
+
+    class Meta:
+        model = Material
+        fields = [
+            'id', 'model', 'material_guid', 'name', 'category', 'properties',
+            # Library links
+            'material_library', 'product_library',
+            # Reused status
+            'reused_status', 'reused_status_display'
+        ]
+
+
+class TypeDefinitionLayerWithMaterialSerializer(serializers.ModelSerializer):
+    """
+    Enhanced TypeDefinitionLayer serializer with MaterialLibrary link.
+
+    Used for displaying material composition with EPD data.
+    """
+
+    material = MaterialLibraryListSerializer(read_only=True)
+
+    class Meta:
+        model = TypeDefinitionLayer
+        fields = [
+            'id', 'type_mapping', 'layer_order', 'material_name',
+            'material',  # Global MaterialLibrary entry
+            'ns3457_code', 'ns3457_name',
+            'quantity_per_unit', 'material_unit', 'thickness_mm',
+            'epd_id', 'notes', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']

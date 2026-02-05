@@ -175,10 +175,14 @@ class SystemMembership(models.Model):
 
 class Material(models.Model):
     """
-    IFC materials.
+    Per-model IFC materials extracted from IfcMaterial.
 
     Note: IfcMaterial does NOT have GlobalId (doesn't inherit from IfcRoot).
     We store the IFC step ID in material_guid for unique identification within a file.
+
+    Links to global libraries:
+    - material_library: Normalized material category (for LCA, density, EPD)
+    - product_library: Specific product (for specs, dimensions, manufacturer)
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='materials')
@@ -186,6 +190,38 @@ class Material(models.Model):
     name = models.CharField(max_length=255)
     category = models.CharField(max_length=100, blank=True, null=True)
     properties = models.JSONField(default=dict, blank=True)
+
+    # Link to global Material Library (normalized category) - ALWAYS set when possible
+    material_library = models.ForeignKey(
+        'MaterialLibrary',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ifc_materials',
+        help_text="Normalized material category (for LCA, density, EPD)"
+    )
+
+    # Link to global Product Library (specific product) - OPTIONAL
+    product_library = models.ForeignKey(
+        'ProductLibrary',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ifc_materials',
+        help_text="Specific product (for specs, dimensions, manufacturer)"
+    )
+
+    # Reused status (can override library default)
+    reused_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('new', 'New'),
+            ('existing_kept', 'Existing Kept'),
+            ('reused', 'Reused'),
+            ('existing_waste', 'Existing Waste'),
+        ],
+        default='new'
+    )
 
     class Meta:
         db_table = 'materials'
@@ -310,17 +346,248 @@ class NS3451Code(models.Model):
 # WAREHOUSE MODELS - User mappings and annotations
 # =============================================================================
 
+# Shared choices for reused status
+REUSED_STATUS_CHOICES = [
+    ('new', 'New'),
+    ('existing_kept', 'Existing Kept'),
+    ('reused', 'Reused'),
+    ('existing_waste', 'Existing Waste'),
+]
+
+# Material category choices aligned with Enova EPD categories (36+ confirmed)
+MATERIAL_CATEGORY_CHOICES = [
+    # Structural
+    ('steel_structural', 'Structural Steel'),
+    ('rebar', 'Reinforcement Steel'),
+    ('concrete_cast', 'Cast-in-place Concrete'),
+    ('concrete_hollowcore', 'Hollow Core Slab'),
+    ('wood_glulam', 'Glulam'),
+    ('wood_clt', 'CLT/Massivtre'),
+    ('wood_structural', 'Structural Timber'),
+    ('wood_treated', 'Treated Wood'),
+    # Boards
+    ('gypsum_standard', 'Gypsum Board Standard'),
+    ('gypsum_wetroom', 'Gypsum Board Wetroom'),
+    ('osb', 'OSB Board'),
+    ('chipboard', 'Chipboard'),
+    # Insulation
+    ('mineral_wool_inner', 'Mineral Wool Inner Wall'),
+    ('mineral_wool_outer', 'Mineral Wool Outer Wall'),
+    ('mineral_wool_roof', 'Mineral Wool Roof'),
+    ('glass_wool', 'Glass Wool'),
+    ('insulation_eps', 'EPS Insulation'),
+    ('insulation_xps', 'XPS Insulation'),
+    # Finishes
+    ('paint_interior', 'Interior Paint'),
+    ('paint_exterior', 'Exterior Paint'),
+    ('tile_ceramic', 'Ceramic Tile'),
+    ('tile_adhesive', 'Tile Adhesive'),
+    ('parquet', 'Parquet'),
+    ('linoleum', 'Linoleum'),
+    ('vinyl', 'Vinyl Flooring'),
+    ('carpet', 'Carpet'),
+    ('screed', 'Screed/Levelling'),
+    # Membranes
+    ('vapor_barrier', 'Vapor Barrier'),
+    ('wetroom_membrane', 'Wetroom Membrane'),
+    ('pvc_roof', 'PVC Roofing'),
+    # Windows/Doors
+    ('window', 'Window'),
+    ('door_interior', 'Interior Door'),
+    ('glass_facade', 'Glass Facade'),
+    ('glass_wall_interior', 'Interior Glass Wall'),
+    # Masonry
+    ('block_lightweight', 'Lightweight Block'),
+    ('brick', 'Brick'),
+    # Other
+    ('aggregate', 'Aggregate/Pukk'),
+    ('aluminium', 'Aluminium'),
+    ('copper', 'Copper'),
+    ('pvc_pipe', 'PVC (pipes)'),
+    ('pe_pipe', 'PE (pipes)'),
+    ('other', 'Other'),
+]
+
+# Unit choices for materials
+MATERIAL_UNIT_CHOICES = [
+    ('m3', 'm³'),
+    ('m2', 'm²'),
+    ('m', 'm'),
+    ('kg', 'kg'),
+]
+
+
+class MaterialLibrary(models.Model):
+    """
+    Global material library with EPD and Reduzer integration.
+
+    Each entry represents a HOMOGENEOUS material category (one Enova EPD).
+    Composite materials are handled via TypeDefinitionLayer (multiple layers).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255, help_text="Material name (e.g., 'Concrete B35')")
+
+    # Category aligned with Enova EPD categories
+    category = models.CharField(
+        max_length=50,
+        choices=MATERIAL_CATEGORY_CHOICES,
+        help_text="Material category (aligned with Enova EPD)"
+    )
+
+    # Unit of measurement
+    unit = models.CharField(
+        max_length=10,
+        choices=MATERIAL_UNIT_CHOICES,
+        help_text="Unit for LCA calculations"
+    )
+
+    # Physical properties
+    density_kg_m3 = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Material density in kg/m³"
+    )
+    thermal_conductivity = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Thermal conductivity W/(m·K)"
+    )
+
+    # EPD data
+    normalized_epd_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Generic/Reduzer EPD reference"
+    )
+    specific_epd_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Product-specific EPD reference (optional)"
+    )
+    gwp_a1_a3 = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Global Warming Potential A1-A3 (kgCO2e per unit)"
+    )
+
+    # Reduzer integration
+    reduzer_product_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Reduzer ProductID (e.g., 'Reduzer Enova Gipsplate normal - typisk verdi')"
+    )
+    reduzer_product_id_type = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="ProductID type: EPDno, NOBB, NEPD, GTINFPAK"
+    )
+
+    # Manufacturer info (optional - for specific materials)
+    manufacturer = models.CharField(max_length=255, blank=True, null=True)
+    product_name = models.CharField(max_length=255, blank=True, null=True)
+    manufacturer_product_id = models.CharField(max_length=100, blank=True, null=True)
+
+    # Reused status
+    reused_status = models.CharField(
+        max_length=20,
+        choices=REUSED_STATUS_CHOICES,
+        default='new'
+    )
+
+    # Metadata
+    description = models.TextField(blank=True, null=True)
+    source = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Data source: 'enova', 'magna-reduzer', 'manual', 'ifc'"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'material_library'
+        ordering = ['category', 'name']
+        verbose_name = 'Material Library Entry'
+        verbose_name_plural = 'Material Library'
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
+
 class ProductLibrary(models.Model):
     """
-    Cross-project product database for mapping IFC types to real products.
+    Cross-project product database for discrete components (pcs/stk).
+
+    Products can be:
+    - Homogeneous: Single material category (is_composite=False)
+    - Composite: Multiple materials via ProductComposition (is_composite=True)
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    category = models.CharField(max_length=100, blank=True, null=True)
+    category = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Product category (window, door, fixture, etc.)"
+    )
     manufacturer = models.CharField(max_length=255, blank=True, null=True)
     product_code = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     epd_data = models.JSONField(default=dict, blank=True, help_text="EPD/LCA data")
+
+    # Base material category (for homogeneous products)
+    material_category = models.CharField(
+        max_length=50,
+        choices=MATERIAL_CATEGORY_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Primary material category (for homogeneous products)"
+    )
+
+    # Composite flag
+    is_composite = models.BooleanField(
+        default=False,
+        help_text="True if product contains multiple materials (use ProductComposition)"
+    )
+
+    # Manufacturer info
+    manufacturer_product_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Manufacturer's product ID/SKU"
+    )
+
+    # Dimensions/specs from datasheet
+    dimensions = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Dimensions: {width, height, depth, weight, thickness}"
+    )
+    specifications = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Flexible spec storage from datasheet"
+    )
+    datasheet_url = models.URLField(blank=True, null=True)
+
+    # Reduzer integration
+    reduzer_product_id = models.CharField(max_length=255, blank=True, null=True)
+    reduzer_product_id_type = models.CharField(max_length=20, blank=True, null=True)
+
+    # Reused status
+    reused_status = models.CharField(
+        max_length=20,
+        choices=REUSED_STATUS_CHOICES,
+        default='new'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -330,6 +597,52 @@ class ProductLibrary(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.manufacturer or 'Unknown'})"
+
+
+class ProductComposition(models.Model):
+    """
+    Materials that make up a composite product.
+
+    Links ProductLibrary to MaterialLibrary with quantities.
+    Only used when product.is_composite=True.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        ProductLibrary,
+        on_delete=models.CASCADE,
+        related_name='compositions'
+    )
+    material = models.ForeignKey(
+        MaterialLibrary,
+        on_delete=models.CASCADE,
+        related_name='product_uses'
+    )
+
+    # Quantity of material per product unit
+    quantity = models.FloatField(help_text="Amount per 1 product unit")
+    unit = models.CharField(
+        max_length=10,
+        choices=MATERIAL_UNIT_CHOICES,
+        help_text="Unit for this quantity (kg, m², m³)"
+    )
+
+    # Position for layered products
+    layer_order = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Layer position for layered products"
+    )
+
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'product_compositions'
+        ordering = ['product', 'layer_order']
+        verbose_name = 'Product Composition'
+        verbose_name_plural = 'Product Compositions'
+
+    def __str__(self):
+        return f"{self.product.name} → {self.material.name}"
 
 
 class TypeMapping(models.Model):
@@ -471,7 +784,17 @@ class TypeDefinitionLayer(models.Model):
     )
     material_name = models.CharField(
         max_length=255,
-        help_text="Material name (e.g., 'Gypsum board', 'Mineral wool')"
+        help_text="Material name for display (kept for backwards compat)"
+    )
+
+    # === Link to global Material Library ===
+    material = models.ForeignKey(
+        MaterialLibrary,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='type_layers',
+        help_text="Link to global MaterialLibrary entry (optional)"
     )
 
     # === Material classification (NS3457-8) ===

@@ -4,7 +4,8 @@ from .views import (
     ProcessingReportViewSet, IFCEntityViewSet,
     NS3451CodeViewSet, IFCTypeViewSet, TypeMappingViewSet,
     TypeDefinitionLayerViewSet, MaterialViewSet, MaterialMappingViewSet,
-    TypeBankEntryViewSet, TypeBankObservationViewSet, TypeBankAliasViewSet
+    TypeBankEntryViewSet, TypeBankObservationViewSet, TypeBankAliasViewSet,
+    MaterialLibraryViewSet, ProductLibraryViewSet, ProductCompositionViewSet
 )
 
 router = DefaultRouter()
@@ -23,6 +24,11 @@ router.register(r'material-mappings', MaterialMappingViewSet, basename='material
 router.register(r'type-bank', TypeBankEntryViewSet, basename='type-bank')
 router.register(r'type-bank-observations', TypeBankObservationViewSet, basename='type-bank-observation')
 router.register(r'type-bank-aliases', TypeBankAliasViewSet, basename='type-bank-alias')
+
+# Material & Product Library routes (Three-Library Architecture)
+router.register(r'material-library', MaterialLibraryViewSet, basename='material-library')
+router.register(r'product-library', ProductLibraryViewSet, basename='product-library')
+router.register(r'product-compositions', ProductCompositionViewSet, basename='product-composition')
 
 urlpatterns = [
     path('', include(router.urls)),
