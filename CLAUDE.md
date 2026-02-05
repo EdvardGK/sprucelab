@@ -35,6 +35,13 @@ A platform for BIM professionals who **USE** models, not create them. IFC is tre
 
 **Current Phase**: MVP - Type Dashboard, Verification Engine, Sandwich View
 
+**MVP Priorities (Feb 2026):**
+1. Type Dashboard - health scores, progress bars, at-a-glance status
+2. Verification Engine - FastAPI validator + ProjectConfig rule resolution
+3. Sandwich View - 2D material section diagram per type
+4. Rule Configuration - GUI builder + JSON/YAML config files
+5. Version Change Badges - new/removed/changed type indicators
+
 **Key Documentation**:
 - **PRD v2.0**: `docs/plans/PRD_v2.md` ⭐
 - Project status: `docs/worklog/` (latest session)
