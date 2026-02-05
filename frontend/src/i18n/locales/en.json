@@ -69,6 +69,7 @@
     "noMatch": "No types match the current filter.",
     "focusedView": "Focused",
     "listView": "List",
+    "gridView": "Grid",
     "exportMappings": "Export Mappings",
     "ns3451": "NS3451",
     "ns3451Classification": "NS3451 Classification",
@@ -119,6 +120,22 @@
     "importRow": "Row",
     "importMoreErrors": "...and {{count}} more errors",
     "importMoreWarnings": "...and {{count}} more warnings"
+  },
+  "dataGrid": {
+    "search": "Search types...",
+    "ifcClass": "IFC Class",
+    "typeName": "Type Name",
+    "instances": "Instances",
+    "status": "Status",
+    "ns3451Code": "NS3451 Code",
+    "ns3451Name": "NS3451 Name",
+    "product": "Product",
+    "unit": "Unit",
+    "discipline": "Discipline",
+    "notes": "Notes",
+    "exportExcel": "Export Excel",
+    "importExcel": "Import Excel",
+    "exportReduzer": "Reduzer"
   },
   "typeInfo": {
     "ifcType": "IFC Type",

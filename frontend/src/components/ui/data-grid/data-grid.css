@@ -1,0 +1,377 @@
+.data-grid-airtable {
+  /* Base palette */
+  --dg-bg: #ffffff;
+  --dg-bg-header: #f5f5f5;
+  --dg-bg-row-even: #ffffff;
+  --dg-bg-row-odd: #fafbfc;
+  --dg-bg-row-hover: #f0f4ff;
+  --dg-bg-group-header: #f7f8fa;
+  --dg-bg-active-cell: #ffffff;
+  --dg-bg-editing: #eff6ff;
+
+  /* Borders */
+  --dg-border: #e5e7eb;
+  --dg-border-active: #2563eb;
+  --dg-border-row: #f0f0f0;
+
+  /* Text */
+  --dg-text: #1f2937;
+  --dg-text-secondary: #6b7280;
+  --dg-text-header: #374151;
+  --dg-text-group: #111827;
+  --dg-text-placeholder: #9ca3af;
+
+  /* Sizing */
+  --dg-font-size: 13px;
+  --dg-font-size-header: 11px;
+  --dg-font-size-small: 11px;
+  --dg-row-height: 36px;
+  --dg-group-row-height: 40px;
+  --dg-header-height: 34px;
+  --dg-checkbox-size: 16px;
+
+  /* Status badge colors (Airtable pastel pills) */
+  --dg-status-pending-bg: #f3f4f6;
+  --dg-status-pending-text: #6b7280;
+  --dg-status-mapped-bg: #dcfce7;
+  --dg-status-mapped-text: #15803d;
+  --dg-status-ignored-bg: #f1f5f9;
+  --dg-status-ignored-text: #94a3b8;
+  --dg-status-review-bg: #fef3c7;
+  --dg-status-review-text: #b45309;
+  --dg-status-followup-bg: #dbeafe;
+  --dg-status-followup-text: #1d4ed8;
+
+  /* Group tint colors (left border accent) */
+  --dg-group-tint-0: #3b82f6;
+  --dg-group-tint-1: #10b981;
+  --dg-group-tint-2: #f59e0b;
+  --dg-group-tint-3: #8b5cf6;
+  --dg-group-tint-4: #ef4444;
+  --dg-group-tint-5: #06b6d4;
+  --dg-group-tint-6: #ec4899;
+  --dg-group-tint-7: #84cc16;
+
+  /* Selection */
+  --dg-selection-bg: #eff6ff;
+  --dg-selection-border: #bfdbfe;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: var(--dg-font-size);
+  color: var(--dg-text);
+  background: var(--dg-bg);
+  border: 1px solid var(--dg-border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.data-grid-airtable .dg-header {
+  display: grid;
+  background: var(--dg-bg-header);
+  border-bottom: 2px solid var(--dg-border);
+  font-size: var(--dg-font-size-header);
+  font-weight: 600;
+  color: var(--dg-text-header);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  min-height: var(--dg-header-height);
+}
+
+.data-grid-airtable .dg-header-cell {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  border-right: 1px solid var(--dg-border);
+  transition: background-color 0.1s;
+  position: relative;
+}
+
+.data-grid-airtable .dg-header-cell:hover {
+  background: #eef0f4;
+}
+
+.data-grid-airtable .dg-header-cell:last-child {
+  border-right: none;
+}
+
+/* Resize handle */
+.data-grid-airtable .dg-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 1;
+}
+
+.data-grid-airtable .dg-resize-handle:hover,
+.data-grid-airtable .dg-resize-handle.resizing {
+  background: var(--dg-border-active);
+}
+
+/* Rows */
+.data-grid-airtable .dg-row {
+  display: grid;
+  min-height: var(--dg-row-height);
+  border-bottom: 1px solid var(--dg-border-row);
+  transition: background-color 0.08s;
+}
+
+.data-grid-airtable .dg-row:nth-child(even) {
+  background: var(--dg-bg-row-even);
+}
+
+.data-grid-airtable .dg-row:nth-child(odd) {
+  background: var(--dg-bg-row-odd);
+}
+
+.data-grid-airtable .dg-row:hover {
+  background: var(--dg-bg-row-hover);
+}
+
+.data-grid-airtable .dg-row.dg-row-selected {
+  background: var(--dg-selection-bg);
+}
+
+/* Cells */
+.data-grid-airtable .dg-cell {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-right: 1px solid var(--dg-border-row);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.data-grid-airtable .dg-cell:last-child {
+  border-right: none;
+}
+
+.data-grid-airtable .dg-cell.dg-cell-active {
+  outline: 2px solid var(--dg-border-active);
+  outline-offset: -2px;
+  border-radius: 1px;
+  z-index: 1;
+}
+
+.data-grid-airtable .dg-cell.dg-cell-editing {
+  background: var(--dg-bg-editing);
+  padding: 0 4px;
+}
+
+.data-grid-airtable .dg-cell.dg-cell-editable:hover {
+  cursor: text;
+}
+
+/* Group rows */
+.data-grid-airtable .dg-group-row {
+  display: flex;
+  align-items: center;
+  min-height: var(--dg-group-row-height);
+  padding: 0 12px;
+  gap: 8px;
+  background: var(--dg-bg-group-header);
+  border-bottom: 1px solid var(--dg-border);
+  font-weight: 600;
+  font-size: var(--dg-font-size);
+  color: var(--dg-text-group);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.1s;
+}
+
+.data-grid-airtable .dg-group-row:hover {
+  background: #eef0f4;
+}
+
+/* Status badges */
+.data-grid-airtable .dg-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: var(--dg-font-size-small);
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.data-grid-airtable .dg-badge-pending {
+  background: var(--dg-status-pending-bg);
+  color: var(--dg-status-pending-text);
+}
+
+.data-grid-airtable .dg-badge-mapped {
+  background: var(--dg-status-mapped-bg);
+  color: var(--dg-status-mapped-text);
+}
+
+.data-grid-airtable .dg-badge-ignored {
+  background: var(--dg-status-ignored-bg);
+  color: var(--dg-status-ignored-text);
+}
+
+.data-grid-airtable .dg-badge-review {
+  background: var(--dg-status-review-bg);
+  color: var(--dg-status-review-text);
+}
+
+.data-grid-airtable .dg-badge-followup {
+  background: var(--dg-status-followup-bg);
+  color: var(--dg-status-followup-text);
+}
+
+/* Checkbox */
+.data-grid-airtable .dg-checkbox {
+  width: var(--dg-checkbox-size);
+  height: var(--dg-checkbox-size);
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+  background: white;
+  flex-shrink: 0;
+}
+
+.data-grid-airtable .dg-checkbox:hover {
+  border-color: var(--dg-border-active);
+}
+
+.data-grid-airtable .dg-checkbox.checked {
+  background: var(--dg-border-active);
+  border-color: var(--dg-border-active);
+}
+
+/* Toolbar */
+.data-grid-airtable .dg-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--dg-border);
+  background: var(--dg-bg);
+  flex-shrink: 0;
+}
+
+.data-grid-airtable .dg-toolbar-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--dg-border);
+  border-radius: 6px;
+  background: white;
+  min-width: 200px;
+  transition: border-color 0.15s;
+}
+
+.data-grid-airtable .dg-toolbar-search:focus-within {
+  border-color: var(--dg-border-active);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.data-grid-airtable .dg-toolbar-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--dg-font-size);
+  color: var(--dg-text);
+  width: 100%;
+}
+
+.data-grid-airtable .dg-toolbar-search input::placeholder {
+  color: var(--dg-text-placeholder);
+}
+
+/* Bulk action bar */
+.data-grid-airtable .dg-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #eff6ff;
+  border-bottom: 1px solid var(--dg-selection-border);
+  font-size: var(--dg-font-size);
+  color: var(--dg-border-active);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.data-grid-airtable .dg-bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--dg-selection-border);
+  border-radius: 6px;
+  background: white;
+  color: var(--dg-text);
+  font-size: var(--dg-font-size-small);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.data-grid-airtable .dg-bulk-btn:hover {
+  background: #dbeafe;
+  border-color: var(--dg-border-active);
+}
+
+/* Scroll container */
+.data-grid-airtable .dg-scroll-container {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* No results */
+.data-grid-airtable .dg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--dg-text-secondary);
+  gap: 8px;
+}
+
+/* Inline cell editors */
+.data-grid-airtable .dg-cell-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--dg-font-size);
+  color: var(--dg-text);
+  font-family: inherit;
+  padding: 0 8px;
+}
+
+.data-grid-airtable .dg-cell-select {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--dg-font-size);
+  color: var(--dg-text);
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0 4px;
+}

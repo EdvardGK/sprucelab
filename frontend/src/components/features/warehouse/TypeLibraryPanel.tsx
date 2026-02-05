@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Layers, CheckCircle2, Clock, Search, Filter, ChevronDown, ChevronRight, Box, List, Focus } from 'lucide-react';
+import { Layers, CheckCircle2, Clock, Search, Filter, ChevronDown, ChevronRight, Box, List, Focus, Grid3X3 } from 'lucide-react';
 import { useModels } from '@/hooks/use-models';
 import {
   useModelTypes,
@@ -27,9 +27,10 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TypeInstanceViewer } from './TypeInstanceViewer';
 import { TypeMappingWorkspace } from './TypeMappingWorkspace';
+import { TypeMappingGrid } from './TypeMappingGrid';
 import { cn } from '@/lib/utils';
 
-type ViewMode = 'list' | 'focused';
+type ViewMode = 'list' | 'focused' | 'grid';
 
 interface TypeLibraryPanelProps {
   projectId: string;
@@ -169,6 +170,15 @@ export function TypeLibraryPanel({ projectId }: TypeLibraryPanelProps) {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setViewMode('grid')}
+            className="gap-1 h-6 text-xs px-2"
+          >
+            <Grid3X3 className="h-3 w-3" />
+            {t('typeMapping.gridView')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setViewMode('list')}
             className="gap-1 h-6 text-xs px-2"
           >
@@ -180,6 +190,65 @@ export function TypeLibraryPanel({ projectId }: TypeLibraryPanelProps) {
         {/* Full-height workspace - NO extra padding */}
         <div className="flex-1 overflow-hidden">
           <TypeMappingWorkspace
+            modelId={selectedModelId}
+            modelFilename={models.find((m) => m.id === selectedModelId)?.name}
+            className="h-full"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // GRID VIEW - Airtable-style data grid
+  if (viewMode === 'grid' && selectedModelId) {
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Compact toolbar */}
+        <div className="flex-none flex items-center gap-3 px-3 py-1.5 border-b bg-background-elevated">
+          <Select
+            value={selectedModelId}
+            onValueChange={(value) => setSelectedModelId(value)}
+          >
+            <SelectTrigger className="w-[180px] h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem
+                  key={model.id}
+                  value={model.id}
+                  disabled={model.status !== 'ready'}
+                >
+                  {model.name} (v{model.version_number})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-text-tertiary">{types.length} {t('common.types')}</span>
+          <div className="flex-1" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setViewMode('focused')}
+            className="gap-1 h-6 text-xs px-2"
+          >
+            <Focus className="h-3 w-3" />
+            {t('typeMapping.focusedView')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="gap-1 h-6 text-xs px-2"
+          >
+            <List className="h-3 w-3" />
+            {t('typeMapping.listView')}
+          </Button>
+        </div>
+
+        {/* Grid fills remaining space */}
+        <div className="flex-1 overflow-hidden">
+          <TypeMappingGrid
             modelId={selectedModelId}
             modelFilename={models.find((m) => m.id === selectedModelId)?.name}
             className="h-full"
@@ -215,6 +284,15 @@ export function TypeLibraryPanel({ projectId }: TypeLibraryPanelProps) {
         </Select>
         {selectedModelId && <span className="text-xs text-text-tertiary">{types.length} {t('common.types')}</span>}
         <div className="flex-1" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setViewMode('grid')}
+          className="gap-1.5 h-7 text-xs"
+        >
+          <Grid3X3 className="h-3.5 w-3.5" />
+          {t('typeMapping.gridView')}
+        </Button>
         <Button
           variant="ghost"
           size="sm"

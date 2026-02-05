@@ -69,6 +69,7 @@
     "noMatch": "Ingen typer samsvarer med gjeldende filter.",
     "focusedView": "Fokusert",
     "listView": "Liste",
+    "gridView": "Rutenett",
     "exportMappings": "Eksporter kartlegging",
     "ns3451": "NS3451",
     "ns3451Classification": "NS3451-klassifisering",
@@ -119,6 +120,22 @@
     "importRow": "Rad",
     "importMoreErrors": "...og {{count}} flere feil",
     "importMoreWarnings": "...og {{count}} flere advarsler"
+  },
+  "dataGrid": {
+    "search": "Søk typer...",
+    "ifcClass": "IFC-klasse",
+    "typeName": "Typenavn",
+    "instances": "Instanser",
+    "status": "Status",
+    "ns3451Code": "NS3451-kode",
+    "ns3451Name": "NS3451-navn",
+    "product": "Produkt",
+    "unit": "Enhet",
+    "discipline": "Disiplin",
+    "notes": "Notater",
+    "exportExcel": "Eksporter Excel",
+    "importExcel": "Importer Excel",
+    "exportReduzer": "Reduzer"
   },
   "typeInfo": {
     "ifcType": "IFC-type",
