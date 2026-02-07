@@ -30,7 +30,8 @@
     "ignored": "Ignorert",
     "review": "Gjennomgang",
     "followUp": "Oppfølging",
-    "loadingModels": "Laster modeller..."
+    "loadingModels": "Laster modeller...",
+    "refresh": "Oppdater"
   },
   "nav": {
     "home": "Hjem",
@@ -252,6 +253,75 @@
     "noTypes": "Ingen typer funnet",
     "complete": "fullført",
     "error": "Kunne ikke laste dashbord-metrikker"
+  },
+  "semanticTypes": {
+    "title": "Semantiske typer",
+    "description": "PA0802/IFC-typenormalisering for standardisert klassifisering",
+    "noType": "Ingen type",
+    "unassigned": "Ikke tildelt",
+    "verified": "Verifisert",
+    "autoAssigned": "Automatisk tildelt",
+    "manual": "Manuell",
+    "verify": "Verifiser",
+    "change": "Endre",
+    "selectType": "Velg semantisk type...",
+    "suggestions": "Forslag",
+    "noSuggestions": "Ingen forslag tilgjengelig",
+    "confidence": "Konfidens",
+    "source": "Kilde",
+    "sources": {
+      "auto_ifc_class": "IFC-klassekartlegging",
+      "auto_name_pattern": "Navnemonstermatch",
+      "manual": "Manuelt tildelt",
+      "verified": "Verifisert av bruker"
+    },
+    "categories": {
+      "A-Structural": "Bærende konstruksjon",
+      "D-Openings": "Åpninger",
+      "E-Cladding": "Kledning",
+      "F-MEP": "VVS/Elektro",
+      "Z-Generic": "Generisk"
+    },
+    "coverage": {
+      "title": "Semantisk dekning",
+      "total": "Totalt typer",
+      "withType": "Med semantisk type",
+      "withoutType": "Uten semantisk type",
+      "coveragePercent": "Dekning",
+      "bySource": "Etter kilde",
+      "byType": "Etter type"
+    },
+    "actions": {
+      "autoNormalize": "Auto-normaliser alle",
+      "normalizing": "Normaliserer...",
+      "normalized": "{{count}} typer normalisert",
+      "skipped": "{{count}} hoppet over"
+    }
+  },
+  "typeBank": {
+    "title": "Typebank",
+    "description": "Global typeklassifiseringsbibliotek på tvers av alle modeller",
+    "ifcClass": "IFC-klasse",
+    "typeName": "Typenavn",
+    "predefinedType": "Forhåndsdefinert type",
+    "material": "Material",
+    "instanceCount": "Instanser",
+    "modelCount": "Modeller",
+    "semanticType": "Semantisk type",
+    "discipline": "Disiplin",
+    "ns3451": "NS3451",
+    "unit": "Enhet",
+    "status": "Status",
+    "confidence": "Konfidens",
+    "noEntries": "Ingen typebank-oppføringer",
+    "noEntriesDesc": "Typer legges til når IFC-modeller behandles",
+    "summary": {
+      "total": "Totalt typer",
+      "mapped": "Kartlagt",
+      "pending": "Venter",
+      "ignored": "Ignorert",
+      "review": "Gjennomgang"
+    }
   },
   "modelUpload": {
     "title": "Last opp IFC-modell",

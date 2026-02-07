@@ -724,3 +724,385 @@ export function useDashboardMetrics(options: UseDashboardMetricsOptions = {}) {
     staleTime: 30_000, // Refresh every 30 seconds
   });
 }
+
+// =============================================================================
+// SEMANTIC TYPES (PA0802/IFC Normalization)
+// =============================================================================
+
+export type SemanticTypeCategory =
+  | 'A-Structural'
+  | 'D-Openings'
+  | 'E-Cladding'
+  | 'F-MEP'
+  | 'Z-Generic';
+
+export interface SemanticType {
+  id: string;
+  code: string;
+  name_no: string;
+  name_en: string;
+  category: SemanticTypeCategory;
+  canonical_ifc_class: string | null;
+  is_active: boolean;
+  type_bank_entry_count: number;
+}
+
+export interface SemanticTypeFull extends SemanticType {
+  alternative_ifc_classes: string[];
+  suggested_ns3451_codes: string[];
+  name_patterns: string[];
+  description: string | null;
+  ifc_mappings: SemanticTypeIFCMapping[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SemanticTypeIFCMapping {
+  id: string;
+  semantic_type: string;
+  ifc_class: string;
+  predefined_type: string | null;
+  is_primary: boolean;
+  is_common_misuse: boolean;
+  confidence_hint: number | null;
+  note: string | null;
+}
+
+export interface SemanticTypeSuggestion {
+  code: string;
+  name_en: string;
+  source: 'ifc_class' | 'name_pattern' | 'predefined_type';
+  confidence: number;
+  is_primary: boolean;
+  is_common_misuse: boolean;
+  note: string | null;
+}
+
+export interface SemanticSummary {
+  total: number;
+  with_semantic_type: number;
+  without_semantic_type: number;
+  coverage_percent: number;
+  by_source: Record<string, number>;
+  by_semantic_type: Record<string, number>;
+}
+
+// TypeBank entry with semantic type fields
+export interface TypeBankEntry {
+  id: string;
+  ifc_class: string;
+  type_name: string;
+  predefined_type: string | null;
+  material: string | null;
+  ns3451_code: string | null;
+  ns3451_name: string | null;
+  discipline: string | null;
+  canonical_name: string | null;
+  representative_unit: 'pcs' | 'm' | 'm2' | 'm3' | null;
+  total_instance_count: number;
+  source_model_count: number;
+  mapping_status: 'pending' | 'mapped' | 'ignored' | 'review';
+  confidence: number | null;
+  observation_count: number;
+  // Semantic type fields
+  semantic_type: string | null;
+  semantic_type_code: string | null;
+  semantic_type_name: string | null;
+  semantic_type_source: 'auto_ifc_class' | 'auto_name_pattern' | 'manual' | 'verified' | null;
+  semantic_type_confidence: number | null;
+}
+
+export interface TypeBankEntryFull extends TypeBankEntry {
+  description: string | null;
+  pct_is_external: number | null;
+  pct_load_bearing: number | null;
+  pct_fire_rated: number | null;
+  created_by: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  semantic_type_data: SemanticType | null;
+  observations: TypeBankObservation[];
+  aliases: TypeBankAlias[];
+}
+
+export interface TypeBankObservation {
+  id: string;
+  type_bank_entry: string;
+  source_model: string;
+  source_model_name: string;
+  source_model_project: string;
+  source_type: string;
+  source_type_name: string;
+  instance_count: number;
+  pct_is_external: number | null;
+  pct_load_bearing: number | null;
+  pct_fire_rated: number | null;
+  property_variations: Record<string, unknown> | null;
+  observed_at: string;
+}
+
+export interface TypeBankAlias {
+  id: string;
+  canonical: string;
+  alias_type_name: string;
+  alias_ifc_class: string | null;
+  alias_source: string | null;
+  created_at: string;
+}
+
+export interface TypeBankSummary {
+  total: number;
+  mapped: number;
+  pending: number;
+  ignored: number;
+  review: number;
+  progress_percent: number;
+  by_ifc_class: Record<string, number>;
+  by_discipline: Record<string, number>;
+}
+
+// Semantic type query keys
+export const semanticTypeKeys = {
+  all: ['semantic-types'] as const,
+  list: () => [...semanticTypeKeys.all, 'list'] as const,
+  byCategory: () => [...semanticTypeKeys.all, 'by-category'] as const,
+  forIfcClass: (ifcClass: string) => [...semanticTypeKeys.all, 'for-ifc-class', ifcClass] as const,
+  detail: (id: string) => [...semanticTypeKeys.all, 'detail', id] as const,
+};
+
+// TypeBank query keys
+export const typeBankKeys = {
+  all: ['type-bank'] as const,
+  list: (filters?: { ifc_class?: string; mapping_status?: string; search?: string }) =>
+    [...typeBankKeys.all, 'list', filters] as const,
+  detail: (id: string) => [...typeBankKeys.all, 'detail', id] as const,
+  summary: () => [...typeBankKeys.all, 'summary'] as const,
+  semanticSummary: () => [...typeBankKeys.all, 'semantic-summary'] as const,
+  suggestions: (id: string) => [...typeBankKeys.all, 'suggestions', id] as const,
+};
+
+// =============================================================================
+// SEMANTIC TYPE HOOKS
+// =============================================================================
+
+/**
+ * Fetch all active semantic types.
+ */
+export function useSemanticTypes() {
+  return useQuery({
+    queryKey: semanticTypeKeys.list(),
+    queryFn: async () => {
+      const response = await apiClient.get<SemanticType[]>('/entities/semantic-types/');
+      return response.data;
+    },
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes (reference data)
+  });
+}
+
+/**
+ * Fetch semantic types grouped by category.
+ */
+export function useSemanticTypesByCategory() {
+  return useQuery({
+    queryKey: semanticTypeKeys.byCategory(),
+    queryFn: async () => {
+      const response = await apiClient.get<Record<SemanticTypeCategory, SemanticType[]>>(
+        '/entities/semantic-types/by-category/'
+      );
+      return response.data;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch semantic types valid for a given IFC class.
+ */
+export function useSemanticTypesForIfcClass(ifcClass: string, options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
+
+  return useQuery({
+    queryKey: semanticTypeKeys.forIfcClass(ifcClass),
+    queryFn: async () => {
+      const response = await apiClient.get<SemanticTypeSuggestion[]>(
+        `/entities/semantic-types/for-ifc-class/?ifc_class=${encodeURIComponent(ifcClass)}`
+      );
+      return response.data;
+    },
+    enabled: enabled && !!ifcClass,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+// =============================================================================
+// TYPEBANK HOOKS
+// =============================================================================
+
+interface UseTypeBankEntriesOptions {
+  ifc_class?: string;
+  mapping_status?: string;
+  search?: string;
+  enabled?: boolean;
+}
+
+/**
+ * Fetch TypeBank entries with optional filters.
+ */
+export function useTypeBankEntries(options: UseTypeBankEntriesOptions = {}) {
+  const { ifc_class, mapping_status, search, enabled = true } = options;
+
+  return useQuery({
+    queryKey: typeBankKeys.list({ ifc_class, mapping_status, search }),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (ifc_class) params.append('ifc_class', ifc_class);
+      if (mapping_status) params.append('mapping_status', mapping_status);
+      if (search) params.append('search', search);
+
+      const response = await apiClient.get<PaginatedResponse<TypeBankEntry>>(
+        `/entities/type-bank/?${params}`
+      );
+      return response.data.results || [];
+    },
+    enabled,
+  });
+}
+
+/**
+ * Fetch a single TypeBank entry with full details.
+ */
+export function useTypeBankEntry(id: string, options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
+
+  return useQuery({
+    queryKey: typeBankKeys.detail(id),
+    queryFn: async () => {
+      const response = await apiClient.get<TypeBankEntryFull>(`/entities/type-bank/${id}/`);
+      return response.data;
+    },
+    enabled: enabled && !!id,
+  });
+}
+
+/**
+ * Fetch TypeBank summary statistics.
+ */
+export function useTypeBankSummary() {
+  return useQuery({
+    queryKey: typeBankKeys.summary(),
+    queryFn: async () => {
+      const response = await apiClient.get<TypeBankSummary>('/entities/type-bank/summary/');
+      return response.data;
+    },
+  });
+}
+
+/**
+ * Fetch semantic type coverage summary.
+ */
+export function useSemanticSummary() {
+  return useQuery({
+    queryKey: typeBankKeys.semanticSummary(),
+    queryFn: async () => {
+      const response = await apiClient.get<SemanticSummary>('/entities/type-bank/semantic-summary/');
+      return response.data;
+    },
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Fetch semantic type suggestions for a TypeBank entry.
+ */
+export function useSemanticTypeSuggestions(entryId: string, options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
+
+  return useQuery({
+    queryKey: typeBankKeys.suggestions(entryId),
+    queryFn: async () => {
+      const response = await apiClient.get<SemanticTypeSuggestion[]>(
+        `/entities/type-bank/${entryId}/suggest-semantic-types/`
+      );
+      return response.data;
+    },
+    enabled: enabled && !!entryId,
+  });
+}
+
+// =============================================================================
+// TYPEBANK MUTATIONS
+// =============================================================================
+
+/**
+ * Bulk auto-normalize TypeBank entries.
+ */
+export function useAutoNormalizeTypeBank() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { overwrite?: boolean; ifc_class?: string } = {}) => {
+      const response = await apiClient.post<{ normalized: number; skipped: number }>(
+        '/entities/type-bank/auto-normalize/',
+        params
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: typeBankKeys.all });
+    },
+  });
+}
+
+interface SetSemanticTypeParams {
+  entryId: string;
+  semanticTypeCode: string;
+}
+
+/**
+ * Manually set semantic type for a TypeBank entry.
+ */
+export function useSetSemanticType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ entryId, semanticTypeCode }: SetSemanticTypeParams) => {
+      const response = await apiClient.post<{
+        status: string;
+        semantic_type_code: string;
+        semantic_type_name: string;
+      }>(`/entities/type-bank/${entryId}/set-semantic-type/`, {
+        semantic_type_code: semanticTypeCode,
+      });
+      return response.data;
+    },
+    onSuccess: (_, { entryId }) => {
+      queryClient.invalidateQueries({ queryKey: typeBankKeys.detail(entryId) });
+      queryClient.invalidateQueries({ queryKey: typeBankKeys.list() });
+      queryClient.invalidateQueries({ queryKey: typeBankKeys.semanticSummary() });
+    },
+  });
+}
+
+/**
+ * Verify/confirm the current semantic type assignment.
+ */
+export function useVerifySemanticType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (entryId: string) => {
+      const response = await apiClient.post<{
+        status: string;
+        semantic_type_code: string;
+        semantic_type_name: string;
+      }>(`/entities/type-bank/${entryId}/verify-semantic-type/`);
+      return response.data;
+    },
+    onSuccess: (_, entryId) => {
+      queryClient.invalidateQueries({ queryKey: typeBankKeys.detail(entryId) });
+      queryClient.invalidateQueries({ queryKey: typeBankKeys.list() });
+      queryClient.invalidateQueries({ queryKey: typeBankKeys.semanticSummary() });
+    },
+  });
+}

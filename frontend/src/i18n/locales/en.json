@@ -30,7 +30,8 @@
     "ignored": "Ignored",
     "review": "Review",
     "followUp": "Follow-up",
-    "loadingModels": "Loading models..."
+    "loadingModels": "Loading models...",
+    "refresh": "Refresh"
   },
   "nav": {
     "home": "Home",
@@ -252,6 +253,75 @@
     "noTypes": "No types found",
     "complete": "complete",
     "error": "Failed to load dashboard metrics"
+  },
+  "semanticTypes": {
+    "title": "Semantic Types",
+    "description": "PA0802/IFC type normalization for standardized classification",
+    "noType": "No type",
+    "unassigned": "Unassigned",
+    "verified": "Verified",
+    "autoAssigned": "Auto-assigned",
+    "manual": "Manual",
+    "verify": "Verify",
+    "change": "Change",
+    "selectType": "Select semantic type...",
+    "suggestions": "Suggestions",
+    "noSuggestions": "No suggestions available",
+    "confidence": "Confidence",
+    "source": "Source",
+    "sources": {
+      "auto_ifc_class": "IFC class mapping",
+      "auto_name_pattern": "Name pattern match",
+      "manual": "Manually assigned",
+      "verified": "Verified by user"
+    },
+    "categories": {
+      "A-Structural": "Structural",
+      "D-Openings": "Openings",
+      "E-Cladding": "Cladding",
+      "F-MEP": "MEP",
+      "Z-Generic": "Generic"
+    },
+    "coverage": {
+      "title": "Semantic Coverage",
+      "total": "Total types",
+      "withType": "With semantic type",
+      "withoutType": "Without semantic type",
+      "coveragePercent": "Coverage",
+      "bySource": "By source",
+      "byType": "By type"
+    },
+    "actions": {
+      "autoNormalize": "Auto-Normalize All",
+      "normalizing": "Normalizing...",
+      "normalized": "{{count}} types normalized",
+      "skipped": "{{count}} skipped"
+    }
+  },
+  "typeBank": {
+    "title": "Type Bank",
+    "description": "Global type classification library across all models",
+    "ifcClass": "IFC Class",
+    "typeName": "Type Name",
+    "predefinedType": "Predefined Type",
+    "material": "Material",
+    "instanceCount": "Instances",
+    "modelCount": "Models",
+    "semanticType": "Semantic Type",
+    "discipline": "Discipline",
+    "ns3451": "NS3451",
+    "unit": "Unit",
+    "status": "Status",
+    "confidence": "Confidence",
+    "noEntries": "No type bank entries",
+    "noEntriesDesc": "Types will be added when IFC models are processed",
+    "summary": {
+      "total": "Total Types",
+      "mapped": "Mapped",
+      "pending": "Pending",
+      "ignored": "Ignored",
+      "review": "Review"
+    }
   },
   "modelUpload": {
     "title": "Upload IFC Model",
