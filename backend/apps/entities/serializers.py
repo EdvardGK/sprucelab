@@ -197,6 +197,7 @@ class TypeMappingSerializer(serializers.ModelSerializer):
 
     ns3451_name = serializers.CharField(source='ns3451.name', read_only=True)
     definition_layers = TypeDefinitionLayerSerializer(many=True, read_only=True)
+    verified_by_username = serializers.CharField(source='verified_by.username', read_only=True)
 
     class Meta:
         model = TypeMapping
@@ -207,9 +208,12 @@ class TypeMappingSerializer(serializers.ModelSerializer):
             'type_category',
             'mapping_status', 'confidence', 'notes',
             'mapped_by', 'mapped_at', 'created_at', 'updated_at',
+            # Verification status (three-tier: pending/auto/verified/flagged)
+            'verification_status', 'verified_by', 'verified_by_username',
+            'verified_at', 'flag_reason',
             'definition_layers'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'verified_by_username']
 
     def create(self, validated_data):
         # Auto-link ns3451 FK when ns3451_code is provided
@@ -331,6 +335,8 @@ class TypeBankEntrySerializer(serializers.ModelSerializer):
     semantic_type_data = SemanticTypeListSerializer(source='semantic_type', read_only=True)
     semantic_type_code = serializers.CharField(source='semantic_type.code', read_only=True)
     semantic_type_name = serializers.CharField(source='semantic_type.name_en', read_only=True)
+    # Verification fields
+    verified_by_username = serializers.CharField(source='verified_by.username', read_only=True)
 
     class Meta:
         model = TypeBankEntry
@@ -348,13 +354,16 @@ class TypeBankEntrySerializer(serializers.ModelSerializer):
             # Provenance
             'source_model_count', 'mapping_status', 'confidence',
             'created_by', 'notes', 'created_at', 'updated_at',
+            # Verification status (three-tier: pending/auto/verified/flagged)
+            'verification_status', 'verified_by', 'verified_by_username',
+            'verified_at', 'flag_reason',
             # Nested
             'observations', 'aliases', 'observation_count'
         ]
         read_only_fields = [
             'id', 'created_at', 'updated_at',
             'total_instance_count', 'pct_is_external', 'pct_load_bearing', 'pct_fire_rated',
-            'source_model_count'
+            'source_model_count', 'verified_by_username'
         ]
 
     def get_observation_count(self, obj):
@@ -407,7 +416,9 @@ class TypeBankEntryListSerializer(serializers.ModelSerializer):
             'mapping_status', 'confidence', 'observation_count',
             # Semantic type
             'semantic_type', 'semantic_type_code', 'semantic_type_name',
-            'semantic_type_source', 'semantic_type_confidence'
+            'semantic_type_source', 'semantic_type_confidence',
+            # Verification status (for filtering/display in list views)
+            'verification_status', 'verified_at'
         ]
 
     def get_observation_count(self, obj):

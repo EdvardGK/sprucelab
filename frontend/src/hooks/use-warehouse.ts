@@ -1106,3 +1106,211 @@ export function useVerifySemanticType() {
     },
   });
 }
+
+
+// =============================================================================
+// GLOBAL TYPE LIBRARY (Unified Type-Centric View)
+// =============================================================================
+
+export type VerificationStatus = 'pending' | 'auto' | 'verified' | 'flagged';
+
+export interface GlobalTypeLibraryEntry {
+  id: string;
+  ifc_class: string;
+  type_name: string;
+  predefined_type: string | null;
+  material: string | null;
+  // Classification
+  ns3451_code: string | null;
+  ns3451_name: string | null;
+  discipline: string | null;
+  canonical_name: string | null;
+  representative_unit: 'pcs' | 'm' | 'm2' | 'm3' | null;
+  // Semantic type
+  semantic_type: string | null;
+  semantic_type_code: string | null;
+  semantic_type_name: string | null;
+  semantic_type_source: string | null;
+  semantic_type_confidence: number | null;
+  // Statistics
+  total_instance_count: number;
+  source_model_count: number;
+  mapping_status: 'pending' | 'mapped' | 'ignored' | 'review';
+  confidence: number | null;
+  observation_count: number;
+  // Verification (three-tier: pending → auto → verified/flagged)
+  verification_status: VerificationStatus;
+  verified_at: string | null;
+}
+
+export interface GlobalTypeLibrarySummary {
+  total: number;
+  by_verification_status: Record<VerificationStatus, number>;
+  by_mapping_status: Record<string, number>;
+  by_ifc_class: Record<string, number>;
+  by_discipline: Record<string, number>;
+  empty_types_count: number;
+  verification_progress_percent: number;
+}
+
+export const globalTypeLibraryKeys = {
+  all: ['type-library'] as const,
+  list: (filters?: Record<string, string>) =>
+    [...globalTypeLibraryKeys.all, 'list', filters] as const,
+  detail: (id: string) => [...globalTypeLibraryKeys.all, 'detail', id] as const,
+  summary: (filters?: Record<string, string>) =>
+    [...globalTypeLibraryKeys.all, 'summary', filters] as const,
+  emptyTypes: (filters?: Record<string, string>) =>
+    [...globalTypeLibraryKeys.all, 'empty-types', filters] as const,
+};
+
+interface UseGlobalTypeLibraryOptions {
+  projectId?: string;
+  modelId?: string;
+  ifcClass?: string;
+  verificationStatus?: VerificationStatus;
+  mappingStatus?: string;
+  hasMaterials?: boolean;
+  search?: string;
+  enabled?: boolean;
+}
+
+/**
+ * Fetch global type library entries with filtering.
+ */
+export function useGlobalTypeLibrary(options: UseGlobalTypeLibraryOptions = {}) {
+  const {
+    projectId,
+    modelId,
+    ifcClass,
+    verificationStatus,
+    mappingStatus,
+    hasMaterials,
+    search,
+    enabled = true,
+  } = options;
+
+  const filters: Record<string, string> = {};
+  if (projectId) filters.project_id = projectId;
+  if (modelId) filters.model_id = modelId;
+  if (ifcClass) filters.ifc_class = ifcClass;
+  if (verificationStatus) filters.verification_status = verificationStatus;
+  if (mappingStatus) filters.mapping_status = mappingStatus;
+  if (hasMaterials !== undefined) filters.has_materials = String(hasMaterials);
+  if (search) filters.search = search;
+
+  return useQuery({
+    queryKey: globalTypeLibraryKeys.list(filters),
+    queryFn: async () => {
+      const params = new URLSearchParams(filters);
+      const url = `/entities/type-library/${params.toString() ? `?${params}` : ''}`;
+      const response = await apiClient.get<PaginatedResponse<GlobalTypeLibraryEntry>>(url);
+      return response.data.results || [];
+    },
+    enabled,
+    staleTime: 30 * 1000, // 30 seconds
+  });
+}
+
+/**
+ * Fetch global type library dashboard summary.
+ */
+export function useGlobalTypeLibrarySummary(options: { projectId?: string; modelId?: string } = {}) {
+  const { projectId, modelId } = options;
+
+  const filters: Record<string, string> = {};
+  if (projectId) filters.project_id = projectId;
+  if (modelId) filters.model_id = modelId;
+
+  return useQuery({
+    queryKey: globalTypeLibraryKeys.summary(filters),
+    queryFn: async () => {
+      const params = new URLSearchParams(filters);
+      const url = `/entities/type-library/unified-summary/${params.toString() ? `?${params}` : ''}`;
+      const response = await apiClient.get<GlobalTypeLibrarySummary>(url);
+      return response.data;
+    },
+    staleTime: 30 * 1000,
+  });
+}
+
+/**
+ * Fetch empty types (types with 0 instances).
+ */
+export function useEmptyTypes(options: { projectId?: string; modelId?: string } = {}) {
+  const { projectId, modelId } = options;
+
+  const filters: Record<string, string> = {};
+  if (projectId) filters.project_id = projectId;
+  if (modelId) filters.model_id = modelId;
+
+  return useQuery({
+    queryKey: globalTypeLibraryKeys.emptyTypes(filters),
+    queryFn: async () => {
+      const params = new URLSearchParams(filters);
+      const url = `/entities/type-library/empty-types/${params.toString() ? `?${params}` : ''}`;
+      const response = await apiClient.get<PaginatedResponse<GlobalTypeLibraryEntry>>(url);
+      return response.data.results || [];
+    },
+    staleTime: 60 * 1000, // 1 minute
+  });
+}
+
+/**
+ * Verify a type (set verification_status = 'verified').
+ */
+export function useVerifyType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ entryId, notes }: { entryId: string; notes?: string }) => {
+      const response = await apiClient.post<GlobalTypeLibraryEntry>(
+        `/entities/type-library/${entryId}/verify/`,
+        notes ? { notes } : {}
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: globalTypeLibraryKeys.all });
+    },
+  });
+}
+
+/**
+ * Flag a type (set verification_status = 'flagged').
+ */
+export function useFlagType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ entryId, flagReason }: { entryId: string; flagReason: string }) => {
+      const response = await apiClient.post<GlobalTypeLibraryEntry>(
+        `/entities/type-library/${entryId}/flag/`,
+        { flag_reason: flagReason }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: globalTypeLibraryKeys.all });
+    },
+  });
+}
+
+/**
+ * Reset verification status to pending.
+ */
+export function useResetVerification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (entryId: string) => {
+      const response = await apiClient.post<GlobalTypeLibraryEntry>(
+        `/entities/type-library/${entryId}/reset-verification/`
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: globalTypeLibraryKeys.all });
+    },
+  });
+}

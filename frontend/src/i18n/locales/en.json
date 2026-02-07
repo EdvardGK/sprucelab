@@ -31,7 +31,9 @@
     "review": "Review",
     "followUp": "Follow-up",
     "loadingModels": "Loading models...",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "clearFilters": "Clear Filters",
+    "notSet": "Not set"
   },
   "nav": {
     "home": "Home",
@@ -355,5 +357,86 @@
     "toastSuccess": "{{count}} model(s) uploaded successfully",
     "toastPartial": "{{success}} uploaded, {{failed}} failed",
     "toastFailed": "{{count}} upload(s) failed"
+  },
+  "typeLibrary": {
+    "title": "Type Library",
+    "types": "types",
+    "instances": "instances",
+    "models": "models",
+    "emptyTypes": "empty types",
+    "noTypes": "No types found",
+    "selectType": "Select a type to view details",
+    "unnamedType": "Unnamed Type",
+    "primaryMaterial": "Primary material",
+    "searchPlaceholder": "Search types...",
+    "allProjects": "All Projects",
+    "showEmpty": "Empty Types",
+    "verificationProgress": "Verification Progress",
+    "exportExcel": "Export to Excel",
+    "exportReducer": "Export to Reducer",
+    "verify": "Verify",
+    "flag": "Flag",
+    "reset": "Reset",
+    "columnGroups": {
+      "identity": "Identity",
+      "classification": "Classification",
+      "materials": "Materials",
+      "status": "Status"
+    },
+    "columns": {
+      "typeName": "Type Name",
+      "ifcClass": "IFC Class",
+      "ns3451": "NS3451",
+      "semantic": "Semantic",
+      "discipline": "Disc.",
+      "materials": "Layers",
+      "status": "Status"
+    },
+    "verification": {
+      "pending": "Pending",
+      "auto": "Auto-classified",
+      "verified": "Verified",
+      "flagged": "Flagged",
+      "flagReason": "Flag Reason",
+      "noReasonProvided": "No reason provided",
+      "pendingDesc": "This type has not been classified yet.",
+      "autoDesc": "This type was auto-classified and needs human review.",
+      "verifiedDesc": "This type has been verified by a human expert.",
+      "flaggedDesc": "This type has been flagged for attention."
+    },
+    "flagDialog": {
+      "title": "Flag Type",
+      "description": "Provide a reason for flagging this type. This helps others understand what needs attention.",
+      "placeholder": "e.g., NS3451 code is incorrect, should be 222.1..."
+    },
+    "tabs": {
+      "classification": "Classification",
+      "materials": "Materials",
+      "product": "Product",
+      "observations": "Observations",
+      "verification": "Verification"
+    },
+    "classification": {
+      "ns3451": "NS3451 Code",
+      "semanticType": "Semantic Type",
+      "discipline": "Discipline",
+      "unit": "Representative Unit",
+      "canonicalName": "Canonical Name"
+    },
+    "materials": {
+      "noLayers": "No Material Layers",
+      "noLayersDesc": "This type has no material layer definitions.",
+      "addLayers": "Add Material Layers"
+    },
+    "product": {
+      "noProduct": "No Product Linked",
+      "noProductDesc": "This type is not linked to a product in the library.",
+      "linkProduct": "Link Product"
+    },
+    "observations": {
+      "title": "Observations",
+      "description": "This type has {{count}} instances across {{models}} models.",
+      "loadModels": "Loading model observations..."
+    }
   }
 }

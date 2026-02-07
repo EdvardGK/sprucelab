@@ -864,11 +864,46 @@ class TypeMapping(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # === Human Verification Status ===
+    # Three-tier system: pending → auto → verified/flagged
+    # Only human action can verify (green) or flag (red)
+    VERIFICATION_STATUS = [
+        ('pending', 'Pending'),           # Not yet classified
+        ('auto', 'Auto-classified'),      # Yellow - automation suggested, needs review
+        ('verified', 'Verified'),         # Green - human approved
+        ('flagged', 'Flagged'),           # Red - human rejected/needs attention
+    ]
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VERIFICATION_STATUS,
+        default='pending',
+        help_text="Human verification status: pending/auto/verified/flagged"
+    )
+    verified_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='verified_type_mappings',
+        help_text="User who verified or flagged this mapping"
+    )
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the mapping was verified or flagged"
+    )
+    flag_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for flagging (required when verification_status='flagged')"
+    )
+
     class Meta:
         db_table = 'type_mappings'
         indexes = [
             models.Index(fields=['mapping_status']),
             models.Index(fields=['ns3451_code']),
+            models.Index(fields=['verification_status']),
         ]
 
     def __str__(self):
@@ -1367,6 +1402,40 @@ class TypeBankEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # === Human Verification Status ===
+    # Three-tier system: pending → auto → verified/flagged
+    # Only human action can verify (green) or flag (red)
+    VERIFICATION_STATUS = [
+        ('pending', 'Pending'),           # Not yet classified
+        ('auto', 'Auto-classified'),      # Yellow - automation suggested, needs review
+        ('verified', 'Verified'),         # Green - human approved
+        ('flagged', 'Flagged'),           # Red - human rejected/needs attention
+    ]
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VERIFICATION_STATUS,
+        default='pending',
+        help_text="Human verification status: pending/auto/verified/flagged"
+    )
+    verified_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='verified_type_bank_entries',
+        help_text="User who verified or flagged this entry"
+    )
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the entry was verified or flagged"
+    )
+    flag_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for flagging (required when verification_status='flagged')"
+    )
+
     class Meta:
         db_table = 'type_bank_entries'
         unique_together = ['ifc_class', 'type_name', 'predefined_type', 'material']
@@ -1374,6 +1443,7 @@ class TypeBankEntry(models.Model):
             models.Index(fields=['ifc_class']),
             models.Index(fields=['mapping_status']),
             models.Index(fields=['ns3451_code']),
+            models.Index(fields=['verification_status']),
         ]
         verbose_name = 'Type Bank Entry'
         verbose_name_plural = 'Type Bank Entries'

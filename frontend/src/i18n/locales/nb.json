@@ -31,7 +31,9 @@
     "review": "Gjennomgang",
     "followUp": "Oppfølging",
     "loadingModels": "Laster modeller...",
-    "refresh": "Oppdater"
+    "refresh": "Oppdater",
+    "clearFilters": "Fjern filtre",
+    "notSet": "Ikke angitt"
   },
   "nav": {
     "home": "Hjem",
@@ -355,5 +357,86 @@
     "toastSuccess": "{{count}} modell(er) lastet opp",
     "toastPartial": "{{success}} lastet opp, {{failed}} feilet",
     "toastFailed": "{{count}} opplasting(er) feilet"
+  },
+  "typeLibrary": {
+    "title": "Typebibliotek",
+    "types": "typer",
+    "instances": "instanser",
+    "models": "modeller",
+    "emptyTypes": "tomme typer",
+    "noTypes": "Ingen typer funnet",
+    "selectType": "Velg en type for å se detaljer",
+    "unnamedType": "Navnløs type",
+    "primaryMaterial": "Hovedmateriale",
+    "searchPlaceholder": "Søk i typer...",
+    "allProjects": "Alle prosjekter",
+    "showEmpty": "Tomme typer",
+    "verificationProgress": "Verifiseringsstatus",
+    "exportExcel": "Eksporter til Excel",
+    "exportReducer": "Eksporter til Reducer",
+    "verify": "Verifiser",
+    "flag": "Flagg",
+    "reset": "Nullstill",
+    "columnGroups": {
+      "identity": "Identitet",
+      "classification": "Klassifisering",
+      "materials": "Materialer",
+      "status": "Status"
+    },
+    "columns": {
+      "typeName": "Typenavn",
+      "ifcClass": "IFC-klasse",
+      "ns3451": "NS3451",
+      "semantic": "Semantisk",
+      "discipline": "Fag",
+      "materials": "Lag",
+      "status": "Status"
+    },
+    "verification": {
+      "pending": "Venter",
+      "auto": "Auto-klassifisert",
+      "verified": "Verifisert",
+      "flagged": "Flagget",
+      "flagReason": "Årsak til flagging",
+      "noReasonProvided": "Ingen årsak oppgitt",
+      "pendingDesc": "Denne typen er ikke klassifisert ennå.",
+      "autoDesc": "Denne typen ble auto-klassifisert og trenger menneskelig gjennomgang.",
+      "verifiedDesc": "Denne typen er verifisert av en ekspert.",
+      "flaggedDesc": "Denne typen er flagget for oppmerksomhet."
+    },
+    "flagDialog": {
+      "title": "Flagg type",
+      "description": "Oppgi en årsak for flagging av denne typen. Dette hjelper andre å forstå hva som trenger oppmerksomhet.",
+      "placeholder": "f.eks., NS3451-kode er feil, burde være 222.1..."
+    },
+    "tabs": {
+      "classification": "Klassifisering",
+      "materials": "Materialer",
+      "product": "Produkt",
+      "observations": "Observasjoner",
+      "verification": "Verifisering"
+    },
+    "classification": {
+      "ns3451": "NS3451-kode",
+      "semanticType": "Semantisk type",
+      "discipline": "Fagdisiplin",
+      "unit": "Representativ enhet",
+      "canonicalName": "Kanonisk navn"
+    },
+    "materials": {
+      "noLayers": "Ingen materiallag",
+      "noLayersDesc": "Denne typen har ingen materiallagdefinisjoner.",
+      "addLayers": "Legg til materiallag"
+    },
+    "product": {
+      "noProduct": "Ingen produkt tilknyttet",
+      "noProductDesc": "Denne typen er ikke tilknyttet et produkt i biblioteket.",
+      "linkProduct": "Tilknytt produkt"
+    },
+    "observations": {
+      "title": "Observasjoner",
+      "description": "Denne typen har {{count}} instanser på tvers av {{models}} modeller.",
+      "loadModels": "Laster modellobservasjoner..."
+    }
   }
 }

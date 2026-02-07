@@ -19,6 +19,7 @@ import QuickStats from './pages/QuickStats';
 import Settings from './pages/Settings';
 import FederatedViewer from './pages/FederatedViewer';
 import ViewerGroups from './pages/ViewerGroups';
+import TypeLibraryPage from './pages/TypeLibraryPage';
 import ProcessingReports from './pages/dev/ProcessingReports';
 import ProcessingReportDetail from './pages/dev/ProcessingReportDetail';
 
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
   { path: "/scripts", element: <ScriptsLibrary /> },
   { path: "/stats", element: <QuickStats /> },
   { path: "/settings", element: <Settings /> },
+  { path: "/type-library", element: <TypeLibraryPage /> },
   { path: "/dev/processing-reports", element: <ProcessingReports /> },
   { path: "/dev/processing-reports/:id", element: <ProcessingReportDetail /> },
 ]);

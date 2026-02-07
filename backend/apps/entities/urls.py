@@ -5,7 +5,8 @@ from .views import (
     NS3451CodeViewSet, SemanticTypeViewSet, IFCTypeViewSet, TypeMappingViewSet,
     TypeDefinitionLayerViewSet, MaterialViewSet, MaterialMappingViewSet,
     TypeBankEntryViewSet, TypeBankObservationViewSet, TypeBankAliasViewSet,
-    MaterialLibraryViewSet, ProductLibraryViewSet, ProductCompositionViewSet
+    MaterialLibraryViewSet, ProductLibraryViewSet, ProductCompositionViewSet,
+    GlobalTypeLibraryViewSet
 )
 
 router = DefaultRouter()
@@ -25,6 +26,9 @@ router.register(r'material-mappings', MaterialMappingViewSet, basename='material
 router.register(r'type-bank', TypeBankEntryViewSet, basename='type-bank')
 router.register(r'type-bank-observations', TypeBankObservationViewSet, basename='type-bank-observation')
 router.register(r'type-bank-aliases', TypeBankAliasViewSet, basename='type-bank-alias')
+
+# Global Type Library (primary UI endpoint - unified type-centric view)
+router.register(r'type-library', GlobalTypeLibraryViewSet, basename='type-library')
 
 # Material & Product Library routes (Three-Library Architecture)
 router.register(r'material-library', MaterialLibraryViewSet, basename='material-library')

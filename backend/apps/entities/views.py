@@ -2371,3 +2371,315 @@ class ProductCompositionViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['product', 'material']
     ordering = ['product', 'layer_order']
+
+
+# =============================================================================
+# GLOBAL TYPE LIBRARY - Unified Type-Centric View
+# =============================================================================
+
+class GlobalTypeLibraryViewSet(viewsets.ModelViewSet):
+    """
+    Global Type Library API - Unified, type-centric view of all types across models.
+
+    This is the PRIMARY interface for the Type Library UI, providing:
+    - Global-first view of all types (not per-model)
+    - Three-tier verification status (pending → auto → verified/flagged)
+    - Filtering by project, model, IFC class, discipline, verification status
+    - Empty types detection (types with 0 instances)
+    - Verify and flag actions (human-only status changes)
+
+    List endpoints:
+    GET /api/type-library/ - All types (paginated)
+    GET /api/type-library/?verification_status=pending - Filter by verification
+    GET /api/type-library/?project_id={id} - Filter by project
+    GET /api/type-library/?model_id={id} - Filter by model
+    GET /api/type-library/?ifc_class=IfcWallType - Filter by IFC class
+    GET /api/type-library/?has_materials=true - Only types with material layers
+
+    Actions:
+    GET /api/type-library/unified-summary/ - Dashboard stats with verification breakdown
+    GET /api/type-library/empty-types/ - Types with instance_count=0
+    POST /api/type-library/{id}/verify/ - Human verify (→ green)
+    POST /api/type-library/{id}/flag/ - Human flag (→ red)
+    POST /api/type-library/{id}/reset-verification/ - Reset to pending
+    """
+
+    queryset = TypeBankEntry.objects.select_related('ns3451', 'semantic_type').annotate(
+        _observation_count=Count('observations')
+    ).all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = [
+        'ifc_class', 'mapping_status', 'verification_status',
+        'ns3451_code', 'discipline', 'confidence'
+    ]
+    search_fields = ['type_name', 'canonical_name', 'material', 'ifc_class']
+    ordering_fields = [
+        'ifc_class', 'type_name', 'total_instance_count', 'source_model_count',
+        'verification_status', 'verified_at', 'updated_at'
+    ]
+    ordering = ['ifc_class', 'type_name']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return TypeBankEntryListSerializer
+        elif self.action in ['update', 'partial_update']:
+            return TypeBankEntryUpdateSerializer
+        return TypeBankEntrySerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Filter by project_id (types observed in this project)
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            queryset = queryset.filter(
+                observations__source_model__project_id=project_id
+            ).distinct()
+
+        # Filter by model_id (types observed in this model)
+        model_id = self.request.query_params.get('model_id')
+        if model_id:
+            queryset = queryset.filter(
+                observations__source_model_id=model_id
+            ).distinct()
+
+        # Filter by has_materials (types with TypeDefinitionLayer entries)
+        has_materials = self.request.query_params.get('has_materials')
+        if has_materials == 'true':
+            # Types that have TypeMapping with definition_layers
+            queryset = queryset.filter(
+                observations__source_type__type_mappings__definition_layers__isnull=False
+            ).distinct()
+        elif has_materials == 'false':
+            queryset = queryset.exclude(
+                observations__source_type__type_mappings__definition_layers__isnull=False
+            ).distinct()
+
+        # For detail views, prefetch observations and aliases
+        if self.action == 'retrieve':
+            queryset = queryset.prefetch_related(
+                Prefetch('observations', queryset=TypeBankObservation.objects.select_related(
+                    'source_model', 'source_model__project', 'source_type'
+                ).order_by('-observed_at')),
+                'aliases'
+            )
+
+        return queryset
+
+    @action(detail=False, methods=['get'], url_path='unified-summary')
+    def unified_summary(self, request):
+        """
+        Get unified Type Library dashboard summary with verification stats.
+
+        GET /api/type-library/unified-summary/
+        GET /api/type-library/unified-summary/?project_id={id}
+        GET /api/type-library/unified-summary/?model_id={id}
+
+        Returns:
+        {
+            "total": 1234,
+            "by_verification_status": {
+                "pending": 100,
+                "auto": 200,
+                "verified": 800,
+                "flagged": 134
+            },
+            "by_mapping_status": {
+                "mapped": 890,
+                "pending": 300,
+                "ignored": 20,
+                "review": 24
+            },
+            "by_ifc_class": {"IfcWallType": 150, ...},
+            "by_discipline": {"ARK": 400, ...},
+            "empty_types_count": 42,
+            "verification_progress_percent": 64.8
+        }
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+
+        total = queryset.count()
+
+        # By verification status
+        by_verification = dict(
+            queryset.values('verification_status')
+            .annotate(count=Count('id'))
+            .values_list('verification_status', 'count')
+        )
+
+        # By mapping status
+        by_mapping = dict(
+            queryset.values('mapping_status')
+            .annotate(count=Count('id'))
+            .values_list('mapping_status', 'count')
+        )
+
+        # By IFC class
+        by_class = dict(
+            queryset.values('ifc_class')
+            .annotate(count=Count('id'))
+            .values_list('ifc_class', 'count')
+        )
+
+        # By discipline (only for entries with discipline)
+        by_discipline = dict(
+            queryset.filter(discipline__isnull=False)
+            .exclude(discipline='')
+            .values('discipline')
+            .annotate(count=Count('id'))
+            .values_list('discipline', 'count')
+        )
+
+        # Empty types (instance_count = 0)
+        empty_count = queryset.filter(total_instance_count=0).count()
+
+        # Verification progress (verified / total)
+        verified = by_verification.get('verified', 0)
+        progress = round((verified / total * 100) if total > 0 else 0, 1)
+
+        return Response({
+            'total': total,
+            'by_verification_status': by_verification,
+            'by_mapping_status': by_mapping,
+            'by_ifc_class': by_class,
+            'by_discipline': by_discipline,
+            'empty_types_count': empty_count,
+            'verification_progress_percent': progress,
+        })
+
+    @action(detail=False, methods=['get'], url_path='empty-types')
+    def empty_types(self, request):
+        """
+        Get types with instance_count=0 (empty types).
+
+        These are IfcTypeObjects that exist in the model but have no entities
+        referencing them. Often indicates orphaned or unused types.
+
+        GET /api/type-library/empty-types/
+        GET /api/type-library/empty-types/?project_id={id}
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        queryset = queryset.filter(total_instance_count=0)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = TypeBankEntryListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = TypeBankEntryListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='verify')
+    def verify(self, request, pk=None):
+        """
+        Human verify a type (set verification_status = 'verified').
+
+        Only human action can set a type to verified (green).
+
+        POST /api/type-library/{id}/verify/
+        Body (optional): {"notes": "Verified after reviewing IFC schema"}
+
+        Returns the updated TypeBankEntry.
+        """
+        from django.utils import timezone
+
+        entry = self.get_object()
+        entry.verification_status = 'verified'
+        entry.verified_by = request.user if request.user.is_authenticated else None
+        entry.verified_at = timezone.now()
+        entry.flag_reason = None  # Clear any previous flag reason
+
+        # Optionally update notes
+        notes = request.data.get('notes')
+        if notes:
+            entry.notes = notes
+
+        entry.save()
+
+        serializer = TypeBankEntrySerializer(entry)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='flag')
+    def flag(self, request, pk=None):
+        """
+        Human flag a type (set verification_status = 'flagged').
+
+        Used when a type needs attention or the classification is incorrect.
+        Requires a flag_reason.
+
+        POST /api/type-library/{id}/flag/
+        Body: {"flag_reason": "NS3451 code incorrect - should be 222.1"}
+
+        Returns the updated TypeBankEntry.
+        """
+        from django.utils import timezone
+
+        flag_reason = request.data.get('flag_reason')
+        if not flag_reason:
+            return Response(
+                {'error': 'flag_reason is required when flagging a type'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        entry = self.get_object()
+        entry.verification_status = 'flagged'
+        entry.verified_by = request.user if request.user.is_authenticated else None
+        entry.verified_at = timezone.now()
+        entry.flag_reason = flag_reason
+
+        entry.save()
+
+        serializer = TypeBankEntrySerializer(entry)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='reset-verification')
+    def reset_verification(self, request, pk=None):
+        """
+        Reset verification status to pending.
+
+        Useful when starting fresh or when type has been modified significantly.
+
+        POST /api/type-library/{id}/reset-verification/
+        """
+        entry = self.get_object()
+        entry.verification_status = 'pending'
+        entry.verified_by = None
+        entry.verified_at = None
+        entry.flag_reason = None
+        entry.save()
+
+        serializer = TypeBankEntrySerializer(entry)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='set-auto')
+    def set_auto(self, request, pk=None):
+        """
+        Set verification status to auto-classified (for automation/ML).
+
+        This is called by automation systems when they suggest a classification.
+        The type should then appear in the "needs review" list for human verification.
+
+        POST /api/type-library/{id}/set-auto/
+        Body (optional): {"confidence": 0.85, "source": "ml_classifier_v2"}
+        """
+        entry = self.get_object()
+
+        # Only allow setting to 'auto' if currently 'pending'
+        # Don't override human decisions
+        if entry.verification_status not in ['pending', 'auto']:
+            return Response(
+                {'error': 'Cannot set auto-classified status on types that have been verified or flagged'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        entry.verification_status = 'auto'
+
+        # Update confidence if provided
+        confidence = request.data.get('confidence')
+        if confidence is not None:
+            entry.confidence = float(confidence)
+
+        entry.save()
+
+        serializer = TypeBankEntrySerializer(entry)
+        return Response(serializer.data)
