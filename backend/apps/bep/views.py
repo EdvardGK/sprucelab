@@ -12,6 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import (
+    BEPTemplate,
     BEPConfiguration,
     TechnicalRequirement,
     MMIScaleDefinition,
@@ -19,8 +20,13 @@ from .models import (
     RequiredPropertySet,
     ValidationRule,
     SubmissionMilestone,
+    ProjectDiscipline,
+    ProjectCoordinates,
+    ProjectStorey,
 )
 from .serializers import (
+    BEPTemplateModelSerializer,
+    BEPTemplateListSerializer,
     BEPConfigurationSerializer,
     BEPConfigurationListSerializer,
     BEPTemplateSerializer,
@@ -30,6 +36,9 @@ from .serializers import (
     RequiredPropertySetSerializer,
     ValidationRuleSerializer,
     SubmissionMilestoneSerializer,
+    ProjectDisciplineSerializer,
+    ProjectCoordinatesSerializer,
+    ProjectStoreySerializer,
 )
 
 
@@ -63,7 +72,9 @@ class BEPConfigurationViewSet(viewsets.ModelViewSet):
             /api/bep/?project={uuid} - BEPs for specific project
             /api/bep/?status=active - Only active BEPs
         """
-        queryset = BEPConfiguration.objects.select_related('project').prefetch_related(
+        queryset = BEPConfiguration.objects.select_related(
+            'project', 'template'
+        ).prefetch_related(
             'technical_requirements',
             'mmi_scale',
             'naming_conventions',
@@ -296,3 +307,118 @@ class SubmissionMilestoneViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status=status_param)
 
         return queryset.order_by('milestone_order', 'target_date')
+
+
+class BEPTemplateViewSet(viewsets.ModelViewSet):
+    """
+    API endpoints for BEP templates.
+
+    Templates are reusable BEP configurations that projects can inherit from.
+    System templates are read-only; user templates can be created/modified.
+    """
+    queryset = BEPTemplate.objects.all()
+    serializer_class = BEPTemplateModelSerializer
+
+    def get_serializer_class(self):
+        """Use lightweight serializer for list view."""
+        if self.action == 'list':
+            return BEPTemplateListSerializer
+        return BEPTemplateModelSerializer
+
+    def get_queryset(self):
+        """Filter by framework if provided."""
+        queryset = BEPTemplate.objects.all()
+
+        framework = self.request.query_params.get('framework', None)
+        if framework:
+            queryset = queryset.filter(framework=framework)
+
+        # System templates first, then alphabetical
+        return queryset.order_by('-is_system', 'name')
+
+    def destroy(self, request, *args, **kwargs):
+        """Prevent deletion of system templates."""
+        template = self.get_object()
+        if template.is_system:
+            return Response(
+                {'error': 'Cannot delete system templates'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().destroy(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        """Prevent modification of system templates."""
+        template = self.get_object()
+        if template.is_system:
+            return Response(
+                {'error': 'Cannot modify system templates'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)
+
+
+class ProjectDisciplineViewSet(viewsets.ModelViewSet):
+    """
+    API endpoints for project disciplines.
+
+    Manages discipline assignments for projects (ARK, RIB, RIV, etc.)
+    with company contacts and software information.
+    """
+    queryset = ProjectDiscipline.objects.all()
+    serializer_class = ProjectDisciplineSerializer
+
+    def get_queryset(self):
+        """Filter by project if provided."""
+        queryset = ProjectDiscipline.objects.select_related('project')
+
+        project_id = self.request.query_params.get('project', None)
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+
+        # Only active by default
+        if self.request.query_params.get('include_inactive', None) != 'true':
+            queryset = queryset.filter(is_active=True)
+
+        return queryset.order_by('discipline_code')
+
+
+class ProjectCoordinatesViewSet(viewsets.ModelViewSet):
+    """
+    API endpoints for project coordinates.
+
+    Manages coordinate system configuration per project.
+    One-to-one relationship with Project.
+    """
+    queryset = ProjectCoordinates.objects.all()
+    serializer_class = ProjectCoordinatesSerializer
+
+    def get_queryset(self):
+        """Filter by project if provided."""
+        queryset = ProjectCoordinates.objects.select_related('project')
+
+        project_id = self.request.query_params.get('project', None)
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+
+        return queryset
+
+
+class ProjectStoreyViewSet(viewsets.ModelViewSet):
+    """
+    API endpoints for project storeys.
+
+    Manages expected floor/storey structure per project.
+    Used for validation of IfcBuildingStorey elevations.
+    """
+    queryset = ProjectStorey.objects.all()
+    serializer_class = ProjectStoreySerializer
+
+    def get_queryset(self):
+        """Filter by project if provided."""
+        queryset = ProjectStorey.objects.select_related('project')
+
+        project_id = self.request.query_params.get('project', None)
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+
+        return queryset.order_by('order', 'elevation_m')

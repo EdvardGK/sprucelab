@@ -255,6 +255,13 @@ class IFCType(models.Model):
     - has_ifc_type_object=True: Backed by real IfcTypeObject, type_guid is GlobalId
     - has_ifc_type_object=False: Synthetic from ObjectType, type_guid is generated hash
     """
+    # === Ownership Status (Sprint 1: The Gatekeeper) ===
+    OWNERSHIP_STATUS_CHOICES = [
+        ('primary', 'Primary - My discipline owns this type'),
+        ('reference', 'Reference - Other discipline owns, I copy'),
+        ('ghost', 'Ghost - Ignore for verification (not my concern)'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='types')
     type_guid = models.CharField(
@@ -283,9 +290,20 @@ class IFCType(models.Model):
         help_text="True if backed by IfcTypeObject, False if synthetic from ObjectType"
     )
 
+    # === Ownership Status (Sprint 1: The Gatekeeper) ===
+    ownership_status = models.CharField(
+        max_length=20,
+        choices=OWNERSHIP_STATUS_CHOICES,
+        default='primary',
+        help_text="Discipline ownership: primary (my type), reference (copy from others), ghost (ignore)"
+    )
+
     class Meta:
         db_table = 'ifc_types'
         unique_together = ['model', 'type_guid']
+        indexes = [
+            models.Index(fields=['ownership_status']),
+        ]
 
     def __str__(self):
         return self.type_name or self.type_guid
@@ -340,6 +358,74 @@ class NS3451Code(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+
+
+class NS3451OwnershipMatrix(models.Model):
+    """
+    Maps NS3451 codes to responsible disciplines (Sprint 1: The Gatekeeper).
+
+    Defines which discipline "owns" which building parts:
+    - Primary: Discipline must model this (e.g., RIV owns 32 HVAC)
+    - Secondary: Discipline may model this for coordination
+    - Reference: Discipline copies from primary owner (e.g., ARK shows RIV elements)
+
+    Used by discipline_filter.py to auto-demote types outside model's responsibility.
+    """
+    DISCIPLINE_CHOICES = [
+        ('ARK', 'Architecture'),
+        ('RIB', 'Structural'),
+        ('RIV', 'Mechanical/HVAC'),
+        ('RIE', 'Electrical'),
+        ('LARK', 'Landscape'),
+        ('RIG', 'Geotechnical'),
+    ]
+
+    OWNERSHIP_LEVEL_CHOICES = [
+        ('primary', 'Primary - Must model'),
+        ('secondary', 'Secondary - May model'),
+        ('reference', 'Reference - Copy from others'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    ns3451_code = models.ForeignKey(
+        NS3451Code,
+        on_delete=models.CASCADE,
+        related_name='ownership_matrix',
+        help_text="NS3451 building part code"
+    )
+    discipline = models.CharField(
+        max_length=10,
+        choices=DISCIPLINE_CHOICES,
+        help_text="BIM discipline code"
+    )
+    ownership_level = models.CharField(
+        max_length=20,
+        choices=OWNERSHIP_LEVEL_CHOICES,
+        help_text="Level of ownership for this discipline"
+    )
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Additional guidance for this assignment"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ns3451_ownership_matrix'
+        unique_together = ['ns3451_code', 'discipline']
+        ordering = ['ns3451_code', 'discipline']
+        verbose_name = 'NS3451 Ownership Matrix'
+        verbose_name_plural = 'NS3451 Ownership Matrix'
+        indexes = [
+            models.Index(fields=['discipline']),
+            models.Index(fields=['ownership_level']),
+        ]
+
+    def __str__(self):
+        return f"{self.ns3451_code.code} → {self.discipline} ({self.ownership_level})"
 
 
 # =============================================================================
@@ -546,19 +632,22 @@ MATERIAL_UNIT_CHOICES = [
 
 class MaterialLibrary(models.Model):
     """
-    Global material library with EPD and Reduzer integration.
+    Global material library for normalized material categories.
 
-    Each entry represents a HOMOGENEOUS material category (one Enova EPD).
+    Each entry represents a HOMOGENEOUS material category.
     Composite materials are handled via TypeDefinitionLayer (multiple layers).
+
+    Note: EPD data is stored separately in EPDLibrary and linked via EPDMapping.
+    This allows different projects to use different EPDs for the same material.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, help_text="Material name (e.g., 'Concrete B35')")
 
-    # Category aligned with Enova EPD categories
+    # Category aligned with Enova categories
     category = models.CharField(
         max_length=50,
         choices=MATERIAL_CATEGORY_CHOICES,
-        help_text="Material category (aligned with Enova EPD)"
+        help_text="Material category (aligned with Enova classification)"
     )
 
     # Unit of measurement
@@ -578,39 +667,6 @@ class MaterialLibrary(models.Model):
         null=True,
         blank=True,
         help_text="Thermal conductivity W/(m·K)"
-    )
-
-    # EPD data
-    normalized_epd_id = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="Generic/Reduzer EPD reference"
-    )
-    specific_epd_id = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="Product-specific EPD reference (optional)"
-    )
-    gwp_a1_a3 = models.FloatField(
-        null=True,
-        blank=True,
-        help_text="Global Warming Potential A1-A3 (kgCO2e per unit)"
-    )
-
-    # Reduzer integration
-    reduzer_product_id = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        help_text="Reduzer ProductID (e.g., 'Reduzer Enova Gipsplate normal - typisk verdi')"
-    )
-    reduzer_product_id_type = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        help_text="ProductID type: EPDno, NOBB, NEPD, GTINFPAK"
     )
 
     # Manufacturer info (optional - for specific materials)
@@ -654,6 +710,9 @@ class ProductLibrary(models.Model):
     Products can be:
     - Homogeneous: Single material category (is_composite=False)
     - Composite: Multiple materials via ProductComposition (is_composite=True)
+
+    Note: EPD data is stored separately in EPDLibrary and linked via EPDMapping.
+    This allows different projects to use different EPDs for the same product.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -666,7 +725,6 @@ class ProductLibrary(models.Model):
     manufacturer = models.CharField(max_length=255, blank=True, null=True)
     product_code = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    epd_data = models.JSONField(default=dict, blank=True, help_text="EPD/LCA data")
 
     # Base material category (for homogeneous products)
     material_category = models.CharField(
@@ -703,10 +761,6 @@ class ProductLibrary(models.Model):
         help_text="Flexible spec storage from datasheet"
     )
     datasheet_url = models.URLField(blank=True, null=True)
-
-    # Reduzer integration
-    reduzer_product_id = models.CharField(max_length=255, blank=True, null=True)
-    reduzer_product_id_type = models.CharField(max_length=20, blank=True, null=True)
 
     # Reused status
     reused_status = models.CharField(
@@ -770,6 +824,279 @@ class ProductComposition(models.Model):
 
     def __str__(self):
         return f"{self.product.name} → {self.material.name}"
+
+
+# =============================================================================
+# EPD ARCHITECTURE - First-class EPD entities with flexible mapping
+# =============================================================================
+
+EPD_SOURCE_CHOICES = [
+    ('reduzer', 'Reduzer'),
+    ('oneclick', 'OneClickLCA'),
+    ('nepd', 'NEPD'),
+    ('epd_norge', 'EPD Norge'),
+    ('custom', 'Custom'),
+]
+
+EPD_TARGET_TYPE_CHOICES = [
+    ('ifc_type', 'IFC Type'),
+    ('ifc_material', 'IFC Material'),
+    ('material_lib', 'Material Library'),
+    ('product_lib', 'Product Library'),
+]
+
+
+class EPDLibrary(models.Model):
+    """
+    EPD (Environmental Product Declaration) data as first-class entity.
+
+    EPDs are NOT embedded in materials/products. Instead, they exist independently
+    and can be mapped flexibly to:
+    - IFC Types (most specific)
+    - IFC Materials (model-specific)
+    - MaterialLibrary entries (generic defaults)
+    - ProductLibrary entries (product-specific)
+
+    This enables different projects to use different EPDs for the same material.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Source identification
+    source = models.CharField(
+        max_length=50,
+        choices=EPD_SOURCE_CHOICES,
+        help_text="EPD database source"
+    )
+    source_id = models.CharField(
+        max_length=255,
+        help_text="ID in source system (e.g., Reduzer product name)"
+    )
+    name = models.CharField(
+        max_length=500,
+        help_text="Human-readable EPD name"
+    )
+    category = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Enova category or similar classification"
+    )
+
+    # LCA impact data (Global Warming Potential in kg CO2e)
+    gwp_a1_a3 = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="GWP A1-A3: Product stage (kg CO2e per declared unit)"
+    )
+    gwp_c3_c4 = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="GWP C3-C4: End of life (kg CO2e per declared unit)"
+    )
+    gwp_d = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="GWP D: Benefits beyond system boundary (kg CO2e per declared unit)"
+    )
+    gwp_total = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Total GWP (A1-A3 + C3-C4 + D, or as declared)"
+    )
+
+    # Unit information
+    unit = models.CharField(
+        max_length=20,
+        help_text="Base unit: kg, m², m³, pcs"
+    )
+    declared_unit = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Full declared unit (e.g., '1 m²', '1000 kg')"
+    )
+
+    # Validity
+    valid_until = models.DateField(
+        null=True,
+        blank=True,
+        help_text="EPD expiration date"
+    )
+
+    # Flexible metadata storage
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional EPD data (manufacturer, program operator, etc.)"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'epd_library'
+        unique_together = ['source', 'source_id']
+        ordering = ['source', 'name']
+        verbose_name = 'EPD Library Entry'
+        verbose_name_plural = 'EPD Library'
+        indexes = [
+            models.Index(fields=['source']),
+            models.Index(fields=['category']),
+        ]
+
+    def __str__(self):
+        return f"{self.source}:{self.name}"
+
+
+class EPDMapping(models.Model):
+    """
+    Flexible EPD-to-target mapping.
+
+    Allows EPDs to be linked to different levels:
+    - ifc_type: Direct to a specific IFCType (most specific)
+    - ifc_material: Direct to a per-model Material
+    - material_lib: To a MaterialLibrary entry (generic default)
+    - product_lib: To a ProductLibrary entry (product-specific)
+
+    Project-specific mappings (project != null) override global defaults.
+    Priority field allows multiple mappings with fallback.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='epd_mappings',
+        help_text="Project-specific mapping (null = global default)"
+    )
+
+    target_type = models.CharField(
+        max_length=50,
+        choices=EPD_TARGET_TYPE_CHOICES,
+        help_text="What this EPD is mapped to"
+    )
+    target_id = models.UUIDField(
+        help_text="UUID of the target (IFCType, Material, MaterialLibrary, or ProductLibrary)"
+    )
+
+    epd = models.ForeignKey(
+        EPDLibrary,
+        on_delete=models.CASCADE,
+        related_name='mappings',
+        help_text="The EPD to use for this target"
+    )
+
+    priority = models.IntegerField(
+        default=0,
+        help_text="Higher priority = preferred when multiple mappings exist"
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for this mapping or additional context"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_epd_mappings'
+    )
+
+    class Meta:
+        db_table = 'epd_mappings'
+        ordering = ['-priority', '-created_at']
+        indexes = [
+            models.Index(fields=['target_type', 'target_id']),
+            models.Index(fields=['project']),
+        ]
+        verbose_name = 'EPD Mapping'
+        verbose_name_plural = 'EPD Mappings'
+
+    def __str__(self):
+        scope = f"Project:{self.project_id}" if self.project else "Global"
+        return f"{self.target_type}:{self.target_id} → {self.epd.name} ({scope})"
+
+
+class IFCMaterialNormalization(models.Model):
+    """
+    Maps raw IFC material names to normalized MaterialLibrary entries.
+
+    This is a normalization rules table that allows:
+    - Per-model mappings (when model is set)
+    - Global rules (when model is null) - applies to all models
+
+    Example: "B35 Betong" in model X → MaterialLibrary "Concrete B35"
+
+    Note: This differs from the existing MaterialMapping model which is a
+    1:1 extension of the Material model. This model is for normalization rules.
+    """
+    CONFIDENCE_CHOICES = [
+        ('auto', 'Auto-detected'),
+        ('manual', 'Manual'),
+        ('verified', 'Verified'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Can be model-specific or global
+    model = models.ForeignKey(
+        'models.Model',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='material_normalizations',
+        help_text="Model-specific normalization (null = global rule)"
+    )
+
+    ifc_material_name = models.CharField(
+        max_length=500,
+        help_text="Raw material name from IFC (exact match or pattern)"
+    )
+    material_library = models.ForeignKey(
+        'MaterialLibrary',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='normalizations',
+        help_text="Normalized MaterialLibrary entry"
+    )
+    normalized_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Canonical name (can differ from MaterialLibrary.name)"
+    )
+
+    confidence = models.CharField(
+        max_length=20,
+        choices=CONFIDENCE_CHOICES,
+        default='auto',
+        help_text="How this normalization was created"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ifc_material_normalizations'
+        unique_together = ['model', 'ifc_material_name']
+        indexes = [
+            models.Index(fields=['ifc_material_name']),
+            models.Index(fields=['confidence']),
+        ]
+        verbose_name = 'IFC Material Normalization'
+        verbose_name_plural = 'IFC Material Normalizations'
+
+    def __str__(self):
+        scope = f"Model:{self.model_id}" if self.model else "Global"
+        target = self.material_library.name if self.material_library else self.normalized_name
+        return f"'{self.ifc_material_name}' → {target} ({scope})"
 
 
 class TypeMapping(models.Model):
@@ -1470,15 +1797,30 @@ class TypeBankObservation(models.Model):
     )
     source_model = models.ForeignKey(
         'models.Model',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='type_bank_observations',
-        help_text="The model where this type was observed"
+        help_text="The model where this type was observed (null if model deleted)"
     )
     source_type = models.ForeignKey(
         IFCType,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='type_bank_observation',
-        help_text="The original IFCType record from this model"
+        help_text="The original IFCType record from this model (null if type deleted)"
+    )
+
+    # === Historical/Audit fields (Sprint 2: The Vault) ===
+    is_historical = models.BooleanField(
+        default=False,
+        help_text="True if source model/type was deleted - observation preserved for audit trail"
+    )
+    archived_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this observation became historical (source deleted)"
     )
 
     # === Statistics for this observation ===
@@ -1503,14 +1845,18 @@ class TypeBankObservation(models.Model):
 
     class Meta:
         db_table = 'type_bank_observations'
-        unique_together = ['type_bank_entry', 'source_type']
+        # Note: unique_together removed since source_type can be null (for historical observations)
+        # Active observations should be unique per (type_bank_entry, source_type) - enforced in code
         indexes = [
             models.Index(fields=['source_model']),
             models.Index(fields=['observed_at']),
+            models.Index(fields=['is_historical']),
+            models.Index(fields=['type_bank_entry', 'is_historical']),
         ]
 
     def __str__(self):
-        return f"{self.type_bank_entry} in {self.source_model.name}"
+        model_name = self.source_model.name if self.source_model else "(deleted model)"
+        return f"{self.type_bank_entry} in {model_name}"
 
 
 class TypeBankAlias(models.Model):
@@ -1671,3 +2017,86 @@ class TypeBankScope(models.Model):
     def __str__(self):
         scope_name = self.scope_type_custom if self.scope_type == 'custom' else self.scope_type
         return f"{self.type_bank_entry} - {scope_name}: {self.status}"
+
+
+# =============================================================================
+# SPATIAL STITCHING - Cross-model room assignment (Sprint 3: The Mapper)
+# =============================================================================
+
+class RoomAssignment(models.Model):
+    """
+    Links discrete MEP entities to containing rooms (Sprint 3: The Mapper).
+
+    Uses point-in-volume to determine which room (IfcSpace) contains
+    the basepoint of discrete elements like vents, valves, and fixtures.
+    Enables cross-model spatial queries: "What dampers are in Room 101?"
+
+    Discrete entity types (point-based, not linear):
+    - IfcAirTerminal (Vents)
+    - IfcValve (Valves)
+    - IfcSanitaryTerminal (Toilets, sinks)
+    - IfcFurniture (Furniture)
+    - IfcLightFixture (Light fixtures)
+    - IfcOutlet (Electrical outlets)
+    - IfcSensor (Sensors)
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # The discrete entity (vent, valve, toilet, etc.)
+    entity = models.ForeignKey(
+        IFCEntity,
+        on_delete=models.CASCADE,
+        related_name='room_assignments',
+        help_text="The discrete entity being assigned to a room"
+    )
+
+    # The room (IfcSpace) that contains this entity
+    room = models.ForeignKey(
+        IFCEntity,
+        on_delete=models.CASCADE,
+        related_name='contained_entities',
+        help_text="The IfcSpace (room) containing this entity"
+    )
+
+    # Cross-model linking (entity from MEP, room from ARK)
+    entity_model = models.ForeignKey(
+        'models.Model',
+        on_delete=models.CASCADE,
+        related_name='outgoing_room_assignments',
+        help_text="Model containing the entity (typically MEP)"
+    )
+    room_model = models.ForeignKey(
+        'models.Model',
+        on_delete=models.CASCADE,
+        related_name='incoming_room_assignments',
+        help_text="Model containing the room (typically ARK)"
+    )
+
+    # Entity basepoint (centroid for recalculation on re-upload)
+    basepoint_x = models.FloatField(help_text="Entity centroid X coordinate")
+    basepoint_y = models.FloatField(help_text="Entity centroid Y coordinate")
+    basepoint_z = models.FloatField(help_text="Entity centroid Z coordinate")
+
+    # Confidence scoring
+    confidence = models.FloatField(
+        default=1.0,
+        help_text="Confidence: 1.0 = point clearly inside, <1.0 = near boundary/estimated"
+    )
+
+    calculated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'room_assignments'
+        unique_together = ['entity', 'room']
+        indexes = [
+            models.Index(fields=['entity_model']),
+            models.Index(fields=['room_model']),
+            models.Index(fields=['confidence']),
+        ]
+        verbose_name = 'Room Assignment'
+        verbose_name_plural = 'Room Assignments'
+
+    def __str__(self):
+        entity_name = self.entity.name or self.entity.ifc_guid if self.entity else 'Unknown'
+        room_name = self.room.name or 'Room' if self.room else 'Unknown'
+        return f"{entity_name} → {room_name}"

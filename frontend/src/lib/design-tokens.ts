@@ -1,31 +1,38 @@
 /**
  * Design Tokens for BIM Coordinator Platform
  *
- * Dark minimalism pattern inspired by Linear/Vercel/Supabase:
- * - Dark gray backgrounds (not pure black)
- * - Desaturated accent colors for dark mode
- * - Off-white text (not pure white)
+ * Warm, friendly design inspired by Basecamp/Hey + Airtable:
+ * - Paper-like warm whites (not sterile)
+ * - Stone grays (warm undertones, not cold zinc)
+ * - Vibrant status colors for at-a-glance comprehension
+ * - Amber accents (Hey-inspired)
  * - 8px spacing grid
+ *
+ * Philosophy: Make BIM professionals' lives better through good design
  */
 
 export const tokens = {
   color: {
+    // Warm stone borders (not cold zinc)
     border: {
-      subtle: 'hsl(240 3.7% 15.9%)',
-      DEFAULT: 'hsl(240 3.7% 15.9%)',
-      strong: 'hsl(240 5.9% 25%)',
+      subtle: 'hsl(30 6% 90%)',      // #E7E5E4 warm subtle
+      DEFAULT: 'hsl(30 6% 85%)',     // Warm default border
+      strong: 'hsl(30 4% 70%)',      // Warm strong border
     },
+    // Text colors for light mode (warm blacks and grays)
     text: {
-      primary: 'hsl(0 0% 98%)',
-      secondary: 'hsl(240 5% 64.9%)',
-      tertiary: 'hsl(240 3.8% 46.1%)',
-      inverse: 'hsl(240 10% 3.9%)',
+      primary: 'hsl(24 10% 10%)',    // #1C1917 warm near-black
+      secondary: 'hsl(30 4% 35%)',   // #57534E warm gray
+      tertiary: 'hsl(30 4% 50%)',    // #A8A29E muted warm
+      inverse: 'hsl(40 6% 96%)',     // #FAFAF9 for dark backgrounds
     },
-    success: 'hsl(142 76% 36%)',
-    warning: 'hsl(38 92% 50%)',
-    error: 'hsl(0 84% 60%)',
-    info: 'hsl(217 91% 60%)',
-    brand: 'hsl(217 91% 60%)',
+    // Vibrant status colors
+    success: 'hsl(142 76% 36%)',     // #22C55E green
+    warning: 'hsl(38 92% 50%)',      // #F59E0B amber
+    error: 'hsl(0 84% 60%)',         // #EF4444 red
+    info: 'hsl(217 91% 60%)',        // #3B82F6 blue
+    brand: 'hsl(214 60% 55%)',       // #4A90D9 warm blue
+    accent: 'hsl(38 92% 50%)',       // #F59E0B amber (Hey-inspired)
   },
   typography: {
     fontFamily: {

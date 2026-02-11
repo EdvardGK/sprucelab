@@ -132,6 +132,22 @@ class ProjectConfig(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     notes = models.TextField(blank=True, null=True)
 
+    # === Phase Gates (Sprint 2: The Vault) ===
+    PHASE_CHOICES = [
+        ('fluid', 'Fluid - New types auto-accepted'),
+        ('controlled', 'Controlled - New types require review'),
+    ]
+    phase = models.CharField(
+        max_length=20,
+        choices=PHASE_CHOICES,
+        default='fluid',
+        help_text="Project phase: fluid=auto-accept new types, controlled=require review"
+    )
+    block_on_new_types = models.BooleanField(
+        default=False,
+        help_text="In controlled phase: block upload verification until new types reviewed"
+    )
+
     class Meta:
         db_table = 'project_configs'
         ordering = ['-version']

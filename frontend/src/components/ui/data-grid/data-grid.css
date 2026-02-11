@@ -1,25 +1,25 @@
 .data-grid-airtable {
-  /* Base palette */
+  /* Base palette - Warm paper-like whites */
   --dg-bg: #ffffff;
-  --dg-bg-header: #f5f5f5;
+  --dg-bg-header: #f5f5f4;           /* Warm stone-100 */
   --dg-bg-row-even: #ffffff;
-  --dg-bg-row-odd: #fafbfc;
-  --dg-bg-row-hover: #f0f4ff;
-  --dg-bg-group-header: #f7f8fa;
+  --dg-bg-row-odd: #fafaf9;          /* Warm stone-50 */
+  --dg-bg-row-hover: #fef3c7;        /* Warm amber-100 for hover */
+  --dg-bg-group-header: #f5f5f4;     /* Warm stone-100 */
   --dg-bg-active-cell: #ffffff;
-  --dg-bg-editing: #eff6ff;
+  --dg-bg-editing: #fef9c3;          /* Yellow-100 for editing */
 
-  /* Borders */
-  --dg-border: #e5e7eb;
-  --dg-border-active: #2563eb;
-  --dg-border-row: #f0f0f0;
+  /* Borders - Warm stone */
+  --dg-border: #e7e5e4;              /* Warm stone-200 */
+  --dg-border-active: #4a90d9;       /* Warm blue (brand) */
+  --dg-border-row: #f5f5f4;          /* Warm stone-100 */
 
-  /* Text */
-  --dg-text: #1f2937;
-  --dg-text-secondary: #6b7280;
-  --dg-text-header: #374151;
-  --dg-text-group: #111827;
-  --dg-text-placeholder: #9ca3af;
+  /* Text - Warm near-blacks */
+  --dg-text: #1c1917;                /* Warm stone-900 */
+  --dg-text-secondary: #57534e;      /* Warm stone-600 */
+  --dg-text-header: #44403c;         /* Warm stone-700 */
+  --dg-text-group: #1c1917;          /* Warm stone-900 */
+  --dg-text-placeholder: #a8a29e;    /* Warm stone-400 */
 
   /* Sizing */
   --dg-font-size: 13px;
@@ -52,9 +52,9 @@
   --dg-group-tint-6: #ec4899;
   --dg-group-tint-7: #84cc16;
 
-  /* Selection */
-  --dg-selection-bg: #eff6ff;
-  --dg-selection-border: #bfdbfe;
+  /* Selection - warm blue tint */
+  --dg-selection-bg: #dbeafe;        /* Blue-100 */
+  --dg-selection-border: #93c5fd;    /* Blue-300 */
 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: var(--dg-font-size);
@@ -96,7 +96,7 @@
 }
 
 .data-grid-airtable .dg-header-cell:hover {
-  background: #eef0f4;
+  background: #e7e5e4;  /* Warm stone-200 */
 }
 
 .data-grid-airtable .dg-header-cell:last-child {
@@ -193,7 +193,7 @@
 }
 
 .data-grid-airtable .dg-group-row:hover {
-  background: #eef0f4;
+  background: #e7e5e4;  /* Warm stone-200 */
 }
 
 /* Status badges */
@@ -304,7 +304,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: #eff6ff;
+  background: #dbeafe;  /* Blue-100 */
   border-bottom: 1px solid var(--dg-selection-border);
   font-size: var(--dg-font-size);
   color: var(--dg-border-active);
@@ -328,7 +328,7 @@
 }
 
 .data-grid-airtable .dg-bulk-btn:hover {
-  background: #dbeafe;
+  background: #bfdbfe;  /* Blue-200 */
   border-color: var(--dg-border-active);
 }
 

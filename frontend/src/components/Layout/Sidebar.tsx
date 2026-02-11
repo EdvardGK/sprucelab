@@ -196,10 +196,10 @@ export function Sidebar() {
               </Link>
             </div>
 
-            {/* Files section */}
+            {/* Data section */}
             <div className="mt-4">
               <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                {t('nav.files')}
+                {t('nav.data')}
               </div>
               <div className="mt-1 space-y-0.5">
                 <Link
@@ -213,6 +213,30 @@ export function Sidebar() {
                 >
                   <Layers className="h-4 w-4" />
                   <span>{t('nav.models')}</span>
+                </Link>
+                <Link
+                  to={`/projects/${projectId}/type-library`}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive(`/projects/${projectId}/type-library`)
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                  )}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>{t('nav.typeLibrary')}</span>
+                </Link>
+                <Link
+                  to={`/projects/${projectId}/material-library`}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive(`/projects/${projectId}/material-library`)
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                  )}
+                >
+                  <Box className="h-4 w-4" />
+                  <span>{t('nav.materialLibrary')}</span>
                 </Link>
                 <Link
                   to={`/projects/${projectId}/documents`}
@@ -274,30 +298,6 @@ export function Sidebar() {
             </div>
             <div className="mt-1 space-y-0.5">
               <Link
-                to={`/projects/${projectId}/workbench?view=dashboard`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  workbenchView === 'dashboard'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span>{t('workbench.dashboard')}</span>
-              </Link>
-              <Link
-                to={`/projects/${projectId}/workbench?view=library`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  workbenchView === 'library'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Layers className="h-4 w-4" />
-                <span>{t('workbench.typeLibrary')}</span>
-              </Link>
-              <Link
                 to={`/projects/${projectId}/workbench?view=classify`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
@@ -308,18 +308,6 @@ export function Sidebar() {
               >
                 <Wrench className="h-4 w-4" />
                 <span>{t('workbench.classification')}</span>
-              </Link>
-              <Link
-                to={`/projects/${projectId}/workbench?view=materials`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  workbenchView === 'materials'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Box className="h-4 w-4" />
-                <span>{t('workbench.materialLibrary')}</span>
               </Link>
             </div>
 

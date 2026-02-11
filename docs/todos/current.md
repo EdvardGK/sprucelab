@@ -1,179 +1,142 @@
-# Current TODO - BIM Coordinator Platform
+# Current TODO - Sprucelab BIM Platform
 
-**Last Updated**: 2025-10-20 (Session 017)
-**Status**: ✅ Celery Integration Complete
-
----
-
-## ✅ Completed (Session 017) - Celery Integration
-
-- [x] Create Celery tasks for IFC processing
-- [x] Add celery_task_id field to Model
-- [x] Replace threading.Thread with Celery tasks
-- [x] Update status endpoint to query Celery
-- [x] Convert revert operation to async
-- [x] Enhance Celery configuration
-- [x] Create test_celery management command
-- [x] Create CELERY_SETUP.md documentation
+**Last Updated**: 2026-02-07
+**Current Phase**: MVP Phase 1 Complete, EPD Architecture Phase 1 Complete
+**Status**: Type Library complete, EPD data models implemented
 
 ---
 
-## ✅ Completed (Session 015)
+## 🎯 Immediate Priority: EPD Architecture Refactor
 
-- [x] Fix TypeScript build errors (15 errors)
-- [x] Install missing Radix UI checkbox package
-- [x] Delete legacy viewer files
-- [x] Debug why viewer groups not displaying
-- [x] Fix pagination response handling in React hooks
-- [x] Update FederatedViewer to load real data
-- [x] Match viewer group card styling to model cards
-- [x] Add gallery/table views to ViewerGroups page
+**Reference**: `docs/worklog/2026-02-07-17-15_Type-Materials-EPD-Architecture.md`
 
----
+### Phase 1: Data Model Refactor ✅ COMPLETE
+- [x] Add EPDLibrary model (EPDs as first-class entities)
+- [x] Add EPDMapping model (flexible EPD→target linking)
+- [x] Add IFCMaterialNormalization model (IFC material→normalized)
+- [x] Remove EPD fields from MaterialLibrary/ProductLibrary
+- [x] Create Django migration (0025_add_epd_architecture)
+- [ ] Seed EPDLibrary with Reduzer products (optional, can do later)
 
-## 🎯 Next Session (016) - High Priority
+### Phase 2: Project Config Enhancement
+- [ ] Add inheritance fields to ProjectConfig
+- [ ] Add EPD source configuration
+- [ ] Add normalization rule configuration
 
-### Viewer Layout Redesign
-- [ ] Replace 3-column layout with full-width canvas
-- [ ] Add collapsible right sidebar for models
-- [ ] Implement floating HUD panels for filters
-- [ ] Make HUD panels toggleable
+### Phase 3: UI Implementation
+- [ ] Create Project Types & Materials page (`/projects/:id/types-materials`)
+- [ ] Create EPD Library browser component
+- [ ] Create EPD Mapping editor
+- [ ] Create Material Mapping grid
 
-### Add Models Feature
-- [ ] Create "Add Models to Group" dialog
-- [ ] List available models from project
-- [ ] Support multi-select with coordination data
-- [ ] Wire up to backend API
-- [ ] Refresh group after adding models
-
-**See**: `project-management/to-do/session-016-viewer-layout.md` for detailed breakdown
+### Phase 4: Export Updates
+- [ ] Update Reduzer export to use EPDMapping
+- [ ] Add EPD resolution logic (project→global fallback)
 
 ---
 
-## 🔨 Medium Priority (Future Sessions)
+## ✅ Phase 1 Complete (Type Library)
 
-### Group Management
-- [ ] Edit group dialog
-- [ ] Delete group with confirmation
-- [ ] Duplicate group
-- [ ] Reorder models in group
+**Reference**: `docs/knowledge/PROJECT_STATUS.md`
 
-### Model Management
-- [ ] Persist model visibility changes to backend
-- [ ] Edit model coordination data (offset, rotation, color, opacity)
-- [ ] Remove models from group
-- [ ] Batch update coordination data
-
-### 3D Viewer Integration
-- [ ] Set up Three.js canvas
-- [ ] Load IFC geometry from backend
-- [ ] Implement camera controls (orbit, pan, zoom)
-- [ ] Apply visibility/color/opacity from backend
-- [ ] Sync 3D selection with sidebar
-
-### Filter Functionality
-- [ ] Connect IFC Element Type filters to backend queries
-- [ ] Connect IFC Systems filters to backend queries
-- [ ] Apply filters to 3D visualization
-- [ ] Save/load filter presets
+- [x] Types-only extraction (2-second parsing)
+- [x] TypeBankEntry model with verification workflow
+- [x] TypeBankObservation for cross-project tracking
+- [x] GlobalTypeLibraryViewSet with all endpoints
+- [x] TypeLibraryPage with 3-panel layout
+- [x] TypeDetailPanel with tabbed interface
+- [x] VerificationBadge status indicators
+- [x] Material layer editor (TypeDefinitionLayer)
+- [x] Keyboard shortcuts (A=save, F=flag, I=ignore)
+- [x] i18n (English + Norwegian Bokmål)
+- [x] Type Dashboard with health scores
 
 ---
 
-## 🚀 Low Priority (Polish & Optimization)
+## 🔨 MVP Priority #2: Verification Engine
 
-### Performance
-- [ ] Implement virtual scrolling for large model lists
-- [ ] Lazy load 3D geometry
-- [ ] Optimize re-renders with React.memo
-- [ ] Add loading skeletons
+**Reference**: `docs/plans/PRD_v2.md`
 
-### UX Improvements
-- [ ] Keyboard shortcuts (e.g., H to toggle HUD)
-- [ ] Tooltips for all icons
-- [ ] Undo/redo for viewer changes
-- [ ] Export viewer configuration as JSON
-- [ ] Import viewer configuration
-
-### Testing
-- [ ] Unit tests for hooks
-- [ ] Integration tests for viewer
-- [ ] E2E tests for group creation flow
-- [ ] Performance benchmarks
+- [ ] Define rule schema in ProjectConfig
+- [ ] Build rule execution engine in FastAPI
+- [ ] Connect ProjectConfig → validation rules
+- [ ] Per-type issue reporting
+- [ ] Health score calculation from verification results
 
 ---
 
-## 📋 Backlog (Research/Design Needed)
+## 🔨 MVP Priority #3: Sandwich View
 
-### Advanced Features
-- [ ] Clash detection visualization
-- [ ] Measure tools in 3D viewer
-- [ ] Section planes/cutting views
-- [ ] Animation/4D timeline
-- [ ] Multi-user collaboration
-- [ ] Comments/annotations in 3D
+- [ ] Design 2D material section diagram component
+- [ ] Render TypeDefinitionLayer as visual sandwich
+- [ ] Add to TypeDetailPanel Materials tab
 
-### BEP Integration
-- [ ] Link viewer groups to BEP milestones
-- [ ] Validate model maturity levels (MMI)
-- [ ] Check naming conventions compliance
-- [ ] Generate coordination reports
+---
+
+## ⏳ Planned (Phase 2+)
+
+### From PRD
+- [ ] Rule Configuration GUI (visual rule builder)
+- [ ] Version Change Badges (new/removed/changed indicators)
+- [ ] Excel import/export UI wiring
+- [ ] BCF export from verification failures
+- [ ] Multi-scenario LCA export (A/B/C comparison)
+
+### From magna-reduzer Comparison
+- [ ] MMI (Model Maturity Index) extraction
+- [ ] Measurement rules per IFC class (auto-detect unit)
+- [ ] Direct Shape detection (Revit artifact handling)
+- [ ] Seed EPDLibrary with 33 confirmed Reduzer products
+
+---
+
+## 🔴 Deprioritized
+
+- BEP System (over-engineered, ProjectConfig sufficient)
+- Full property editing (Excel workflow sufficient)
+- Graph queries (over-engineered for MVP)
+- Clash detection (Solibri's moat)
 
 ---
 
 ## 🐛 Known Issues
 
-**None currently!** All blocking issues resolved in Session 015.
-
----
-
-## 💡 Ideas / Future Enhancements
-
-1. **Group Templates**: Pre-configured group setups (e.g., "Full Building", "MEP Coordination", "Structural Review")
-
-2. **Smart Grouping**: Auto-create groups based on:
-   - Model discipline (ARK, STR, HVAC, etc.)
-   - Building zones
-   - Construction phases
-
-3. **Model Comparison**: Side-by-side viewer for version comparison
-
-4. **Export Options**:
-   - Export combined IFC from group
-   - Export BCF issues from viewer
-   - Export screenshots/videos
-
-5. **Integration**:
-   - Link to external BIM tools (Solibri, Navisworks)
-   - Export to game engines (Unity, Unreal)
+1. **Production migration needed**: `reused_status` column missing on Railway
+2. **Dashboard health at 0%**: 620/623 types pending classification (expected)
 
 ---
 
 ## 📊 Progress Tracking
 
-**Overall Project Completion**: ~60%
+**Overall MVP Completion**: ~70%
 
-### Backend ✅ 95% Complete
-- [x] Database models
-- [x] REST API endpoints
-- [x] BEP system
-- [ ] 3D geometry optimization (pending)
-
-### Frontend 🔨 70% Complete
-- [x] Project/Model management
-- [x] Viewer groups UI
-- [x] Group creation/listing
-- [ ] Add models dialog (in progress)
-- [ ] 3D viewer (pending)
-- [ ] Filters (pending)
-
-### 3D Visualization 🚧 10% Complete
-- [ ] Three.js setup (pending)
-- [ ] Geometry loading (pending)
-- [ ] Camera controls (pending)
-- [ ] Visual effects (pending)
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Type extraction | ✅ 100% | 2-second parsing works |
+| TypeBank | ✅ 100% | Cross-project intelligence |
+| Type Dashboard | ✅ 95% | Health scores, progress bars |
+| Type Library UI | ✅ 90% | Grid, detail panel, verification |
+| Verification Engine | 🟡 20% | Models exist, engine pending |
+| EPD Architecture | 🟡 30% | Phase 1 complete (data models) |
+| Sandwich View | 🔴 0% | Not started |
+| Excel Workflows | 🟡 50% | Endpoints exist, UI not wired |
+| LCA Export | 🟡 30% | Endpoint exists, needs EPD refactor |
 
 ---
 
-**Next Action**: Start Session 016 with viewer layout redesign
+## 📋 Key Documentation
+
+| Document | Purpose |
+|----------|---------|
+| `CLAUDE.md` | Project context, rules, architecture |
+| `docs/knowledge/PROJECT_STATUS.md` | Current state overview |
+| `docs/knowledge/architecture-flowchart.md` | System diagrams |
+| `docs/knowledge/magna-reduzer-comparison.md` | Prototype comparison |
+| `docs/plans/PRD_v2.md` | Product requirements |
+| `docs/worklog/2026-02-07-*` | Latest session logs |
+
+---
+
+**Next Action**: Implement EPD Architecture Phase 2 (Project Config Enhancement)
 **Blocker**: None
-**Estimated Time to MVP**: 2-3 more sessions
+**Reference Worklog**: `docs/worklog/2026-02-07-17-15_Type-Materials-EPD-Architecture.md`

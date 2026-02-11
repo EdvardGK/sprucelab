@@ -4,6 +4,42 @@ IFC Model and related models for BIM Coordinator Platform.
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 import uuid
+import re
+
+
+def infer_discipline_from_filename(filename: str) -> str | None:
+    """
+    Infer discipline from IFC filename patterns.
+
+    Common patterns:
+    - ST28_RIV_*.ifc → RIV (Mechanical)
+    - ProjectName_ARK_*.ifc → ARK (Architecture)
+    - *_RIE*.ifc → RIE (Electrical)
+    - *-RIB-*.ifc → RIB (Structural)
+
+    Returns discipline code or None if not inferable.
+    """
+    if not filename:
+        return None
+
+    # Normalize: uppercase for matching
+    upper_name = filename.upper()
+
+    # Norwegian discipline codes in priority order
+    discipline_patterns = [
+        (r'[_\-]ARK[_\-\.]', 'ARK'),   # Architecture
+        (r'[_\-]RIB[_\-\.]', 'RIB'),   # Structural
+        (r'[_\-]RIV[_\-\.]', 'RIV'),   # Mechanical/HVAC
+        (r'[_\-]RIE[_\-\.]', 'RIE'),   # Electrical
+        (r'[_\-]LARK[_\-\.]', 'LARK'), # Landscape
+        (r'[_\-]RIG[_\-\.]', 'RIG'),   # Geotechnical
+    ]
+
+    for pattern, discipline in discipline_patterns:
+        if re.search(pattern, upper_name):
+            return discipline
+
+    return None
 
 
 class Model(models.Model):
@@ -46,6 +82,26 @@ class Model(models.Model):
         ('completed', 'Completed'),
         ('failed', 'Failed'),
     ]
+
+    # === Discipline (Sprint 1: The Gatekeeper) ===
+    DISCIPLINE_CHOICES = [
+        ('ARK', 'Architecture'),
+        ('RIB', 'Structural'),
+        ('RIV', 'Mechanical/HVAC'),
+        ('RIE', 'Electrical'),
+        ('LARK', 'Landscape'),
+        ('RIG', 'Geotechnical'),
+    ]
+
+    # Color mapping for frontend discipline "ear" indicator
+    DISCIPLINE_COLORS = {
+        'ARK': '#3B82F6',   # Blue
+        'RIB': '#EF4444',   # Red
+        'RIV': '#22C55E',   # Green
+        'RIE': '#F59E0B',   # Yellow/Orange
+        'LARK': '#10B981',  # Teal
+        'RIG': '#8B5CF6',   # Purple
+    }
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='models')
@@ -224,6 +280,19 @@ class Model(models.Model):
         help_text="4x4 transformation matrix for GIS to Local coordinate conversion"
     )
 
+    # === Discipline Assignment (Sprint 1: The Gatekeeper) ===
+    discipline = models.CharField(
+        max_length=10,
+        choices=DISCIPLINE_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Model discipline - auto-inferred from filename, can be overridden"
+    )
+    is_primary_for_discipline = models.BooleanField(
+        default=False,
+        help_text="This is THE authoritative model for this discipline (e.g., main ARK model = room source of truth)"
+    )
+
     # Celery task tracking
     task_id = models.CharField(
         max_length=255,
@@ -239,6 +308,17 @@ class Model(models.Model):
         db_table = 'models'
         ordering = ['-created_at']
         unique_together = ['project', 'name', 'version_number']
+        indexes = [
+            models.Index(fields=['discipline']),
+            models.Index(fields=['project', 'discipline']),
+            models.Index(fields=['is_primary_for_discipline']),
+        ]
+
+    def save(self, *args, **kwargs):
+        """Auto-infer discipline from filename if not already set."""
+        if not self.discipline and self.original_filename:
+            self.discipline = infer_discipline_from_filename(self.original_filename)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} (v{self.version_number})"
@@ -293,6 +373,38 @@ class Model(models.Model):
     def is_fork(self):
         """Check if this model is a fork."""
         return self.forked_from is not None
+
+    @property
+    def discipline_color(self):
+        """Get the color for this model's discipline (for frontend 'ear' indicator)."""
+        if self.discipline:
+            return self.DISCIPLINE_COLORS.get(self.discipline, '#6B7280')  # Gray fallback
+        return None
+
+    def set_as_primary(self):
+        """
+        Set this model as the primary model for its discipline in the project.
+
+        This will:
+        1. Unset is_primary_for_discipline on other models with same discipline in project
+        2. Set this model's is_primary_for_discipline to True
+
+        Returns:
+            bool: True if set successfully, False if no discipline assigned
+        """
+        if not self.discipline:
+            return False
+
+        # Unset primary flag on other models with same discipline in this project
+        Model.objects.filter(
+            project=self.project,
+            discipline=self.discipline,
+            is_primary_for_discipline=True
+        ).exclude(id=self.id).update(is_primary_for_discipline=False)
+
+        self.is_primary_for_discipline = True
+        self.save()
+        return True
 
     def get_forks(self):
         """Get all forks of this model."""

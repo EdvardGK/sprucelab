@@ -15,6 +15,9 @@ sqlalchemy>=2.0.25
 ifcopenshell>=0.8.0
 numpy>=1.26.0
 
+# Geometry (for spatial stitching - point-in-polygon)
+shapely>=2.0.0
+
 # Excel support
 pandas>=2.0.0
 openpyxl>=3.1.0

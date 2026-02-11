@@ -5,6 +5,7 @@ Serializes BEP configuration and all related components for API endpoints.
 """
 from rest_framework import serializers
 from .models import (
+    BEPTemplate,
     BEPConfiguration,
     TechnicalRequirement,
     MMIScaleDefinition,
@@ -12,7 +13,81 @@ from .models import (
     RequiredPropertySet,
     ValidationRule,
     SubmissionMilestone,
+    ProjectDiscipline,
+    ProjectCoordinates,
+    ProjectStorey,
 )
+
+
+class BEPTemplateModelSerializer(serializers.ModelSerializer):
+    """Serialize BEP templates (database model)."""
+
+    class Meta:
+        model = BEPTemplate
+        fields = [
+            'id', 'name', 'framework', 'description', 'is_system',
+            'default_disciplines', 'default_coordinate_system',
+            'default_naming_conventions', 'default_responsibility_matrix',
+            'default_mmi_requirements', 'default_storeys',
+            'created_at', 'updated_at', 'created_by'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_system']
+
+
+class BEPTemplateListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for listing BEP templates."""
+
+    class Meta:
+        model = BEPTemplate
+        fields = [
+            'id', 'name', 'framework', 'description', 'is_system',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_system']
+
+
+class ProjectDisciplineSerializer(serializers.ModelSerializer):
+    """Serialize project discipline assignments."""
+
+    class Meta:
+        model = ProjectDiscipline
+        fields = [
+            'id', 'project', 'discipline_code', 'discipline_name',
+            'company_name', 'contact_name', 'contact_email',
+            'software', 'source_code_mapping', 'is_active',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ProjectCoordinatesSerializer(serializers.ModelSerializer):
+    """Serialize project coordinate system configuration."""
+
+    class Meta:
+        model = ProjectCoordinates
+        fields = [
+            'id', 'project',
+            'horizontal_crs_epsg', 'horizontal_crs_name', 'vertical_crs',
+            'local_origin_x', 'local_origin_y', 'local_origin_z',
+            'eastings', 'northings', 'orthometric_height',
+            'true_north_rotation',
+            'position_tolerance_m', 'rotation_tolerance_deg',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ProjectStoreySerializer(serializers.ModelSerializer):
+    """Serialize project storey definitions."""
+
+    class Meta:
+        model = ProjectStorey
+        fields = [
+            'id', 'project', 'storey_name', 'storey_code',
+            'elevation_m', 'tolerance_m', 'order',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class TechnicalRequirementSerializer(serializers.ModelSerializer):
@@ -109,6 +184,9 @@ class BEPConfigurationSerializer(serializers.ModelSerializer):
     Includes technical requirements, MMI scale, naming conventions,
     property sets, validation rules, and milestones.
     """
+    # Template (optional)
+    template_detail = BEPTemplateListSerializer(source='template', read_only=True)
+
     # Nested serializers for related components
     technical_requirements = TechnicalRequirementSerializer(read_only=True)
     mmi_scale = MMIScaleDefinitionSerializer(many=True, read_only=True)
@@ -123,8 +201,9 @@ class BEPConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = BEPConfiguration
         fields = [
-            'id', 'project', 'project_name', 'version', 'status',
-            'name', 'description', 'eir_document_url', 'bep_document_url',
+            'id', 'project', 'project_name', 'template', 'template_detail',
+            'version', 'status', 'name', 'description',
+            'eir_document_url', 'bep_document_url',
             'framework', 'cde_structure',
             'technical_requirements', 'mmi_scale', 'naming_conventions',
             'required_property_sets', 'validation_rules', 'milestones',
@@ -140,6 +219,7 @@ class BEPConfigurationListSerializer(serializers.ModelSerializer):
     Used for list endpoints to reduce payload size.
     """
     project_name = serializers.CharField(source='project.name', read_only=True)
+    template_name = serializers.CharField(source='template.name', read_only=True, default=None)
     mmi_scale_count = serializers.SerializerMethodField()
     validation_rules_count = serializers.SerializerMethodField()
     milestones_count = serializers.SerializerMethodField()
@@ -147,8 +227,8 @@ class BEPConfigurationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = BEPConfiguration
         fields = [
-            'id', 'project', 'project_name', 'version', 'status',
-            'name', 'description', 'framework',
+            'id', 'project', 'project_name', 'template', 'template_name',
+            'version', 'status', 'name', 'description', 'framework',
             'mmi_scale_count', 'validation_rules_count', 'milestones_count',
             'created_at', 'updated_at', 'activated_at'
         ]

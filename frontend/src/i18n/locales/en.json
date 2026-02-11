@@ -47,13 +47,18 @@
     "documents": "Documents",
     "drawings": "Drawings",
     "viewer3d": "3D Viewer",
+    "viewer": "3D Viewer",
     "scriptsLibrary": "Scripts Library",
     "quickStats": "Quick Stats",
     "processingReports": "Processing Reports",
     "workspace": "Workspace",
     "developer": "Developer",
     "modules": "Modules",
-    "files": "Files"
+    "files": "Files",
+    "data": "Data",
+    "typeLibrary": "Type Library",
+    "materialLibrary": "Material Library",
+    "workbench": "Workbench"
   },
   "workbench": {
     "title": "BIM Workbench",
@@ -291,7 +296,35 @@
     "models": "Models",
     "noTypes": "No types found",
     "complete": "complete",
-    "error": "Failed to load dashboard metrics"
+    "error": "Failed to load dashboard metrics",
+    "tabs": {
+      "overview": "Overview",
+      "project": "Project",
+      "bim": "BIM"
+    },
+    "elements": "Elements",
+    "types": "Types",
+    "topTypes": "Top Types",
+    "topMaterials": "Top Materials",
+    "noTypeData": "No type data",
+    "noMaterialData": "No material data",
+    "ns3451Mapping": "NS-3451 Mapping",
+    "coverage": "Coverage",
+    "mmiDistribution": "MMI Distribution",
+    "noMmiData": "No MMI data",
+    "configureBep": "Configure BEP to enable",
+    "projectBasepoint": "Project Basepoint",
+    "noBasepoint": "No basepoint set",
+    "uploadWithGis": "Upload model with GIS coords",
+    "navCards": {
+      "models": "View and manage IFC models",
+      "viewer": "Explore models in 3D",
+      "workbench": "Classify types and edit data"
+    }
+  },
+  "materialLibrary": {
+    "title": "Material Library",
+    "comingSoon": "Material library functionality coming soon"
   },
   "semanticTypes": {
     "title": "Semantic Types",

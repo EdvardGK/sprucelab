@@ -24,6 +24,9 @@ export default {
   				tertiary: tokens.color.text.tertiary,
   				inverse: tokens.color.text.inverse,
   			},
+  			// Surface color for hover states
+  			surface: 'hsl(var(--secondary))',
+  			// Status colors
   			success: tokens.color.success,
   			warning: tokens.color.warning,
   			error: tokens.color.error,

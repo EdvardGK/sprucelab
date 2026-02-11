@@ -13,6 +13,123 @@ from django.utils import timezone
 import uuid
 
 
+class BEPTemplate(models.Model):
+    """
+    Global BEP template library.
+
+    Templates provide reusable defaults for BEP configurations that projects can
+    inherit and customize. System templates (POFIN, ISO 19650) are built-in;
+    users can create custom templates.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Identity
+    name = models.CharField(
+        max_length=200,
+        help_text="Template name (e.g., 'ISO 19650', 'POFIN Norway')"
+    )
+    framework = models.CharField(
+        max_length=50,
+        choices=[
+            ('pofin', 'POFIN (buildingSMART Norge)'),
+            ('iso19650', 'ISO 19650 Generic'),
+            ('custom', 'Custom'),
+        ],
+        default='pofin',
+        help_text="BIM framework this template follows"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Description of this template and its intended use"
+    )
+    is_system = models.BooleanField(
+        default=False,
+        help_text="System templates are built-in and read-only"
+    )
+
+    # Template defaults (inherited by projects)
+    default_disciplines = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="""
+        Default discipline codes and names:
+        [
+            {"code": "ARK", "name": "Arkitekt"},
+            {"code": "RIB", "name": "Rådgivende Ingeniør Bygg"},
+            {"code": "RIV", "name": "Rådgivende Ingeniør VVS"},
+            {"code": "RIE", "name": "Rådgivende Ingeniør Elektro"}
+        ]
+        """
+    )
+
+    default_coordinate_system = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="""
+        Default coordinate system settings:
+        {
+            "horizontal_crs_epsg": 25833,
+            "horizontal_crs_name": "ETRS89 / UTM zone 33N",
+            "vertical_crs": "NN2000"
+        }
+        """
+    )
+
+    default_naming_conventions = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Default naming convention patterns"
+    )
+
+    default_responsibility_matrix = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="""
+        Default NS3451 responsibility assignments:
+        {
+            "20": {"ARK": "primary"},
+            "22": {"RIB": "primary", "ARK": "secondary"},
+            "31": {"RIV": "primary"}
+        }
+        """
+    )
+
+    default_mmi_requirements = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Default MMI level requirements per phase"
+    )
+
+    default_storeys = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="""
+        Default storey structure (for templates with standard floor schemes):
+        [
+            {"name": "Plan U1", "code": "U1", "elevation": -3.0},
+            {"name": "Plan 01", "code": "01", "elevation": 0.0},
+            {"name": "Plan 02", "code": "02", "elevation": 3.5}
+        ]
+        """
+    )
+
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = 'bep_templates'
+        ordering = ['is_system', 'name']
+        verbose_name = 'BEP Template'
+        verbose_name_plural = 'BEP Templates'
+
+    def __str__(self):
+        prefix = "[System] " if self.is_system else ""
+        return f"{prefix}{self.name} ({self.framework})"
+
+
 class BEPConfiguration(models.Model):
     """
     BIM Execution Plan configuration for a project.
@@ -21,6 +138,7 @@ class BEPConfiguration(models.Model):
     configuration that defines both requirements and how we'll validate them.
 
     Supports versioning: one project can have multiple BEPs, but only one active at a time.
+    Can inherit defaults from a BEPTemplate.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -29,6 +147,16 @@ class BEPConfiguration(models.Model):
         on_delete=models.CASCADE,
         related_name='beps',
         help_text="Project this BEP applies to"
+    )
+
+    # Template inheritance
+    template = models.ForeignKey(
+        BEPTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='configurations',
+        help_text="Optional template to inherit defaults from"
     )
 
     # Versioning
@@ -747,3 +875,250 @@ class SubmissionMilestone(models.Model):
 
     def __str__(self):
         return f"{self.name} (MMI {self.target_mmi}) - {self.target_date}"
+
+
+class ProjectDiscipline(models.Model):
+    """
+    Discipline assignment for a project.
+
+    Links discipline codes (ARK, RIB, RIV, RIE, etc.) to companies, contacts,
+    and software used. Used for the responsibility matrix and file validation.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        related_name='disciplines',
+        help_text="Project this discipline belongs to"
+    )
+
+    # Discipline identity
+    discipline_code = models.CharField(
+        max_length=10,
+        help_text="Standard code: ARK, RIB, RIV, RIE, LARK, RIG, etc."
+    )
+    discipline_name = models.CharField(
+        max_length=100,
+        help_text="Full name (e.g., 'Arkitekt', 'Rådgivende Ingeniør Bygg')"
+    )
+
+    # Company info
+    company_name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Name of company responsible for this discipline"
+    )
+    contact_name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Primary contact person"
+    )
+    contact_email = models.EmailField(
+        blank=True,
+        help_text="Contact email"
+    )
+
+    # Technical info
+    software = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Authoring software (Revit, Archicad, Tekla, etc.)"
+    )
+    source_code_mapping = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text="Maps internal codes (e.g., 'A') to standard ('ARK')"
+    )
+
+    # Status
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Is this discipline currently active on the project?"
+    )
+
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'project_disciplines'
+        ordering = ['project', 'discipline_code']
+        unique_together = [['project', 'discipline_code']]
+        verbose_name = 'Project Discipline'
+        verbose_name_plural = 'Project Disciplines'
+
+    def __str__(self):
+        return f"{self.project.name} - {self.discipline_code}: {self.discipline_name}"
+
+
+class ProjectCoordinates(models.Model):
+    """
+    Project-level coordinate system configuration.
+
+    Defines the georeferencing settings for the project site. Used to validate
+    that uploaded IFC models use the correct coordinate system.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.OneToOneField(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        related_name='coordinates',
+        help_text="Project this coordinate config belongs to"
+    )
+
+    # Coordinate Reference System
+    horizontal_crs_epsg = models.IntegerField(
+        default=25833,  # ETRS89 / UTM zone 33N (Norway)
+        help_text="EPSG code for horizontal CRS (e.g., 25833 for UTM33N)"
+    )
+    horizontal_crs_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default='ETRS89 / UTM zone 33N',
+        help_text="Human-readable CRS name"
+    )
+    vertical_crs = models.CharField(
+        max_length=50,
+        default='NN2000',
+        help_text="Vertical datum (e.g., 'NN2000', 'NN54')"
+    )
+
+    # Local project origin
+    local_origin_x = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+        help_text="Local origin X (typically 0)"
+    )
+    local_origin_y = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+        help_text="Local origin Y (typically 0)"
+    )
+    local_origin_z = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+        help_text="Local origin Z (typically 0)"
+    )
+
+    # Global position (real-world coordinates)
+    eastings = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text="Eastings in CRS units (e.g., meters for UTM)"
+    )
+    northings = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text="Northings in CRS units"
+    )
+    orthometric_height = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text="Orthometric height above datum"
+    )
+
+    # Rotation
+    true_north_rotation = models.DecimalField(
+        max_digits=8,
+        decimal_places=4,
+        default=0,
+        help_text="True North rotation in degrees (positive = clockwise from grid north)"
+    )
+
+    # Tolerance for validation
+    position_tolerance_m = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        default=0.1,
+        help_text="Allowed deviation from expected position (meters)"
+    )
+    rotation_tolerance_deg = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        default=0.1,
+        help_text="Allowed deviation from expected rotation (degrees)"
+    )
+
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'project_coordinates'
+        verbose_name = 'Project Coordinates'
+        verbose_name_plural = 'Project Coordinates'
+
+    def __str__(self):
+        return f"{self.project.name} - EPSG:{self.horizontal_crs_epsg}"
+
+
+class ProjectStorey(models.Model):
+    """
+    Expected storey/level structure for a project.
+
+    Defines the expected floors with their elevations. Used to validate
+    that IfcBuildingStorey elements in uploaded models match the project spec.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        related_name='storeys',
+        help_text="Project this storey belongs to"
+    )
+
+    # Storey identity
+    storey_name = models.CharField(
+        max_length=100,
+        help_text="Full storey name (e.g., 'Plan U1', 'Plan 01', 'Tak')"
+    )
+    storey_code = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Short code (e.g., 'U1', '01', 'T')"
+    )
+
+    # Elevation
+    elevation_m = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        help_text="Storey elevation in meters (relative to project zero)"
+    )
+    tolerance_m = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        default=0.01,
+        help_text="Allowed elevation deviation in meters"
+    )
+
+    # Display order
+    order = models.IntegerField(
+        default=0,
+        help_text="Sort order (lowest floor first, typically negative for basement)"
+    )
+
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'project_storeys'
+        ordering = ['project', 'order', 'elevation_m']
+        unique_together = [['project', 'storey_name']]
+        verbose_name = 'Project Storey'
+        verbose_name_plural = 'Project Storeys'
+
+    def __str__(self):
+        return f"{self.project.name} - {self.storey_name} ({self.elevation_m}m)"

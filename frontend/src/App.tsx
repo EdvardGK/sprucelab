@@ -20,6 +20,8 @@ import Settings from './pages/Settings';
 import FederatedViewer from './pages/FederatedViewer';
 import ViewerGroups from './pages/ViewerGroups';
 import TypeLibraryPage from './pages/TypeLibraryPage';
+import ProjectTypeLibrary from './pages/ProjectTypeLibrary';
+import ProjectMaterialLibrary from './pages/ProjectMaterialLibrary';
 import ProcessingReports from './pages/dev/ProcessingReports';
 import ProcessingReportDetail from './pages/dev/ProcessingReportDetail';
 
@@ -35,6 +37,8 @@ const router = createBrowserRouter([
   { path: "/projects/:id/viewer/:groupId", element: <FederatedViewer /> },
   { path: "/projects/:id/documents", element: <ProjectDocuments /> },
   { path: "/projects/:id/drawings", element: <ProjectDrawings /> },
+  { path: "/projects/:id/type-library", element: <ProjectTypeLibrary /> },
+  { path: "/projects/:id/material-library", element: <ProjectMaterialLibrary /> },
   { path: "/projects/:id/workbench", element: <BIMWorkbench /> },
   { path: "/models/:id", element: <ModelWorkspace /> },
   { path: "/my-issues", element: <MyIssues /> },

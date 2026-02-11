@@ -47,13 +47,18 @@
     "documents": "Dokumenter",
     "drawings": "Tegninger",
     "viewer3d": "3D-visning",
+    "viewer": "3D-visning",
     "scriptsLibrary": "Skriptbibliotek",
     "quickStats": "Hurtigstatistikk",
     "processingReports": "Prosesseringsrapporter",
     "workspace": "Arbeidsområde",
     "developer": "Utvikler",
     "modules": "Moduler",
-    "files": "Filer"
+    "files": "Filer",
+    "data": "Data",
+    "typeLibrary": "Typebibliotek",
+    "materialLibrary": "Materialbibliotek",
+    "workbench": "Arbeidsbenk"
   },
   "workbench": {
     "title": "BIM-arbeidsbenk",
@@ -291,7 +296,35 @@
     "models": "Modeller",
     "noTypes": "Ingen typer funnet",
     "complete": "fullført",
-    "error": "Kunne ikke laste dashbord-metrikker"
+    "error": "Kunne ikke laste dashbord-metrikker",
+    "tabs": {
+      "overview": "Oversikt",
+      "project": "Prosjekt",
+      "bim": "BIM"
+    },
+    "elements": "Elementer",
+    "types": "Typer",
+    "topTypes": "Topp typer",
+    "topMaterials": "Topp materialer",
+    "noTypeData": "Ingen typedata",
+    "noMaterialData": "Ingen materialdata",
+    "ns3451Mapping": "NS-3451-kartlegging",
+    "coverage": "Dekning",
+    "mmiDistribution": "MMI-fordeling",
+    "noMmiData": "Ingen MMI-data",
+    "configureBep": "Konfigurer BEP for å aktivere",
+    "projectBasepoint": "Prosjektbasepunkt",
+    "noBasepoint": "Ingen basepunkt satt",
+    "uploadWithGis": "Last opp modell med GIS-koordinater",
+    "navCards": {
+      "models": "Se og administrer IFC-modeller",
+      "viewer": "Utforsk modeller i 3D",
+      "workbench": "Klassifiser typer og rediger data"
+    }
+  },
+  "materialLibrary": {
+    "title": "Materialbibliotek",
+    "comingSoon": "Materialbibliotek-funksjonalitet kommer snart"
   },
   "semanticTypes": {
     "title": "Semantiske typer",

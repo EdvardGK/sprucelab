@@ -1,31 +1,22 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Code2, Package } from 'lucide-react';
+import { Code2 } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { AppLayout } from '@/components/Layout/AppLayout';
-import { TypeLibraryPanel } from '@/components/features/warehouse/TypeLibraryPanel';
-import { TypeDashboard } from '@/components/features/warehouse/TypeDashboard';
-import { TypeLibraryView } from '@/components/features/warehouse/library/TypeLibraryView';
 import { TypeAnalysisWorkbench } from '@/components/features/warehouse/workbench/TypeAnalysisWorkbench';
 import { MMITableMaker } from '@/components/features/bep/MMITableMaker';
 
-type ViewId = 'dashboard' | 'library' | 'classify' | 'types' | 'materials' | 'bep' | 'scripting';
+type ViewId = 'classify' | 'bep' | 'scripting';
 
 export default function BIMWorkbench() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { data: project, isLoading } = useProject(id!);
 
-  // Dashboard is the default landing view
-  const activeView = (searchParams.get('view') || 'dashboard') as ViewId;
-
-  // Handler for navigating to type list for a specific model
-  const handleModelSelect = (modelId: string) => {
-    setSearchParams({ view: 'types', model: modelId });
-  };
+  // Classification is the default landing view (editing-only workbench)
+  const activeView = (searchParams.get('view') || 'classify') as ViewId;
 
   if (isLoading) {
     return (
@@ -52,59 +43,12 @@ export default function BIMWorkbench() {
       <div className="flex h-full flex-col bg-background text-foreground overflow-hidden">
         {/* Content - Full height, no scrolling at container level */}
         <div className="flex-1 overflow-hidden">
-          {activeView === 'dashboard' && (
-            <TypeDashboard
-              projectId={project.id}
-              onModelSelect={handleModelSelect}
-            />
-          )}
-          {activeView === 'library' && <TypeLibraryView projectId={project.id} />}
           {activeView === 'classify' && <TypeAnalysisWorkbench projectId={project.id} />}
-          {/* Legacy: keep 'types' for backwards compatibility */}
-          {activeView === 'types' && <TypeLibraryPanel projectId={project.id} />}
-          {activeView === 'materials' && <MaterialLibraryPanel projectId={project.id} />}
           {activeView === 'bep' && <BEPTab projectId={project.id} />}
           {activeView === 'scripting' && <ScriptingTab projectId={project.id} />}
         </div>
       </div>
     </AppLayout>
-  );
-}
-
-// Material Library Panel (placeholder - to be implemented)
-function MaterialLibraryPanel({ projectId: _projectId }: { projectId: string }) {
-  const { t } = useTranslation();
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-text-primary">{t('materials.title')}</h2>
-          <p className="text-text-secondary text-sm">
-            {t('materials.description')}
-          </p>
-        </div>
-        <Button variant="outline" size="sm">
-          {t('materials.importCsv')}
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('materials.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12">
-            <Package className="h-12 w-12 text-text-tertiary mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-text-primary mb-2">
-              {t('materials.noMaterials')}
-            </h3>
-            <p className="text-text-secondary mb-4">
-              {t('materials.noMaterialsDesc')}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
   );
 }
 
