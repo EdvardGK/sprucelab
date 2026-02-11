@@ -44,10 +44,10 @@ export function Sidebar() {
   // Detect if we're in the workbench
   const isInWorkbench = location.pathname.includes('/workbench');
 
-  // Get workbench view from URL search params (types, materials, products, stats)
+  // Get workbench view from URL search params (dashboard, library, classify, materials, stats)
   const workbenchView = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    return params.get('view') || 'types';
+    return params.get('view') || 'dashboard';
   }, [location.search]);
 
   const { data: currentProject } = useProject(projectId || '');
@@ -274,16 +274,40 @@ export function Sidebar() {
             </div>
             <div className="mt-1 space-y-0.5">
               <Link
-                to={`/projects/${projectId}/workbench?view=types`}
+                to={`/projects/${projectId}/workbench?view=dashboard`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  workbenchView === 'types'
+                  workbenchView === 'dashboard'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>{t('workbench.dashboard')}</span>
+              </Link>
+              <Link
+                to={`/projects/${projectId}/workbench?view=library`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  workbenchView === 'library'
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                 )}
               >
                 <Layers className="h-4 w-4" />
                 <span>{t('workbench.typeLibrary')}</span>
+              </Link>
+              <Link
+                to={`/projects/${projectId}/workbench?view=classify`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  workbenchView === 'classify'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <Wrench className="h-4 w-4" />
+                <span>{t('workbench.classification')}</span>
               </Link>
               <Link
                 to={`/projects/${projectId}/workbench?view=materials`}
@@ -306,7 +330,7 @@ export function Sidebar() {
                     : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                 )}
               >
-                <BarChart3 className="h-4 w-4" />
+                <Target className="h-4 w-4" />
                 <span>{t('workbench.mappingStats')}</span>
               </Link>
             </div>

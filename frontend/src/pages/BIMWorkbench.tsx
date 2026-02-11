@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { TypeLibraryPanel } from '@/components/features/warehouse/TypeLibraryPanel';
 import { TypeDashboard } from '@/components/features/warehouse/TypeDashboard';
+import { TypeLibraryView } from '@/components/features/warehouse/library/TypeLibraryView';
+import { TypeAnalysisWorkbench } from '@/components/features/warehouse/workbench/TypeAnalysisWorkbench';
 import { MMITableMaker } from '@/components/features/bep/MMITableMaker';
 
-type ViewId = 'dashboard' | 'types' | 'materials' | 'stats' | 'bep' | 'scripting';
+type ViewId = 'dashboard' | 'library' | 'classify' | 'types' | 'materials' | 'stats' | 'bep' | 'scripting';
 
 export default function BIMWorkbench() {
   const { t } = useTranslation();
@@ -56,6 +58,9 @@ export default function BIMWorkbench() {
               onModelSelect={handleModelSelect}
             />
           )}
+          {activeView === 'library' && <TypeLibraryView projectId={project.id} />}
+          {activeView === 'classify' && <TypeAnalysisWorkbench projectId={project.id} />}
+          {/* Legacy: keep 'types' for backwards compatibility */}
           {activeView === 'types' && <TypeLibraryPanel projectId={project.id} />}
           {activeView === 'materials' && <MaterialLibraryPanel projectId={project.id} />}
           {activeView === 'stats' && <MappingStatsPanel projectId={project.id} />}
