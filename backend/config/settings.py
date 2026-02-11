@@ -230,8 +230,10 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React dev server
     "http://localhost:5173",  # Vite dev server
+    "http://localhost:5174",  # Vite fallback port
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
     "https://sprucelab.vercel.app",  # Production frontend
 ]
 
@@ -271,8 +273,10 @@ CORS_ALLOW_CREDENTIALS = True  # Allow cookies for CSRF
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:5174",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
     "https://sprucelab.vercel.app",  # Production frontend
 ]
 

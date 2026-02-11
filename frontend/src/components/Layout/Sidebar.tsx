@@ -58,9 +58,9 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="flex w-64 flex-col border-r border-border bg-background-elevated">
+    <aside className="flex w-64 flex-col border-r border-white/30 bg-white/60 backdrop-blur-xl">
       {/* Workspace selector */}
-      <div className="border-b border-border p-3">
+      <div className="border-b border-white/30 p-3">
         <button
           onClick={() => navigate('/')}
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface transition-colors"
@@ -75,7 +75,7 @@ export function Sidebar() {
       </div>
 
       {/* Search and actions */}
-      <div className="flex items-center gap-2 border-b border-border p-3">
+      <div className="flex items-center gap-2 border-b border-white/30 p-3">
         <Button
           variant="ghost"
           size="sm"

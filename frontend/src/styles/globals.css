@@ -10,72 +10,114 @@
 
 @layer base {
   :root {
-    /* shadcn/ui semantic variables (HSL format for dark mode) */
-    --background: 0 0% 100%;           /* #0a0f14 */
-    --foreground: 0 0% 3.9%;             /* #fafafa */
+    /* ===========================================
+       BLUE GLASS - Glassmorphism with blue gradient
+       Airy, modern, distinctive
+       =========================================== */
 
-    --card: 0 0% 100%;                /* #141b22 */
-    --card-foreground: 0 0% 3.9%;
+    /* Background gradient defined separately - CSS variables for solid fallback */
+    --background: 210 100% 96%;        /* Light blue fallback #E8F4FD */
+    --foreground: 215 25% 20%;         /* Dark blue-gray for text */
 
-    --popover: 0 0% 100%;             /* #1f2933 */
-    --popover-foreground: 0 0% 3.9%;
+    /* Glass cards - semi-transparent white */
+    --card: 0 0% 100%;                 /* White base (opacity applied in component) */
+    --card-foreground: 215 25% 20%;
 
-    --primary: 0 0% 9%;            /* #1890ff */
-    --primary-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 20%;
 
-    --secondary: 0 0% 96.1%;           /* #33a070 */
-    --secondary-foreground: 0 0% 9%;
+    /* Primary - vibrant blue */
+    --primary: 217 91% 50%;            /* #2563EB bright blue */
+    --primary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 96.1%;               /* #4a5568 */
-    --muted-foreground: 0 0% 45.1%;    /* #cbd5e0 */
+    /* Secondary - frosted glass surface */
+    --secondary: 210 40% 96%;          /* Very light blue */
+    --secondary-foreground: 215 25% 20%;
 
-    --accent: 0 0% 96.1%;             /* #5dffca */
-    --accent-foreground: 0 0% 9%;   /* #1a202c */
+    /* Muted - subtle blue-gray */
+    --muted: 210 30% 92%;              /* Light blue-gray */
+    --muted-foreground: 215 15% 45%;   /* Medium blue-gray text */
 
-    --destructive: 0 84.2% 60.2%;           /* #fc8181 */
-    --destructive-foreground: 0 0% 98%;
+    /* Accent - vibrant amber/gold for highlights */
+    --accent: 38 92% 50%;              /* #F59E0B amber */
+    --accent-foreground: 215 25% 15%;
 
-    --border: 0 0% 89.8%;              /* #2d3748 */
-    --input: 0 0% 89.8%;               /* #4a5568 */
-    --ring: 0 0% 3.9%;               /* #1890ff */
+    /* Destructive - clear red */
+    --destructive: 0 84% 60%;          /* #EF4444 red */
+    --destructive-foreground: 0 0% 100%;
 
-    --radius: 0.5rem;
+    /* Borders - subtle white/blue for glass edges */
+    --border: 210 30% 85%;             /* Light blue-gray border */
+    --input: 210 30% 90%;
+    --ring: 217 91% 50%;               /* Match primary for focus */
 
-    --chart-1: 12 76% 61%;
+    --radius: 0.75rem;                 /* Slightly more rounded for glass look */
 
-    --chart-2: 173 58% 39%;
+    /* Chart colors - vibrant palette */
+    --chart-1: 217 91% 50%;            /* Blue */
+    --chart-2: 142 76% 40%;            /* Green */
+    --chart-3: 38 92% 50%;             /* Amber */
+    --chart-4: 0 84% 60%;              /* Red */
+    --chart-5: 262 83% 58%;            /* Purple */
 
-    --chart-3: 197 37% 24%;
+    /* Status colors for badges */
+    --success: 142 76% 36%;            /* #22C55E green */
+    --success-foreground: 142 76% 20%;
+    --warning: 38 92% 50%;             /* #F59E0B amber */
+    --warning-foreground: 38 92% 30%;
+    --info: 217 91% 60%;               /* #3B82F6 blue */
+    --info-foreground: 217 91% 30%;
 
-    --chart-4: 43 74% 66%;
-
-    --chart-5: 27 87% 67%;
+    /* Glass effect variables */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    /* ===========================================
+       DARK MODE - Warm undertones, not cold
+       =========================================== */
+    --background: 24 10% 6%;           /* Warm near-black */
+    --foreground: 40 6% 96%;           /* Warm off-white */
+
+    --card: 24 10% 8%;
+    --card-foreground: 40 6% 96%;
+
+    --popover: 24 10% 10%;
+    --popover-foreground: 40 6% 96%;
+
+    --primary: 214 60% 60%;            /* Slightly brighter blue */
+    --primary-foreground: 24 10% 6%;
+
+    --secondary: 24 6% 14%;
+    --secondary-foreground: 40 6% 96%;
+
+    --muted: 24 6% 14%;
+    --muted-foreground: 30 4% 60%;
+
+    --accent: 38 92% 50%;              /* Keep amber accent */
+    --accent-foreground: 24 10% 6%;
+
+    --destructive: 0 62% 40%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+
+    --border: 24 6% 18%;
+    --input: 24 6% 18%;
+    --ring: 214 60% 60%;
+
+    --chart-1: 214 70% 60%;
+    --chart-2: 142 60% 50%;
+    --chart-3: 38 80% 55%;
+    --chart-4: 0 70% 55%;
+    --chart-5: 262 70% 65%;
+
+    --success: 142 60% 50%;
+    --success-foreground: 142 60% 90%;
+    --warning: 38 80% 55%;
+    --warning-foreground: 38 80% 90%;
+    --info: 217 80% 65%;
+    --info-foreground: 217 80% 90%;
   }
 }
 
@@ -84,27 +126,63 @@
 }
 
 body {
-  @apply bg-background text-foreground;
+  @apply text-foreground;
   font-feature-settings: 'rlig' 1, 'calt' 1;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Blue glass gradient background */
+  background: linear-gradient(135deg,
+    #E0F2FE 0%,      /* sky-100 */
+    #BAE6FD 25%,     /* sky-200 */
+    #E0E7FF 50%,     /* indigo-100 */
+    #C7D2FE 75%,     /* indigo-200 */
+    #DBEAFE 100%     /* blue-100 */
+  );
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
-/* Scrollbar styling for dark mode */
+/* Glassmorphism utility classes */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+}
+
+/* Scrollbar styling - subtle glass look */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-background;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-border rounded;
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-border/80;
+  background: rgba(100, 116, 139, 0.5);
 }
 
 /* Focus styles for accessibility */
@@ -116,7 +194,5 @@ body {
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+  /* Body gradient defined above - don't override here */
 }
