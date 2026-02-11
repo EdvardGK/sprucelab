@@ -32,6 +32,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -124,6 +125,7 @@ export function TypeAnalysisWorkbench({
   const progressPercent = totalTypes > 0 ? Math.round((mappedTypes / totalTypes) * 100) : 0;
 
   return (
+    <TooltipProvider>
     <div className={cn('flex flex-col h-full', className)}>
       {/* Header Bar */}
       <div className="flex-none border-b bg-muted/30 px-4 py-2">
@@ -280,6 +282,7 @@ export function TypeAnalysisWorkbench({
         )}
       </div>
     </div>
+    </TooltipProvider>
   );
 }
 
