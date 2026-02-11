@@ -321,18 +321,6 @@ export function Sidebar() {
                 <Box className="h-4 w-4" />
                 <span>{t('workbench.materialLibrary')}</span>
               </Link>
-              <Link
-                to={`/projects/${projectId}/workbench?view=stats`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  workbenchView === 'stats'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Target className="h-4 w-4" />
-                <span>{t('workbench.mappingStats')}</span>
-              </Link>
             </div>
 
             <div className="mt-3 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">

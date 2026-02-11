@@ -11,7 +11,7 @@ import { TypeLibraryView } from '@/components/features/warehouse/library/TypeLib
 import { TypeAnalysisWorkbench } from '@/components/features/warehouse/workbench/TypeAnalysisWorkbench';
 import { MMITableMaker } from '@/components/features/bep/MMITableMaker';
 
-type ViewId = 'dashboard' | 'library' | 'classify' | 'types' | 'materials' | 'stats' | 'bep' | 'scripting';
+type ViewId = 'dashboard' | 'library' | 'classify' | 'types' | 'materials' | 'bep' | 'scripting';
 
 export default function BIMWorkbench() {
   const { t } = useTranslation();
@@ -63,7 +63,6 @@ export default function BIMWorkbench() {
           {/* Legacy: keep 'types' for backwards compatibility */}
           {activeView === 'types' && <TypeLibraryPanel projectId={project.id} />}
           {activeView === 'materials' && <MaterialLibraryPanel projectId={project.id} />}
-          {activeView === 'stats' && <MappingStatsPanel projectId={project.id} />}
           {activeView === 'bep' && <BEPTab projectId={project.id} />}
           {activeView === 'scripting' && <ScriptingTab projectId={project.id} />}
         </div>
@@ -103,78 +102,6 @@ function MaterialLibraryPanel({ projectId: _projectId }: { projectId: string }) 
               {t('materials.noMaterialsDesc')}
             </p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-
-// Mapping Stats Panel (placeholder - to be implemented with real data)
-function MappingStatsPanel({ projectId: _projectId }: { projectId: string }) {
-  const { t } = useTranslation();
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-text-primary">{t('stats.title')}</h2>
-        <p className="text-text-secondary text-sm">
-          {t('stats.description')}
-        </p>
-      </div>
-
-      {/* Progress bars */}
-      <div className="grid grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('stats.typeMapping')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="w-full bg-secondary rounded-full h-3 overflow-hidden mb-2">
-              <div
-                className="bg-primary h-3 rounded-full transition-all duration-500"
-                style={{ width: '0%' }}
-              />
-            </div>
-            <p className="text-sm text-text-tertiary">0% {t('stats.complete')} (0/0 {t('common.types')})</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('stats.materialMapping')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="w-full bg-secondary rounded-full h-3 overflow-hidden mb-2">
-              <div
-                className="bg-success h-3 rounded-full transition-all duration-500"
-                style={{ width: '0%' }}
-              />
-            </div>
-            <p className="text-sm text-text-tertiary">0% {t('stats.complete')} (0/0 materials)</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Export */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('stats.exportData')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <Button variant="outline" disabled>
-              {t('stats.exportTypesCsv')}
-            </Button>
-            <Button variant="outline" disabled>
-              {t('stats.exportMaterialsCsv')}
-            </Button>
-            <Button variant="outline" disabled>
-              {t('stats.exportFullReport')}
-            </Button>
-          </div>
-          <p className="text-xs text-text-tertiary mt-2">
-            {t('stats.completeToExport')}
-          </p>
         </CardContent>
       </Card>
     </div>
