@@ -43,9 +43,6 @@ export function Sidebar() {
     return match ? match[1] : null;
   }, [location.pathname]);
 
-  // Detect if we're in the workbench
-  const isInWorkbench = location.pathname.includes('/workbench');
-
   // Get workbench view from URL search params (dashboard, library, classify, materials, stats)
   const workbenchView = useMemo(() => {
     const params = new URLSearchParams(location.search);
