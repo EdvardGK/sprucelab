@@ -16,13 +16,9 @@ import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@
 // Tab definitions
 const TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'qto', label: 'QTO' },
-  { id: 'mmi', label: 'MMI' },
   { id: 'validation', label: 'Validation' },
-  { id: 'statistics', label: 'Statistics' },
-  { id: 'properties', label: 'Properties' },
-  { id: 'scripts', label: 'Scripts' },
   { id: 'metadata', label: 'Metadata' },
+  { id: 'scripts', label: 'Scripts' },
   { id: 'history', label: 'History' },
 ] as const;
 
