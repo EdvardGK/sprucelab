@@ -281,15 +281,40 @@ function AnalysisDashboard({ analysis }: { analysis: ModelAnalysis }) {
         ]} />
         <InfoCard title="Units" rows={
           analysis.units && typeof analysis.units === 'object'
-            ? Object.entries(analysis.units as Record<string, string>).map(([k, v]) => [k, String(v)])
+            ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
+                if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
+                  const u = v as { name?: string; prefix?: string; symbol?: string };
+                  return [k, u.symbol || u.name || '—'];
+                }
+                return [k, String(v ?? '—')];
+              })
             : [['—', 'No unit data']]
         } />
         <InfoCard title="Coordinates" rows={
           analysis.coordinates && typeof analysis.coordinates === 'object'
-            ? Object.entries(analysis.coordinates as Record<string, unknown>).map(([k, v]) => [
-                k.replace(/_/g, ' '),
-                typeof v === 'object' ? JSON.stringify(v) : String(v ?? '—'),
-              ])
+            ? (() => {
+                const c = analysis.coordinates as Record<string, unknown>;
+                const rows: [string, string][] = [];
+                if (c.crs) rows.push(['CRS', String(c.crs)]);
+                if (c.true_north) {
+                  const tn = c.true_north as { angle_deg?: number };
+                  rows.push(['True North', `${tn.angle_deg ?? 0}°`]);
+                }
+                if (c.wcs_origin) {
+                  const o = c.wcs_origin as { x?: number; y?: number; z?: number };
+                  rows.push(['WCS Origin', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
+                }
+                if (c.site_reference) {
+                  const s = c.site_reference as { latitude?: number; longitude?: number; elevation?: number };
+                  if (s.latitude || s.longitude) rows.push(['Site', `${s.latitude}°N, ${s.longitude}°E`]);
+                  if (s.elevation) rows.push(['Elevation', `${s.elevation}m`]);
+                }
+                if (c.orientation_sample) {
+                  const os = c.orientation_sample as { dominant?: string };
+                  rows.push(['Orientation', os.dominant || '—']);
+                }
+                return rows.length ? rows : [['—', 'No coordinate data']];
+              })()
             : [['—', 'No coordinate data']]
         } />
       </div>
