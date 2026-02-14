@@ -68,7 +68,7 @@ export default function ModelWorkspace() {
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-border bg-background-elevated px-6 py-4">
+      <header className="border-gradient-header bg-background-elevated px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
