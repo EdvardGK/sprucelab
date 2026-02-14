@@ -343,6 +343,25 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
       <DashboardOverlay open={overlay === 'geometry'} onClose={() => setOverlay(null)} title="Geometry">
         <GeometryDonut types={analysis.types} showAll />
       </DashboardOverlay>
+      {hasFile && (
+        <DashboardOverlay open={overlay === 'viewer'} onClose={() => { setOverlay(null); setSelectedElement(null); }} title="3D Viewer" fullscreen>
+          <div className="flex h-full">
+            <div className="flex-1 relative">
+              <UnifiedBIMViewer
+                modelId={model.id}
+                showPropertiesPanel={false}
+                onSelectionChange={(element) => setSelectedElement(element)}
+              />
+            </div>
+            <aside className="w-80 border-l border-border bg-background overflow-hidden flex-shrink-0">
+              <ElementPropertiesPanel
+                element={selectedElement}
+                onClose={() => setSelectedElement(null)}
+              />
+            </aside>
+          </div>
+        </DashboardOverlay>
+      )}
     </>
   );
 }
