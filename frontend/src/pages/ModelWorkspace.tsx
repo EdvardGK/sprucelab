@@ -234,7 +234,7 @@ function AnalysisDashboard({ analysis }: { analysis: ModelAnalysis }) {
       </div>
 
       {/* Row 3: Storeys bar chart */}
-      <Card className="flex-shrink min-h-0 overflow-hidden flex flex-col"
+      <Card className="flex-shrink min-h-0 overflow-hidden flex flex-col card-accent-forest"
             style={{ flex: '1 1 30%' }}>
         <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 overflow-y-auto">
           <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.25rem,0.5vw,0.4rem)]">
