@@ -423,8 +423,8 @@ class IFCRepository:
             await conn.executemany(
                 """
                 INSERT INTO ifc_types (
-                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties, instance_count, has_ifc_type_object
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties, instance_count, has_ifc_type_object, ownership_status
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 ON CONFLICT (model_id, type_guid) DO NOTHING
                 """,
                 records
