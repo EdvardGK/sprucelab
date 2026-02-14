@@ -91,11 +91,9 @@ def apply_discipline_firewall(model_id: UUID) -> FilterResult:
             unchanged_count += 1
             continue
 
-        # Look up ownership in matrix
-        ownership = NS3451OwnershipMatrix.objects.filter(
-            ns3451_code_id=ns3451_code,
-            discipline=model.discipline
-        ).first()
+        # Look up ownership: project matrix first, fallback to global
+        discipline_codes = resolve_discipline_for_lookup(model.discipline)
+        ownership = _lookup_ownership(model, ns3451_code, discipline_codes)
 
         new_status = determine_ownership_status(ownership, ifc_type.ownership_status)
 
