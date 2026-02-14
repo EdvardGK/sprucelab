@@ -2,7 +2,7 @@
 
 ## Summary
 
-Reorganized the project sidebar navigation into logical groups (Files, Data, BIM Workbench) and fixed the model analysis endpoint for production (Supabase URL download).
+Reorganized the project sidebar navigation into logical groups (Files, Data, BIM Workbench) and fixed the model analysis endpoint for production (Supabase URL download + vendored ifc-toolkit).
 
 ## Changes
 
@@ -17,7 +17,21 @@ Reorganized the project sidebar navigation into logical groups (Files, Data, BIM
   - Local file path (passthrough)
   - Local dev media URL (resolve to MEDIA_ROOT)
   - Remote URL / Supabase (download to temp file, clean up after)
-- `backend/requirements.txt` - Added `ifc-toolkit>=0.2.0` (was missing from production deps)
+
+### Vendored ifc-toolkit
+- **Problem**: `ifc-toolkit` was a local editable install (`~/dev/resources/ifc-toolkit`), not on PyPI. Adding it to `requirements.txt` broke the Railway build.
+- **Solution**: Copied source into `backend/lib/ifc_toolkit/` and added `sys.path.insert(0, str(BASE_DIR / 'lib'))` to Django settings.
+- **Pattern**: `backend/lib/` is now the vendored packages directory. Any local-only Python package can be placed here and it will be importable by both Django and any script that loads Django settings.
+- Removed `ifc-toolkit>=0.2.0` from `requirements.txt`
+
+## Key Insight: Vendored Dependencies
+
+ifc-toolkit is our own IFC analysis library (2500 LOC, 12 modules). It was developed standalone in `~/dev/resources/ifc-toolkit/` but has no PyPI release or git remote. For production deployment on Railway:
+
+- **Don't add local packages to requirements.txt** - they only exist on the dev machine
+- **Vendor into `backend/lib/`** - copy source, add to sys.path via settings.py
+- **Keep in sync manually** - changes to the original need to be re-copied
+- Long-term: consider publishing to PyPI or a private GitHub repo if the package stabilizes
 
 ## Next
 - Spaces and QTO pages are nav-only placeholders (routes will 404)
