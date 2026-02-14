@@ -7,6 +7,12 @@ export default {
   theme: {
   	extend: {
   		colors: {
+  			// ── Named palette — Mindful Palettes No. 160 ──
+  			silver: tokens.palette.silver,
+  			lavender: tokens.palette.lavender,
+  			lime: tokens.palette.lime,
+  			forest: tokens.palette.forest,
+  			navy: tokens.palette.navy,
   			background: {
   				DEFAULT: 'hsl(var(--background))',
   				elevated: 'hsl(var(--card))',

@@ -198,3 +198,64 @@ export interface ProjectStatistics {
   created_at: string;
   updated_at: string;
 }
+
+// Model Analysis types (type_analysis output)
+
+export interface AnalysisStorey {
+  name: string;
+  elevation: number | null;
+  height: number | null;
+  element_count: number;
+}
+
+export interface AnalysisTypeStoreyDist {
+  storey: string;
+  elevation: number | null;
+  instance_count: number;
+}
+
+export interface AnalysisTypeRecord {
+  type_class: string;
+  type_name: string | null;
+  element_class: string;
+  predefined_type: string | null;
+  instance_count: number;
+  is_empty: boolean;
+  is_proxy: boolean;
+  is_untyped: boolean;
+  loadbearing_true: number;
+  loadbearing_false: number;
+  loadbearing_unset: number;
+  is_external_true: number;
+  is_external_false: number;
+  is_external_unset: number;
+  fire_rating_set: number;
+  fire_rating_unset: number;
+  primary_representation: string;
+  mapped_item_count: number;
+  mapped_source_count: number;
+  reuse_ratio: number | null;
+  properties: Record<string, unknown>;
+  storey_distribution: AnalysisTypeStoreyDist[];
+}
+
+export interface ModelAnalysis {
+  id: string;
+  model: string;
+  created_at: string;
+  ifc_schema: string;
+  file_size_mb: number | null;
+  application: string;
+  total_types: number;
+  total_products: number;
+  total_storeys: number;
+  total_spaces: number;
+  duplicate_guid_count: number;
+  units: Record<string, unknown>;
+  coordinates: Record<string, unknown>;
+  project_name: string;
+  site_name: string;
+  building_name: string;
+  storeys: AnalysisStorey[];
+  types: AnalysisTypeRecord[];
+}

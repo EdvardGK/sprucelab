@@ -634,7 +634,7 @@ function GeometryDonut({ types }: { types: AnalysisTypeRecord[] }) {
 
 function InfoCard({ title, rows }: { title: string; rows: [string, string][] }) {
   return (
-    <Card>
+    <Card className="card-accent-lavender">
       <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)]">
         <h3 className="text-[clamp(0.6rem,1vw,0.75rem)] font-semibold text-text-primary mb-[clamp(0.2rem,0.4vw,0.3rem)]">
           {title}

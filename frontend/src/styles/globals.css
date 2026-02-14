@@ -241,3 +241,32 @@ body {
     @apply border-border;
   }
 }
+
+/* ── Palette gradients (Mindful Palettes No. 160) ──
+   Five canonical gradients from the palette guide.
+   Usage: class="grad-05" or as CSS var(--grad-03) */
+
+:root {
+  --grad-01: linear-gradient(135deg, #D6D9D8, #C7CEE8);  /* Silver → Lavender */
+  --grad-02: linear-gradient(135deg, #C7CEE8, #D0D34D);  /* Lavender → Lime */
+  --grad-03: linear-gradient(135deg, #C7CEE8, #157954);  /* Lavender → Forest */
+  --grad-04: linear-gradient(135deg, #D0D34D, #157954, #21263A); /* Lime → Forest → Navy */
+  --grad-05: linear-gradient(135deg, #157954, #21263A);  /* Forest → Navy */
+}
+
+.grad-01 { background: var(--grad-01); }
+.grad-02 { background: var(--grad-02); }
+.grad-03 { background: var(--grad-03); }
+.grad-04 { background: var(--grad-04); }
+.grad-05 { background: var(--grad-05); }
+
+/* Header accent border — lime → forest → navy */
+.border-gradient-header {
+  border-bottom: 3px solid transparent;
+  border-image: linear-gradient(to right, #D0D34D, #157954, #21263A) 1;
+}
+
+/* Card accent borders — colored top border per section role */
+.card-accent-forest { border-top: 2px solid #157954; }
+.card-accent-lime   { border-top: 2px solid #D0D34D; }
+.card-accent-lavender { border-top: 2px solid #C7CEE8; }

@@ -1,38 +1,46 @@
 /**
  * Design Tokens for BIM Coordinator Platform
  *
- * Warm, friendly design inspired by Basecamp/Hey + Airtable:
- * - Paper-like warm whites (not sterile)
- * - Stone grays (warm undertones, not cold zinc)
- * - Vibrant status colors for at-a-glance comprehension
- * - Amber accents (Hey-inspired)
- * - 8px spacing grid
+ * Mindful Palettes No. 160 — five-color system:
+ * Silver (#D6D9D8), Lavender (#C7CEE8), Lime (#D0D34D),
+ * Forest (#157954), Navy (#21263A)
  *
- * Philosophy: Make BIM professionals' lives better through good design
+ * Dark-mode primary (matching IFC analysis dashboard).
+ * Light mode derived from same palette.
+ * Text and border tokens are CSS-variable-based for mode responsiveness.
+ *
+ * 8px spacing grid. Inter font.
  */
 
 export const tokens = {
+  // ── Named palette ────────────────────────────────────────
+  palette: {
+    silver:   '#D6D9D8',
+    lavender: '#C7CEE8',
+    lime:     '#D0D34D',
+    forest:   '#157954',
+    navy:     '#21263A',
+  },
   color: {
-    // Warm stone borders (not cold zinc)
+    // CSS-variable-based — respond to light/dark mode
     border: {
-      subtle: 'hsl(30 6% 90%)',      // #E7E5E4 warm subtle
-      DEFAULT: 'hsl(30 6% 85%)',     // Warm default border
-      strong: 'hsl(30 4% 70%)',      // Warm strong border
+      subtle: 'hsl(var(--border-subtle))',
+      DEFAULT: 'hsl(var(--border))',
+      strong: 'hsl(var(--border-strong))',
     },
-    // Text colors for light mode (warm blacks and grays)
     text: {
-      primary: 'hsl(24 10% 10%)',    // #1C1917 warm near-black
-      secondary: 'hsl(30 4% 35%)',   // #57534E warm gray
-      tertiary: 'hsl(30 4% 50%)',    // #A8A29E muted warm
-      inverse: 'hsl(40 6% 96%)',     // #FAFAF9 for dark backgrounds
+      primary: 'hsl(var(--text-primary))',
+      secondary: 'hsl(var(--text-secondary))',
+      tertiary: 'hsl(var(--text-tertiary))',
+      inverse: 'hsl(var(--text-inverse))',
     },
-    // Vibrant status colors
-    success: 'hsl(142 76% 36%)',     // #22C55E green
-    warning: 'hsl(38 92% 50%)',      // #F59E0B amber
-    error: 'hsl(0 84% 60%)',         // #EF4444 red
-    info: 'hsl(217 91% 60%)',        // #3B82F6 blue
-    brand: 'hsl(214 60% 55%)',       // #4A90D9 warm blue
-    accent: 'hsl(38 92% 50%)',       // #F59E0B amber (Hey-inspired)
+    // Status colors (consistent across modes)
+    success: 'hsl(158 70% 28%)',     // #157954 Forest
+    warning: 'hsl(25 96% 61%)',      // #fb923c Orange
+    error: 'hsl(0 91% 71%)',         // #f87171 Red
+    info: 'hsl(227 35% 70%)',        // Lavender-ish
+    brand: 'hsl(158 70% 28%)',       // #157954 Forest
+    accent: 'hsl(61 63% 56%)',       // #D0D34D Lime
   },
   typography: {
     fontFamily: {
