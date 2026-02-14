@@ -357,7 +357,7 @@ function SubKpiCard({ value, label, warn }: { value: number; label: string; warn
     <Card>
       <CardContent className="p-[clamp(0.4rem,0.8vw,0.6rem)] flex items-center justify-between">
         <span className="text-[clamp(0.55rem,1vw,0.7rem)] text-text-secondary">{label}</span>
-        <span className={`text-[clamp(0.7rem,1.2vw,0.85rem)] font-semibold tabular-nums ${warn ? 'text-[#fb923c]' : 'text-text-primary'}`}>
+        <span className={`text-[clamp(0.7rem,1.2vw,0.85rem)] font-semibold tabular-nums ${warn ? 'text-warning' : 'text-text-primary'}`}>
           {value.toLocaleString()}
         </span>
       </CardContent>
