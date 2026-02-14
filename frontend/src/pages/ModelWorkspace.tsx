@@ -377,7 +377,7 @@ function QualityCard({ analysis, stats }: { analysis: ModelAnalysis; stats: Anal
   ];
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col card-accent-lime">
       <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
         <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.3rem,0.6vw,0.5rem)]">
           Quality
