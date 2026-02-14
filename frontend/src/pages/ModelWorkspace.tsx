@@ -66,7 +66,7 @@ export default function ModelWorkspace() {
   const isReady = model.status === 'ready';
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="border-gradient-header bg-background-elevated px-6 py-4">
         <div className="flex items-center justify-between">
