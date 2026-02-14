@@ -365,14 +365,15 @@ class IFCRepository:
                 material.name,
                 material.category,
                 json.dumps(material.properties or {}),
+                'new',
             ))
 
         async with get_transaction() as conn:
             await conn.executemany(
                 """
                 INSERT INTO materials (
-                    id, model_id, material_guid, name, category, properties
-                ) VALUES ($1, $2, $3, $4, $5, $6)
+                    id, model_id, material_guid, name, category, properties, reused_status
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (model_id, material_guid) DO NOTHING
                 """,
                 records
