@@ -6,7 +6,7 @@ from .views import (
     TypeDefinitionLayerViewSet, MaterialViewSet, MaterialMappingViewSet,
     TypeBankEntryViewSet, TypeBankObservationViewSet, TypeBankAliasViewSet,
     MaterialLibraryViewSet, ProductLibraryViewSet, ProductCompositionViewSet,
-    GlobalTypeLibraryViewSet
+    GlobalTypeLibraryViewSet, ModelAnalysisViewSet,
 )
 
 router = DefaultRouter()
