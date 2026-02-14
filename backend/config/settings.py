@@ -11,16 +11,19 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables
-# Priority: .env.local (local dev overrides) > .env (base config)
-# Check backend/.env.local first (local dev), then root .env (shared/production)
+# Priority: .env.dev (local dev) > .env.local (overrides) > .env (base config)
+dev_env_path = BASE_DIR.parent / '.env.dev'
 local_env_path = BASE_DIR / '.env.local'
 root_env_path = BASE_DIR.parent / '.env'
 
-if local_env_path.exists():
-    print(f"📁 Loading local env: {local_env_path}")
+if dev_env_path.exists():
+    print(f"Loading env: {dev_env_path}")
+    load_dotenv(dev_env_path)
+elif local_env_path.exists():
+    print(f"Loading env: {local_env_path}")
     load_dotenv(local_env_path)
 else:
-    print(f"📁 Loading env: {root_env_path}")
+    print(f"Loading env: {root_env_path}")
     load_dotenv(root_env_path)
 
 # SECURITY WARNING: keep the secret key used in production secret!

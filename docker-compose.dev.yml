@@ -1,0 +1,36 @@
+# Local Development Infrastructure
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d    # Start PostgreSQL + Redis
+#   docker compose -f docker-compose.dev.yml down      # Stop
+#   docker compose -f docker-compose.dev.yml down -v   # Stop + delete data
+#
+# Code runs natively (not in containers) for fast hot reload.
+# Use ./dev.sh to orchestrate everything.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sprucelab-dev-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: sprucelab_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sprucelab-dev-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  dev_pgdata:
