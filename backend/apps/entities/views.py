@@ -15,7 +15,8 @@ from .models import (
     IFCType, Material, TypeMapping, TypeDefinitionLayer, MaterialMapping, NS3451Code,
     SemanticType, SemanticTypeIFCMapping,
     TypeBankEntry, TypeBankObservation, TypeBankAlias,
-    MaterialLibrary, ProductLibrary, ProductComposition
+    MaterialLibrary, ProductLibrary, ProductComposition,
+    ModelAnalysis,
 )
 from .serializers import (
     ProcessingReportSerializer, IFCEntitySerializer,
@@ -25,7 +26,8 @@ from .serializers import (
     TypeBankEntrySerializer, TypeBankEntryListSerializer, TypeBankEntryUpdateSerializer,
     TypeBankObservationSerializer, TypeBankAliasSerializer,
     MaterialLibrarySerializer, MaterialLibraryListSerializer,
-    ProductLibrarySerializer, ProductLibraryListSerializer, ProductCompositionSerializer
+    ProductLibrarySerializer, ProductLibraryListSerializer, ProductCompositionSerializer,
+    ModelAnalysisSerializer,
 )
 from .services.semantic_normalizer import get_normalizer
 from .services.excel_export import export_types_to_excel
