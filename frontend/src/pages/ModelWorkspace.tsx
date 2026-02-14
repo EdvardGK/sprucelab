@@ -257,7 +257,7 @@ function AnalysisDashboard({ analysis }: { analysis: ModelAnalysis }) {
             </div>
           </CardContent>
         </Card>
-        <Card className="overflow-hidden flex flex-col">
+        <Card className="overflow-hidden flex flex-col card-accent-forest">
           <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
             <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.25rem,0.5vw,0.4rem)]">
               Geometry
