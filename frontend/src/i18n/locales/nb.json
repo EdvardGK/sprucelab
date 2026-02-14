@@ -69,6 +69,8 @@
     "classification": "Klassifisering",
     "materialLibrary": "Materialbibliotek",
     "mappingStats": "Kartleggingsstatistikk",
+    "verification": "Verifisering",
+    "ifcEditing": "IFC-redigering",
     "bepConfig": "BEP-konfig",
     "scripting": "Skripting",
     "tools": "Verktøy",

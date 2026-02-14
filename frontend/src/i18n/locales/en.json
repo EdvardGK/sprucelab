@@ -69,6 +69,8 @@
     "classification": "Classification",
     "materialLibrary": "Material Library",
     "mappingStats": "Mapping Stats",
+    "verification": "Verification",
+    "ifcEditing": "IFC Editing",
     "bepConfig": "BEP Config",
     "scripting": "Scripting",
     "tools": "Tools",

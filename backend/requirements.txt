@@ -24,6 +24,7 @@ django-celery-results==2.5.1
 
 # IFC Processing
 ifcopenshell>=0.8.0
+ifc-toolkit>=0.2.0
 numpy>=1.26.0
 pandas>=2.0.0
 open3d>=0.18.0

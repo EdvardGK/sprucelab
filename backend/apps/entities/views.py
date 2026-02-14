@@ -2750,21 +2750,42 @@ class ModelAnalysisViewSet(viewsets.ReadOnlyModelViewSet):
             from ifc_toolkit.analyze import type_analysis
             from django.conf import settings
             import urllib.parse
+            import tempfile
+            import requests as req
 
             file_url = model.file_url
-            # Convert HTTP URL to local file path for local storage
             parsed = urllib.parse.urlparse(file_url)
-            if parsed.scheme in ('http', 'https') and 'media/' in parsed.path:
-                # Extract relative path after /media/
+
+            # Resolve file_url to a local file path
+            if not parsed.scheme or parsed.scheme == 'file':
+                # Already a local path
+                file_path = file_url
+            elif parsed.scheme in ('http', 'https') and 'media/' in parsed.path:
+                # Local dev: Django-served media file
                 media_rel = parsed.path.split('media/', 1)[1]
                 file_path = str(settings.MEDIA_ROOT / media_rel)
             else:
-                file_path = file_url
+                # Remote URL (Supabase etc): download to temp file
+                resp = req.get(file_url, timeout=120)
+                resp.raise_for_status()
+                suffix = '.ifc'
+                if file_url.lower().endswith('.ifczip'):
+                    suffix = '.ifczip'
+                tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+                tmp.write(resp.content)
+                tmp.close()
+                file_path = tmp.name
 
-            data = type_analysis(file_path)
-            analysis = ingest_type_analysis(str(model_id), data)
-            serializer = self.get_serializer(analysis)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            try:
+                data = type_analysis(file_path)
+                analysis = ingest_type_analysis(str(model_id), data)
+                serializer = self.get_serializer(analysis)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            finally:
+                # Clean up temp file if we created one
+                if file_path != file_url and not file_path.startswith(str(settings.MEDIA_ROOT)):
+                    import os
+                    os.unlink(file_path)
         except Exception as e:
             return Response(
                 {'error': str(e)},

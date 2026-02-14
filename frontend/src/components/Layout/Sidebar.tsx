@@ -302,31 +302,8 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Modules section (only when in project context and NOT in workbench) */}
-        {projectId && currentProject && !isInWorkbench && (
-          <div className="mb-4">
-            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-              {t('nav.modules')}
-            </div>
-            <div className="mt-1 space-y-0.5">
-              <Link
-                to={`/projects/${projectId}/workbench`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/workbench`)
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Wrench className="h-4 w-4" />
-                <span>{t('workbench.title')}</span>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Workbench sub-navigation (when IN workbench) */}
-        {projectId && currentProject && isInWorkbench && (
+        {/* BIM Workbench section */}
+        {projectId && currentProject && (
           <div className="mb-4">
             <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
               {t('workbench.title')}
@@ -336,7 +313,7 @@ export function Sidebar() {
                 to={`/projects/${projectId}/workbench?view=classify`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  workbenchView === 'classify'
+                  isActive(`/projects/${projectId}/workbench`) && workbenchView === 'classify'
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                 )}
@@ -344,35 +321,41 @@ export function Sidebar() {
                 <Wrench className="h-4 w-4" />
                 <span>{t('workbench.classification')}</span>
               </Link>
-            </div>
-
-            <div className="mt-3 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-              {t('workbench.tools')}
-            </div>
-            <div className="mt-1 space-y-0.5">
+              <Link
+                to={`/projects/${projectId}/workbench?view=verification`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  isActive(`/projects/${projectId}/workbench`) && workbenchView === 'verification'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span>{t('workbench.verification')}</span>
+              </Link>
+              <Link
+                to={`/projects/${projectId}/workbench?view=ifc-editing`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  isActive(`/projects/${projectId}/workbench`) && workbenchView === 'ifc-editing'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <PenLine className="h-4 w-4" />
+                <span>{t('workbench.ifcEditing')}</span>
+              </Link>
               <Link
                 to={`/projects/${projectId}/workbench?view=bep`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  workbenchView === 'bep'
+                  isActive(`/projects/${projectId}/workbench`) && workbenchView === 'bep'
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                 )}
               >
                 <Settings className="h-4 w-4" />
                 <span>{t('workbench.bepConfig')}</span>
-              </Link>
-              <Link
-                to={`/projects/${projectId}/workbench?view=scripting`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  workbenchView === 'scripting'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Code className="h-4 w-4" />
-                <span>{t('workbench.scripting')}</span>
               </Link>
             </div>
           </div>
