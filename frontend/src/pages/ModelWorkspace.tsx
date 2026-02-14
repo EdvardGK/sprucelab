@@ -341,7 +341,7 @@ function KpiCard({ value, label, accent }: { value: number; label: string; accen
   return (
     <Card>
       <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] text-center">
-        <div className={`text-[clamp(1.25rem,3vw,1.75rem)] font-bold tabular-nums ${accent ? 'text-[#D0D34D]' : 'text-text-primary'}`}>
+        <div className={`text-[clamp(1.25rem,3vw,1.75rem)] font-bold tabular-nums ${accent ? 'text-lime' : 'text-text-primary'}`}>
           {value.toLocaleString()}
         </div>
         <div className="text-[clamp(0.5rem,0.9vw,0.65rem)] uppercase tracking-wide text-text-tertiary">
