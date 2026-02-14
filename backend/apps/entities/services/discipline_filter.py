@@ -8,6 +8,12 @@ The "firewall" concept:
 - ARK models should only have ARK types as "primary"
 - RIV elements in an ARK model become "reference" (copied for coordination)
 - Unclassified or unmatched types remain "primary" (conservative)
+
+Hierarchy resolution:
+- Parent discipline (e.g. RIV) inherits responsibility for all children
+  (RIVv, RIVp, RIVspr, RIkulde, RIvarme)
+- Child discipline (e.g. RIVp) matches only itself + parent (RIV)
+- Project-level ResponsibilityMatrix overrides global NS3451OwnershipMatrix
 """
 from uuid import UUID
 from typing import TypedDict
@@ -15,6 +21,8 @@ from django.db.models import Q
 
 from apps.models.models import Model
 from apps.entities.models import IFCType, NS3451OwnershipMatrix, TypeMapping
+from apps.projects.models import ResponsibilityMatrix
+from apps.core.disciplines import resolve_discipline_for_lookup
 
 
 class FilterResult(TypedDict):
