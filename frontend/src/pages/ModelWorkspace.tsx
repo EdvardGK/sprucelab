@@ -130,13 +130,9 @@ export default function ModelWorkspace() {
       <div className="bg-background">
         {/* All tabs - show content or processing message */}
         {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === 'qto' && (isReady ? <QTODashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === 'mmi' && (isReady ? <MMIDashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === 'validation' && (isReady ? <PlaceholderTab title="Validation" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === 'statistics' && (isReady ? <PlaceholderTab title="Statistics" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === 'properties' && (isReady ? <PlaceholderTab title="Properties" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        {activeTab === 'metadata' && <MetadataTab model={model} />}
         {activeTab === 'scripts' && (isReady ? <PlaceholderTab title="Scripts" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === 'metadata' && (isReady ? <PlaceholderTab title="Metadata" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === 'history' && (isReady ? <PlaceholderTab title="History" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
       </div>
     </div>
