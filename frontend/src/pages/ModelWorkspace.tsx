@@ -686,6 +686,98 @@ function InfoCard({ title, rows }: { title: string; rows: [string, string][] }) 
   );
 }
 
+// ─── Card Header with expand button ─────────────────────────────────────────
+
+function CardHeader({ title, onExpand }: { title: string; onExpand?: () => void }) {
+  return (
+    <div className="flex items-center justify-between mb-[clamp(0.25rem,0.5vw,0.4rem)]">
+      <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary">
+        {title}
+      </h3>
+      {onExpand && (
+        <button
+          onClick={onExpand}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
+                     bg-forest/15 border border-forest/30 text-lime
+                     hover:bg-forest hover:text-white hover:border-forest transition-all"
+        >
+          <Maximize2 className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Dashboard Overlay ──────────────────────────────────────────────────────
+
+function DashboardOverlay({ open, onClose, title, children }: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-150"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+    >
+      <div className="bg-surface border border-border border-t-2 border-t-forest rounded-xl
+                      w-[min(90vw,900px)] max-h-[85vh] flex flex-col shadow-2xl
+                      animate-in slide-in-from-bottom-4 duration-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <h2 className="text-sm font-semibold text-lime">{title}</h2>
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-white/10 text-text-secondary hover:text-text-primary transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Quality Overlay Content ────────────────────────────────────────────────
+
+function QualityOverlayContent({ analysis, stats }: { analysis: ModelAnalysis; stats: AnalysisStats }) {
+  const checks = [
+    { label: 'Duplicate GUIDs', value: analysis.duplicate_guid_count, ok: analysis.duplicate_guid_count === 0 },
+    { label: 'IsExternal unset', value: stats.missingIsExternal, ok: stats.missingIsExternal === 0 },
+    { label: 'LoadBearing unset', value: stats.missingLoadBearing, ok: stats.missingLoadBearing === 0 },
+    { label: 'FireRating unset', value: stats.missingFireRating, ok: stats.missingFireRating === 0 },
+    { label: 'Empty types', value: stats.emptyTypes, ok: stats.emptyTypes === 0 },
+    { label: 'Untyped instances', value: stats.untypedCount, ok: stats.untypedCount === 0 },
+    { label: 'Proxy-typed instances', value: stats.proxyCount, ok: stats.proxyCount === 0 },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <div className="text-xs text-text-tertiary mb-3">
+        {analysis.ifc_schema} &middot; {analysis.application}
+      </div>
+      {checks.map((c) => (
+        <div key={c.label} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+          <span className="text-sm text-text-secondary">{c.label}</span>
+          <span className={`font-semibold tabular-nums px-3 py-1 rounded text-sm ${
+            c.ok
+              ? 'bg-forest/15 text-forest'
+              : 'bg-red-500/15 text-red-400'
+          }`}>
+            {c.value === 0 ? 'OK' : c.value.toLocaleString()}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // 3D Viewer Tab Component
 function Viewer3DTab({ model }: { model: Model }) {
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
