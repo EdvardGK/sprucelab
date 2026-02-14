@@ -423,7 +423,7 @@ function StoreyChart({ storeys }: { storeys: AnalysisStorey[] }) {
           </span>
           <div className="h-[clamp(0.7rem,1.2vw,1rem)] bg-white/5 rounded overflow-hidden">
             <div
-              className="h-full rounded bg-gradient-to-r from-[#21263A] to-[#157954] transition-all"
+              className="h-full rounded bg-gradient-to-r from-navy to-forest transition-all"
               style={{ width: `${(s.element_count / maxCount) * 100}%` }}
             />
           </div>
