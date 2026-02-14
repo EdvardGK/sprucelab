@@ -58,6 +58,8 @@
     "data": "Data",
     "typeLibrary": "Type Library",
     "materialLibrary": "Material Library",
+    "spaces": "Spaces",
+    "qto": "QTO",
     "workbench": "Workbench"
   },
   "workbench": {

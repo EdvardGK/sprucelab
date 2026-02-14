@@ -58,6 +58,8 @@
     "data": "Data",
     "typeLibrary": "Typebibliotek",
     "materialLibrary": "Materialbibliotek",
+    "spaces": "Rom",
+    "qto": "Mengder",
     "workbench": "Arbeidsbenk"
   },
   "workbench": {

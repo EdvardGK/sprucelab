@@ -196,10 +196,10 @@ export function Sidebar() {
               </Link>
             </div>
 
-            {/* Data section */}
+            {/* Files section */}
             <div className="mt-4">
               <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                {t('nav.data')}
+                {t('nav.files')}
               </div>
               <div className="mt-1 space-y-0.5">
                 <Link
@@ -214,6 +214,39 @@ export function Sidebar() {
                   <Layers className="h-4 w-4" />
                   <span>{t('nav.models')}</span>
                 </Link>
+                <Link
+                  to={`/projects/${projectId}/drawings`}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive(`/projects/${projectId}/drawings`)
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                  )}
+                >
+                  <Image className="h-4 w-4" />
+                  <span>{t('nav.drawings')}</span>
+                </Link>
+                <Link
+                  to={`/projects/${projectId}/documents`}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive(`/projects/${projectId}/documents`)
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                  )}
+                >
+                  <FileStack className="h-4 w-4" />
+                  <span>{t('nav.documents')}</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Data section */}
+            <div className="mt-4">
+              <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                {t('nav.data')}
+              </div>
+              <div className="mt-1 space-y-0.5">
                 <Link
                   to={`/projects/${projectId}/type-library`}
                   className={cn(
@@ -239,28 +272,28 @@ export function Sidebar() {
                   <span>{t('nav.materialLibrary')}</span>
                 </Link>
                 <Link
-                  to={`/projects/${projectId}/documents`}
+                  to={`/projects/${projectId}/spaces`}
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/documents`)
+                    isActive(`/projects/${projectId}/spaces`)
                       ? 'bg-primary/10 text-primary font-medium'
                       : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                   )}
                 >
-                  <FileStack className="h-4 w-4" />
-                  <span>{t('nav.documents')}</span>
+                  <Folder className="h-4 w-4" />
+                  <span>{t('nav.spaces')}</span>
                 </Link>
                 <Link
-                  to={`/projects/${projectId}/drawings`}
+                  to={`/projects/${projectId}/qto`}
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/drawings`)
+                    isActive(`/projects/${projectId}/qto`)
                       ? 'bg-primary/10 text-primary font-medium'
                       : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                   )}
                 >
-                  <Image className="h-4 w-4" />
-                  <span>{t('nav.drawings')}</span>
+                  <BarChart3 className="h-4 w-4" />
+                  <span>{t('nav.qto')}</span>
                 </Link>
               </div>
             </div>
