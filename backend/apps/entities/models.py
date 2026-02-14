@@ -5,6 +5,11 @@ from django.db import models
 from django.contrib.postgres.fields import ArrayField
 import uuid
 
+from apps.core.disciplines import (
+    ALL_DISCIPLINE_CHOICES,
+    OWNERSHIP_LEVEL_CHOICES,
+)
+
 
 class IFCEntity(models.Model):
     """
