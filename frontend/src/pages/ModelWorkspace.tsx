@@ -153,106 +153,502 @@ export default function ModelWorkspace() {
   );
 }
 
-// Overview Tab Component
+// ─── Overview Tab ─── Analysis dashboard ───────────────────────────────────
+
 function OverviewTab({ model }: { model: Model }) {
+  const { data: analysis, isLoading } = useModelAnalysis(model.id);
+  const runAnalysis = useRunAnalysis();
+
+  if (isLoading) {
+    return (
+      <div className="h-full p-[clamp(0.5rem,2vw,1.5rem)] grid grid-cols-5 grid-rows-[auto_1fr_1fr_auto] gap-[clamp(0.5rem,1vw,0.75rem)]">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <h3 className="text-lg font-semibold text-text-primary mb-2">No Analysis Data</h3>
+            <p className="text-sm text-text-secondary mb-4">
+              Run type analysis to see a comprehensive breakdown of this model.
+            </p>
+            <Button
+              onClick={() => runAnalysis.mutate(model.id)}
+              disabled={runAnalysis.isPending}
+            >
+              {runAnalysis.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Running...</>
+              ) : (
+                <><Play className="mr-2 h-4 w-4" /> Run Analysis</>
+              )}
+            </Button>
+            {runAnalysis.isError && (
+              <p className="text-xs text-red-400 mt-2">
+                {(runAnalysis.error as Error).message}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return <AnalysisDashboard analysis={analysis} />;
+}
+
+// ─── Analysis Dashboard Layout ──────────────────────────────────────────────
+
+function AnalysisDashboard({ analysis }: { analysis: ModelAnalysis }) {
+  const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
+
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary mb-2">Model Overview</h2>
-        <p className="text-text-secondary">
-          Quick summary of your BIM model's key metrics and information.
-        </p>
+    <div className="h-full overflow-hidden p-[clamp(0.5rem,2vw,1.5rem)] flex flex-col gap-[clamp(0.4rem,0.8vw,0.6rem)]">
+      {/* Row 1: Quality + KPIs */}
+      <div className="grid grid-cols-5 gap-[clamp(0.4rem,0.8vw,0.6rem)] min-h-0"
+           style={{ flex: '0 0 auto' }}>
+        {/* Quality checks card (spans 2 rows via nested flex) */}
+        <div className="row-span-2 flex flex-col">
+          <QualityCard analysis={analysis} stats={stats} />
+        </div>
+        {/* KPI cards */}
+        <KpiCard value={analysis.total_types} label="Types" accent />
+        <KpiCard value={analysis.total_products} label="Products" />
+        <KpiCard value={analysis.total_storeys} label="Storeys" />
+        <KpiCard value={analysis.total_spaces} label="Spaces" />
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-text-primary">{model.element_count.toLocaleString()}</div>
-            <p className="text-xs text-text-tertiary mt-1">Total Elements</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-text-primary">{model.storey_count}</div>
-            <p className="text-xs text-text-tertiary mt-1">Building Storeys</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-text-primary">{model.system_count}</div>
-            <p className="text-xs text-text-tertiary mt-1">MEP Systems</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-text-primary">
-              {model.ifc_schema || 'IFC4'}
-            </div>
-            <p className="text-xs text-text-tertiary mt-1">IFC Schema</p>
-          </CardContent>
-        </Card>
+      {/* Row 2: Sub-KPIs */}
+      <div className="grid grid-cols-5 gap-[clamp(0.4rem,0.8vw,0.6rem)]"
+           style={{ flex: '0 0 auto' }}>
+        <div /> {/* spacer for quality card column */}
+        <SubKpiCard value={stats.emptyTypes} label="Empty Types" warn={stats.emptyTypes > 0} />
+        <SubKpiCard value={stats.untypedCount} label="Untyped" warn={stats.untypedCount > 0} />
+        <SubKpiCard value={stats.proxyCount} label="Proxy-typed" warn={stats.proxyCount > 0} />
+        <SubKpiCard value={analysis.duplicate_guid_count} label="Duplicate GUIDs" warn={analysis.duplicate_guid_count > 0} />
       </div>
 
-      {/* Model Information */}
-      <Card>
-        <CardContent className="pt-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">Model Information</h3>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between py-2 border-b border-border">
-              <dt className="text-text-secondary">File Name</dt>
-              <dd className="text-text-primary font-medium">{model.name}</dd>
-            </div>
-            <div className="flex justify-between py-2 border-b border-border">
-              <dt className="text-text-secondary">Version</dt>
-              <dd className="text-text-primary font-medium">{model.version_number}</dd>
-            </div>
-            <div className="flex justify-between py-2 border-b border-border">
-              <dt className="text-text-secondary">Upload Date</dt>
-              <dd className="text-text-primary font-medium">
-                {new Date(model.created_at).toLocaleString()}
-              </dd>
-            </div>
-            <div className="flex justify-between py-2 border-b border-border">
-              <dt className="text-text-secondary">Status</dt>
-              <dd>
-                <ModelStatusBadge status={model.status} />
-              </dd>
-            </div>
-          </dl>
+      {/* Row 3: Storeys bar chart */}
+      <Card className="flex-shrink min-h-0 overflow-hidden flex flex-col"
+            style={{ flex: '1 1 30%' }}>
+        <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 overflow-y-auto">
+          <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.25rem,0.5vw,0.4rem)]">
+            Storeys
+          </h3>
+          <StoreyChart storeys={analysis.storeys} />
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardContent className="pt-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">Quick Actions</h3>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <Button variant="outline" className="justify-start">
-              View in 3D
-            </Button>
-            <Button variant="outline" className="justify-start">
-              Run QTO Analysis
-            </Button>
-            <Button variant="outline" className="justify-start">
-              Check MMI
-            </Button>
-            <Button variant="outline" className="justify-start">
-              Validate Model
-            </Button>
-            <Button variant="outline" className="justify-start">
-              Export Data
-            </Button>
-            <Button variant="outline" className="justify-start">
-              Run Scripts
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Row 4: Treemap + Geometry donut */}
+      <div className="grid grid-cols-[1.5fr_1fr] gap-[clamp(0.4rem,0.8vw,0.6rem)] min-h-0"
+           style={{ flex: '1 1 35%' }}>
+        <Card className="overflow-hidden flex flex-col">
+          <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
+            <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.25rem,0.5vw,0.4rem)]">
+              Element Distribution
+            </h3>
+            <div className="flex-1 min-h-0 relative">
+              <Treemap types={analysis.types} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden flex flex-col">
+          <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
+            <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.25rem,0.5vw,0.4rem)]">
+              Geometry
+            </h3>
+            <div className="flex-1 min-h-0 flex items-center justify-center">
+              <GeometryDonut types={analysis.types} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 5: Context / Units / Coordinates */}
+      <div className="grid grid-cols-3 gap-[clamp(0.4rem,0.8vw,0.6rem)]"
+           style={{ flex: '0 0 auto' }}>
+        <InfoCard title="Context" rows={[
+          ['Project', analysis.project_name || '—'],
+          ['Site', analysis.site_name || '—'],
+          ['Building', analysis.building_name || '—'],
+          ['Application', analysis.application || '—'],
+          ['Schema', analysis.ifc_schema || '—'],
+        ]} />
+        <InfoCard title="Units" rows={
+          analysis.units && typeof analysis.units === 'object'
+            ? Object.entries(analysis.units as Record<string, string>).map(([k, v]) => [k, String(v)])
+            : [['—', 'No unit data']]
+        } />
+        <InfoCard title="Coordinates" rows={
+          analysis.coordinates && typeof analysis.coordinates === 'object'
+            ? Object.entries(analysis.coordinates as Record<string, unknown>).map(([k, v]) => [
+                k.replace(/_/g, ' '),
+                typeof v === 'object' ? JSON.stringify(v) : String(v ?? '—'),
+              ])
+            : [['—', 'No coordinate data']]
+        } />
+      </div>
     </div>
+  );
+}
+
+// ─── Stats computation ──────────────────────────────────────────────────────
+
+interface AnalysisStats {
+  emptyTypes: number;
+  untypedCount: number;
+  proxyCount: number;
+  missingIsExternal: number;
+  missingLoadBearing: number;
+  missingFireRating: number;
+  classCounts: Record<string, number>;
+  repCounts: Record<string, number>;
+}
+
+function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
+  let emptyTypes = 0, untypedCount = 0, proxyCount = 0;
+  let missingIsExternal = 0, missingLoadBearing = 0, missingFireRating = 0;
+  const classCounts: Record<string, number> = {};
+  const repCounts: Record<string, number> = {};
+
+  for (const t of analysis.types) {
+    if (t.is_empty) emptyTypes++;
+    if (t.is_untyped) untypedCount += t.instance_count;
+    if (t.is_proxy) proxyCount += t.instance_count;
+    missingIsExternal += t.is_external_unset;
+    missingLoadBearing += t.loadbearing_unset;
+    missingFireRating += t.fire_rating_unset;
+
+    const cls = t.element_class || t.type_class.replace('Type', '');
+    classCounts[cls] = (classCounts[cls] || 0) + t.instance_count;
+
+    if (t.primary_representation && t.instance_count > 0) {
+      repCounts[t.primary_representation] = (repCounts[t.primary_representation] || 0) + t.instance_count;
+    }
+  }
+
+  return { emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts };
+}
+
+// ─── KPI Card ───────────────────────────────────────────────────────────────
+
+function KpiCard({ value, label, accent }: { value: number; label: string; accent?: boolean }) {
+  return (
+    <Card>
+      <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] text-center">
+        <div className={`text-[clamp(1.25rem,3vw,1.75rem)] font-bold tabular-nums ${accent ? 'text-[#D0D34D]' : 'text-text-primary'}`}>
+          {value.toLocaleString()}
+        </div>
+        <div className="text-[clamp(0.5rem,0.9vw,0.65rem)] uppercase tracking-wide text-text-tertiary">
+          {label}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SubKpiCard({ value, label, warn }: { value: number; label: string; warn?: boolean }) {
+  return (
+    <Card>
+      <CardContent className="p-[clamp(0.4rem,0.8vw,0.6rem)] flex items-center justify-between">
+        <span className="text-[clamp(0.55rem,1vw,0.7rem)] text-text-secondary">{label}</span>
+        <span className={`text-[clamp(0.7rem,1.2vw,0.85rem)] font-semibold tabular-nums ${warn ? 'text-[#fb923c]' : 'text-text-primary'}`}>
+          {value.toLocaleString()}
+        </span>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Quality Checks Card ────────────────────────────────────────────────────
+
+function QualityCard({ analysis, stats }: { analysis: ModelAnalysis; stats: AnalysisStats }) {
+  const checks = [
+    { label: 'Duplicate GUIDs', value: analysis.duplicate_guid_count, ok: analysis.duplicate_guid_count === 0 },
+    { label: 'IsExternal unset', value: stats.missingIsExternal, ok: stats.missingIsExternal === 0 },
+    { label: 'LoadBearing unset', value: stats.missingLoadBearing, ok: stats.missingLoadBearing === 0 },
+    { label: 'FireRating unset', value: stats.missingFireRating, ok: stats.missingFireRating === 0 },
+    { label: 'Empty types', value: stats.emptyTypes, ok: stats.emptyTypes === 0 },
+  ];
+
+  return (
+    <Card className="h-full flex flex-col">
+      <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
+        <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.3rem,0.6vw,0.5rem)]">
+          Quality
+        </h3>
+        <div className="space-y-[clamp(0.2rem,0.4vw,0.3rem)] flex-1">
+          {checks.map((c) => (
+            <div key={c.label} className="flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)]">
+              <span className="text-text-secondary">{c.label}</span>
+              <span className={`font-semibold tabular-nums px-[clamp(0.3rem,0.6vw,0.5rem)] py-px rounded text-[clamp(0.5rem,0.9vw,0.65rem)] ${
+                c.ok
+                  ? 'bg-emerald-500/15 text-emerald-400'
+                  : 'bg-red-500/15 text-red-400'
+              }`}>
+                {c.value === 0 ? 'OK' : c.value.toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-auto pt-[clamp(0.3rem,0.5vw,0.4rem)] border-t border-border text-[clamp(0.5rem,0.8vw,0.6rem)] text-text-tertiary">
+          {analysis.ifc_schema} &middot; {analysis.application}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Storey Chart ───────────────────────────────────────────────────────────
+
+function StoreyChart({ storeys }: { storeys: AnalysisStorey[] }) {
+  if (!storeys.length) return <div className="text-text-tertiary text-xs">No storeys</div>;
+
+  const sorted = [...storeys].sort((a, b) => (b.elevation ?? 0) - (a.elevation ?? 0));
+  const maxCount = Math.max(...sorted.map(s => s.element_count), 1);
+
+  return (
+    <div className="space-y-[clamp(0.1rem,0.3vw,0.2rem)]">
+      {sorted.map((s) => (
+        <div key={s.name} className="grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)]"
+             style={{ gridTemplateColumns: '1fr auto 3fr auto' }}>
+          <span className="text-text-secondary truncate" title={s.name}>{s.name}</span>
+          <span className="text-text-tertiary tabular-nums w-[3.5em] text-right">
+            {s.elevation != null ? `${s.elevation.toFixed(1)}m` : '—'}
+          </span>
+          <div className="h-[clamp(0.7rem,1.2vw,1rem)] bg-white/5 rounded overflow-hidden">
+            <div
+              className="h-full rounded bg-gradient-to-r from-[#21263A] to-[#157954] transition-all"
+              style={{ width: `${(s.element_count / maxCount) * 100}%` }}
+            />
+          </div>
+          <span className="text-text-primary tabular-nums font-medium w-[3em] text-right">
+            {s.element_count}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Treemap ────────────────────────────────────────────────────────────────
+
+const TREEMAP_COLORS = [
+  '#157954', '#C7CEE8', '#D0D34D', '#21263A', '#2dd4a0',
+  '#fb923c', '#f87171', '#818cf8', '#38bdf8', '#a78bfa',
+  '#34d399', '#fbbf24',
+];
+
+function treemapLayout(items: { label: string; value: number }[], W: number, H: number) {
+  const total = items.reduce((s, i) => s + i.value, 0);
+  if (!total) return [];
+
+  const sorted = [...items].sort((a, b) => b.value - a.value);
+  const rects: { x: number; y: number; w: number; h: number; label: string; value: number }[] = [];
+  let x = 0, y = 0, w = W, h = H;
+
+  function layoutRow(row: typeof sorted, rowArea: number, isHorizontal: boolean) {
+    const side = isHorizontal ? w : h;
+    const rowSize = rowArea / side;
+    let offset = isHorizontal ? y : x;
+
+    for (const item of row) {
+      const fraction = item.value / rowArea;
+      const itemSize = fraction * side;
+      if (isHorizontal) {
+        rects.push({ x, y: offset, w: rowSize, h: itemSize, label: item.label, value: item.value });
+        offset += itemSize;
+      } else {
+        rects.push({ x: offset, y, w: itemSize, h: rowSize, label: item.label, value: item.value });
+        offset += itemSize;
+      }
+    }
+
+    if (isHorizontal) { x += rowSize; w -= rowSize; }
+    else { y += rowSize; h -= rowSize; }
+  }
+
+  function worst(row: typeof sorted, side: number) {
+    const rowSum = row.reduce((s, i) => s + i.value, 0);
+    const area = row.map(i => (i.value / total) * W * H);
+    const rowWidth = rowSum / total * W * H / side;
+    let mx = 0;
+    for (const a of area) {
+      const r = Math.max((rowWidth * rowWidth) / a, a / (rowWidth * rowWidth));
+      mx = Math.max(mx, r);
+    }
+    return mx;
+  }
+
+  let remaining = [...sorted];
+  while (remaining.length > 0) {
+    const isHorizontal = w < h;
+    const side = isHorizontal ? h : w;
+    const row = [remaining[0]];
+    remaining = remaining.slice(1);
+
+    while (remaining.length > 0) {
+      const candidate = [...row, remaining[0]];
+      if (worst(candidate, side) <= worst(row, side)) {
+        row.push(remaining[0]);
+        remaining = remaining.slice(1);
+      } else break;
+    }
+
+    const rowArea = row.reduce((s, i) => s + (i.value / total) * W * H, 0);
+    layoutRow(row, rowArea, isHorizontal);
+  }
+
+  return rects;
+}
+
+function Treemap({ types }: { types: AnalysisTypeRecord[] }) {
+  const items = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of types) {
+      if (t.instance_count === 0) continue;
+      const cls = (t.element_class || t.type_class.replace('Type', '')).replace('Ifc', '');
+      counts[cls] = (counts[cls] || 0) + t.instance_count;
+    }
+    return Object.entries(counts)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [types]);
+
+  if (!items.length) return <div className="text-text-tertiary text-xs">No data</div>;
+
+  const W = 400, H = 220;
+  const rects = treemapLayout(items, W, H);
+
+  return (
+    <div className="absolute inset-0">
+      <div className="relative w-full h-full">
+        {rects.map((r, i) => {
+          const pctX = (r.x / W) * 100, pctY = (r.y / H) * 100;
+          const pctW = (r.w / W) * 100, pctH = (r.h / H) * 100;
+          const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
+          const showLabel = pctW > 8 && pctH > 8;
+          return (
+            <div
+              key={r.label}
+              className="absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px"
+              style={{
+                left: `${pctX}%`, top: `${pctY}%`,
+                width: `${pctW}%`, height: `${pctH}%`,
+                background: color, opacity: 0.85,
+              }}
+              title={`${r.label}: ${r.value.toLocaleString()}`}
+            >
+              {showLabel && (
+                <>
+                  <span className="text-[clamp(0.45rem,0.8vw,0.6rem)] font-medium text-white/90 leading-tight truncate max-w-full px-0.5">
+                    {r.label}
+                  </span>
+                  <span className="text-[clamp(0.4rem,0.7vw,0.55rem)] text-white/70 tabular-nums">
+                    {r.value.toLocaleString()}
+                  </span>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Geometry Donut ─────────────────────────────────────────────────────────
+
+const DONUT_COLORS = ['#157954', '#D0D34D', '#C7CEE8', '#2dd4a0', '#fb923c', '#818cf8', '#f87171', '#38bdf8'];
+
+function GeometryDonut({ types }: { types: AnalysisTypeRecord[] }) {
+  const data = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of types) {
+      if (!t.primary_representation || t.instance_count === 0) continue;
+      counts[t.primary_representation] = (counts[t.primary_representation] || 0) + t.instance_count;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [types]);
+
+  if (!data.length) return <div className="text-text-tertiary text-xs">No geometry data</div>;
+
+  const total = data.reduce((s, [, v]) => s + v, 0);
+  const size = 130;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 2, ir = r * 0.55;
+
+  let angle = -Math.PI / 2;
+  const paths: JSX.Element[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const [label, value] = data[i];
+    const sweep = (value / total) * Math.PI * 2;
+    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(angle + sweep), y2 = cy + r * Math.sin(angle + sweep);
+    const ix1 = cx + ir * Math.cos(angle + sweep), iy1 = cy + ir * Math.sin(angle + sweep);
+    const ix2 = cx + ir * Math.cos(angle), iy2 = cy + ir * Math.sin(angle);
+    const large = sweep > Math.PI ? 1 : 0;
+
+    paths.push(
+      <path
+        key={label}
+        d={`M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${large} 0 ${ix2},${iy2} Z`}
+        fill={DONUT_COLORS[i % DONUT_COLORS.length]}
+        opacity={0.85}
+      >
+        <title>{`${label}: ${value.toLocaleString()} (${((value / total) * 100).toFixed(1)}%)`}</title>
+      </path>
+    );
+    angle += sweep;
+  }
+
+  return (
+    <div className="flex items-center gap-[clamp(0.5rem,1.5vw,1rem)]">
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-[clamp(5rem,10vw,8rem)] h-[clamp(5rem,10vw,8rem)] flex-shrink-0">
+        {paths}
+      </svg>
+      <div className="space-y-[clamp(0.1rem,0.2vw,0.15rem)] min-w-0">
+        {data.slice(0, 6).map(([label, value], i) => (
+          <div key={label} className="flex items-center gap-[clamp(0.2rem,0.4vw,0.3rem)] text-[clamp(0.5rem,0.85vw,0.6rem)]">
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+            <span className="text-text-secondary truncate">{label}</span>
+            <span className="text-text-tertiary tabular-nums ml-auto">{((value / total) * 100).toFixed(0)}%</span>
+          </div>
+        ))}
+        {data.length > 6 && (
+          <div className="text-[clamp(0.45rem,0.8vw,0.55rem)] text-text-tertiary">
+            +{data.length - 6} more
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Info Card ──────────────────────────────────────────────────────────────
+
+function InfoCard({ title, rows }: { title: string; rows: [string, string][] }) {
+  return (
+    <Card>
+      <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)]">
+        <h3 className="text-[clamp(0.6rem,1vw,0.75rem)] font-semibold text-text-primary mb-[clamp(0.2rem,0.4vw,0.3rem)]">
+          {title}
+        </h3>
+        <div className="space-y-[clamp(0.1rem,0.2vw,0.15rem)]">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex justify-between text-[clamp(0.5rem,0.85vw,0.6rem)]">
+              <span className="text-text-secondary">{label}</span>
+              <span className="text-text-primary tabular-nums font-medium truncate ml-2 max-w-[60%] text-right">{value}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
