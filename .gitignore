@@ -264,7 +264,6 @@ dist-ssr
 .env.production
 frontend/.env.production
 backend/.env*
-dev.sh
 
 # Test coverage
 htmlcov/
