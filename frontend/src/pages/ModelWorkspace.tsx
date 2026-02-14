@@ -402,7 +402,7 @@ function SubKpiCard({ value, label, warn }: { value: number; label: string; warn
 
 // ─── Quality Checks Card ────────────────────────────────────────────────────
 
-function QualityCard({ analysis, stats }: { analysis: ModelAnalysis; stats: AnalysisStats }) {
+function QualityCard({ analysis, stats, onExpand }: { analysis: ModelAnalysis; stats: AnalysisStats; onExpand?: () => void }) {
   const checks = [
     { label: 'Duplicate GUIDs', value: analysis.duplicate_guid_count, ok: analysis.duplicate_guid_count === 0 },
     { label: 'IsExternal unset', value: stats.missingIsExternal, ok: stats.missingIsExternal === 0 },
@@ -414,9 +414,7 @@ function QualityCard({ analysis, stats }: { analysis: ModelAnalysis; stats: Anal
   return (
     <Card className="h-full flex flex-col card-accent-lime">
       <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
-        <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.3rem,0.6vw,0.5rem)]">
-          Quality
-        </h3>
+        <CardHeader title="Quality" onExpand={onExpand} />
         <div className="space-y-[clamp(0.2rem,0.4vw,0.3rem)] flex-1">
           {checks.map((c) => (
             <div key={c.label} className="flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)]">
