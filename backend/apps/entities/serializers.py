@@ -5,7 +5,8 @@ from .models import (
     NS3451Code, SemanticType, SemanticTypeIFCMapping,
     TypeMapping, TypeDefinitionLayer, MaterialMapping,
     TypeBankEntry, TypeBankObservation, TypeBankAlias, TypeBankScope,
-    MaterialLibrary, ProductLibrary, ProductComposition
+    MaterialLibrary, ProductLibrary, ProductComposition,
+    ModelAnalysis, AnalysisStorey, AnalysisType, AnalysisTypeStorey,
 )
 
 
