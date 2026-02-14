@@ -876,15 +876,31 @@ function ProcessingMessage({ status, error }: { status: Model['status']; error?:
 
 // ─── Metadata Tab ───────────────────────────────────────────────────────────
 
-const DISCIPLINES = [
-  { code: 'ARK', label: 'Architecture' },
-  { code: 'RIB', label: 'Structural' },
-  { code: 'RIV', label: 'HVAC' },
-  { code: 'RIE', label: 'Electrical' },
-  { code: 'RIR', label: 'Plumbing' },
-  { code: 'RIVA', label: 'Fire Safety' },
-  { code: 'LARK', label: 'Landscape' },
-  { code: 'OTHER', label: 'Other' },
+const MODEL_DISCIPLINES = [
+  { code: 'ARK', label: 'Architecture', color: '#3B82F6' },
+  { code: 'RIB', label: 'Structural', color: '#EF4444' },
+  { code: 'RIBp', label: 'Structural Prefab', color: '#F87171', parent: 'RIB' },
+  { code: 'RIG', label: 'Geotechnical', color: '#A855F7' },
+  { code: 'RIV', label: 'HVAC', color: '#22C55E' },
+  { code: 'RIVv', label: 'Ventilation', color: '#4ADE80', parent: 'RIV' },
+  { code: 'RIVp', label: 'Plumbing', color: '#2DD4BF', parent: 'RIV' },
+  { code: 'RIVspr', label: 'Sprinkler', color: '#FB923C', parent: 'RIV' },
+  { code: 'RIkulde', label: 'Cooling', color: '#38BDF8', parent: 'RIV' },
+  { code: 'RIvarme', label: 'Heating', color: '#F97316', parent: 'RIV' },
+  { code: 'RIE', label: 'Electrical', color: '#F59E0B' },
+  { code: 'LARK', label: 'Landscape', color: '#10B981' },
+] as const;
+
+const ADVISORY_ROLES = [
+  { code: 'RIA', label: 'Acoustics', color: '#8B5CF6' },
+  { code: 'RIBr', label: 'Fire Safety', color: '#DC2626' },
+  { code: 'RIByfy', label: 'Building Physics', color: '#6366F1' },
+  { code: 'RIM', label: 'Environmental', color: '#84CC16' },
+  { code: 'BIM-K', label: 'BIM Coordinator', color: '#06B6D4' },
+  { code: 'BIM-M', label: 'BIM Manager', color: '#0891B2' },
+  { code: 'PGL', label: 'Design Manager', color: '#64748B' },
+  { code: 'PM', label: 'Project Manager', color: '#475569' },
+  { code: 'BH', label: 'Owner/Client', color: '#334155' },
 ] as const;
 
 function MetadataTab({ model }: { model: Model }) {
