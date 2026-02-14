@@ -243,7 +243,22 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           </CardContent>
         </Card>
 
-        {/* Row 4: Treemap + Geometry donut */}
+        {/* Row 4: 3D Viewer */}
+        {hasFile && (
+          <Card className="overflow-hidden flex flex-col card-accent-forest">
+            <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex flex-col">
+              <CardHeader title="3D Viewer" onExpand={() => setOverlay('viewer')} />
+              <div className="h-[400px] rounded-lg overflow-hidden bg-black/20">
+                <UnifiedBIMViewer
+                  modelId={model.id}
+                  showPropertiesPanel={false}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Row 5: Treemap + Geometry donut */}
         <div className="grid grid-cols-[1.5fr_1fr] gap-[clamp(0.5rem,1vw,0.75rem)] min-h-[250px]">
           <Card className="overflow-hidden flex flex-col card-accent-forest">
             <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex-1 min-h-0 flex flex-col">
