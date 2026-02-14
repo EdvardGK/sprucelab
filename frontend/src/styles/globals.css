@@ -11,113 +11,144 @@
 @layer base {
   :root {
     /* ===========================================
-       BLUE GLASS - Glassmorphism with blue gradient
-       Airy, modern, distinctive
+       LIGHT MODE — Mindful Palettes No. 160
+       Silver/Lavender backgrounds, Navy text,
+       Forest primary, Lime accent
        =========================================== */
 
-    /* Background gradient defined separately - CSS variables for solid fallback */
-    --background: 210 100% 96%;        /* Light blue fallback #E8F4FD */
-    --foreground: 215 25% 20%;         /* Dark blue-gray for text */
+    --background: 160 5% 96%;           /* Near-white with silver tint */
+    --foreground: 228 27% 18%;          /* Navy */
 
-    /* Glass cards - semi-transparent white */
-    --card: 0 0% 100%;                 /* White base (opacity applied in component) */
-    --card-foreground: 215 25% 20%;
+    --card: 0 0% 100%;                  /* White */
+    --card-foreground: 228 27% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 20%;
+    --popover-foreground: 228 27% 18%;
 
-    /* Primary - vibrant blue */
-    --primary: 217 91% 50%;            /* #2563EB bright blue */
+    /* Primary — Forest green */
+    --primary: 158 70% 28%;             /* #157954 */
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - frosted glass surface */
-    --secondary: 210 40% 96%;          /* Very light blue */
-    --secondary-foreground: 215 25% 20%;
+    /* Secondary — very light lavender */
+    --secondary: 227 35% 95%;
+    --secondary-foreground: 228 27% 18%;
 
-    /* Muted - subtle blue-gray */
-    --muted: 210 30% 92%;              /* Light blue-gray */
-    --muted-foreground: 215 15% 45%;   /* Medium blue-gray text */
+    /* Muted — light silver */
+    --muted: 160 5% 92%;
+    --muted-foreground: 228 13% 45%;
 
-    /* Accent - vibrant amber/gold for highlights */
-    --accent: 38 92% 50%;              /* #F59E0B amber */
-    --accent-foreground: 215 25% 15%;
+    /* Accent — Lime */
+    --accent: 61 63% 56%;               /* #D0D34D */
+    --accent-foreground: 228 27% 18%;   /* Navy on lime */
 
-    /* Destructive - clear red */
-    --destructive: 0 84% 60%;          /* #EF4444 red */
+    /* Destructive */
+    --destructive: 0 91% 61%;           /* Red */
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders - subtle white/blue for glass edges */
-    --border: 210 30% 85%;             /* Light blue-gray border */
-    --input: 210 30% 90%;
-    --ring: 217 91% 50%;               /* Match primary for focus */
+    /* Borders */
+    --border: 160 5% 85%;               /* Silver-ish */
+    --border-subtle: 227 20% 91%;       /* Lavender-tinted subtle */
+    --border-strong: 228 15% 70%;       /* Stronger */
+    --input: 160 5% 88%;
+    --ring: 158 70% 28%;                /* Forest — focus ring */
 
-    --radius: 0.75rem;                 /* Slightly more rounded for glass look */
+    --radius: 0.75rem;
 
-    /* Chart colors - vibrant palette */
-    --chart-1: 217 91% 50%;            /* Blue */
-    --chart-2: 142 76% 40%;            /* Green */
-    --chart-3: 38 92% 50%;             /* Amber */
-    --chart-4: 0 84% 60%;              /* Red */
-    --chart-5: 262 83% 58%;            /* Purple */
+    /* Text tokens (light mode) */
+    --text-primary: 228 27% 18%;        /* Navy */
+    --text-secondary: 228 15% 40%;
+    --text-tertiary: 228 13% 55%;
+    --text-inverse: 160 3% 84%;         /* Silver */
 
-    /* Status colors for badges */
-    --success: 142 76% 36%;            /* #22C55E green */
-    --success-foreground: 142 76% 20%;
-    --warning: 38 92% 50%;             /* #F59E0B amber */
-    --warning-foreground: 38 92% 30%;
-    --info: 217 91% 60%;               /* #3B82F6 blue */
-    --info-foreground: 217 91% 30%;
+    /* Chart colors from palette */
+    --chart-1: 158 70% 28%;             /* Forest */
+    --chart-2: 61 63% 56%;              /* Lime */
+    --chart-3: 227 35% 84%;             /* Lavender */
+    --chart-4: 160 66% 50%;             /* Bright green */
+    --chart-5: 25 96% 61%;              /* Orange */
+
+    /* Status badges */
+    --success: 158 70% 28%;
+    --success-foreground: 158 70% 15%;
+    --warning: 25 96% 61%;
+    --warning-foreground: 25 96% 30%;
+    --info: 227 35% 65%;
+    --info-foreground: 227 35% 30%;
 
     /* Glass effect variables */
     --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+    --glass-border: rgba(199, 206, 232, 0.4);
+    --glass-shadow: 0 8px 32px rgba(33, 38, 58, 0.08);
   }
 
   .dark {
     /* ===========================================
-       DARK MODE - Warm undertones, not cold
+       DARK MODE — Dashboard aesthetic
+       Navy backgrounds, Silver text,
+       Forest primary, Lime highlights
        =========================================== */
-    --background: 24 10% 6%;           /* Warm near-black */
-    --foreground: 40 6% 96%;           /* Warm off-white */
 
-    --card: 24 10% 8%;
-    --card-foreground: 40 6% 96%;
+    --background: 228 31% 14%;          /* #171b2e dashboard bg */
+    --foreground: 160 3% 84%;           /* Silver */
 
-    --popover: 24 10% 10%;
-    --popover-foreground: 40 6% 96%;
+    --card: 228 29% 17%;               /* #1e2338 surface */
+    --card-foreground: 160 3% 84%;
 
-    --primary: 214 60% 60%;            /* Slightly brighter blue */
-    --primary-foreground: 24 10% 6%;
+    --popover: 228 27% 21%;            /* #272d44 surface2 */
+    --popover-foreground: 160 3% 84%;
 
-    --secondary: 24 6% 14%;
-    --secondary-foreground: 40 6% 96%;
+    /* Primary — Forest green */
+    --primary: 158 70% 28%;             /* #157954 */
+    --primary-foreground: 160 3% 84%;   /* Silver on forest */
 
-    --muted: 24 6% 14%;
-    --muted-foreground: 30 4% 60%;
+    /* Secondary — dark surface */
+    --secondary: 228 27% 21%;           /* surface2 */
+    --secondary-foreground: 160 3% 84%;
 
-    --accent: 38 92% 50%;              /* Keep amber accent */
-    --accent-foreground: 24 10% 6%;
+    /* Muted */
+    --muted: 228 27% 21%;
+    --muted-foreground: 228 14% 63%;    /* text-dim */
 
-    --destructive: 0 62% 40%;
+    /* Accent — Lime */
+    --accent: 61 63% 56%;               /* #D0D34D */
+    --accent-foreground: 228 27% 18%;   /* Navy */
+
+    /* Destructive */
+    --destructive: 0 91% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 24 6% 18%;
-    --input: 24 6% 18%;
-    --ring: 214 60% 60%;
+    /* Borders */
+    --border: 228 26% 33%;              /* #3e4668 */
+    --border-subtle: 227 20% 15%;       /* Very subtle */
+    --border-strong: 228 20% 42%;
+    --input: 228 26% 33%;
+    --ring: 158 70% 28%;                /* Forest */
 
-    --chart-1: 214 70% 60%;
-    --chart-2: 142 60% 50%;
-    --chart-3: 38 80% 55%;
-    --chart-4: 0 70% 55%;
-    --chart-5: 262 70% 65%;
+    /* Text tokens (dark mode) */
+    --text-primary: 160 3% 84%;         /* Silver */
+    --text-secondary: 228 14% 63%;      /* text-dim */
+    --text-tertiary: 228 13% 45%;       /* text-muted */
+    --text-inverse: 228 27% 18%;        /* Navy */
 
-    --success: 142 60% 50%;
-    --success-foreground: 142 60% 90%;
-    --warning: 38 80% 55%;
-    --warning-foreground: 38 80% 90%;
-    --info: 217 80% 65%;
-    --info-foreground: 217 80% 90%;
+    /* Chart colors — brighter for dark bg */
+    --chart-1: 158 70% 38%;             /* Brighter forest */
+    --chart-2: 61 63% 56%;              /* Lime */
+    --chart-3: 227 35% 84%;             /* Lavender */
+    --chart-4: 160 66% 50%;             /* Bright green */
+    --chart-5: 25 96% 61%;              /* Orange */
+
+    /* Status badges */
+    --success: 160 66% 50%;
+    --success-foreground: 160 66% 90%;
+    --warning: 25 96% 61%;
+    --warning-foreground: 25 96% 90%;
+    --info: 227 35% 75%;
+    --info-foreground: 227 35% 92%;
+
+    /* Glass effect variables — dark mode */
+    --glass-bg: rgba(30, 35, 56, 0.7);
+    --glass-border: rgba(199, 206, 232, 0.07);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -130,16 +161,20 @@ body {
   font-feature-settings: 'rlig' 1, 'calt' 1;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  /* Blue glass gradient background */
+  /* Light mode: subtle silver → lavender gradient */
   background: linear-gradient(135deg,
-    #E0F2FE 0%,      /* sky-100 */
-    #BAE6FD 25%,     /* sky-200 */
-    #E0E7FF 50%,     /* indigo-100 */
-    #C7D2FE 75%,     /* indigo-200 */
-    #DBEAFE 100%     /* blue-100 */
+    #eeeeed 0%,
+    #e4e6f0 50%,
+    #eeeeed 100%
   );
   background-attachment: fixed;
   min-height: 100vh;
+}
+
+/* Dark mode body gradient */
+.dark body,
+:root.dark body {
+  background: #171b2e;
 }
 
 /* Glassmorphism utility classes */
@@ -158,31 +193,42 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+.dark .glass-subtle {
+  background: rgba(30, 35, 56, 0.5);
+  border-color: rgba(199, 206, 232, 0.05);
+}
+
 .glass-strong {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  box-shadow: 0 8px 32px rgba(33, 38, 58, 0.1);
 }
 
-/* Scrollbar styling - subtle glass look */
+.dark .glass-strong {
+  background: rgba(30, 35, 56, 0.85);
+  border-color: rgba(199, 206, 232, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(199, 206, 232, 0.1);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.3);
+  background: rgba(199, 206, 232, 0.2);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.5);
+  background: rgba(199, 206, 232, 0.35);
 }
 
 /* Focus styles for accessibility */
@@ -194,5 +240,4 @@ body {
   * {
     @apply border-border;
   }
-  /* Body gradient defined above - don't override here */
 }
