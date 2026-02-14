@@ -212,7 +212,7 @@ function AnalysisDashboard({ analysis }: { analysis: ModelAnalysis }) {
 
   return (
     <>
-      <div className="overflow-y-auto p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto w-full space-y-[clamp(0.5rem,1vw,0.75rem)]">
+      <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto w-full space-y-[clamp(0.5rem,1vw,0.75rem)]">
         {/* Row 1: Quality + KPIs */}
         <div className="grid grid-cols-5 gap-[clamp(0.5rem,1vw,0.75rem)]">
           {/* Quality checks card (spans 2 rows via nested flex) */}
