@@ -16,7 +16,6 @@ import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@
 // Tab definitions
 const TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: '3d-viewer', label: '3D Viewer' },
   { id: 'qto', label: 'QTO' },
   { id: 'mmi', label: 'MMI' },
   { id: 'validation', label: 'Validation' },
