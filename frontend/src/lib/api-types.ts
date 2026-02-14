@@ -45,6 +45,7 @@ export interface Model {
   type_count: number;
   mapped_type_count: number;
   processing_error: string | null;
+  discipline: string | null;
   task_id: string | null;
   created_at: string;
   updated_at: string;

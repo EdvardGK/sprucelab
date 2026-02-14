@@ -935,22 +935,45 @@ function MetadataTab({ model }: { model: Model }) {
         <Card className="card-accent-forest">
           <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)]">
             <h3 className="text-sm font-semibold text-text-primary mb-3">Discipline</h3>
-            <p className="text-xs text-text-secondary mb-4">
+            <p className="text-xs text-text-secondary mb-3">
               Assign this model to a discipline for filtering, validation rules, and project weighting.
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              {DISCIPLINES.map((d) => (
+
+            <h4 className="text-xs font-medium text-text-secondary mb-2">Model Disciplines</h4>
+            <div className="grid grid-cols-2 gap-1.5 mb-3">
+              {MODEL_DISCIPLINES.map((d) => (
                 <button
                   key={d.code}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border
-                             text-sm text-text-secondary hover:border-forest hover:text-text-primary
-                             transition-colors text-left"
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-sm text-left transition-colors
+                    ${model.discipline === d.code
+                      ? 'border-forest bg-forest/15 text-text-primary'
+                      : 'border-border text-text-secondary hover:border-forest hover:text-text-primary'}
+                    ${'parent' in d ? 'pl-6' : ''}`}
                 >
-                  <span className="text-xs font-mono text-text-tertiary w-10">{d.code}</span>
-                  <span>{d.label}</span>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-xs font-mono text-text-tertiary w-14">{d.code}</span>
+                  <span className="text-xs">{d.label}</span>
                 </button>
               ))}
             </div>
+
+            <h4 className="text-xs font-medium text-text-secondary mb-2">Advisory Roles</h4>
+            <div className="grid grid-cols-2 gap-1.5">
+              {ADVISORY_ROLES.map((d) => (
+                <button
+                  key={d.code}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-sm text-left transition-colors
+                    ${model.discipline === d.code
+                      ? 'border-forest bg-forest/15 text-text-primary'
+                      : 'border-border text-text-secondary hover:border-forest hover:text-text-primary'}`}
+                >
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-xs font-mono text-text-tertiary w-14">{d.code}</span>
+                  <span className="text-xs">{d.label}</span>
+                </button>
+              ))}
+            </div>
+
             <p className="text-xs text-text-tertiary mt-3">
               Discipline assignment coming soon.
             </p>

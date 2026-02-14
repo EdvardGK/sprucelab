@@ -151,11 +151,14 @@ def _lookup_ownership(model: Model, ns3451_code: str, discipline_codes: list[str
 
 
 def determine_ownership_status(
-    ownership: NS3451OwnershipMatrix | None,
+    ownership: NS3451OwnershipMatrix | ResponsibilityMatrix | None,
     current_status: str
 ) -> str:
     """
     Determine the ownership status for a type based on the ownership matrix.
+
+    Works with both NS3451OwnershipMatrix (global) and ResponsibilityMatrix
+    (project-level) - both have an `ownership_level` field.
 
     Logic:
     - No matrix entry → stays primary (this discipline might own it)
@@ -164,7 +167,7 @@ def determine_ownership_status(
     - Reference in matrix → reference (we copy from others)
 
     Args:
-        ownership: NS3451OwnershipMatrix entry for this code/discipline
+        ownership: Matrix entry (global or project-level) for this code/discipline
         current_status: Current ownership_status value
 
     Returns:

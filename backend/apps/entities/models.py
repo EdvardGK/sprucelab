@@ -387,8 +387,8 @@ class NS3451OwnershipMatrix(models.Model):
         help_text="NS3451 building part code"
     )
     discipline = models.CharField(
-        max_length=10,
-        choices=DISCIPLINE_CHOICES,
+        max_length=20,
+        choices=ALL_DISCIPLINE_CHOICES,
         help_text="BIM discipline code"
     )
     ownership_level = models.CharField(

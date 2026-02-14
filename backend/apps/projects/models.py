@@ -305,3 +305,56 @@ class ProjectConfig(models.Model):
         if 'bep' not in self.config:
             self.config['bep'] = {}
         self.config['bep']['target_mmi'] = level
+
+
+class ResponsibilityMatrix(models.Model):
+    """
+    Project-level responsibility matrix override.
+
+    Maps classification codes (NS3451 by default) to disciplines with ownership levels.
+    When present, overrides the global NS3451OwnershipMatrix defaults for this project.
+    Falls back to global matrix for codes not explicitly configured.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='responsibility_matrix',
+        help_text="Project this matrix entry belongs to"
+    )
+    classification_system = models.CharField(
+        max_length=50,
+        default='NS3451',
+        help_text="Classification system (NS3451, OmniClass, etc.)"
+    )
+    classification_code = models.CharField(
+        max_length=20,
+        help_text="Classification code (e.g., '32', '22')"
+    )
+    discipline = models.CharField(
+        max_length=20,
+        choices=ALL_DISCIPLINE_CHOICES,
+        help_text="BIM discipline code"
+    )
+    ownership_level = models.CharField(
+        max_length=20,
+        choices=OWNERSHIP_LEVEL_CHOICES,
+        help_text="Level of ownership for this discipline"
+    )
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Additional guidance for this assignment"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'responsibility_matrix'
+        unique_together = ['project', 'classification_code', 'discipline']
+        ordering = ['classification_code', 'discipline']
+
+    def __str__(self):
+        return f"{self.project.name} - {self.classification_code} → {self.discipline} ({self.ownership_level})"

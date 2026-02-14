@@ -375,7 +375,7 @@ class Model(models.Model):
     def discipline_color(self):
         """Get the color for this model's discipline (for frontend 'ear' indicator)."""
         if self.discipline:
-            return self.DISCIPLINE_COLORS.get(self.discipline, '#6B7280')  # Gray fallback
+            return DISCIPLINE_COLORS.get(self.discipline, '#6B7280')  # Gray fallback
         return None
 
     def set_as_primary(self):
