@@ -58,10 +58,6 @@ export default function ModelWorkspace() {
     );
   }
 
-  // Viewer available immediately if file uploaded (doesn't need processing)
-  const hasFile = !!model.file_url;
-
-  // Other tabs need processing to complete
   const isReady = model.status === 'ready';
 
   return (
