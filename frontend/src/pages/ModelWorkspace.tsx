@@ -136,7 +136,7 @@ export default function ModelWorkspace() {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-auto bg-background">
+      <div className="bg-background">
         {/* All tabs - show content or processing message */}
         {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === '3d-viewer' && (hasFile ? <Viewer3DTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
