@@ -3,12 +3,16 @@ Django settings for BIM Coordinator Platform.
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Add lib/ to Python path for vendored packages (e.g. ifc_toolkit)
+sys.path.insert(0, str(BASE_DIR / 'lib'))
 
 # Load environment variables
 # Priority: .env.dev (local dev) > .env.local (overrides) > .env (base config)
