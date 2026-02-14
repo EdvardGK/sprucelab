@@ -197,7 +197,7 @@ function OverviewTab({ model }: { model: Model }) {
     );
   }
 
-  return <AnalysisDashboard analysis={analysis} />;
+  return <AnalysisDashboard analysis={analysis} model={model} />;
 }
 
 // ─── Analysis Dashboard Layout ──────────────────────────────────────────────
