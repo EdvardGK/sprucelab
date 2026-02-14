@@ -279,8 +279,8 @@ class Model(models.Model):
 
     # === Discipline Assignment (Sprint 1: The Gatekeeper) ===
     discipline = models.CharField(
-        max_length=10,
-        choices=DISCIPLINE_CHOICES,
+        max_length=20,
+        choices=MODEL_DISCIPLINE_CHOICES,
         blank=True,
         null=True,
         help_text="Model discipline - auto-inferred from filename, can be overridden"
