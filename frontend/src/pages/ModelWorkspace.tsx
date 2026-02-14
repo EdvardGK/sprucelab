@@ -600,7 +600,7 @@ function Treemap({ types }: { types: AnalysisTypeRecord[] }) {
 
 const DONUT_COLORS = ['#157954', '#D0D34D', '#C7CEE8', '#2dd4a0', '#fb923c', '#818cf8', '#f87171', '#38bdf8'];
 
-function GeometryDonut({ types }: { types: AnalysisTypeRecord[] }) {
+function GeometryDonut({ types, showAll }: { types: AnalysisTypeRecord[]; showAll?: boolean }) {
   const data = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const t of types) {
