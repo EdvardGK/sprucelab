@@ -202,11 +202,13 @@ function OverviewTab({ model }: { model: Model }) {
 
 // ─── Analysis Dashboard Layout ──────────────────────────────────────────────
 
-type OverlayType = 'quality' | 'storeys' | 'elements' | 'geometry' | null;
+type OverlayType = 'quality' | 'storeys' | 'elements' | 'geometry' | 'viewer' | null;
 
-function AnalysisDashboard({ analysis }: { analysis: ModelAnalysis }) {
+function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model: Model }) {
   const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
   const [overlay, setOverlay] = useState<OverlayType>(null);
+  const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
+  const hasFile = !!model.file_url;
 
   return (
     <>
