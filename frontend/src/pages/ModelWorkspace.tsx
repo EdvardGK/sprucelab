@@ -208,7 +208,7 @@ function AnalysisDashboard({ analysis }: { analysis: ModelAnalysis }) {
   const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
 
   return (
-    <div className="h-full overflow-hidden p-[clamp(0.5rem,2vw,1.5rem)] flex flex-col gap-[clamp(0.4rem,0.8vw,0.6rem)]">
+    <div className="h-full overflow-y-auto p-[clamp(0.5rem,2vw,1.5rem)] flex flex-col gap-[clamp(0.4rem,0.8vw,0.6rem)]">
       {/* Row 1: Quality + KPIs */}
       <div className="grid grid-cols-5 gap-[clamp(0.4rem,0.8vw,0.6rem)] min-h-0"
            style={{ flex: '0 0 auto' }}>
