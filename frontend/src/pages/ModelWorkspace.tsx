@@ -439,8 +439,8 @@ function StoreyChart({ storeys }: { storeys: AnalysisStorey[] }) {
 // ─── Treemap ────────────────────────────────────────────────────────────────
 
 const TREEMAP_COLORS = [
-  '#157954', '#C7CEE8', '#D0D34D', '#21263A', '#2dd4a0',
-  '#fb923c', '#f87171', '#818cf8', '#38bdf8', '#a78bfa',
+  '#157954', '#C7CEE8', '#D0D34D', '#21263A', '#2dd4a0', // palette + green
+  '#fb923c', '#f87171', '#818cf8', '#38bdf8', '#a78bfa', // extended
   '#34d399', '#fbbf24',
 ];
 
