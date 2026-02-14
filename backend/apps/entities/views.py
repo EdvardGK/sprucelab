@@ -2748,7 +2748,20 @@ class ModelAnalysisViewSet(viewsets.ReadOnlyModelViewSet):
 
         try:
             from ifc_toolkit.analyze import type_analysis
-            data = type_analysis(model.file_url)
+            from django.conf import settings
+            import urllib.parse
+
+            file_url = model.file_url
+            # Convert HTTP URL to local file path for local storage
+            parsed = urllib.parse.urlparse(file_url)
+            if parsed.scheme in ('http', 'https') and 'media/' in parsed.path:
+                # Extract relative path after /media/
+                media_rel = parsed.path.split('media/', 1)[1]
+                file_path = str(settings.MEDIA_ROOT / media_rel)
+            else:
+                file_path = file_url
+
+            data = type_analysis(file_path)
             analysis = ingest_type_analysis(str(model_id), data)
             serializer = self.get_serializer(analysis)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

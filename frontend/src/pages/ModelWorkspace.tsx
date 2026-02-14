@@ -456,9 +456,10 @@ function treemapLayout(items: { label: string; value: number }[], W: number, H: 
     const side = isHorizontal ? w : h;
     const rowSize = rowArea / side;
     let offset = isHorizontal ? y : x;
+    const rowSum = row.reduce((s, i) => s + i.value, 0);
 
     for (const item of row) {
-      const fraction = item.value / rowArea;
+      const fraction = item.value / rowSum;
       const itemSize = fraction * side;
       if (isHorizontal) {
         rects.push({ x, y: offset, w: rowSize, h: itemSize, label: item.label, value: item.value });
