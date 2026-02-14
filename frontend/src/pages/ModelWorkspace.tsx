@@ -138,7 +138,6 @@ export default function ModelWorkspace() {
       <div className="bg-background">
         {/* All tabs - show content or processing message */}
         {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === '3d-viewer' && (hasFile ? <Viewer3DTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === 'qto' && (isReady ? <QTODashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === 'mmi' && (isReady ? <MMIDashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         {activeTab === 'validation' && (isReady ? <PlaceholderTab title="Validation" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
