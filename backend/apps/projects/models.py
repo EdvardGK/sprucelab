@@ -4,6 +4,11 @@ Project models for BIM Coordinator Platform.
 from django.db import models
 import uuid
 
+from apps.core.disciplines import (
+    ALL_DISCIPLINE_CHOICES,
+    OWNERSHIP_LEVEL_CHOICES,
+)
+
 
 class Project(models.Model):
     """
