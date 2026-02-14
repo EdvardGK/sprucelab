@@ -376,20 +376,7 @@ class NS3451OwnershipMatrix(models.Model):
 
     Used by discipline_filter.py to auto-demote types outside model's responsibility.
     """
-    DISCIPLINE_CHOICES = [
-        ('ARK', 'Architecture'),
-        ('RIB', 'Structural'),
-        ('RIV', 'Mechanical/HVAC'),
-        ('RIE', 'Electrical'),
-        ('LARK', 'Landscape'),
-        ('RIG', 'Geotechnical'),
-    ]
-
-    OWNERSHIP_LEVEL_CHOICES = [
-        ('primary', 'Primary - Must model'),
-        ('secondary', 'Secondary - May model'),
-        ('reference', 'Reference - Copy from others'),
-    ]
+    # Discipline choices and ownership levels imported from apps.core.disciplines
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
