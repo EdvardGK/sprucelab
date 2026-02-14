@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Play, Loader2 } from 'lucide-react';
 import { useModel } from '@/hooks/use-models';
+import { useModelAnalysis, useRunAnalysis } from '@/hooks/use-model-analysis';
 import { Button } from '@/components/ui/button';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { QTODashboard } from '@/components/features/qto/QTODashboard';
 import { MMIDashboard } from '@/components/features/mmi/MMIDashboard';
 import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer';
 import { ElementPropertiesPanel, ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
-import type { Model } from '@/lib/api-types';
+import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
 
 // Tab definitions
 const TABS = [
