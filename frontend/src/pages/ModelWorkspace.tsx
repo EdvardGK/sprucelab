@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Loader2 } from 'lucide-react';
+import { ArrowLeft, Play, Loader2, Maximize2, X } from 'lucide-react';
 import { useModel } from '@/hooks/use-models';
 import { useModelAnalysis, useRunAnalysis } from '@/hooks/use-model-analysis';
 import { Button } from '@/components/ui/button';
