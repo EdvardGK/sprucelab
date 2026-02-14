@@ -874,10 +874,81 @@ function ProcessingMessage({ status, error }: { status: Model['status']; error?:
   );
 }
 
+// ─── Metadata Tab ───────────────────────────────────────────────────────────
+
+const DISCIPLINES = [
+  { code: 'ARK', label: 'Architecture' },
+  { code: 'RIB', label: 'Structural' },
+  { code: 'RIV', label: 'HVAC' },
+  { code: 'RIE', label: 'Electrical' },
+  { code: 'RIR', label: 'Plumbing' },
+  { code: 'RIVA', label: 'Fire Safety' },
+  { code: 'LARK', label: 'Landscape' },
+  { code: 'OTHER', label: 'Other' },
+] as const;
+
+function MetadataTab({ model }: { model: Model }) {
+  return (
+    <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto space-y-[clamp(0.5rem,1vw,0.75rem)]">
+      <div className="grid grid-cols-2 gap-[clamp(0.5rem,1vw,0.75rem)]">
+        {/* Platform Info */}
+        <Card className="card-accent-lavender">
+          <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)]">
+            <h3 className="text-sm font-semibold text-text-primary mb-3">Model Info</h3>
+            <div className="space-y-2">
+              {([
+                ['Name', model.name],
+                ['Version', `v${model.version_number}`],
+                ['Status', model.status],
+                ['Elements', model.element_count.toLocaleString()],
+                ['Storeys', String(model.storey_count)],
+                ['File', model.original_filename || '—'],
+                ['Uploaded', model.created_at ? new Date(model.created_at).toLocaleString() : '—'],
+                ['Last Modified', model.updated_at ? new Date(model.updated_at).toLocaleString() : '—'],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-text-secondary">{label}</span>
+                  <span className="text-text-primary font-medium">{value}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Discipline Assignment */}
+        <Card className="card-accent-forest">
+          <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)]">
+            <h3 className="text-sm font-semibold text-text-primary mb-3">Discipline</h3>
+            <p className="text-xs text-text-secondary mb-4">
+              Assign this model to a discipline for filtering, validation rules, and project weighting.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {DISCIPLINES.map((d) => (
+                <button
+                  key={d.code}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border
+                             text-sm text-text-secondary hover:border-forest hover:text-text-primary
+                             transition-colors text-left"
+                >
+                  <span className="text-xs font-mono text-text-tertiary w-10">{d.code}</span>
+                  <span>{d.label}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-text-tertiary mt-3">
+              Discipline assignment coming soon.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // Placeholder Tab Component
 function PlaceholderTab({ title }: { title: string }) {
   return (
-    <div className="flex h-full items-center justify-center">
+    <div className="flex min-h-[300px] items-center justify-center">
       <Card className="max-w-md">
         <CardContent className="pt-6 text-center">
           <h3 className="text-lg font-semibold text-text-primary mb-2">

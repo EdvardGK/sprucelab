@@ -6,6 +6,11 @@ from django.contrib.postgres.fields import ArrayField
 import uuid
 import re
 
+from apps.core.disciplines import (
+    MODEL_DISCIPLINE_CHOICES,
+    DISCIPLINE_COLORS,
+)
+
 
 def infer_discipline_from_filename(filename: str) -> str | None:
     """
@@ -14,25 +19,35 @@ def infer_discipline_from_filename(filename: str) -> str | None:
     Common patterns:
     - ST28_RIV_*.ifc → RIV (Mechanical)
     - ProjectName_ARK_*.ifc → ARK (Architecture)
-    - *_RIE*.ifc → RIE (Electrical)
+    - *_RIVp*.ifc → RIVp (Plumbing)
     - *-RIB-*.ifc → RIB (Structural)
 
+    Sub-disciplines checked before parents (RIVp before RIV).
     Returns discipline code or None if not inferable.
     """
     if not filename:
         return None
 
-    # Normalize: uppercase for matching
     upper_name = filename.upper()
 
-    # Norwegian discipline codes in priority order
+    # Longer codes first so sub-disciplines match before parents
     discipline_patterns = [
-        (r'[_\-]ARK[_\-\.]', 'ARK'),   # Architecture
-        (r'[_\-]RIB[_\-\.]', 'RIB'),   # Structural
-        (r'[_\-]RIV[_\-\.]', 'RIV'),   # Mechanical/HVAC
-        (r'[_\-]RIE[_\-\.]', 'RIE'),   # Electrical
-        (r'[_\-]LARK[_\-\.]', 'LARK'), # Landscape
-        (r'[_\-]RIG[_\-\.]', 'RIG'),   # Geotechnical
+        (r'[_\-]RIVARME[_\-\.]',  'RIvarme'),
+        (r'[_\-]RIKULDE[_\-\.]',  'RIkulde'),
+        (r'[_\-]RIVSPR[_\-\.]',   'RIVspr'),
+        (r'[_\-]RIVV[_\-\.]',     'RIVv'),
+        (r'[_\-]RIVP[_\-\.]',     'RIVp'),
+        (r'[_\-]RIBP[_\-\.]',     'RIBp'),
+        (r'[_\-]RIBYFY[_\-\.]',   'RIByfy'),
+        (r'[_\-]RIBR[_\-\.]',     'RIBr'),
+        (r'[_\-]LARK[_\-\.]',     'LARK'),
+        (r'[_\-]ARK[_\-\.]',      'ARK'),
+        (r'[_\-]RIB[_\-\.]',      'RIB'),
+        (r'[_\-]RIV[_\-\.]',      'RIV'),
+        (r'[_\-]RIE[_\-\.]',      'RIE'),
+        (r'[_\-]RIG[_\-\.]',      'RIG'),
+        (r'[_\-]RIA[_\-\.]',      'RIA'),
+        (r'[_\-]RIM[_\-\.]',      'RIM'),
     ]
 
     for pattern, discipline in discipline_patterns:
