@@ -416,6 +416,7 @@ class IFCRepository:
                 json.dumps(type_data.properties or {}),
                 type_data.instance_count,
                 type_data.has_ifc_type_object,
+                'primary',
             ))
 
         async with get_transaction() as conn:
