@@ -388,7 +388,7 @@ function QualityCard({ analysis, stats }: { analysis: ModelAnalysis; stats: Anal
               <span className="text-text-secondary">{c.label}</span>
               <span className={`font-semibold tabular-nums px-[clamp(0.3rem,0.6vw,0.5rem)] py-px rounded text-[clamp(0.5rem,0.9vw,0.65rem)] ${
                 c.ok
-                  ? 'bg-emerald-500/15 text-emerald-400'
+                  ? 'bg-forest/15 text-forest'
                   : 'bg-red-500/15 text-red-400'
               }`}>
                 {c.value === 0 ? 'OK' : c.value.toLocaleString()}
