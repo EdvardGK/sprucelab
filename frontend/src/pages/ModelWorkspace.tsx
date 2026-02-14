@@ -141,13 +141,24 @@ export default function ModelWorkspace() {
 
 // ─── Overview Tab ─── Analysis dashboard ───────────────────────────────────
 
+const OVERVIEW_SUBTABS = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'qto', label: 'QTO' },
+  { id: 'mmi', label: 'MMI' },
+  { id: 'statistics', label: 'Statistics' },
+  { id: 'properties', label: 'Properties' },
+] as const;
+
+type OverviewSubTab = typeof OVERVIEW_SUBTABS[number]['id'];
+
 function OverviewTab({ model }: { model: Model }) {
   const { data: analysis, isLoading } = useModelAnalysis(model.id);
   const runAnalysis = useRunAnalysis();
+  const [subTab, setSubTab] = useState<OverviewSubTab>('dashboard');
 
   if (isLoading) {
     return (
-      <div className="h-full p-[clamp(0.5rem,2vw,1.5rem)] grid grid-cols-5 grid-rows-[auto_1fr_1fr_auto] gap-[clamp(0.5rem,1vw,0.75rem)]">
+      <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto grid grid-cols-5 grid-rows-[auto_1fr_1fr_auto] gap-[clamp(0.5rem,1vw,0.75rem)]">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-lg" />
         ))}
@@ -157,7 +168,7 @@ function OverviewTab({ model }: { model: Model }) {
 
   if (!analysis) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex min-h-[400px] items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
             <h3 className="text-lg font-semibold text-text-primary mb-2">No Analysis Data</h3>
@@ -185,7 +196,38 @@ function OverviewTab({ model }: { model: Model }) {
     );
   }
 
-  return <AnalysisDashboard analysis={analysis} model={model} />;
+  return (
+    <div>
+      {/* Sub-tab navigation */}
+      <div className="border-b border-border/50 bg-background px-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto">
+        <nav className="flex space-x-1">
+          {OVERVIEW_SUBTABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSubTab(tab.id)}
+              className={`
+                px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap
+                border-b-2 -mb-px
+                ${subTab === tab.id
+                  ? 'text-text-primary border-lime'
+                  : 'text-text-tertiary border-transparent hover:text-text-secondary'
+                }
+              `}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Sub-tab content */}
+      {subTab === 'dashboard' && <AnalysisDashboard analysis={analysis} model={model} />}
+      {subTab === 'qto' && <QTODashboard modelId={model.id} />}
+      {subTab === 'mmi' && <MMIDashboard modelId={model.id} />}
+      {subTab === 'statistics' && <PlaceholderTab title="Statistics" />}
+      {subTab === 'properties' && <PlaceholderTab title="Properties" />}
+    </div>
+  );
 }
 
 // ─── Analysis Dashboard Layout ──────────────────────────────────────────────
