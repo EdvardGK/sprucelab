@@ -120,6 +120,36 @@ def apply_discipline_firewall(model_id: UUID) -> FilterResult:
     )
 
 
+def _lookup_ownership(model: Model, ns3451_code: str, discipline_codes: list[str]):
+    """
+    Look up ownership for a classification code and discipline.
+
+    Checks project-level ResponsibilityMatrix first, falls back to global
+    NS3451OwnershipMatrix. Tries all codes in discipline_codes (hierarchy).
+    """
+    # Project-level override
+    if model.project_id:
+        for code in discipline_codes:
+            entry = ResponsibilityMatrix.objects.filter(
+                project_id=model.project_id,
+                classification_code=ns3451_code,
+                discipline=code,
+            ).first()
+            if entry:
+                return entry
+
+    # Global fallback
+    for code in discipline_codes:
+        entry = NS3451OwnershipMatrix.objects.filter(
+            ns3451_code_id=ns3451_code,
+            discipline=code,
+        ).first()
+        if entry:
+            return entry
+
+    return None
+
+
 def determine_ownership_status(
     ownership: NS3451OwnershipMatrix | None,
     current_status: str
