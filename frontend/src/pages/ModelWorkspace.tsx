@@ -815,60 +815,6 @@ function QualityOverlayContent({ analysis, stats }: { analysis: ModelAnalysis; s
   );
 }
 
-// 3D Viewer Tab Component
-function Viewer3DTab({ model }: { model: Model }) {
-  const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
-
-  return (
-    <div className="flex h-full">
-      {/* Model tree (left panel) */}
-      <aside className="w-64 border-r border-border bg-background p-4 overflow-y-auto">
-        <h2 className="text-sm font-semibold text-text-primary mb-3">Model Tree</h2>
-        <div className="text-xs text-text-secondary mb-4">
-          {model.element_count.toLocaleString()} elements
-        </div>
-
-        {/* Placeholder tree structure */}
-        <div className="space-y-1 text-xs">
-          <div className="font-medium text-text-primary py-1">📁 Project</div>
-          <div className="pl-4 space-y-1">
-            <div className="font-medium text-text-primary py-1">📁 Site</div>
-            <div className="pl-4 space-y-1">
-              <div className="font-medium text-text-primary py-1">🏢 Building</div>
-              <div className="pl-4 space-y-1">
-                {Array.from({ length: model.storey_count || 3 }, (_, i) => (
-                  <div key={i} className="text-text-secondary py-1 hover:text-text-primary cursor-pointer">
-                    📐 Storey {i + 1}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 text-xs text-text-tertiary">
-          Tree view coming soon...
-        </div>
-      </aside>
-
-      {/* 3D viewer (center panel) */}
-      <main className="flex-1 relative">
-        <UnifiedBIMViewer
-          modelId={model.id}
-          showPropertiesPanel={false}
-          onSelectionChange={(element) => setSelectedElement(element)}
-        />
-      </main>
-
-      {/* Properties panel (right panel) */}
-      <aside className="w-80 border-l border-border bg-background overflow-hidden">
-        <ElementPropertiesPanel
-          element={selectedElement}
-          onClose={() => setSelectedElement(null)}
-        />
-      </aside>
-    </div>
-  );
-}
 
 // Processing Message Component
 function ProcessingMessage({ status, error }: { status: Model['status']; error?: string | null }) {
