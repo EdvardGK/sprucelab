@@ -187,6 +187,9 @@ class ModelViewSet(viewsets.ModelViewSet):
             uploaded_file.seek(0)
             saved_path = default_storage.save(file_path, uploaded_file)
             file_url = default_storage.url(saved_path)
+            # Local storage returns relative URLs - make absolute for FastAPI
+            if file_url.startswith('/'):
+                file_url = f"{settings.DJANGO_URL}{file_url}"
             print(f"✅ File saved to: {file_url}")
         except Exception as storage_error:
             print(f"❌ Storage upload failed: {storage_error}")

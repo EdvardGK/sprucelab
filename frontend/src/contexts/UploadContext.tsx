@@ -109,25 +109,53 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   const uploadSingleFile = useCallback(async (upload: UploadFile): Promise<{ success: boolean; name: string; error?: string }> => {
     try {
-      // Step 1: Get presigned URL from Django
-      const urlData = await getUploadUrl(upload.projectId, upload.file.name);
+      // Try direct Supabase upload first, fall back to Django upload for local dev
+      let useLocalUpload = false;
+      let urlData;
 
-      // Step 2: Upload directly to Supabase
-      await uploadToSupabase(upload.file, urlData.upload_url, (progress) => {
-        setUploads(prev =>
-          prev.map(u => (u.id === upload.id ? { ...u, progress } : u))
-        );
-      });
+      try {
+        urlData = await getUploadUrl(upload.projectId, upload.file.name);
+      } catch {
+        // No cloud storage configured - use local Django upload
+        useLocalUpload = true;
+      }
 
-      // Step 3: Confirm upload and trigger processing
-      await confirmUpload({
-        project_id: upload.projectId,
-        file_path: urlData.file_path,
-        file_url: urlData.file_url,
-        filename: upload.file.name,
-        file_size: upload.file.size,
-        name: upload.file.name.replace(/\.ifc$/i, ''),
-      });
+      if (useLocalUpload) {
+        // Local dev: upload directly through Django
+        const formData = new FormData();
+        formData.append('file', upload.file);
+        formData.append('project_id', upload.projectId);
+        formData.append('name', upload.file.name.replace(/\.ifc$/i, ''));
+
+        await apiClient.post('/models/upload/', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 300000,
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              setUploads(prev =>
+                prev.map(u => (u.id === upload.id ? { ...u, progress } : u))
+              );
+            }
+          },
+        });
+      } else {
+        // Production: upload directly to Supabase via presigned URL
+        await uploadToSupabase(upload.file, urlData!.upload_url, (progress) => {
+          setUploads(prev =>
+            prev.map(u => (u.id === upload.id ? { ...u, progress } : u))
+          );
+        });
+
+        await confirmUpload({
+          project_id: upload.projectId,
+          file_path: urlData!.file_path,
+          file_url: urlData!.file_url,
+          filename: upload.file.name,
+          file_size: upload.file.size,
+          name: upload.file.name.replace(/\.ifc$/i, ''),
+        });
+      }
 
       // Mark as success
       setUploads(prev =>

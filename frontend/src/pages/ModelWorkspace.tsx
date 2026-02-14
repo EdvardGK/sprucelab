@@ -34,7 +34,7 @@ export default function ModelWorkspace() {
   const navigate = useNavigate();
   // const location = useLocation();
   const { data: model, isLoading } = useModel(id!);
-  const [activeTab, setActiveTab] = useState<TabId>('3d-viewer');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   // Get preparsed scene from navigation state (if uploaded)
   // const preparsedScene = (location.state as any)?.preparsedScene as THREE.Group | undefined;

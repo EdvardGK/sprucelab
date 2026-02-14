@@ -27,8 +27,8 @@ export function useRunAnalysis() {
   return useMutation({
     mutationFn: async (modelId: string) => {
       const response = await apiClient.post<ModelAnalysis>(
-        `/entities/model-analysis/run_analysis/`,
-        { model_id: modelId }
+        `/entities/model-analysis/run/`,
+        { model: modelId }
       );
       return response.data;
     },
