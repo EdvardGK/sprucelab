@@ -705,3 +705,55 @@ class TypeDefinitionLayerWithMaterialSerializer(serializers.ModelSerializer):
             'epd_id', 'notes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+# =============================================================================
+# ANALYSIS SERIALIZERS - Type-first analysis data
+# =============================================================================
+
+class AnalysisTypeStoreySerializer(serializers.ModelSerializer):
+    """Nested serializer for type × storey distribution."""
+
+    storey = serializers.CharField(source='storey.name')
+    elevation = serializers.FloatField(source='storey.elevation')
+
+    class Meta:
+        model = AnalysisTypeStorey
+        fields = ['storey', 'elevation', 'instance_count']
+
+
+class AnalysisTypeSerializer(serializers.ModelSerializer):
+    """Per-type analysis record with nested storey distribution."""
+
+    storey_distribution = AnalysisTypeStoreySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AnalysisType
+        exclude = ['id', 'analysis', 'ifc_type']
+
+
+class AnalysisStoreySerializer(serializers.ModelSerializer):
+    """Storey with elevation and aggregate element count."""
+
+    class Meta:
+        model = AnalysisStorey
+        fields = ['name', 'elevation', 'height', 'element_count']
+
+
+class ModelAnalysisSerializer(serializers.ModelSerializer):
+    """Full analysis snapshot with nested storeys and types."""
+
+    storeys = AnalysisStoreySerializer(many=True, read_only=True)
+    types = AnalysisTypeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ModelAnalysis
+        fields = [
+            'id', 'model', 'created_at',
+            'ifc_schema', 'file_size_mb', 'application',
+            'total_types', 'total_products', 'total_storeys', 'total_spaces',
+            'duplicate_guid_count',
+            'units', 'coordinates',
+            'project_name', 'site_name', 'building_name',
+            'storeys', 'types',
+        ]

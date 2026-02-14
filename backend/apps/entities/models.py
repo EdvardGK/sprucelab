@@ -2100,3 +2100,152 @@ class RoomAssignment(models.Model):
         entity_name = self.entity.name or self.entity.ifc_guid if self.entity else 'Unknown'
         room_name = self.room.name or 'Room' if self.room else 'Unknown'
         return f"{entity_name} → {room_name}"
+
+
+# =============================================================================
+# ANALYSIS - Type-first analysis data (from ifc-toolkit type_analysis())
+# =============================================================================
+
+class ModelAnalysis(models.Model):
+    """
+    Analysis snapshot for an IFC model. Regenerated on each deep analysis.
+
+    Separate from the fast 2s parse (IFCType extraction). This is an optional
+    deeper analysis step (10-30s) that produces per-type quality, geometry,
+    and storey distribution data for the dashboard.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    model = models.OneToOneField(
+        'models.Model', on_delete=models.CASCADE, related_name='analysis'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # File metadata
+    ifc_schema = models.CharField(max_length=20)
+    file_size_mb = models.FloatField(null=True, blank=True)
+    application = models.CharField(max_length=255, blank=True)
+
+    # Global counts
+    total_types = models.IntegerField(default=0)
+    total_products = models.IntegerField(default=0)
+    total_storeys = models.IntegerField(default=0)
+    total_spaces = models.IntegerField(default=0)
+    duplicate_guid_count = models.IntegerField(default=0)
+
+    # Model-level data (not per-type, not filterable)
+    units = models.JSONField(default=dict)
+    coordinates = models.JSONField(default=dict)
+    project_name = models.CharField(max_length=255, blank=True)
+    site_name = models.CharField(max_length=255, blank=True)
+    building_name = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = 'model_analysis'
+
+    def __str__(self):
+        return f"Analysis: {self.model} ({self.ifc_schema})"
+
+
+class AnalysisStorey(models.Model):
+    """Storey with elevation and aggregate element count."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    analysis = models.ForeignKey(
+        ModelAnalysis, on_delete=models.CASCADE, related_name='storeys'
+    )
+    name = models.CharField(max_length=255)
+    elevation = models.FloatField(null=True, blank=True)
+    height = models.FloatField(null=True, blank=True)
+    element_count = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'analysis_storeys'
+        unique_together = ['analysis', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.elevation}m)"
+
+
+class AnalysisType(models.Model):
+    """
+    Per-type analysis data. The primary entity for cross-filtering.
+
+    Includes typed elements, untyped groups (type_name=NULL),
+    and empty type definitions (instance_count=0).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    analysis = models.ForeignKey(
+        ModelAnalysis, on_delete=models.CASCADE, related_name='types'
+    )
+    ifc_type = models.ForeignKey(
+        'IFCType', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='analysis_data'
+    )
+
+    # Type identity
+    type_class = models.CharField(max_length=100)
+    type_name = models.CharField(max_length=500, blank=True, null=True)
+    element_class = models.CharField(max_length=100, blank=True)
+    predefined_type = models.CharField(max_length=50, blank=True, null=True)
+    instance_count = models.IntegerField(default=0)
+
+    # Flags
+    is_empty = models.BooleanField(default=False)
+    is_proxy = models.BooleanField(default=False)
+    is_untyped = models.BooleanField(default=False)
+
+    # Quality: property value distributions (per-type aggregates)
+    loadbearing_true = models.IntegerField(default=0)
+    loadbearing_false = models.IntegerField(default=0)
+    loadbearing_unset = models.IntegerField(default=0)
+    is_external_true = models.IntegerField(default=0)
+    is_external_false = models.IntegerField(default=0)
+    is_external_unset = models.IntegerField(default=0)
+    fire_rating_set = models.IntegerField(default=0)
+    fire_rating_unset = models.IntegerField(default=0)
+
+    # Geometry
+    primary_representation = models.CharField(max_length=100, blank=True)
+    mapped_item_count = models.IntegerField(default=0)
+    mapped_source_count = models.IntegerField(default=0)
+    reuse_ratio = models.FloatField(null=True, blank=True)
+
+    # Extensible (materials, custom properties — future)
+    properties = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'analysis_types'
+        indexes = [
+            models.Index(fields=['type_class']),
+            models.Index(fields=['element_class']),
+            models.Index(fields=['is_untyped']),
+            models.Index(fields=['is_proxy']),
+        ]
+
+    def __str__(self):
+        name = self.type_name or self.element_class
+        return f"{self.type_class}:{name} x{self.instance_count}"
+
+
+class AnalysisTypeStorey(models.Model):
+    """
+    Type x Storey instance count. Enables spatial cross-filtering.
+    Answers: "How many IfcWallType:STD-200 on storey 02?"
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    analysis = models.ForeignKey(
+        ModelAnalysis, on_delete=models.CASCADE, related_name='type_storeys'
+    )
+    type = models.ForeignKey(
+        AnalysisType, on_delete=models.CASCADE, related_name='storey_distribution'
+    )
+    storey = models.ForeignKey(
+        AnalysisStorey, on_delete=models.CASCADE, related_name='type_distribution'
+    )
+    instance_count = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'analysis_type_storeys'
+        unique_together = ['type', 'storey']
+
+    def __str__(self):
+        return f"{self.type} @ {self.storey}: {self.instance_count}"

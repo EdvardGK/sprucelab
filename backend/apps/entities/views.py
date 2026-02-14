@@ -2685,3 +2685,75 @@ class GlobalTypeLibraryViewSet(viewsets.ModelViewSet):
 
         serializer = TypeBankEntrySerializer(entry)
         return Response(serializer.data)
+
+
+# =============================================================================
+# ANALYSIS VIEWSET - Type-first analysis data
+# =============================================================================
+
+class ModelAnalysisViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for model analysis data (from ifc-toolkit type_analysis).
+
+    list: GET /api/model-analysis/?model={id}
+    retrieve: GET /api/model-analysis/{id}/
+    run_analysis: POST /api/model-analysis/run/?model={id}
+
+    Returns the full analysis with nested storeys and types.
+    """
+    queryset = ModelAnalysis.objects.prefetch_related(
+        'storeys',
+        'types',
+        'types__storey_distribution',
+        'types__storey_distribution__storey',
+    ).all()
+    serializer_class = ModelAnalysisSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['model']
+
+    @action(detail=False, methods=['post'], url_path='run')
+    def run_analysis(self, request):
+        """
+        Run type_analysis() on a model's IFC file and store results.
+
+        POST /api/model-analysis/run/
+        Body: {"model": "uuid"}
+
+        Requires the model to have a file_url pointing to an IFC file.
+        """
+        from .services.analysis_ingestion import ingest_type_analysis
+
+        model_id = request.data.get('model')
+        if not model_id:
+            return Response(
+                {'error': 'model ID is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            from apps.models.models import Model as BIMModel
+            model = BIMModel.objects.get(id=model_id)
+        except Exception:
+            return Response(
+                {'error': f'Model {model_id} not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Get the IFC file path
+        if not model.file_url:
+            return Response(
+                {'error': 'Model has no IFC file'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            from ifc_toolkit.analyze import type_analysis
+            data = type_analysis(model.file_url)
+            analysis = ingest_type_analysis(str(model_id), data)
+            serializer = self.get_serializer(analysis)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

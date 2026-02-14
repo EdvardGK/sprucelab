@@ -12,8 +12,8 @@ from django.core.management.base import BaseCommand
 from apps.entities.models import NS3451Code
 
 
-# Path to ifcforge NS3451 data
-IFCFORGE_NS3451_PATH = Path("/home/edkjo/dev/ifcforge/data/output/ns3451_2022_classification.json")
+# Path to central standards NS3451 JSON
+IFCFORGE_NS3451_PATH = Path("/home/edkjo/dev/resources/standards/ns3451/ns3451_codes.json")
 
 
 class Command(BaseCommand):

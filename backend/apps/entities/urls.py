@@ -30,6 +30,9 @@ router.register(r'type-bank-aliases', TypeBankAliasViewSet, basename='type-bank-
 # Global Type Library (primary UI endpoint - unified type-centric view)
 router.register(r'type-library', GlobalTypeLibraryViewSet, basename='type-library')
 
+# Analysis routes (type-first analysis data)
+router.register(r'model-analysis', ModelAnalysisViewSet, basename='model-analysis')
+
 # Material & Product Library routes (Three-Library Architecture)
 router.register(r'material-library', MaterialLibraryViewSet, basename='material-library')
 router.register(r'product-library', ProductLibraryViewSet, basename='product-library')
