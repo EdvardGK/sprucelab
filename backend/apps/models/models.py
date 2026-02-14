@@ -98,25 +98,7 @@ class Model(models.Model):
         ('failed', 'Failed'),
     ]
 
-    # === Discipline (Sprint 1: The Gatekeeper) ===
-    DISCIPLINE_CHOICES = [
-        ('ARK', 'Architecture'),
-        ('RIB', 'Structural'),
-        ('RIV', 'Mechanical/HVAC'),
-        ('RIE', 'Electrical'),
-        ('LARK', 'Landscape'),
-        ('RIG', 'Geotechnical'),
-    ]
-
-    # Color mapping for frontend discipline "ear" indicator
-    DISCIPLINE_COLORS = {
-        'ARK': '#3B82F6',   # Blue
-        'RIB': '#EF4444',   # Red
-        'RIV': '#22C55E',   # Green
-        'RIE': '#F59E0B',   # Yellow/Orange
-        'LARK': '#10B981',  # Teal
-        'RIG': '#8B5CF6',   # Purple
-    }
+    # Discipline choices and colors imported from apps.core.disciplines
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='models')
