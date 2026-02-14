@@ -204,121 +204,131 @@ function OverviewTab({ model }: { model: Model }) {
 
 // ─── Analysis Dashboard Layout ──────────────────────────────────────────────
 
+type OverlayType = 'quality' | 'storeys' | 'elements' | 'geometry' | null;
+
 function AnalysisDashboard({ analysis }: { analysis: ModelAnalysis }) {
   const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
+  const [overlay, setOverlay] = useState<OverlayType>(null);
 
   return (
-    <div className="h-full overflow-y-auto p-[clamp(0.5rem,2vw,1.5rem)] flex flex-col gap-[clamp(0.4rem,0.8vw,0.6rem)]">
-      {/* Row 1: Quality + KPIs */}
-      <div className="grid grid-cols-5 gap-[clamp(0.4rem,0.8vw,0.6rem)] min-h-0"
-           style={{ flex: '0 0 auto' }}>
-        {/* Quality checks card (spans 2 rows via nested flex) */}
-        <div className="row-span-2 flex flex-col">
-          <QualityCard analysis={analysis} stats={stats} />
+    <>
+      <div className="overflow-y-auto p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto w-full space-y-[clamp(0.5rem,1vw,0.75rem)]">
+        {/* Row 1: Quality + KPIs */}
+        <div className="grid grid-cols-5 gap-[clamp(0.5rem,1vw,0.75rem)]">
+          {/* Quality checks card (spans 2 rows via nested flex) */}
+          <div className="row-span-2 flex flex-col">
+            <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} />
+          </div>
+          {/* KPI cards */}
+          <KpiCard value={analysis.total_types} label="Types" accent />
+          <KpiCard value={analysis.total_products} label="Products" />
+          <KpiCard value={analysis.total_storeys} label="Storeys" />
+          <KpiCard value={analysis.total_spaces} label="Spaces" />
         </div>
-        {/* KPI cards */}
-        <KpiCard value={analysis.total_types} label="Types" accent />
-        <KpiCard value={analysis.total_products} label="Products" />
-        <KpiCard value={analysis.total_storeys} label="Storeys" />
-        <KpiCard value={analysis.total_spaces} label="Spaces" />
-      </div>
 
-      {/* Row 2: Sub-KPIs */}
-      <div className="grid grid-cols-5 gap-[clamp(0.4rem,0.8vw,0.6rem)]"
-           style={{ flex: '0 0 auto' }}>
-        <div /> {/* spacer for quality card column */}
-        <SubKpiCard value={stats.emptyTypes} label="Empty Types" warn={stats.emptyTypes > 0} />
-        <SubKpiCard value={stats.untypedCount} label="Untyped" warn={stats.untypedCount > 0} />
-        <SubKpiCard value={stats.proxyCount} label="Proxy-typed" warn={stats.proxyCount > 0} />
-        <SubKpiCard value={analysis.duplicate_guid_count} label="Duplicate GUIDs" warn={analysis.duplicate_guid_count > 0} />
-      </div>
+        {/* Row 2: Sub-KPIs */}
+        <div className="grid grid-cols-5 gap-[clamp(0.5rem,1vw,0.75rem)]">
+          <div /> {/* spacer for quality card column */}
+          <SubKpiCard value={stats.emptyTypes} label="Empty Types" warn={stats.emptyTypes > 0} />
+          <SubKpiCard value={stats.untypedCount} label="Untyped" warn={stats.untypedCount > 0} />
+          <SubKpiCard value={stats.proxyCount} label="Proxy-typed" warn={stats.proxyCount > 0} />
+          <SubKpiCard value={analysis.duplicate_guid_count} label="Duplicate GUIDs" warn={analysis.duplicate_guid_count > 0} />
+        </div>
 
-      {/* Row 3: Storeys bar chart */}
-      <Card className="flex-shrink overflow-hidden flex flex-col card-accent-forest"
-            style={{ flex: '1 1 30%', minHeight: '10rem' }}>
-        <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 overflow-y-auto">
-          <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.25rem,0.5vw,0.4rem)]">
-            Storeys
-          </h3>
-          <StoreyChart storeys={analysis.storeys} />
-        </CardContent>
-      </Card>
-
-      {/* Row 4: Treemap + Geometry donut */}
-      <div className="grid grid-cols-[1.5fr_1fr] gap-[clamp(0.4rem,0.8vw,0.6rem)]"
-           style={{ flex: '1 1 35%', minHeight: '12rem' }}>
-        <Card className="overflow-hidden flex flex-col card-accent-forest">
-          <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
-            <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.25rem,0.5vw,0.4rem)]">
-              Element Distribution
-            </h3>
-            <div className="flex-1 min-h-0 relative">
-              <Treemap types={analysis.types} />
-            </div>
+        {/* Row 3: Storeys bar chart */}
+        <Card className="overflow-hidden flex flex-col card-accent-forest min-h-[180px]">
+          <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex-1 min-h-0 overflow-y-auto">
+            <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
+            <StoreyChart storeys={analysis.storeys} />
           </CardContent>
         </Card>
-        <Card className="overflow-hidden flex flex-col card-accent-forest">
-          <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
-            <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary mb-[clamp(0.25rem,0.5vw,0.4rem)]">
-              Geometry
-            </h3>
-            <div className="flex-1 min-h-0 flex items-center justify-center">
-              <GeometryDonut types={analysis.types} />
-            </div>
-          </CardContent>
-        </Card>
+
+        {/* Row 4: Treemap + Geometry donut */}
+        <div className="grid grid-cols-[1.5fr_1fr] gap-[clamp(0.5rem,1vw,0.75rem)] min-h-[250px]">
+          <Card className="overflow-hidden flex flex-col card-accent-forest">
+            <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex-1 min-h-0 flex flex-col">
+              <CardHeader title="Element Distribution" onExpand={() => setOverlay('elements')} />
+              <div className="flex-1 min-h-0 relative">
+                <Treemap types={analysis.types} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="overflow-hidden flex flex-col card-accent-forest">
+            <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex-1 min-h-0 flex flex-col">
+              <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
+              <div className="flex-1 min-h-0 flex items-center justify-center">
+                <GeometryDonut types={analysis.types} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Row 5: Context / Units / Coordinates */}
+        <div className="grid grid-cols-3 gap-[clamp(0.5rem,1vw,0.75rem)]">
+          <InfoCard title="Context" rows={[
+            ['Project', analysis.project_name || '—'],
+            ['Site', analysis.site_name || '—'],
+            ['Building', analysis.building_name || '—'],
+            ['Application', analysis.application || '—'],
+            ['Schema', analysis.ifc_schema || '—'],
+          ]} />
+          <InfoCard title="Units" rows={
+            analysis.units && typeof analysis.units === 'object'
+              ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
+                  if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
+                    const u = v as { name?: string; prefix?: string; symbol?: string };
+                    return [k, u.symbol || u.name || '—'];
+                  }
+                  return [k, String(v ?? '—')];
+                })
+              : [['—', 'No unit data']]
+          } />
+          <InfoCard title="Coordinates" rows={
+            analysis.coordinates && typeof analysis.coordinates === 'object'
+              ? (() => {
+                  const c = analysis.coordinates as Record<string, unknown>;
+                  const rows: [string, string][] = [];
+                  if (c.crs) rows.push(['CRS', String(c.crs)]);
+                  if (c.true_north) {
+                    const tn = c.true_north as { angle_deg?: number };
+                    rows.push(['True North', `${tn.angle_deg ?? 0}°`]);
+                  }
+                  if (c.wcs_origin) {
+                    const o = c.wcs_origin as { x?: number; y?: number; z?: number };
+                    rows.push(['WCS Origin', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
+                  }
+                  if (c.site_reference) {
+                    const s = c.site_reference as { latitude?: number; longitude?: number; elevation?: number };
+                    if (s.latitude || s.longitude) rows.push(['Site', `${s.latitude}°N, ${s.longitude}°E`]);
+                    if (s.elevation) rows.push(['Elevation', `${s.elevation}m`]);
+                  }
+                  if (c.orientation_sample) {
+                    const os = c.orientation_sample as { dominant?: string };
+                    rows.push(['Orientation', os.dominant || '—']);
+                  }
+                  return rows.length ? rows : [['—', 'No coordinate data']];
+                })()
+              : [['—', 'No coordinate data']]
+          } />
+        </div>
       </div>
 
-      {/* Row 5: Context / Units / Coordinates */}
-      <div className="grid grid-cols-3 gap-[clamp(0.4rem,0.8vw,0.6rem)]"
-           style={{ flex: '0 0 auto' }}>
-        <InfoCard title="Context" rows={[
-          ['Project', analysis.project_name || '—'],
-          ['Site', analysis.site_name || '—'],
-          ['Building', analysis.building_name || '—'],
-          ['Application', analysis.application || '—'],
-          ['Schema', analysis.ifc_schema || '—'],
-        ]} />
-        <InfoCard title="Units" rows={
-          analysis.units && typeof analysis.units === 'object'
-            ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
-                if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
-                  const u = v as { name?: string; prefix?: string; symbol?: string };
-                  return [k, u.symbol || u.name || '—'];
-                }
-                return [k, String(v ?? '—')];
-              })
-            : [['—', 'No unit data']]
-        } />
-        <InfoCard title="Coordinates" rows={
-          analysis.coordinates && typeof analysis.coordinates === 'object'
-            ? (() => {
-                const c = analysis.coordinates as Record<string, unknown>;
-                const rows: [string, string][] = [];
-                if (c.crs) rows.push(['CRS', String(c.crs)]);
-                if (c.true_north) {
-                  const tn = c.true_north as { angle_deg?: number };
-                  rows.push(['True North', `${tn.angle_deg ?? 0}°`]);
-                }
-                if (c.wcs_origin) {
-                  const o = c.wcs_origin as { x?: number; y?: number; z?: number };
-                  rows.push(['WCS Origin', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
-                }
-                if (c.site_reference) {
-                  const s = c.site_reference as { latitude?: number; longitude?: number; elevation?: number };
-                  if (s.latitude || s.longitude) rows.push(['Site', `${s.latitude}°N, ${s.longitude}°E`]);
-                  if (s.elevation) rows.push(['Elevation', `${s.elevation}m`]);
-                }
-                if (c.orientation_sample) {
-                  const os = c.orientation_sample as { dominant?: string };
-                  rows.push(['Orientation', os.dominant || '—']);
-                }
-                return rows.length ? rows : [['—', 'No coordinate data']];
-              })()
-            : [['—', 'No coordinate data']]
-        } />
-      </div>
-    </div>
+      {/* Expand overlays */}
+      <DashboardOverlay open={overlay === 'quality'} onClose={() => setOverlay(null)} title="Quality Checks">
+        <QualityOverlayContent analysis={analysis} stats={stats} />
+      </DashboardOverlay>
+      <DashboardOverlay open={overlay === 'storeys'} onClose={() => setOverlay(null)} title={`Storeys (${analysis.total_storeys})`}>
+        <StoreyChart storeys={analysis.storeys} />
+      </DashboardOverlay>
+      <DashboardOverlay open={overlay === 'elements'} onClose={() => setOverlay(null)} title="Element Distribution">
+        <div className="relative h-[400px]">
+          <Treemap types={analysis.types} />
+        </div>
+      </DashboardOverlay>
+      <DashboardOverlay open={overlay === 'geometry'} onClose={() => setOverlay(null)} title="Geometry">
+        <GeometryDonut types={analysis.types} showAll />
+      </DashboardOverlay>
+    </>
   );
 }
 
