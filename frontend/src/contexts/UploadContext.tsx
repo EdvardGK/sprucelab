@@ -8,6 +8,7 @@
 
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { getUploadUrl, confirmUpload } from '@/hooks/use-models';
+import apiClient from '@/lib/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { modelKeys } from '@/hooks/use-models';
 import { useToast } from '@/hooks/use-toast';
