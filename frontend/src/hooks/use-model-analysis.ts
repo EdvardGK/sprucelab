@@ -12,7 +12,7 @@ export function useModelAnalysis(modelId: string) {
     queryKey: analysisKeys.detail(modelId),
     queryFn: async () => {
       const response = await apiClient.get<PaginatedResponse<ModelAnalysis>>(
-        `/model-analysis/?model=${modelId}`
+        `/entities/model-analysis/?model=${modelId}`
       );
       return response.data.results[0] ?? null;
     },
