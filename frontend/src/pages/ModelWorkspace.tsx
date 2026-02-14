@@ -647,14 +647,14 @@ function GeometryDonut({ types, showAll }: { types: AnalysisTypeRecord[]; showAl
         {paths}
       </svg>
       <div className="space-y-[clamp(0.1rem,0.2vw,0.15rem)] min-w-0">
-        {data.slice(0, 6).map(([label, value], i) => (
+        {(showAll ? data : data.slice(0, 6)).map(([label, value], i) => (
           <div key={label} className="flex items-center gap-[clamp(0.2rem,0.4vw,0.3rem)] text-[clamp(0.5rem,0.85vw,0.6rem)]">
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
             <span className="text-text-secondary truncate">{label}</span>
             <span className="text-text-tertiary tabular-nums ml-auto">{((value / total) * 100).toFixed(0)}%</span>
           </div>
         ))}
-        {data.length > 6 && (
+        {!showAll && data.length > 6 && (
           <div className="text-[clamp(0.45rem,0.8vw,0.55rem)] text-text-tertiary">
             +{data.length - 6} more
           </div>
