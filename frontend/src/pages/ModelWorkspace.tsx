@@ -750,11 +750,12 @@ function CardHeader({ title, onExpand }: { title: string; onExpand?: () => void 
 
 // ─── Dashboard Overlay ──────────────────────────────────────────────────────
 
-function DashboardOverlay({ open, onClose, title, children }: {
+function DashboardOverlay({ open, onClose, title, children, fullscreen }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  fullscreen?: boolean;
 }) {
   if (!open) return null;
 
@@ -764,10 +765,10 @@ function DashboardOverlay({ open, onClose, title, children }: {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
     >
-      <div className="bg-surface border border-border border-t-2 border-t-forest rounded-xl
-                      w-[min(90vw,900px)] max-h-[85vh] flex flex-col shadow-2xl
-                      animate-in slide-in-from-bottom-4 duration-200">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+      <div className={`bg-surface border border-border border-t-2 border-t-forest rounded-xl
+                      flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-200
+                      ${fullscreen ? 'w-[96vw] h-[92vh]' : 'w-[min(90vw,900px)] max-h-[85vh]'}`}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0">
           <h2 className="text-sm font-semibold text-lime">{title}</h2>
           <button
             onClick={onClose}
@@ -776,7 +777,7 @@ function DashboardOverlay({ open, onClose, title, children }: {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className={`flex-1 min-h-0 ${fullscreen ? '' : 'overflow-y-auto p-5'}`}>
           {children}
         </div>
       </div>
