@@ -1,0 +1,15 @@
+# project.yaml — Skiplum project metadata
+
+# Identity
+name: "Sprucelab"
+code: SLAB
+type: dev
+
+# Notion
+notion:
+  project_id: 4147e014-51ea-4a56-940f-6c66b93e1ef4
+  subproject_id: 30d2fc6e-2659-810a-b553-d8a9c2d48704
+
+themes: []
+rolle: Internt
+fase: ~
