@@ -4,6 +4,7 @@
 name: "Sprucelab"
 code: SLAB
 type: dev
+kind: project
 
 # Notion
 notion:
