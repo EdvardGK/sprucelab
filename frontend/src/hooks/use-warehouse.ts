@@ -691,6 +691,47 @@ export function useImportTypesExcel() {
   });
 }
 
+/**
+ * Export TypeBank entries to Excel for batch classification.
+ * Supports optional filtering by mapping_status and ifc_class.
+ */
+export function useExportTypeBankExcel() {
+  return useMutation({
+    mutationFn: async (filters?: { mappingStatus?: string; ifcClass?: string }) => {
+      const params = new URLSearchParams();
+      if (filters?.mappingStatus) params.append('mapping_status', filters.mappingStatus);
+      if (filters?.ifcClass) params.append('ifc_class', filters.ifcClass);
+      const query = params.toString();
+
+      const response = await apiClient.get(
+        `/entities/type-bank/export-excel/${query ? `?${query}` : ''}`,
+        { responseType: 'blob' }
+      );
+
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'type_bank.xlsx';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?(.+)"?/);
+        if (match) filename = match[1];
+      }
+
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, filename };
+    },
+  });
+}
+
 // =============================================================================
 // DASHBOARD METRICS
 // =============================================================================
