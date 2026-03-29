@@ -147,24 +147,41 @@ Types accumulate into a global TypeBank:
 
 **Output**: Per-type validation status + issue list
 
-### 5. Viewer Integration
+### 5. Insight Layer (Primary Interface)
 
-- **ThatOpen Components** (Three.js-based)
-- **Load IFC directly** (not pre-processed fragments)
-- **Type filtering**: Show only selected type's instances
-- **Instance navigation**: Click through instances
-- **Section planes**: Up to 4, keyboard-controlled
-- **On-demand properties**: Query FastAPI for element details
+The dashboard is the product. It answers:
+- **Is this model ready?** → Health score (classification + verification + materials)
+- **What needs attention?** → Action items sorted by severity, click to investigate
+- **What changed?** → Version change badges + summary
+- **Which disciplines are behind?** → Per-discipline progress breakdown
+- **How are we trending?** → Health scores over time (future)
 
-### 6. Dashboards (Minimal Gamification)
-
-- **Model health score** (% types classified, % verified)
+Specifics:
+- **Model health score** (% types classified, % verified, % with materials)
+- **Verification summary** (pass/warning/fail counts, top issues)
+- **Action items** (flagged types with what to fix, click to navigate)
 - **Progress bars** (mapped/pending/review/ignored)
-- **Completion percentages** per model and per project
-- **At-a-glance status** (green/yellow/red indicators)
+- **Version change card** (new/removed/changed since last upload)
 - **Professional, clean aesthetic** - no leaderboards, badges, or XP
 
-### 7. Version Change Detection (Basic)
+### 6. Version Change Detection
+
+- **New type badge**: Type appears in new version but not previous
+- **Removed type badge**: Type was in previous version but not current
+- **Changed badge**: Instance count changed significantly (configurable threshold)
+- **Dashboard summary**: "+12 new, -3 removed, 5 changed" with click-to-filter
+- **Auto-detect on upload**: Compare triggers automatically when uploading a new version
+
+### 7. 3D Context (Supporting)
+
+The viewer serves the data, not the other way around. When the dashboard flags an issue or a type needs review, the embedded viewer shows instances in-model. Users never need to "open" a viewer as a primary action.
+
+- **ThatOpen Components** (Three.js-based)
+- **Type filtering**: Show only selected type's instances
+- **Instance navigation**: Click through instances from type detail
+- **On-demand properties**: Query FastAPI for element details
+
+### 8. Version Change Detection (Basic)
 
 - **New type badge**: Type appears in new version but not previous
 - **Removed type badge**: Type was in previous version but not current
