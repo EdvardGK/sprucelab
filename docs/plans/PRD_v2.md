@@ -28,10 +28,10 @@ Sprucelab turns IFC files into actionable data. Drop a model, get answers in sec
 
 ### What We ARE
 
-- A **Type Warehouse** that extracts, classifies, and tracks types across models
-- A **verification engine** with customizable rules
-- A **professional dashboard** for BIM professionals to understand models instantly
-- A **collaboration layer** for type classification across teams/projects
+- A platform that **answers questions** about BIM models in seconds
+- An engine that **surfaces what needs attention** before you ask
+- A system that **remembers classifications** across projects (classify once, apply everywhere)
+- A dashboard that **tracks health over time** so you see progress, not just state
 
 ---
 
