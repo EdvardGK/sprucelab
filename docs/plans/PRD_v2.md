@@ -323,7 +323,8 @@ The user never needs to "browse" a 3D model. Data surfaces problems; the viewer 
 |---------|------|---------|
 | 1.0 | 2025-10-25 | PRELIMINARY_PRD - BIM Coordination Platform vision |
 | 1.1 | 2025-11-09 | PLAN.md - Property Editing Platform pivot |
-| 2.0 | 2026-02-05 | **Current** - Type-Centric BIM Intelligence Platform |
+| 2.0 | 2026-02-05 | Type-Centric BIM Intelligence Platform |
+| 2.1 | 2026-03-29 | **Current** - Data-First refocus: IFC in, insight out |
 
 ### Evolution Context
 
@@ -331,3 +332,4 @@ The user never needs to "browse" a 3D model. Data surfaces problems; the viewer 
 - **Nov 2025**: Pivoted to Property Editing Platform (bulk IFC editing)
 - **Dec 2025**: Session 031 breakthrough - Types-Only Architecture (10x performance)
 - **Feb 2026**: Crystallized as Type-Centric BIM Intelligence Platform
+- **Mar 2026**: Data-First refocus - viewer serves data, dashboards are the product
