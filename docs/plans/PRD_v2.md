@@ -11,11 +11,13 @@
 
 ### Product Vision
 
-**"Drop your IFC → See all your types → Verify, classify, and track."**
+**"IFC in → Actionable insight out. Types are the language. Data is the product."**
 
-Sprucelab is a type-centric BIM intelligence platform for professionals who **USE** models, not create them. We treat IFC as a simple "Layer 1" data source that powers BIM-centric workflows: type classification, material breakdown, quantity extraction, LCA tracking, and rule-based verification.
+Sprucelab turns IFC files into actionable data. Drop a model, get answers in seconds: What types exist? What's classified? What's wrong? What changed? The 3D model is a data source, not the destination. Dashboards, verification results, and change detection are the product.
 
 **Core insight**: Types are the unit of coordination in BIM, not individual entities. A building might have 50,000 entities but only 300-500 unique types. By focusing on types, we make BIM data manageable, actionable, and valuable.
+
+**Design principle**: Every feature must answer one of these questions: *Is this model ready? What needs attention? What changed? How do I fix it?* If it doesn't, it's Phase 2.
 
 ### What We Are NOT
 
