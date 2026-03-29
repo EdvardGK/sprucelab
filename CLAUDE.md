@@ -1,4 +1,4 @@
-# Sprucelab - Type-Centric BIM Intelligence Platform
+# Sprucelab - Data-First BIM Intelligence Platform
 
 > **For detailed project status, session history, and planning documents:**
 > See `/docs/` directory
@@ -7,22 +7,26 @@
 
 ## Project Overview
 
-**"Drop your IFC → See all your types → Verify, classify, and track."**
+**"IFC in → Actionable insight out. Types are the language. Data is the product."**
 
-A platform for BIM professionals who **USE** models, not create them. IFC is treated as a simple "Layer 1" data source that powers BIM-centric workflows.
+A platform for BIM professionals who **USE** models, not create them. IFC is a "Layer 1" data source. Dashboards, verification results, and change detection are the product. The 3D viewer serves insights, not the other way around.
+
+**Design Principle**: Every feature must answer: *Is this model ready? What needs attention? What changed? How do I fix it?*
 
 **Core Insight**: Types are the unit of coordination in BIM, not individual entities. A building has 50,000 entities but only 300-500 unique types.
 
 **Core Value Proposition:**
-- **Type Warehouse**: Extract, classify, and track types across models
+- **Insight Dashboards**: Health scores, action items, verification status at a glance
 - **Verification Engine**: Core rules + custom rules (per-project via ProjectConfig)
 - **TypeBank**: Cross-project type intelligence (classify once, apply everywhere)
+- **Version Change Detection**: What's new, removed, or changed since last upload
 - **Excel Workflows**: Bidirectional type classification via Excel
 - **LCA Export**: Material layers → Reduzer/OneClickLCA
-- **3D Viewer**: Type instance navigation and filtering
+- **3D Context**: Type instance viewer (supporting role, serves the data layer)
 
 **What We Are NOT:**
 - NOT a modeling tool (we don't create IFC)
+- NOT a 3D viewer with data on the side (data leads, 3D follows)
 - NOT a clash detection platform (Solibri/Navisworks territory)
 - NOT a general property editor (too broad, Excel workflows sufficient)
 
@@ -31,19 +35,20 @@ A platform for BIM professionals who **USE** models, not create them. IFC is tre
 - **Database**: PostgreSQL (Supabase)
 - **IFC Processing**: ifcopenshell 0.8.x (types-only extraction, 2 seconds)
 - **Frontend**: React 18 + TypeScript + Vite, Tailwind v4 + shadcn/ui
-- **Viewer**: ThatOpen Components + Three.js (load IFC directly, type filtering)
+- **Viewer**: ThatOpen Components + Three.js (supporting role, type filtering)
 
-**Current Phase**: MVP - Type Dashboard, Verification Engine, Sandwich View
+**Current Phase**: MVP - Verification Engine, Change Detection, Dashboard Enhancement
 
-**MVP Priorities (Feb 2026):**
-1. Type Dashboard - health scores, progress bars, at-a-glance status
-2. Verification Engine - FastAPI validator + ProjectConfig rule resolution
-3. Sandwich View - 2D material section diagram per type
-4. Rule Configuration - GUI builder + JSON/YAML config files
-5. Version Change Badges - new/removed/changed type indicators
+**MVP Priorities (Mar 2026):**
+1. ~~Type Dashboard~~ - DONE
+2. Verification Engine - type-level verification against ProjectConfig rules
+3. Version Change Detection - what changed since last upload?
+4. Dashboard Enhancement - surface verification results + action items
+5. Excel Workflow UI - wire existing endpoints to frontend
+6. Sandwich View - 2D material section diagram per type
 
 **Key Documentation**:
-- **PRD v2.0**: `docs/plans/PRD_v2.md` ⭐
+- **PRD v2.1**: `docs/plans/PRD_v2.md`
 - Project status: `docs/worklog/` (latest session)
 - Planning docs: `docs/plans/`
 - TODO lists: `docs/todos/`
