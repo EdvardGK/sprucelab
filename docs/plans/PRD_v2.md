@@ -254,13 +254,6 @@ The user never needs to "browse" a 3D model. Data surfaces problems; the viewer 
 5. **Excel Workflow UI** - wire existing endpoints to frontend
 6. **Sandwich View** - 2D material section diagram
 
-### Phase 2 (Post-MVP)
-
-- BCF export (verification failures → BCF issues)
-- Full change diff view
-- Auto-classification suggestions
-- TypeBank ML training
-
 ### Phase 2 Backlog
 
 - Rule Configuration GUI (visual rule builder)
