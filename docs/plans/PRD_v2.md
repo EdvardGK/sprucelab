@@ -181,13 +181,19 @@ The viewer serves the data, not the other way around. When the dashboard flags a
 - **Instance navigation**: Click through instances from type detail
 - **On-demand properties**: Query FastAPI for element details
 
-### 8. Version Change Detection (Basic)
+---
 
-- **New type badge**: Type appears in new version but not previous
-- **Removed type badge**: Type was in previous version but not current
-- **Changed badge**: Instance count changed significantly (configurable threshold)
-- **Simple indicators**: Badges on type cards, no full diff view
-- **Per-model tracking**: Compare current version to previous version only
+## The Insight Flow
+
+The core user experience, from upload to action:
+
+```
+Upload IFC (2 sec) → Dashboard (instant) → Health Score (auto-verified) →
+  Flagged Issues (click to investigate) → Type Detail (3D as context, not destination) →
+    Action (classify / verify / export / fix)
+```
+
+The user never needs to "browse" a 3D model. Data surfaces problems; the viewer provides spatial context when needed.
 
 ---
 
