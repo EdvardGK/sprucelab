@@ -247,11 +247,12 @@ The user never needs to "browse" a 3D model. Data surfaces problems; the viewer 
 
 ### MVP Priorities
 
-1. **Type Dashboard** - health scores, progress, at-a-glance status
-2. **Verification Engine** - FastAPI validator + ProjectConfig rule resolution
-3. **Sandwich View** - 2D material section diagram
-4. **Rule Configuration** - GUI builder + JSON/YAML config files
-5. **Version Change Badges** - new/removed/changed type indicators
+1. ~~**Type Dashboard**~~ - DONE (health scores, progress, at-a-glance status)
+2. **Verification Engine** - type-level verification against ProjectConfig rules
+3. **Version Change Detection** - what changed since last upload?
+4. **Dashboard Enhancement** - surface verification results + action items
+5. **Excel Workflow UI** - wire existing endpoints to frontend
+6. **Sandwich View** - 2D material section diagram
 
 ### Phase 2 (Post-MVP)
 
