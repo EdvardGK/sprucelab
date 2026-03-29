@@ -1,9 +1,9 @@
-# Sprucelab PRD v2.0 - Type-Centric BIM Intelligence Platform
+# Sprucelab PRD v2.1 - Data-First BIM Intelligence Platform
 
-**Version**: 2.0
-**Date**: 2026-02-05
+**Version**: 2.1
+**Date**: 2026-03-29
 **Status**: Active
-**Supersedes**: PRELIMINARY_PRD.md, PLAN.md
+**Supersedes**: PRD v2.0, PRELIMINARY_PRD.md, PLAN.md
 
 ---
 
