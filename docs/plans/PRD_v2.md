@@ -261,12 +261,21 @@ The user never needs to "browse" a 3D model. Data surfaces problems; the viewer 
 - Auto-classification suggestions
 - TypeBank ML training
 
+### Phase 2 Backlog
+
+- Rule Configuration GUI (visual rule builder)
+- BCF export (verification failures -> BCF issues)
+- Auto-classification suggestions (TypeBank ML)
+- Design scenario comparison (A/B/C LCA)
+
 ### Deprioritized / Cut
 
 - BEP system (too complex, over-engineered)
 - Clash detection (Solibri's moat, not our focus)
 - Full property editing (too broad, Excel workflow sufficient)
 - Graph queries (over-engineered for current needs)
+- Standalone viewer features (section plane UX, viewer-first workflows)
+- Viewer as primary navigation (data leads, 3D follows)
 
 ---
 
