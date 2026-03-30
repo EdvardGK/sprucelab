@@ -268,8 +268,3 @@ export default function HUDScene({ geometry, renderMode, isLoading, resetTrigger
 }
 
 export { type HUDSceneProps };
-
-// Expose resetCamera via ref pattern
-export type HUDSceneHandle = {
-  resetCamera: () => void;
-};
