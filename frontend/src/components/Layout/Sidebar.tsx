@@ -307,18 +307,6 @@ export function Sidebar() {
             </div>
             <div className="mt-1 space-y-0.5">
               <Link
-                to={`/projects/${projectId}/workbench?view=classify`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/workbench`) && workbenchView === 'classify'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Wrench className="h-4 w-4" />
-                <span>{t('workbench.classification')}</span>
-              </Link>
-              <Link
                 to={`/projects/${projectId}/workbench?view=verification`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
