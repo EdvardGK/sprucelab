@@ -35,14 +35,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-
 import { NS3451CascadingSelector } from './NS3451CascadingSelector';
 import { TypeInfoPanel } from './TypeInfoPanel';
 import { InlineViewer } from '../viewer/InlineViewer';
