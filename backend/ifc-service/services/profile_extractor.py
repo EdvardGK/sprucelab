@@ -158,6 +158,10 @@ class ProfileExtractor:
         if profile_type == 'IfcRoundedRectangleProfileDef':
             return self._rectangle_profile(profile_def, profile_name)
 
+        # Hollow rectangle (RHS/SHS steel tube)
+        if profile_type == 'IfcRectangleHollowProfileDef':
+            return self._rectangle_hollow_profile(profile_def, profile_name)
+
         # Circle
         if profile_type == 'IfcCircleProfileDef':
             return self._circle_profile(profile_def, profile_name)
