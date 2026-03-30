@@ -473,6 +473,115 @@ export default function HUDScene({
     }
   }, [geometry]);
 
+  // Build clean 2D profile outline from ProfileData
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    // Remove previous profile group
+    if (profileGroupRef.current) {
+      scene.remove(profileGroupRef.current);
+      profileGroupRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh || child instanceof THREE.LineLoop) {
+          (child as THREE.Mesh).geometry.dispose();
+        }
+      });
+      profileGroupRef.current = null;
+    }
+
+    hasProfileRef.current = false;
+
+    if (!profileData || profileData.outline.length < 2) return;
+
+    const group = buildProfileOutline(profileData);
+
+    // Compute bounds to center profile and set up camera
+    const box = new THREE.Box3().setFromObject(group);
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+
+    // Center profile at origin
+    group.position.set(-center.x, -center.y, 0);
+
+    scene.add(group);
+    profileGroupRef.current = group;
+    hasProfileRef.current = true;
+
+    console.log('[HUDScene] Profile outline built:', {
+      type: profileData.profile_type,
+      points: profileData.outline.length,
+      voids: profileData.inner_outlines?.length || 0,
+      size: { w: size.x.toFixed(1), h: size.y.toFixed(1) },
+    });
+
+    // If currently in 2D, apply profile camera view
+    if (viewDimRef.current === '2d') {
+      applyProfileView(size);
+    }
+  }, [profileData]);
+
+  // Set up ortho camera for clean profile view (XY plane, Z-up camera)
+  function applyProfileView(profileSize?: THREE.Vector3) {
+    const orthoCamera = orthoCameraRef.current;
+    const orthoControls = orthoControlsRef.current;
+    const renderer = rendererRef.current;
+    const container = containerRef.current;
+    if (!orthoCamera || !orthoControls || !renderer || !container) return;
+
+    // No clipping needed for clean profile lines
+    renderer.clippingPlanes = [];
+
+    // Determine profile bounds
+    let w: number, h: number;
+    if (profileSize) {
+      w = profileSize.x;
+      h = profileSize.y;
+    } else if (profileGroupRef.current) {
+      const box = new THREE.Box3().setFromObject(profileGroupRef.current);
+      const s = new THREE.Vector3();
+      box.getSize(s);
+      w = s.x;
+      h = s.y;
+    } else {
+      return;
+    }
+
+    const maxDim = Math.max(w, h, 1);
+
+    // Camera looks along -Z at XY plane
+    orthoCamera.position.set(0, 0, maxDim * 2);
+    orthoCamera.up.set(0, 1, 0);
+    orthoCamera.lookAt(0, 0, 0);
+    orthoCamera.near = 0.01;
+    orthoCamera.far = maxDim * 5;
+
+    // Fit frustum to profile with padding
+    const aspect = container.clientWidth / container.clientHeight;
+    const padding = 1.4;
+    const pW = w * padding;
+    const pH = h * padding;
+    const profAspect = pW / pH;
+
+    let frustumH: number;
+    if (aspect >= profAspect) {
+      frustumH = pH;
+    } else {
+      frustumH = pW / aspect;
+    }
+    frustumH = Math.max(frustumH, 0.5);
+
+    orthoCamera.top = frustumH / 2;
+    orthoCamera.bottom = -frustumH / 2;
+    orthoCamera.left = -(frustumH * aspect) / 2;
+    orthoCamera.right = (frustumH * aspect) / 2;
+    orthoCamera.updateProjectionMatrix();
+
+    orthoControls.target.set(0, 0, 0);
+    orthoControls.update();
+  }
+
   // Switch between 2D/3D view mode
   useEffect(() => {
     const perspControls = perspControlsRef.current;
