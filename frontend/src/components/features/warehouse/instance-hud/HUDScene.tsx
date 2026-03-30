@@ -1367,6 +1367,8 @@ export default function HUDScene({
       controls.update();
     } else if (hasProfileRef.current) {
       applyProfileView();
+    } else if (hasSandwichRef.current) {
+      applySandwichView();
     } else {
       applySectionView();
     }
