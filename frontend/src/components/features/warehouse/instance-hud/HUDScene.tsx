@@ -591,6 +591,7 @@ export default function HUDScene({
     if (!perspControls || !orthoControls || !renderer || !group) return;
 
     const is3D = viewDimension === '3d';
+    const hasProfile = hasProfileRef.current;
 
     // Toggle controls
     perspControls.enabled = is3D;
@@ -606,17 +607,30 @@ export default function HUDScene({
     const profileFill = group.getObjectByName('profile-fill');
     const profileEdges = group.getObjectByName('profile-edges');
 
-    if (solid) solid.visible = is3D;
-    if (profileFill) profileFill.visible = !is3D;
-    if (profileEdges) profileEdges.visible = !is3D;
-
-    if (!is3D) {
-      applySectionView();
-    } else {
-      // Clear clipping in 3D
+    if (is3D) {
+      // 3D: show solid mesh, hide clipped mesh and profile outline
+      if (solid) solid.visible = true;
+      if (profileFill) profileFill.visible = false;
+      if (profileEdges) profileEdges.visible = false;
+      if (profileGroupRef.current) profileGroupRef.current.visible = false;
       renderer.clippingPlanes = [];
+    } else if (hasProfile) {
+      // 2D with clean profile: show profile outline, hide 3D mesh entirely
+      if (solid) solid.visible = false;
+      if (profileFill) profileFill.visible = false;
+      if (profileEdges) profileEdges.visible = false;
+      if (profileGroupRef.current) profileGroupRef.current.visible = true;
+      renderer.clippingPlanes = [];
+      applyProfileView();
+    } else {
+      // 2D fallback: clipped 3D mesh (no profile data)
+      if (solid) solid.visible = false;
+      if (profileFill) profileFill.visible = true;
+      if (profileEdges) profileEdges.visible = true;
+      if (profileGroupRef.current) profileGroupRef.current.visible = false;
+      applySectionView();
     }
-  }, [viewDimension, geometry]);
+  }, [viewDimension, geometry, profileData]);
 
   // Handle render mode (solid vs wireframe)
   useEffect(() => {
