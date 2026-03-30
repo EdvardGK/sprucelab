@@ -222,6 +222,10 @@ export default function HUDScene({
     orthoCamera.up.copy(section.cameraUp);
     orthoCamera.lookAt(0, 0, 0);
 
+    // Dynamic near/far to handle mm-scale or m-scale geometry
+    orthoCamera.near = 0.01;
+    orthoCamera.far = section.cameraFar;
+
     // Fit frustum to the cross-section dimensions
     const aspect = container.clientWidth / container.clientHeight;
     const padding = 1.4;
