@@ -559,6 +559,8 @@
     "addLayers": "Add layers"
   },
   "instanceHUD": {
+    "solid": "Solid",
+    "wireframe": "Wire",
     "resetCamera": "Reset view",
     "seeInModel": "See in Model",
     "instanceOf": "Instance {{current}} / {{total}}",
