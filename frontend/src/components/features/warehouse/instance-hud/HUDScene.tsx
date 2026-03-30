@@ -659,7 +659,9 @@ export default function HUDScene({
   const viewDimRef = useRef<ViewDimension>(viewDimension);
   const sectionRef = useRef<SectionSetup | null>(null);
   const profileGroupRef = useRef<THREE.Group | null>(null);
+  const sandwichGroupRef = useRef<THREE.Group | null>(null);
   const hasProfileRef = useRef<boolean>(false);
+  const hasSandwichRef = useRef<boolean>(false);
   const axisGroupRef = useRef<THREE.Group | null>(null);
 
   // Keep ref in sync for animation loop
