@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, Download, Upload, AlertTriangle,
-  ChevronDown, X, Loader2, CheckCircle2,
+  ChevronDown, X,
 } from 'lucide-react';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { Button } from '@/components/ui/button';
