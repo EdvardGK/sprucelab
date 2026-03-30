@@ -208,6 +208,35 @@ class MeshGeometry(BaseModel):
     face_count: int = Field(..., description="Number of triangular faces")
 
 
+class ProfilePoint(BaseModel):
+    """2D point in profile coordinate system."""
+    x: float
+    y: float
+
+
+class ProfileData(BaseModel):
+    """2D cross-section profile extracted from IfcProfileDef."""
+
+    guid: str = Field(..., description="Element or type GUID")
+    ifc_type: str = Field(..., description="IFC entity type")
+    name: Optional[str] = Field(None, description="Element name")
+    profile_type: str = Field(..., description="IfcProfileDef subtype (e.g., IfcRectangleProfileDef)")
+    profile_name: Optional[str] = Field(None, description="Profile name from IFC")
+    params: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Parametric profile dimensions (e.g., XDim, YDim, Radius)"
+    )
+    outline: List[ProfilePoint] = Field(
+        default_factory=list,
+        description="Closed polyline outline of the profile cross-section"
+    )
+    has_voids: bool = Field(False, description="Whether profile has inner voids (e.g., hollow sections)")
+    inner_outlines: List[List[ProfilePoint]] = Field(
+        default_factory=list,
+        description="Inner void outlines for hollow profiles"
+    )
+
+
 # ============================================================================
 # IFC Processing (Django integration)
 # ============================================================================
