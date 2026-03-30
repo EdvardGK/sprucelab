@@ -57,6 +57,7 @@
     "modules": "Modules",
     "files": "Files",
     "data": "Data",
+    "types": "Types",
     "typeLibrary": "Type Library",
     "materialLibrary": "Material Library",
     "spaces": "Spaces",
