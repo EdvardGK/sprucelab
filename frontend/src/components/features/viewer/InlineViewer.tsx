@@ -191,6 +191,7 @@ export function InlineViewer({
       <HUDScene
         geometry={geometry ?? null}
         viewDimension={viewDimension}
+        renderMode={renderMode}
         resetTrigger={resetTrigger}
       />
 
@@ -204,7 +205,11 @@ export function InlineViewer({
         guid={currentGuid}
       />
 
-      <ResetCameraButton onResetCamera={handleResetCamera} />
+      <ViewControls
+        renderMode={renderMode}
+        onRenderModeChange={setRenderMode}
+        onResetCamera={handleResetCamera}
+      />
 
       <QuantitiesPanel detail={detail ?? null} isLoading={detailLoading} />
 
