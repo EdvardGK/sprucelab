@@ -1,12 +1,23 @@
 # Sprucelab Platform Architecture — Product Map v5
 
-## The Core Insight
+## Core Principles
 
-**Every project workflow is spatial. The reason non-BIM roles don't use models today is because the tools are too hard — not because the data isn't spatial.**
-
-HMS should annotate 3D models with fall zones, crane radii, protective measures. Progress should overlay spatially (4D). Cost should map to zones and elements (5D). Site logistics should have crane models, machine paths, material laydown areas.
+### 1. Every workflow is spatial
+The reason non-BIM roles don't use models today is because the tools are too hard — not because the data isn't spatial. HMS should annotate 3D models with fall zones, crane radii, protective measures. Progress should overlay spatially (4D). Cost should map to zones and elements (5D).
 
 **Sprucelab's job: make it trivially easy for ANY workflow to read from, annotate, and contribute to the model.**
+
+### 2. Layer 1 data quality gates everything
+IFC is the Layer 1 — simple, but trustworthy. The platform DOES opine on Layer 1 quality: types classified? Properties present? Model ready for workflows? Yes or no. Verification is measurable, automatable, gateable. If Layer 1 isn't ready, verticals can't build on it.
+
+### 3. Documentation: traceability and ownership, not correctness
+The platform does NOT opine on documentation quality. A structural calculation is right or wrong — that's the engineer's professional responsibility and liability. Sprucelab's job is traceability and ownership:
+- **Who** wrote/submitted it
+- **When** it was created/updated
+- **What** model elements it connects to
+- **Where** it sits in the delivery chain
+
+The platform guarantees the audit trail, not the content. Quality is the domain expert's job. Traceability is ours.
 
 ## Architecture: Integrated Verticals
 
