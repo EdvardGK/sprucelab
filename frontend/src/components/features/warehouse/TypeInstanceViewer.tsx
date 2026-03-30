@@ -108,13 +108,9 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
       if (highlighterRef.current) {
         highlighterRef.current.clear('current');
       }
-      // Reset visibility on all fragments
-      if (fragmentsGroupRef.current) {
-        for (const fragment of fragmentsGroupRef.current.items) {
-          if (fragment.mesh) {
-            fragment.mesh.visible = true;
-          }
-        }
+      // Reset visibility using Hider (show everything)
+      if (hiderRef.current) {
+        hiderRef.current.set(true);
       }
     };
   }, [typeId]);
