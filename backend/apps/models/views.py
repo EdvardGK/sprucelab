@@ -1472,9 +1472,18 @@ class ModelViewSet(viewsets.ModelViewSet):
             try:
                 from apps.entities.tasks import run_model_analysis_task
                 run_model_analysis_task.delay(str(model.id))
-                print(f"📊 Triggered background analysis for {model.name}")
-            except Exception as analysis_err:
-                print(f"⚠️  Could not trigger analysis: {analysis_err}")
+                print(f"📊 Triggered background analysis for {model.name} (Celery)")
+            except Exception:
+                # Celery not available — run in thread as fallback
+                import threading
+                def _run_analysis(mid):
+                    try:
+                        from apps.entities.tasks import run_model_analysis_task
+                        run_model_analysis_task(mid)
+                    except Exception as e:
+                        print(f"⚠️  Background analysis failed: {e}")
+                threading.Thread(target=_run_analysis, args=(str(model.id),), daemon=True).start()
+                print(f"📊 Triggered background analysis for {model.name} (thread)")
 
         return Response({'status': 'ok'})
 
