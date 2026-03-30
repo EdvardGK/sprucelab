@@ -28,6 +28,7 @@ interface InlineViewerProps {
   typeId: string | null;
   typeName?: string | null;
   ifcType?: string | null;
+  definitionLayers?: TypeDefinitionLayer[];
   className?: string;
 }
 
