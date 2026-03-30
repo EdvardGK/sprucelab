@@ -63,6 +63,12 @@ export function TypeLibraryView({ projectId, initialModelId }: TypeLibraryViewPr
   // Fetch mapping summary
   const { data: summary } = useTypeMappingSummary(selectedModelId || '');
 
+  // Get selected type object for HUD
+  const selectedType = useMemo(
+    () => types.find((t) => t.id === selectedTypeId) || null,
+    [types, selectedTypeId]
+  );
+
   // Get unique IFC types for filter dropdown
   const uniqueIfcTypes = useMemo(() => {
     const typeSet = new Set(types.map((t) => t.ifc_type));
