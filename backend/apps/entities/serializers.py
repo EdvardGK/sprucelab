@@ -212,9 +212,12 @@ class TypeMappingSerializer(serializers.ModelSerializer):
             # Verification status (three-tier: pending/auto/verified/flagged)
             'verification_status', 'verified_by', 'verified_by_username',
             'verified_at', 'flag_reason',
+            # Engine verification results
+            'verification_issues', 'verified_engine_at',
             'definition_layers'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'verified_by_username']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'verified_by_username',
+                            'verification_issues', 'verified_engine_at']
 
     def create(self, validated_data):
         # Auto-link ns3451 FK when ns3451_code is provided
