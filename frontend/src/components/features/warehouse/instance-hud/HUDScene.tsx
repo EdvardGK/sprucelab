@@ -328,7 +328,9 @@ export default function HUDScene({
     let camPos: THREE.Vector3;
     let camUp: THREE.Vector3;
     let secW: number, secH: number;
-    const camDist = 100;
+    // Camera must be outside the geometry — scale with bounding box
+    const camDist = maxDim * 2;
+    const camFar = maxDim * 5;
 
     if (longest === 'x') {
       // Wall/beam along X: cut perpendicular to X, camera looks along +X, Z-up
@@ -353,12 +355,20 @@ export default function HUDScene({
       secH = size.y;
     }
 
+    console.log('[HUDScene] Section setup:', {
+      longestAxis: longest,
+      size: { x: size.x, y: size.y, z: size.z },
+      camDist,
+      sectionDims: { w: secW, h: secH },
+    });
+
     sectionRef.current = {
       clipPlane: new THREE.Plane(clipNormal, 0),
       cameraPosition: camPos,
       cameraUp: camUp,
       sectionWidth: Math.max(secW, 0.1),
       sectionHeight: Math.max(secH, 0.1),
+      cameraFar: camFar,
     };
 
     // If currently in 2D, apply section view
