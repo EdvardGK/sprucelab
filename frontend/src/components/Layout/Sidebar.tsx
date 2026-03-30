@@ -15,7 +15,6 @@ import {
   Code,
   User,
   Layers,
-  Wrench,
   FileStack,
   Image,
   Box,
