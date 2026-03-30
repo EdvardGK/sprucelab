@@ -4,10 +4,10 @@ import { Layers, Loader2 } from 'lucide-react';
 import { useTypeInstances } from '@/hooks/use-warehouse';
 import { useInstanceDetail } from '@/hooks/useInstanceDetail';
 import { useInstanceGeometry } from '@/hooks/useInstanceGeometry';
-import HUDScene, { type ViewDimension } from '../warehouse/instance-hud/HUDScene';
+import HUDScene, { type ViewDimension, type RenderMode } from '../warehouse/instance-hud/HUDScene';
 import {
   IdentityBadge,
-  ResetCameraButton,
+  ViewControls,
   QuantitiesPanel,
   LocationPanel,
   InstanceNav,
