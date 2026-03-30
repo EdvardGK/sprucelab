@@ -198,6 +198,7 @@ export function InlineViewer({
       <HUDScene
         geometry={geometry ?? null}
         profileData={profileData ?? null}
+        definitionLayers={definitionLayers}
         viewDimension={viewDimension}
         renderMode={renderMode}
         resetTrigger={resetTrigger}
