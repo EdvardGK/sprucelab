@@ -96,7 +96,7 @@ class TechnicalRequirementSerializer(serializers.ModelSerializer):
     class Meta:
         model = TechnicalRequirement
         fields = [
-            'id', 'ifc_schema', 'model_view_definition',
+            'id', 'bep', 'ifc_schema', 'model_view_definition',
             'coordinate_system_name', 'coordinate_system_description',
             'length_unit', 'area_unit', 'volume_unit',
             'geometry_tolerance', 'max_file_size_mb',
@@ -111,7 +111,7 @@ class MMIScaleDefinitionSerializer(serializers.ModelSerializer):
     class Meta:
         model = MMIScaleDefinition
         fields = [
-            'id', 'mmi_level', 'name', 'name_en', 'description',
+            'id', 'bep', 'mmi_level', 'name', 'name_en', 'description',
             'color_hex', 'color_rgb',
             'geometry_requirements', 'information_requirements',
             'discipline_specific_rules', 'applies_to_disciplines',
