@@ -486,10 +486,12 @@ export function TypeMappingWorkspace({
                   </Button>
                 </div>
                 {/* Viewer Content */}
-                <InstanceViewer
+                <InlineViewer
                   key={currentType.id}
                   modelId={modelId}
                   typeId={currentType.id}
+                  typeName={currentType.type_name}
+                  ifcType={currentType.ifc_type}
                   className="flex-1 min-h-0"
                 />
               </div>
