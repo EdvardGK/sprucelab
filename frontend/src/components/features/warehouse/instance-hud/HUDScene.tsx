@@ -19,6 +19,7 @@ interface SectionSetup {
 interface HUDSceneProps {
   geometry: MeshGeometry | null;
   profileData?: ProfileData | null;
+  definitionLayers?: TypeDefinitionLayer[];
   viewDimension: ViewDimension;
   renderMode?: RenderMode;
   resetTrigger?: number;
