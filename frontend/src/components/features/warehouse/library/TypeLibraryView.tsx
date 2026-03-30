@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TypeStatusBadge, type MappingStatus } from '../shared/TypeStatusBadge';
-import InstanceHUD from '../instance-hud/InstanceHUD';
+import { InlineViewer } from '../../viewer/InlineViewer';
 import { cn } from '@/lib/utils';
 
 interface TypeLibraryViewProps {
