@@ -639,6 +639,7 @@ function buildProfileOutline(profile: ProfileData): THREE.Group {
 export default function HUDScene({
   geometry,
   profileData,
+  definitionLayers,
   viewDimension,
   renderMode = 'solid',
   resetTrigger,
