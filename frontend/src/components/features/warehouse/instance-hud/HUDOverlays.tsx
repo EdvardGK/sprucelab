@@ -64,45 +64,23 @@ function IdentityBadge({ ifcType, typeName, instanceName, guid }: IdentityBadgeP
   );
 }
 
-// --- View Controls (top-right) ---
+// --- Reset Camera Button (top-right) ---
 
-interface ViewControlsProps {
-  renderMode: RenderMode;
-  onRenderModeChange: (mode: RenderMode) => void;
+interface ResetCameraButtonProps {
   onResetCamera: () => void;
 }
 
-function ViewControls({ renderMode, onRenderModeChange, onResetCamera }: ViewControlsProps) {
+function ResetCameraButton({ onResetCamera }: ResetCameraButtonProps) {
   const { t } = useTranslation();
 
-  const modeButton = (mode: RenderMode, icon: React.ReactNode, label: string) => (
-    <button
-      onClick={() => onRenderModeChange(mode)}
-      className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
-        renderMode === mode
-          ? 'bg-cyan-400/20 text-cyan-400 border border-cyan-400/30'
-          : 'text-white/50 hover:text-white/80 border border-transparent'
-      }`}
-      title={label}
-    >
-      {icon}
-      <span className="hidden sm:inline">{label}</span>
-    </button>
-  );
-
   return (
-    <div className={`absolute top-3 right-3 z-10 ${hudPanel} px-2 py-1.5 flex items-center gap-1`}>
-      {modeButton('solid', <Box className="h-3.5 w-3.5" />, t('instanceHUD.solid'))}
-      {modeButton('wireframe', <Grid3x3 className="h-3.5 w-3.5" />, t('instanceHUD.wireframe'))}
-      <div className="w-px h-4 bg-white/10 mx-0.5" />
-      <button
-        onClick={onResetCamera}
-        className="flex items-center gap-1 px-2 py-1 rounded text-xs text-white/50 hover:text-white/80 transition-colors"
-        title={t('instanceHUD.resetCamera')}
-      >
-        <RotateCcw className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    <button
+      onClick={onResetCamera}
+      className={`absolute top-3 right-3 z-10 ${hudPanel} p-2 text-white/50 hover:text-white/80 transition-colors`}
+      title={t('instanceHUD.resetCamera')}
+    >
+      <RotateCcw className="h-3.5 w-3.5" />
+    </button>
   );
 }
 
