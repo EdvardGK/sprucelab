@@ -781,9 +781,9 @@ export function useVerifyModel() {
       );
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Invalidate type queries to refresh verification_status badges
-      queryClient.invalidateQueries({ queryKey: warehouseKeys.types(data.model_id) });
+      queryClient.invalidateQueries({ queryKey: warehouseKeys.types() });
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] });
     },
   });
