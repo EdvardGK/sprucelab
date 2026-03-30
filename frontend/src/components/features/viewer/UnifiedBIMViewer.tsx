@@ -952,8 +952,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 event.preventDefault();
                 const activePlaneR = sp.planes.find(p => p.id === sp.activePlaneId);
                 let pullAmount = 0.5;
-                if (world.camera?.three && activePlaneR?.point) {
-                  const dist = world.camera.three.position.distanceTo(activePlaneR.point);
+                const rCam = getCamera(world);
+                if (rCam?.three && activePlaneR?.point) {
+                  const dist = rCam.three.position.distanceTo(activePlaneR.point);
                   pullAmount = Math.max(0.01, Math.min(2, dist * 0.01));
                 }
                 if (event.shiftKey) pullAmount *= 0.5; // Shift = 50% for fine control
