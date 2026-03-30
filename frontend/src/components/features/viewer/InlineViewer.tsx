@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Layers, Monitor, Crosshair, Loader2 } from 'lucide-react';
+import { Layers, Loader2 } from 'lucide-react';
 import { useTypeInstances } from '@/hooks/use-warehouse';
 import { useInstanceDetail } from '@/hooks/useInstanceDetail';
 import { useInstanceGeometry } from '@/hooks/useInstanceGeometry';
-import HUDScene, { type RenderMode } from '../warehouse/instance-hud/HUDScene';
+import HUDScene, { type ViewDimension } from '../warehouse/instance-hud/HUDScene';
 import {
   IdentityBadge,
-  ViewControls,
+  ResetCameraButton,
   QuantitiesPanel,
   LocationPanel,
   InstanceNav,
@@ -15,14 +15,12 @@ import {
   NoGeometryOverlay,
 } from '../warehouse/instance-hud/HUDOverlays';
 
-// Lazy-load the heavy ThatOpen viewer for Model mode
+// Lazy-load the heavy ThatOpen viewer for "See in Model"
 const TypeInstanceViewer = lazy(() =>
   import('../warehouse/TypeInstanceViewer').then((m) => ({
     default: m.TypeInstanceViewer,
   }))
 );
-
-type ViewMode = 'hud' | 'model';
 
 interface InlineViewerProps {
   modelId: string;
@@ -40,9 +38,9 @@ export function InlineViewer({
   className,
 }: InlineViewerProps) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<ViewMode>('hud');
+  const [viewDimension, setViewDimension] = useState<ViewDimension>('3d');
+  const [showModel, setShowModel] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [renderMode, setRenderMode] = useState<RenderMode>('solid');
   const [resetTrigger, setResetTrigger] = useState(0);
 
   // Fetch instance list for type
@@ -54,19 +52,19 @@ export function InlineViewer({
   const currentInstance = instances[currentIndex] || null;
   const currentGuid = currentInstance?.ifc_guid || null;
 
-  // HUD data hooks (only active in HUD mode to avoid unnecessary fetches)
+  // Data hooks (only fetch when not in full-model view)
   const { data: detail, isLoading: detailLoading } = useInstanceDetail(
     modelId,
-    mode === 'hud' ? currentGuid : null
+    !showModel ? currentGuid : null
   );
   const { data: geometry, isLoading: geometryLoading, error: geometryError } = useInstanceGeometry(
     modelId,
-    mode === 'hud' ? currentGuid : null
+    !showModel ? currentGuid : null
   );
 
   // Debug: log data flow
   console.log('[InlineViewer]', {
-    typeId, modelId, mode,
+    typeId, modelId, viewDimension, showModel,
     instanceCount: instances.length,
     currentGuid,
     hasGeometry: !!geometry,
@@ -107,24 +105,25 @@ export function InlineViewer({
           e.preventDefault();
           goToNext();
           break;
-        case 's':
-        case 'S':
-          if (mode === 'hud') setRenderMode('solid');
+        case '2':
+          if (!showModel) setViewDimension('2d');
           break;
-        case 'w':
-        case 'W':
-          if (mode === 'hud') setRenderMode('wireframe');
+        case '3':
+          if (!showModel) setViewDimension('3d');
           break;
         case 'r':
         case 'R':
-          if (mode === 'hud') handleResetCamera();
+          if (!showModel) handleResetCamera();
+          break;
+        case 'Escape':
+          if (showModel) setShowModel(false);
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrev, goToNext, handleResetCamera, mode]);
+  }, [goToPrev, goToNext, handleResetCamera, showModel]);
 
   // Empty state: no type selected
   if (!typeId) {
@@ -146,47 +145,10 @@ export function InlineViewer({
     );
   }
 
-  return (
-    <div className={`relative h-full bg-zinc-950 overflow-hidden ${className || ''}`}>
-      {/* Mode Toggle */}
-      <ModeToggle mode={mode} onModeChange={setMode} />
-
-      {/* HUD Mode */}
-      {mode === 'hud' && (
-        <>
-          <HUDScene
-            geometry={geometry ?? null}
-            renderMode={renderMode}
-            resetTrigger={resetTrigger}
-          />
-
-          {geometryLoading && currentGuid && <GeometryLoadingOverlay />}
-          {!geometryLoading && !geometry && currentGuid && <NoGeometryOverlay />}
-
-          <IdentityBadge
-            ifcType={ifcType || currentInstance?.ifc_type || null}
-            typeName={typeName || null}
-            instanceName={currentInstance?.name || null}
-            guid={currentGuid}
-          />
-
-          <ViewControls
-            renderMode={renderMode}
-            onRenderModeChange={setRenderMode}
-            onResetCamera={handleResetCamera}
-          />
-
-          <QuantitiesPanel detail={detail ?? null} isLoading={detailLoading} />
-
-          <LocationPanel
-            storey={currentInstance?.storey_id || null}
-            detail={detail ?? null}
-          />
-        </>
-      )}
-
-      {/* Model Mode */}
-      {mode === 'model' && (
+  // Full-model view (TypeInstanceViewer)
+  if (showModel) {
+    return (
+      <div className={`relative h-full bg-zinc-950 overflow-hidden ${className || ''}`}>
         <Suspense
           fallback={
             <div className="flex items-center justify-center h-full">
@@ -200,56 +162,92 @@ export function InlineViewer({
             className="h-full"
           />
         </Suspense>
-      )}
+        {/* Back button */}
+        <button
+          onClick={() => setShowModel(false)}
+          className="absolute top-3 left-3 z-20 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg px-3 py-1.5 text-xs text-white/60 hover:text-white/90 transition-colors"
+        >
+          {t('common.back')}
+        </button>
+      </div>
+    );
+  }
 
-      {/* Shared Instance Navigation (both modes) */}
+  return (
+    <div className={`relative h-full bg-zinc-950 overflow-hidden ${className || ''}`}>
+      {/* 2D/3D Toggle */}
+      <DimensionToggle dimension={viewDimension} onDimensionChange={setViewDimension} />
+
+      {/* Three.js Scene (handles both 2D and 3D) */}
+      <HUDScene
+        geometry={geometry ?? null}
+        viewDimension={viewDimension}
+        resetTrigger={resetTrigger}
+      />
+
+      {geometryLoading && currentGuid && <GeometryLoadingOverlay />}
+      {!geometryLoading && !geometry && currentGuid && <NoGeometryOverlay />}
+
+      <IdentityBadge
+        ifcType={ifcType || currentInstance?.ifc_type || null}
+        typeName={typeName || null}
+        instanceName={currentInstance?.name || null}
+        guid={currentGuid}
+      />
+
+      <ResetCameraButton onResetCamera={handleResetCamera} />
+
+      <QuantitiesPanel detail={detail ?? null} isLoading={detailLoading} />
+
+      <LocationPanel
+        storey={currentInstance?.storey_id || null}
+        detail={detail ?? null}
+      />
+
+      {/* Instance Navigation */}
       {totalCount > 0 && (
         <InstanceNav
           currentIndex={currentIndex}
           totalCount={totalCount}
           onPrev={goToPrev}
           onNext={goToNext}
-          onSeeInModel={() => setMode('model')}
+          onSeeInModel={() => setShowModel(true)}
         />
       )}
     </div>
   );
 }
 
-// --- Mode Toggle (top-center, above other overlays) ---
+// --- 2D/3D Toggle (top-center) ---
 
-function ModeToggle({
-  mode,
-  onModeChange,
+function DimensionToggle({
+  dimension,
+  onDimensionChange,
 }: {
-  mode: ViewMode;
-  onModeChange: (mode: ViewMode) => void;
+  dimension: ViewDimension;
+  onDimensionChange: (dim: ViewDimension) => void;
 }) {
-  const { t } = useTranslation();
-
   return (
     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-lg p-0.5">
       <button
-        onClick={() => onModeChange('hud')}
-        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-colors ${
-          mode === 'hud'
+        onClick={() => onDimensionChange('2d')}
+        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+          dimension === '2d'
             ? 'bg-cyan-400/20 text-cyan-400'
             : 'text-white/50 hover:text-white/80'
         }`}
       >
-        <Crosshair className="h-3.5 w-3.5" />
-        {t('inlineViewer.hud')}
+        2D
       </button>
       <button
-        onClick={() => onModeChange('model')}
-        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-colors ${
-          mode === 'model'
+        onClick={() => onDimensionChange('3d')}
+        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+          dimension === '3d'
             ? 'bg-cyan-400/20 text-cyan-400'
             : 'text-white/50 hover:text-white/80'
         }`}
       >
-        <Monitor className="h-3.5 w-3.5" />
-        {t('inlineViewer.model')}
+        3D
       </button>
     </div>
   );
