@@ -533,5 +533,24 @@
       "description": "Denne typen har {{count}} instanser på tvers av {{models}} modeller.",
       "loadModels": "Laster modellobservasjoner..."
     }
+  },
+  "instanceHUD": {
+    "solid": "Solid",
+    "wireframe": "Tråd",
+    "resetCamera": "Nullstill visning",
+    "seeInModel": "Se i modell",
+    "instanceOf": "Instans {{current}} / {{total}}",
+    "noInstances": "Ingen instanser av denne typen",
+    "loading3D": "Laster geometri...",
+    "noGeometry": "Ingen geometri tilgjengelig",
+    "quantities": "Mengder",
+    "location": "Plassering",
+    "area": "Areal",
+    "volume": "Volum",
+    "length": "Lengde",
+    "height": "Høyde",
+    "storey": "Etasje",
+    "copyGuid": "Kopier GUID",
+    "guidCopied": "Kopiert!"
   }
 }
