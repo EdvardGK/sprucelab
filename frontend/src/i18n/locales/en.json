@@ -552,12 +552,13 @@
     }
   },
   "inlineViewer": {
-    "hud": "HUD",
-    "model": "Model"
+    "view2d": "2D",
+    "view3d": "3D",
+    "editLayers": "Edit layers",
+    "noLayersDefined": "No layers defined",
+    "addLayers": "Add layers"
   },
   "instanceHUD": {
-    "solid": "Solid",
-    "wireframe": "Wire",
     "resetCamera": "Reset view",
     "seeInModel": "See in Model",
     "instanceOf": "Instance {{current}} / {{total}}",
