@@ -789,6 +789,14 @@ export default function HUDScene({
     // Center profile at origin
     group.position.set(-center.x, -center.y, 0);
 
+    // Add dimension annotations (computed in centered coordinates)
+    const centeredBox = new THREE.Box3(
+      new THREE.Vector3(box.min.x - center.x, box.min.y - center.y, 0),
+      new THREE.Vector3(box.max.x - center.x, box.max.y - center.y, 0),
+    );
+    const dims = buildDimensionAnnotations(profileData, centeredBox);
+    group.add(dims);
+
     scene.add(group);
     profileGroupRef.current = group;
     hasProfileRef.current = true;
