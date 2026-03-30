@@ -539,10 +539,12 @@ export function TypeMappingWorkspace({
           </div>
           {/* Fullscreen Viewer */}
           <div className="flex-1 min-h-0">
-            <InstanceViewer
+            <InlineViewer
               key={`fullscreen-${currentType.id}`}
               modelId={modelId}
               typeId={currentType.id}
+              typeName={currentType.type_name}
+              ifcType={currentType.ifc_type}
               className="h-full w-full"
             />
           </div>
