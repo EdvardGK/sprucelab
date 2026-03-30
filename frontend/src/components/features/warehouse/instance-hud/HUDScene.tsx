@@ -849,9 +849,9 @@ export default function HUDScene({
     orthoCamera.near = 0.01;
     orthoCamera.far = maxDim * 5;
 
-    // Fit frustum to profile with padding
+    // Fit frustum to profile with padding (extra for dimension annotations)
     const aspect = container.clientWidth / container.clientHeight;
-    const padding = 1.4;
+    const padding = hasProfileRef.current ? 1.7 : 1.4; // more room for dimension lines
     const pW = w * padding;
     const pH = h * padding;
     const profAspect = pW / pH;
