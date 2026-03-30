@@ -66,11 +66,9 @@ interface TypeBrowserListViewProps {
   modelFilename?: string;
   /** Pre-filtered types from parent (after search/filter bar) */
   filteredTypes: IFCType[];
-  /** All types for the model (unfiltered, for navigation hook) */
-  allTypes: IFCType[];
   summary: ReturnType<typeof useTypeMappingSummary>['data'];
   className?: string;
-  // Excel callbacks (managed by parent for hidden file input)
+  // Excel callbacks (passed from parent, used in filter bar)
   onExportExcel: () => void;
   onImportExcel: () => void;
   onExportReduzer: () => void;
