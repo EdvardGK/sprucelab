@@ -492,6 +492,7 @@ export function TypeMappingWorkspace({
                   typeId={currentType.id}
                   typeName={currentType.type_name}
                   ifcType={currentType.ifc_type}
+                  definitionLayers={currentType.mapping?.definition_layers}
                   className="flex-1 min-h-0"
                 />
               </div>
