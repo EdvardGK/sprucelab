@@ -449,6 +449,7 @@ export function TypeBrowserListView({
               typeId={currentType.id}
               typeName={currentType.type_name}
               ifcType={currentType.ifc_type}
+              definitionLayers={currentType.mapping?.definition_layers}
               className="h-full w-full"
             />
           </div>
