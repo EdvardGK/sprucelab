@@ -38,7 +38,7 @@ Projects behave differently depending on the layer:
 - **Work layer**: Projects are **relations/tags** on your files. Organizational, optional, flexible. A file can relate to multiple projects or none. Unassigned work is perfectly valid — it's your sandbox.
 - **Shared layer**: Projects are **containers**. Published work lives IN the project. Structure, permissions, delivery tracking, versioning, archival — all scoped to the project. This is where coordination happens, where contracts apply, where the audit trail lives.
 
-Publishing = moving from relation (work layer) to container (shared layer). Your workspace file tagged "Project X" becomes a published artifact inside Project X's container, visible to other participants, governed by project rules.
+Publishing = transferring ownership. Your workspace file tagged "Project X" becomes a published artifact inside Project X's container. Once shared, **the project owns it** — visible to participants, governed by project rules, versioned, archived. The contributor can't retract it. This mirrors how IFC deliveries work in practice: once you deliver, the delivery belongs to the project record.
 
 **Analogy**: Like git. Your local repo is yours — branches, experiments, WIP. The remote is the shared container with structure, permissions, and history. You push when ready.
 
