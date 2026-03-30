@@ -227,6 +227,34 @@ class ProfileExtractor:
             outline=[(-w, -h), (w, -h), (w, h), (-w, h), (-w, -h)],
         )
 
+    def _rectangle_hollow_profile(self, p, name: Optional[str]) -> ProfileResult:
+        """Hollow rectangular section (RHS/SHS)."""
+        w = float(p.XDim) / 2
+        h = float(p.YDim) / 2
+        t = float(p.WallThickness)
+        wi = w - t
+        hi = h - t
+
+        outer = [(-w, -h), (w, -h), (w, h), (-w, h), (-w, -h)]
+        inner = [(-wi, -hi), (wi, -hi), (wi, hi), (-wi, hi), (-wi, -hi)]
+
+        params = {'XDim': p.XDim, 'YDim': p.YDim, 'WallThickness': t}
+        ofr = getattr(p, 'OuterFilletRadius', None)
+        ifr = getattr(p, 'InnerFilletRadius', None)
+        if ofr:
+            params['OuterFilletRadius'] = float(ofr)
+        if ifr:
+            params['InnerFilletRadius'] = float(ifr)
+
+        return ProfileResult(
+            profile_type='IfcRectangleHollowProfileDef',
+            profile_name=name,
+            params=params,
+            outline=outer,
+            has_voids=True,
+            inner_outlines=[inner],
+        )
+
     def _circle_profile(self, p, name: Optional[str]) -> ProfileResult:
         r = float(p.Radius)
         n = 48
