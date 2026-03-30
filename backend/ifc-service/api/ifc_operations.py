@@ -214,6 +214,47 @@ async def get_element_geometry(file_id: str, guid: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.get("/{file_id}/profile/{guid}", response_model=ProfileData)
+async def get_element_profile(file_id: str, guid: str):
+    """
+    Get 2D cross-section profile (IfcProfileDef) for an element.
+
+    Extracts parametric profile data and a 2D outline polyline.
+    Works for beams, columns, members, and other extruded elements.
+    Returns 404 if no profile is found (e.g., walls without extrusion profiles).
+    """
+    ifc_file = ifc_loader._cache.get(file_id)
+    if not ifc_file:
+        raise HTTPException(status_code=404, detail=f"File {file_id} not loaded")
+
+    try:
+        element = ifc_file.by_guid(guid)
+    except RuntimeError:
+        raise HTTPException(status_code=404, detail=f"Element with GUID {guid} not found")
+
+    result = profile_extractor.extract_from_element(ifc_file, guid)
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No IfcProfileDef found for {element.is_a()} '{element.Name or guid}'"
+        )
+
+    return ProfileData(
+        guid=element.GlobalId,
+        ifc_type=element.is_a(),
+        name=element.Name,
+        profile_type=result.profile_type,
+        profile_name=result.profile_name,
+        params=result.params,
+        outline=[ProfilePoint(x=p[0], y=p[1]) for p in result.outline],
+        has_voids=result.has_voids,
+        inner_outlines=[
+            [ProfilePoint(x=p[0], y=p[1]) for p in inner]
+            for inner in result.inner_outlines
+        ],
+    )
+
+
 @router.get("/{file_id}/types/{type_guid}/instances", response_model=TypeInstancesResponse)
 async def get_type_instances(file_id: str, type_guid: str):
     """
