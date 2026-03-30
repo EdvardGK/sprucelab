@@ -521,8 +521,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           // Only handle left mouse button
           if (event.button !== 0) return;
 
-          if (!world?.camera?.controls) {
-            console.warn('Camera not ready for selection');
+          const cam = getCamera(world);
+          if (!cam?.controls) {
             return;
           }
 
