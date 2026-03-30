@@ -37,6 +37,7 @@ export function InlineViewer({
   typeId,
   typeName,
   ifcType,
+  definitionLayers,
   className,
 }: InlineViewerProps) {
   const { t } = useTranslation();
