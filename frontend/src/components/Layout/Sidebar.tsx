@@ -330,16 +330,16 @@ export function Sidebar() {
                 <span>{t('workbench.ifcEditing')}</span>
               </Link>
               <Link
-                to={`/projects/${projectId}/workbench?view=bep`}
+                to={`/projects/${projectId}/bep`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/workbench`) && workbenchView === 'bep'
+                  isActive(`/projects/${projectId}/bep`)
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                 )}
               >
                 <Settings className="h-4 w-4" />
-                <span>{t('workbench.bepConfig')}</span>
+                <span>{t('nav.bep')}</span>
               </Link>
             </div>
           </div>
