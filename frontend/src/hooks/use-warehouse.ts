@@ -764,6 +764,32 @@ export function useExportTypeBankExcel() {
 }
 
 // =============================================================================
+// VERIFICATION ENGINE
+// =============================================================================
+
+/**
+ * Run verification engine on all types for a model.
+ * Updates TypeMapping.verification_status and verification_issues.
+ */
+export function useVerifyModel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (modelId: string) => {
+      const response = await apiClient.post<ModelVerificationResult>(
+        `/entities/types/verify/?model=${modelId}`
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      // Invalidate type queries to refresh verification_status badges
+      queryClient.invalidateQueries({ queryKey: warehouseKeys.types(data.model_id) });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] });
+    },
+  });
+}
+
+// =============================================================================
 // DASHBOARD METRICS
 // =============================================================================
 
