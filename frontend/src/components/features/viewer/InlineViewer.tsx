@@ -39,6 +39,7 @@ export function InlineViewer({
 }: InlineViewerProps) {
   const { t } = useTranslation();
   const [viewDimension, setViewDimension] = useState<ViewDimension>('3d');
+  const [renderMode, setRenderMode] = useState<RenderMode>('solid');
   const [showModel, setShowModel] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [resetTrigger, setResetTrigger] = useState(0);
