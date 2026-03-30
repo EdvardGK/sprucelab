@@ -27,17 +27,34 @@ Contributors own their data. The platform respects the distinction between:
 
 **Sharing is a deliberate readiness decision, not an upload.** Contributors publish when they're ready, not before. The platform never exposes work-layer content without explicit action.
 
+**The work layer is project-agnostic.** Your workspace is YOURS — not "your area within a project." You can:
+- Work on internal projects, sandboxes, R&D — no project setup needed
+- Build company templates, standards, TypeBank entries
+- Get invited to a project → auto-scaffold a project folder from your own internal templates, or just start tagging existing work with that project
+- Projects are **relations you assign to objects**, not containers you work inside
+
+The data model is relational, not hierarchical:
+- Files, models, documents, types exist in YOUR workspace
+- Projects are relations: `file → assigned to → Project X`
+- Publishing = making the relation visible on the shared layer
+- The same file can relate to multiple projects if needed
+- Unassigned work is perfectly valid — it's your sandbox
+
+**Analogy**: Like a developer's GitHub account. You have repos (your workspace). Organizations and projects are contexts you participate in. You push to a project repo when ready — your local work is yours.
+
 This creates the adoption flywheel:
-1. **Contributors move internal workflows into Sprucelab** — their private workspace handles QA/QC, documentation, coordination, design reviews
-2. **Sharing into a project becomes trivial** — just a publish decision, not a file-gathering exercise
-3. **Companies persist across projects** — they accumulate templates, TypeBank entries, workflow configurations, standards
+1. **Contributors use Sprucelab for their OWN work** — internal QA/QC, documentation, coordination, design reviews, sandboxing
+2. **Sharing into a project becomes trivial** — assign the relation, publish. Not a file-gathering exercise.
+3. **Companies persist across projects** — they accumulate templates, TypeBank entries, workflow configurations, standards in their workspace
 4. **Network effects** — companies that use Sprucelab internally bring it to every project they join. The more projects, the more companies. The more companies, the more projects.
+5. **Onboarding a new project = accepting an invite** — the platform auto-scaffolds from your templates, your standards are already there, your TypeBank is ready
 
-**Two entities, two lifecycles:**
-- **Project** = deterministic, has a start and finish. A manifestation of work. Temporary.
-- **Company/Organization** = persistent, spans many projects. Accumulates knowledge, workflows, and data over time. Long-term value.
+**Three entities, three lifecycles:**
+- **User workspace** = personal, always there. Your tools, your sandboxes, your experiments.
+- **Company/Organization** = persistent, spans many projects. Accumulates knowledge, workflows, templates, and standards over time.
+- **Project** = deterministic, has a start and finish. A manifestation of work. Temporary. Draws from company and user resources.
 
-The platform serves the contributor FIRST (their workspace, their workflows, their data), the project SECOND (shared layer, coordination, delivery). This inverts the typical AEC platform model where the project owns everything and contributors are just uploaders.
+The platform serves the contributor FIRST (their workspace, their workflows, their data), the company SECOND (shared standards, templates, TypeBank), the project THIRD (shared layer, coordination, delivery). This inverts the typical AEC platform model where the project owns everything and contributors are just uploaders.
 
 ## Architecture: Integrated Verticals
 
