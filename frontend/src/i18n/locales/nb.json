@@ -57,6 +57,7 @@
     "modules": "Moduler",
     "files": "Filer",
     "data": "Data",
+    "types": "Typer",
     "typeLibrary": "Typebibliotek",
     "materialLibrary": "Materialbibliotek",
     "spaces": "Rom",
