@@ -534,6 +534,10 @@
       "loadModels": "Loading model observations..."
     }
   },
+  "inlineViewer": {
+    "hud": "HUD",
+    "model": "Model"
+  },
   "instanceHUD": {
     "solid": "Solid",
     "wireframe": "Wire",
