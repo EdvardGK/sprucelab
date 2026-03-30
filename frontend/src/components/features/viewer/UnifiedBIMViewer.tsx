@@ -592,7 +592,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             }
 
             // If we found geometry, zoom to it with padding
-            if (hasGeometry && !bbox.isEmpty() && world.camera?.controls) {
+            const dblCam = getCamera(world);
+            if (hasGeometry && !bbox.isEmpty() && dblCam?.controls) {
               const center = new THREE.Vector3();
               bbox.getCenter(center);
 
@@ -604,14 +605,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               const distance = Math.max(maxDim * 2.0, 5); // At least 5m away
 
               // Get current camera direction to maintain viewing angle
-              const camera = world.camera.three;
+              const camera = dblCam.three;
               const currentDir = new THREE.Vector3();
               camera.getWorldDirection(currentDir);
 
               // Position camera at distance from center, opposite to view direction
               const cameraPos = center.clone().sub(currentDir.multiplyScalar(distance));
 
-              world.camera.controls.setLookAt(
+              dblCam.controls.setLookAt(
                 cameraPos.x, cameraPos.y, cameraPos.z,
                 center.x, center.y, center.z,
                 true // Enable transition animation
