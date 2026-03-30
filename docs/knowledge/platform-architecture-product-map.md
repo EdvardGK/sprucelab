@@ -33,14 +33,14 @@ Contributors own their data. The platform respects the distinction between:
 - Get invited to a project → auto-scaffold a project folder from your own internal templates, or just start tagging existing work with that project
 - Projects are **relations you assign to objects**, not containers you work inside
 
-The data model is relational, not hierarchical:
-- Files, models, documents, types exist in YOUR workspace
-- Projects are relations: `file → assigned to → Project X`
-- Publishing = making the relation visible on the shared layer
-- The same file can relate to multiple projects if needed
-- Unassigned work is perfectly valid — it's your sandbox
+Projects behave differently depending on the layer:
 
-**Analogy**: Like a developer's GitHub account. You have repos (your workspace). Organizations and projects are contexts you participate in. You push to a project repo when ready — your local work is yours.
+- **Work layer**: Projects are **relations/tags** on your files. Organizational, optional, flexible. A file can relate to multiple projects or none. Unassigned work is perfectly valid — it's your sandbox.
+- **Shared layer**: Projects are **containers**. Published work lives IN the project. Structure, permissions, delivery tracking, versioning, archival — all scoped to the project. This is where coordination happens, where contracts apply, where the audit trail lives.
+
+Publishing = moving from relation (work layer) to container (shared layer). Your workspace file tagged "Project X" becomes a published artifact inside Project X's container, visible to other participants, governed by project rules.
+
+**Analogy**: Like git. Your local repo is yours — branches, experiments, WIP. The remote is the shared container with structure, permissions, and history. You push when ready.
 
 This creates the adoption flywheel:
 1. **Contributors use Sprucelab for their OWN work** — internal QA/QC, documentation, coordination, design reviews, sandboxing
