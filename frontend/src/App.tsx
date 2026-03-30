@@ -21,6 +21,7 @@ import FederatedViewer from './pages/FederatedViewer';
 import ViewerGroups from './pages/ViewerGroups';
 import TypeLibraryPage from './pages/TypeLibraryPage';
 import ProjectTypeLibrary from './pages/ProjectTypeLibrary';
+import ProjectTypesPage from './pages/ProjectTypesPage';
 import ProjectMaterialLibrary from './pages/ProjectMaterialLibrary';
 import ProcessingReports from './pages/dev/ProcessingReports';
 import ProcessingReportDetail from './pages/dev/ProcessingReportDetail';
