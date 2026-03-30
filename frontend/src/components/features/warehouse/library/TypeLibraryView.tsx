@@ -369,20 +369,15 @@ export function TypeLibraryView({ projectId, initialModelId }: TypeLibraryViewPr
           )}
         </div>
 
-        {/* Instance Viewer - Right Column (proportional, aspect-ratio friendly) */}
-        <div className="flex flex-col min-h-0 bg-muted/5">
-          {selectedModelId && selectedTypeId ? (
-            <TypeInstanceViewer
-              modelId={selectedModelId}
-              typeId={selectedTypeId}
-              className="h-full"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
-              <Layers className="h-8 w-8 mb-3 opacity-50" />
-              <p className="text-sm">{t('typeLibrary.selectTypeToPreview')}</p>
-            </div>
-          )}
+        {/* Instance HUD - Right Column */}
+        <div className="flex flex-col min-h-0 rounded-lg overflow-hidden">
+          <InstanceHUD
+            modelId={selectedModelId || ''}
+            typeId={selectedTypeId}
+            typeName={selectedType?.type_name}
+            ifcType={selectedType?.ifc_type}
+            className="h-full"
+          />
         </div>
       </div>
     </div>
