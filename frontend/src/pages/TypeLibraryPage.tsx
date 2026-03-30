@@ -57,6 +57,9 @@ export default function TypeLibraryPage() {
     modelId: selectedModelId,
   });
 
+  // Export hook
+  const exportExcel = useExportTypeBankExcel();
+
   // Handle type selection
   const handleSelectType = (type: GlobalTypeLibraryEntry) => {
     setSelectedType(type);
