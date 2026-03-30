@@ -824,7 +824,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
     if (!highlighter) {
       console.log('[TypeInstanceViewer] No highlighter, just zooming');
-      zoomToVisibleInstances();
+      zoomToFragments();
       return;
     }
 
@@ -840,7 +840,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         : currentInstance ? [currentInstance.ifc_guid] : [];
 
       if (guidsToShow.length === 0) {
-        zoomToVisibleInstances();
+        zoomToFragments();
         return;
       }
 
@@ -873,13 +873,13 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         console.warn('[TypeInstanceViewer] No fragment matches for GUIDs, showing full model');
       }
 
-      // Zoom to visible elements (behaves like double-click - animated zoom with 2x multiplier)
-      zoomToVisibleInstances();
+      // Zoom to the filtered fragments
+      zoomToFragments(hasMatches ? fragmentIdMapToShow : undefined);
     } catch (err) {
       console.error('[TypeInstanceViewer] Filtering failed:', err);
-      zoomToVisibleInstances();
+      zoomToFragments();
     }
-  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToVisibleInstances, typeId]);
+  }, [instances, currentInstance, currentIndex, showAll, isLoading, zoomToFragments, typeId]);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {
