@@ -195,6 +195,7 @@ export function InlineViewer({
       {/* Three.js Scene (handles both 2D and 3D) */}
       <HUDScene
         geometry={geometry ?? null}
+        profileData={profileData ?? null}
         viewDimension={viewDimension}
         renderMode={renderMode}
         resetTrigger={resetTrigger}
