@@ -19,7 +19,12 @@ export function useModelAnalysis(modelId: string) {
     enabled: !!modelId,
     staleTime: 5 * 60 * 1000,
     // Poll every 5s while analysis hasn't arrived yet (auto-triggered on upload)
-    refetchInterval: (query) => query.state.data === null ? 5000 : false,
+    // Stops polling once analysis data exists
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      // null = fetched but no analysis yet; undefined = hasn't fetched yet
+      return data === null ? 5000 : false;
+    },
   });
 }
 
