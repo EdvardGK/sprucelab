@@ -273,11 +273,9 @@ function buildDimensionAnnotations(
 
   if (type === 'IfcRectangleHollowProfileDef' && p.WallThickness) {
     const t = p.WallThickness;
-    const halfW = (p.XDim || w) / 2;
     const halfH = (p.YDim || h) / 2;
-    const detailOffset = scale * 0.08;
 
-    // Wall thickness (horizontal at top)
+    // Wall thickness (vertical at left edge)
     group.add(createDimension(
       new THREE.Vector2(-halfW, halfH - t),
       new THREE.Vector2(-halfW, halfH),
