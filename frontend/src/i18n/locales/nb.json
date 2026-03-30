@@ -552,12 +552,13 @@
     }
   },
   "inlineViewer": {
-    "hud": "HUD",
-    "model": "Modell"
+    "view2d": "2D",
+    "view3d": "3D",
+    "editLayers": "Rediger lag",
+    "noLayersDefined": "Ingen lag definert",
+    "addLayers": "Legg til lag"
   },
   "instanceHUD": {
-    "solid": "Solid",
-    "wireframe": "Tråd",
     "resetCamera": "Nullstill visning",
     "seeInModel": "Se i modell",
     "instanceOf": "Instans {{current}} / {{total}}",
