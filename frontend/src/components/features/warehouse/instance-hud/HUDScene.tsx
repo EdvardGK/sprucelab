@@ -399,7 +399,10 @@ function buildAxisHelper(axisLength: number, mode: '3d' | '2d'): THREE.Group {
     yLabel.position.set(0, axisLength * labelOffset, 0.1);
     group.add(yLabel);
   } else {
-    // 3D: X (red, right), Y (green, forward), Z (blue, up)
+    // 3D with BIM Z-up convention mapped to Three.js Y-up:
+    //   BIM X → Three.js X (red, right)
+    //   BIM Y → Three.js Z (green, forward/depth)
+    //   BIM Z → Three.js Y (blue, up)
     const xGeo = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(axisLength, 0, 0),
@@ -409,23 +412,24 @@ function buildAxisHelper(axisLength: number, mode: '3d' | '2d'): THREE.Group {
     xLabel.position.set(axisLength * labelOffset, 0, 0);
     group.add(xLabel);
 
+    // BIM Y → Three.js Z (depth)
     const yGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, axisLength, 0),
-    ]);
-    group.add(new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x44ff44 })));
-    const yLabel = createAxisLabel('Y', '#44ff44', labelScale);
-    yLabel.position.set(0, axisLength * labelOffset, 0);
-    group.add(yLabel);
-
-    // Z axis (blue, up)
-    const zGeo = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 0, axisLength),
     ]);
+    group.add(new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x44ff44 })));
+    const yLabel = createAxisLabel('Y', '#44ff44', labelScale);
+    yLabel.position.set(0, 0, axisLength * labelOffset);
+    group.add(yLabel);
+
+    // BIM Z → Three.js Y (up)
+    const zGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, axisLength, 0),
+    ]);
     group.add(new THREE.Line(zGeo, new THREE.LineBasicMaterial({ color: 0x4488ff })));
     const zLabel = createAxisLabel('Z', '#4488ff', labelScale);
-    zLabel.position.set(0, 0, axisLength * labelOffset);
+    zLabel.position.set(0, axisLength * labelOffset, 0);
     group.add(zLabel);
   }
 
