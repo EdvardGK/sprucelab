@@ -470,7 +470,6 @@ interface TypeNavGroupProps {
 
 function TypeNavGroup({ ifcType, types, isExpanded, onToggle, currentTypeId, onSelectType }: TypeNavGroupProps) {
   const mappedCount = types.filter((t) => t.mapping?.mapping_status === 'mapped').length;
-  const totalInstances = types.reduce((sum, t) => sum + t.instance_count, 0);
 
   return (
     <div className="rounded overflow-hidden">
