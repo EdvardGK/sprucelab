@@ -19,6 +19,26 @@ The platform does NOT opine on documentation quality. A structural calculation i
 
 The platform guarantees the audit trail, not the content. Quality is the domain expert's job. Traceability is ours.
 
+### 4. Work layer vs shared layer — data ownership by default
+Contributors own their data. The platform respects the distinction between:
+
+- **Work layer** (private): Internal files, draft calculations, WIP models, coordination notes. Owned by the contributor. Hidden from ALL other users. The contributor's own workspace.
+- **Shared/published layer** (project): What gets released to the project. IFC exports, signed-off reports, approved documents. What exactly gets shared is defined by the project contract/BEP.
+
+**Sharing is a deliberate readiness decision, not an upload.** Contributors publish when they're ready, not before. The platform never exposes work-layer content without explicit action.
+
+This creates the adoption flywheel:
+1. **Contributors move internal workflows into Sprucelab** — their private workspace handles QA/QC, documentation, coordination, design reviews
+2. **Sharing into a project becomes trivial** — just a publish decision, not a file-gathering exercise
+3. **Companies persist across projects** — they accumulate templates, TypeBank entries, workflow configurations, standards
+4. **Network effects** — companies that use Sprucelab internally bring it to every project they join. The more projects, the more companies. The more companies, the more projects.
+
+**Two entities, two lifecycles:**
+- **Project** = deterministic, has a start and finish. A manifestation of work. Temporary.
+- **Company/Organization** = persistent, spans many projects. Accumulates knowledge, workflows, and data over time. Long-term value.
+
+The platform serves the contributor FIRST (their workspace, their workflows, their data), the project SECOND (shared layer, coordination, delivery). This inverts the typical AEC platform model where the project owns everything and contributors are just uploaders.
+
 ## Architecture: Integrated Verticals
 
 Every vertical workflow has THREE relationships with the model:
