@@ -301,11 +301,12 @@ export default function HUDScene({
 
     group.position.set(-center.x, -center.y, -center.z);
 
-    // Position grid at bottom of object
+    // Position grid at bottom of object — scale to geometry
     if (gridRef.current) {
-      gridRef.current.position.y = -size.y / 2 - 0.01;
-      const maxHorizontal = Math.max(size.x, size.z, 2);
-      gridRef.current.scale.set(maxHorizontal / 10, 1, maxHorizontal / 10);
+      const gridOffset = maxDim * 0.001;
+      gridRef.current.position.y = -size.y / 2 - gridOffset;
+      const gridScale = Math.max(size.x, size.z, maxDim) / 10;
+      gridRef.current.scale.set(gridScale, 1, gridScale);
     }
 
     // Fit 3D camera — scale with geometry (handles mm or m units)
