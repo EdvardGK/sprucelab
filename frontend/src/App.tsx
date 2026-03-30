@@ -38,6 +38,7 @@ const router = createBrowserRouter([
   { path: "/projects/:id/viewer/:groupId", element: <FederatedViewer /> },
   { path: "/projects/:id/documents", element: <ProjectDocuments /> },
   { path: "/projects/:id/drawings", element: <ProjectDrawings /> },
+  { path: "/projects/:id/types", element: <ProjectTypesPage /> },
   { path: "/projects/:id/type-library", element: <ProjectTypeLibrary /> },
   { path: "/projects/:id/material-library", element: <ProjectMaterialLibrary /> },
   { path: "/projects/:id/workbench", element: <BIMWorkbench /> },
