@@ -250,16 +250,92 @@
     "completeToExport": "Fullfør kartlegging for å aktivere eksport"
   },
   "bep": {
-    "title": "BIM-gjennomføringsplan konfigurasjon",
+    "title": "BIM-gjennomføringsplan",
     "description": "Konfigurer prosjektomfattende BIM-standarder, MMI-skala og valideringsregler",
-    "comingSoon": "BEP-konfigurasjon kommer snart",
-    "comingSoonDesc": "Se og administrer BEP-maler, MMI-skala, tekniske krav",
-    "features": {
-      "templates": "Bla gjennom tilgjengelige BEP-maler (MMI-veileder 2.0, ISO 19650)",
-      "assign": "Tilordne BEP-konfigurasjon til prosjekt",
-      "mmi": "Tilpass MMI-skala og fargekobling",
-      "requirements": "Definer tekniske krav (IFC-skjema, enheter, osv.)",
-      "naming": "Konfigurer navnekonvensjoner og valideringsregler"
+    "sections": {
+      "overview": "Oversikt",
+      "coordinates": "Koordinater",
+      "storeys": "Etasjer",
+      "disciplines": "Fagdisipliner",
+      "technical": "Tekniske krav",
+      "mmi": "MMI-skala"
+    },
+    "status": {
+      "draft": "Utkast",
+      "active": "Aktiv",
+      "archived": "Arkivert"
+    },
+    "actions": {
+      "activate": "Aktiver",
+      "archive": "Arkiver",
+      "save": "Lagre"
+    },
+    "create": {
+      "title": "Opprett BIM-gjennomføringsplan",
+      "description": "Prosjektet har ingen BEP ennå. Opprett en for å definere koordinatsystem, etasjer, fagdisipliner og tekniske krav.",
+      "button": "Opprett BEP"
+    },
+    "overview": {
+      "version": "Versjon",
+      "quickReference": "Hurtigreferanse",
+      "notConfigured": "Ikke konfigurert",
+      "classification": "Klassifisering",
+      "description": "Beskrivelse"
+    },
+    "coordinates": {
+      "crs": "Koordinatsystem",
+      "crsTitle": "Koordinatreferansesystem",
+      "epsg": "EPSG-kode",
+      "verticalCrs": "Vertikalt datum",
+      "crsName": "CRS-navn",
+      "localOrigin": "Lokalt nullpunkt (prosjektbasepunkt)",
+      "globalPosition": "Global posisjon og toleranser",
+      "origin": "Nullpunkt",
+      "eastings": "Østkoordinat (E)",
+      "northings": "Nordkoordinat (N)",
+      "height": "Høyde (H)",
+      "rotation": "Rotasjon mot nord (grader)",
+      "positionTolerance": "Posisjonstoleranse (m)",
+      "rotationTolerance": "Rotasjonstoleranse (grader)"
+    },
+    "storeys": {
+      "title": "Etasjedefinisjon",
+      "add": "Legg til etasje",
+      "empty": "Ingen etasjer definert. Legg til etasjer for å definere bygningsstrukturen.",
+      "name": "Etasjenavn",
+      "code": "Kode",
+      "elevation": "Kotehøyde (m)",
+      "tolerance": "Toleranse (m)",
+      "defined": "definert"
+    },
+    "disciplines": {
+      "title": "Fagdisipliner",
+      "add": "Legg til fag",
+      "empty": "Ingen fagdisipliner definert. Legg til fag for å definere prosjektteamet.",
+      "code": "Fagkode",
+      "name": "Fagnavn",
+      "company": "Firma",
+      "companyPlaceholder": "Firmanavn",
+      "contact": "FMA",
+      "software": "Programvare",
+      "selectCode": "Velg fagkode..."
+    },
+    "technical": {
+      "ifcSettings": "IFC-innstillinger",
+      "ifcVersion": "IFC-versjon",
+      "mvd": "Model View Definition",
+      "units": "Enheter",
+      "model": "modell",
+      "lengthUnit": "Lengdeenhet",
+      "areaUnit": "Arealenhet",
+      "volumeUnit": "Volumenhet",
+      "limits": "Toleranser og grenser",
+      "geometryTolerance": "Geometritoleranse",
+      "maxFileSize": "Maks filstørrelse"
+    },
+    "mmi": {
+      "title": "MMI-skala",
+      "levels": "nivåer"
     }
   },
   "scriptingTab": {
