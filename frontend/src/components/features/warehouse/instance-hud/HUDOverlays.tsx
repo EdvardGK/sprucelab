@@ -253,7 +253,7 @@ function NoGeometryOverlay() {
 
 export {
   IdentityBadge,
-  ViewControls,
+  ResetCameraButton,
   QuantitiesPanel,
   LocationPanel,
   InstanceNav,
