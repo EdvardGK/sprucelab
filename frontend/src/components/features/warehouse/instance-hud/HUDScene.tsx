@@ -308,14 +308,19 @@ export default function HUDScene({
       gridRef.current.scale.set(maxHorizontal / 10, 1, maxHorizontal / 10);
     }
 
-    // Fit 3D camera
+    // Fit 3D camera — scale with geometry (handles mm or m units)
     const maxDim = Math.max(size.x, size.y, size.z, 1);
     const distance = maxDim * 2.5;
     const perspCamera = perspCameraRef.current;
     const perspControls = perspControlsRef.current;
     if (perspCamera && perspControls) {
+      perspCamera.near = maxDim * 0.001;
+      perspCamera.far = maxDim * 20;
+      perspCamera.updateProjectionMatrix();
       perspCamera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
       perspControls.target.set(0, 0, 0);
+      perspControls.maxDistance = maxDim * 10;
+      perspControls.minDistance = maxDim * 0.1;
       perspControls.update();
     }
 
