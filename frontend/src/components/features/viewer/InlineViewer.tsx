@@ -112,6 +112,14 @@ export function InlineViewer({
         case '3':
           if (!showModel) setViewDimension('3d');
           break;
+        case 's':
+        case 'S':
+          if (!showModel) setRenderMode('solid');
+          break;
+        case 'w':
+        case 'W':
+          if (!showModel) setRenderMode('wireframe');
+          break;
         case 'r':
         case 'R':
           if (!showModel) handleResetCamera();
