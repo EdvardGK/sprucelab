@@ -1338,13 +1338,20 @@ export default function HUDScene({
       if (cleanFill) {
         cleanFill.visible = renderMode === 'solid';
       }
+    } else if (hasSandwichRef.current && sandwichGroupRef.current) {
+      // 2D sandwich: wireframe = outlines only, solid = filled layers
+      sandwichGroupRef.current.children.forEach((child) => {
+        if (child instanceof THREE.Mesh && child.name.startsWith('layer-fill-')) {
+          child.visible = renderMode === 'solid';
+        }
+      });
     } else {
       // 2D fallback: wireframe = edges only (hide fill), solid = fill + edges
       if (profileFill) {
         profileFill.visible = renderMode === 'solid';
       }
     }
-  }, [renderMode, viewDimension, geometry, profileData]);
+  }, [renderMode, viewDimension, geometry, profileData, definitionLayers]);
 
   // Reset camera when trigger changes
   useEffect(() => {
