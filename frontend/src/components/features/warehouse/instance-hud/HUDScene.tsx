@@ -996,6 +996,59 @@ export default function HUDScene({
     }
   }, [viewDimension, geometry, profileData]);
 
+  // Axis indicator — shows XYZ in 3D, local XY in 2D profile
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const group = meshGroupRef.current;
+    if (!scene || !group) return;
+
+    // Remove previous axis
+    if (axisGroupRef.current) {
+      scene.remove(axisGroupRef.current);
+      axisGroupRef.current.traverse((child) => {
+        if (child instanceof THREE.Line || child instanceof THREE.Sprite) {
+          if (child instanceof THREE.Line) child.geometry.dispose();
+        }
+      });
+      axisGroupRef.current = null;
+    }
+
+    // Determine scale from visible content
+    let axisLen: number;
+    const is3D = viewDimension === '3d';
+
+    if (!is3D && hasProfileRef.current && profileGroupRef.current) {
+      // 2D profile: scale from profile bounds
+      const box = new THREE.Box3().setFromObject(profileGroupRef.current);
+      const s = new THREE.Vector3();
+      box.getSize(s);
+      axisLen = Math.max(s.x, s.y, 1) * 0.25;
+    } else if (group.children.length > 0) {
+      // 3D: scale from mesh bounds
+      const box = new THREE.Box3().setFromObject(group);
+      const s = new THREE.Vector3();
+      box.getSize(s);
+      axisLen = Math.max(s.x, s.y, s.z, 1) * 0.25;
+    } else {
+      return;
+    }
+
+    const mode = is3D ? '3d' : '2d';
+    const axis = buildAxisHelper(axisLen, mode);
+
+    // Position at bottom-left corner with some offset
+    if (!is3D && hasProfileRef.current && profileGroupRef.current) {
+      const box = new THREE.Box3().setFromObject(profileGroupRef.current);
+      axis.position.set(box.min.x - axisLen * 0.3, box.min.y - axisLen * 0.3, 0.1);
+    } else if (group.children.length > 0) {
+      const box = new THREE.Box3().setFromObject(group);
+      axis.position.set(box.min.x - axisLen * 0.3, box.min.y - axisLen * 0.3, box.min.z - axisLen * 0.3);
+    }
+
+    scene.add(axis);
+    axisGroupRef.current = axis;
+  }, [viewDimension, geometry, profileData]);
+
   // Handle render mode (solid vs wireframe)
   useEffect(() => {
     const group = meshGroupRef.current;
