@@ -100,10 +100,10 @@ echo -e "${BLUE}[4/6] Starting Django (port 8000)...${NC}"
 python "$PROJECT_ROOT/backend/manage.py" runserver 0.0.0.0:8000 &
 PIDS+=($!)
 
-# 6. Start FastAPI IFC Service (port 8001, with hot reload)
-echo -e "${BLUE}[5/6] Starting FastAPI IFC Service (port 8001)...${NC}"
+# 6. Start FastAPI IFC Service (port 8100, with hot reload)
+echo -e "${BLUE}[5/6] Starting FastAPI IFC Service (port 8100)...${NC}"
 cd "$PROJECT_ROOT/backend/ifc-service"
-PORT=8001 python -m uvicorn main:app --host 0.0.0.0 --port 8001 --reload &
+PORT=8100 python -m uvicorn main:app --host 0.0.0.0 --port 8100 --reload &
 PIDS+=($!)
 cd "$PROJECT_ROOT"
 
