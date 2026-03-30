@@ -4,6 +4,7 @@ import { Layers, Loader2 } from 'lucide-react';
 import { useTypeInstances } from '@/hooks/use-warehouse';
 import { useInstanceDetail } from '@/hooks/useInstanceDetail';
 import { useInstanceGeometry } from '@/hooks/useInstanceGeometry';
+import { useInstanceProfile } from '@/hooks/useInstanceProfile';
 import HUDScene, { type ViewDimension, type RenderMode } from '../warehouse/instance-hud/HUDScene';
 import {
   IdentityBadge,
