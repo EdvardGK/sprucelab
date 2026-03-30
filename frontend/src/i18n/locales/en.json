@@ -62,7 +62,8 @@
     "materialLibrary": "Material Library",
     "spaces": "Spaces",
     "qto": "QTO",
-    "workbench": "Workbench"
+    "workbench": "Workbench",
+    "bep": "BEP"
   },
   "workbench": {
     "title": "BIM Workbench",
