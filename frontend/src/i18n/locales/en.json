@@ -477,7 +477,21 @@
       "pendingDesc": "This type has not been classified yet.",
       "autoDesc": "This type was auto-classified and needs human review.",
       "verifiedDesc": "This type has been verified by a human expert.",
-      "flaggedDesc": "This type has been flagged for attention."
+      "flaggedDesc": "This type has been flagged for attention.",
+      "runVerification": "Run Verification",
+      "running": "Running verification...",
+      "complete": "Verification complete",
+      "healthScore": "Quality Score",
+      "passed": "Passed",
+      "warnings": "Warnings",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "rules": {
+        "has_ns3451": "NS3451 classification required",
+        "has_unit": "Representative unit required",
+        "has_material_layers": "Material layers defined",
+        "type_name_not_empty": "Type name must not be empty"
+      }
     },
     "flagDialog": {
       "title": "Flag Type",
