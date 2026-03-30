@@ -382,6 +382,7 @@ export function TypeLibraryView({ projectId, initialModelId }: TypeLibraryViewPr
             typeId={selectedTypeId}
             typeName={selectedType?.type_name}
             ifcType={selectedType?.ifc_type}
+            definitionLayers={selectedType?.mapping?.definition_layers}
             className="h-full"
           />
         </div>
