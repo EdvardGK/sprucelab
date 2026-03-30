@@ -1282,14 +1282,19 @@ export default function HUDScene({
     let axisLen: number;
     const is3D = viewDimension === '3d';
 
-    if (!is3D && hasProfileRef.current && profileGroupRef.current) {
-      // 2D profile: scale from profile bounds
-      const box = new THREE.Box3().setFromObject(profileGroupRef.current);
+    // Determine 2D content source
+    const content2D = !is3D && hasProfileRef.current && profileGroupRef.current
+      ? profileGroupRef.current
+      : !is3D && hasSandwichRef.current && sandwichGroupRef.current
+        ? sandwichGroupRef.current
+        : null;
+
+    if (content2D) {
+      const box = new THREE.Box3().setFromObject(content2D);
       const s = new THREE.Vector3();
       box.getSize(s);
       axisLen = Math.max(s.x, s.y, 1) * 0.25;
     } else if (group.children.length > 0) {
-      // 3D: scale from mesh bounds
       const box = new THREE.Box3().setFromObject(group);
       const s = new THREE.Vector3();
       box.getSize(s);
@@ -1301,9 +1306,8 @@ export default function HUDScene({
     const mode = is3D ? '3d' : '2d';
     const axis = buildAxisHelper(axisLen, mode);
 
-    // Position at bottom-left corner with some offset
-    if (!is3D && hasProfileRef.current && profileGroupRef.current) {
-      const box = new THREE.Box3().setFromObject(profileGroupRef.current);
+    if (content2D) {
+      const box = new THREE.Box3().setFromObject(content2D);
       axis.position.set(box.min.x - axisLen * 0.3, box.min.y - axisLen * 0.3, 0.1);
     } else if (group.children.length > 0) {
       const box = new THREE.Box3().setFromObject(group);
@@ -1312,7 +1316,7 @@ export default function HUDScene({
 
     scene.add(axis);
     axisGroupRef.current = axis;
-  }, [viewDimension, geometry, profileData]);
+  }, [viewDimension, geometry, profileData, definitionLayers]);
 
   // Handle render mode (solid vs wireframe)
   useEffect(() => {
