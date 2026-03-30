@@ -250,16 +250,92 @@
     "completeToExport": "Complete mapping to enable exports"
   },
   "bep": {
-    "title": "BIM Execution Plan Configuration",
+    "title": "BIM Execution Plan",
     "description": "Configure project-wide BIM standards, MMI scale, and validation rules",
-    "comingSoon": "BEP Configuration Coming Soon",
-    "comingSoonDesc": "View and manage BEP templates, MMI scale, technical requirements",
-    "features": {
-      "templates": "Browse available BEP templates (MMI-veileder 2.0, ISO 19650)",
-      "assign": "Assign BEP configuration to project",
-      "mmi": "Customize MMI scale and color mapping",
-      "requirements": "Define technical requirements (IFC schema, units, etc.)",
-      "naming": "Configure naming conventions and validation rules"
+    "sections": {
+      "overview": "Overview",
+      "coordinates": "Coordinates",
+      "storeys": "Storeys",
+      "disciplines": "Disciplines",
+      "technical": "Technical Requirements",
+      "mmi": "MMI Scale"
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "actions": {
+      "activate": "Activate",
+      "archive": "Archive",
+      "save": "Save"
+    },
+    "create": {
+      "title": "Create BIM Execution Plan",
+      "description": "This project has no BEP yet. Create one to define the coordinate system, storeys, disciplines, and technical requirements.",
+      "button": "Create BEP"
+    },
+    "overview": {
+      "version": "Version",
+      "quickReference": "Quick Reference",
+      "notConfigured": "Not configured",
+      "classification": "Classification",
+      "description": "Description"
+    },
+    "coordinates": {
+      "crs": "Coordinate System",
+      "crsTitle": "Coordinate Reference System",
+      "epsg": "EPSG Code",
+      "verticalCrs": "Vertical Datum",
+      "crsName": "CRS Name",
+      "localOrigin": "Local Origin (Project Basepoint)",
+      "globalPosition": "Global Position and Tolerances",
+      "origin": "Origin",
+      "eastings": "Eastings (E)",
+      "northings": "Northings (N)",
+      "height": "Height (H)",
+      "rotation": "True North Rotation (degrees)",
+      "positionTolerance": "Position Tolerance (m)",
+      "rotationTolerance": "Rotation Tolerance (degrees)"
+    },
+    "storeys": {
+      "title": "Storey Definition",
+      "add": "Add Storey",
+      "empty": "No storeys defined. Add storeys to define the building structure.",
+      "name": "Storey Name",
+      "code": "Code",
+      "elevation": "Elevation (m)",
+      "tolerance": "Tolerance (m)",
+      "defined": "defined"
+    },
+    "disciplines": {
+      "title": "Disciplines",
+      "add": "Add Discipline",
+      "empty": "No disciplines defined. Add disciplines to define the project team.",
+      "code": "Code",
+      "name": "Name",
+      "company": "Company",
+      "companyPlaceholder": "Company name",
+      "contact": "Contact (FMA)",
+      "software": "Software",
+      "selectCode": "Select code..."
+    },
+    "technical": {
+      "ifcSettings": "IFC Settings",
+      "ifcVersion": "IFC Version",
+      "mvd": "Model View Definition",
+      "units": "Units",
+      "model": "model",
+      "lengthUnit": "Length Unit",
+      "areaUnit": "Area Unit",
+      "volumeUnit": "Volume Unit",
+      "limits": "Tolerances and Limits",
+      "geometryTolerance": "Geometry Tolerance",
+      "maxFileSize": "Max File Size"
+    },
+    "mmi": {
+      "title": "MMI Scale",
+      "levels": "levels"
     }
   },
   "scriptingTab": {
