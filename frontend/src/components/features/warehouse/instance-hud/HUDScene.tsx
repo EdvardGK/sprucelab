@@ -8,7 +8,7 @@ export type RenderMode = 'solid' | 'wireframe';
 interface HUDSceneProps {
   geometry: MeshGeometry | null;
   renderMode: RenderMode;
-  isLoading: boolean;
+  isLoading?: boolean;
   resetTrigger?: number;
   className?: string;
 }
