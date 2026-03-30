@@ -533,5 +533,24 @@
       "description": "This type has {{count}} instances across {{models}} models.",
       "loadModels": "Loading model observations..."
     }
+  },
+  "instanceHUD": {
+    "solid": "Solid",
+    "wireframe": "Wire",
+    "resetCamera": "Reset view",
+    "seeInModel": "See in Model",
+    "instanceOf": "Instance {{current}} / {{total}}",
+    "noInstances": "No instances of this type",
+    "loading3D": "Loading geometry...",
+    "noGeometry": "No geometry available",
+    "quantities": "Quantities",
+    "location": "Location",
+    "area": "Area",
+    "volume": "Volume",
+    "length": "Length",
+    "height": "Height",
+    "storey": "Storey",
+    "copyGuid": "Copy GUID",
+    "guidCopied": "Copied!"
   }
 }
