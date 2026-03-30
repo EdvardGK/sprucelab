@@ -46,7 +46,7 @@ export function InlineViewer({
   const [resetTrigger, setResetTrigger] = useState(0);
 
   // Fetch instance list for type
-  const { data: instanceData } = useTypeInstances(typeId);
+  const { data: instanceData, error: instanceError } = useTypeInstances(typeId);
   const instances = instanceData?.instances || [];
   const totalCount = instanceData?.total_count || 0;
 
@@ -59,10 +59,21 @@ export function InlineViewer({
     modelId,
     mode === 'hud' ? currentGuid : null
   );
-  const { data: geometry, isLoading: geometryLoading } = useInstanceGeometry(
+  const { data: geometry, isLoading: geometryLoading, error: geometryError } = useInstanceGeometry(
     modelId,
     mode === 'hud' ? currentGuid : null
   );
+
+  // Debug: log data flow
+  console.log('[InlineViewer]', {
+    typeId, modelId, mode,
+    instanceCount: instances.length,
+    currentGuid,
+    hasGeometry: !!geometry,
+    geometryLoading,
+    geometryError: geometryError?.message,
+    instanceError: instanceError?.message,
+  });
 
   // Reset index when type changes
   useEffect(() => {
