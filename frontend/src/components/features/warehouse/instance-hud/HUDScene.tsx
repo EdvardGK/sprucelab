@@ -43,6 +43,87 @@ const PROFILE_LINE = new THREE.LineBasicMaterial({
   linewidth: 1,
 });
 
+// Clean 2D profile outline materials (from IfcProfileDef extraction)
+const PROFILE_OUTLINE = new THREE.LineBasicMaterial({
+  color: 0x44ccff,
+  linewidth: 2,
+});
+
+const PROFILE_OUTLINE_FILL = new THREE.MeshBasicMaterial({
+  color: 0x1a2a3a,
+  side: THREE.DoubleSide,
+});
+
+const PROFILE_VOID_LINE = new THREE.LineBasicMaterial({
+  color: 0x44ccff,
+  linewidth: 1,
+  opacity: 0.6,
+  transparent: true,
+});
+
+/**
+ * Build THREE.js objects from ProfileData outline points.
+ * Returns a group with outline loops and optional fill.
+ */
+function buildProfileOutline(profile: ProfileData): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'profile-outline-group';
+
+  // Helper: create a LineLoop from ProfilePoint[] in XY plane
+  const createLoop = (
+    points: { x: number; y: number }[],
+    material: THREE.LineBasicMaterial,
+    name: string
+  ) => {
+    if (points.length < 2) return;
+    const positions = new Float32Array(points.length * 3);
+    for (let i = 0; i < points.length; i++) {
+      positions[i * 3] = points[i].x;
+      positions[i * 3 + 1] = points[i].y;
+      positions[i * 3 + 2] = 0;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const loop = new THREE.LineLoop(geo, material.clone());
+    loop.name = name;
+    group.add(loop);
+  };
+
+  // Helper: create a filled shape from ProfilePoint[] using ShapeGeometry
+  const createFill = (
+    outerPts: { x: number; y: number }[],
+    voids: { x: number; y: number }[][],
+    name: string,
+  ) => {
+    if (outerPts.length < 3) return;
+    const shape = new THREE.Shape(outerPts.map((p) => new THREE.Vector2(p.x, p.y)));
+    for (const hole of voids) {
+      if (hole.length >= 3) {
+        shape.holes.push(new THREE.Path(hole.map((p) => new THREE.Vector2(p.x, p.y))));
+      }
+    }
+    const geo = new THREE.ShapeGeometry(shape);
+    const mesh = new THREE.Mesh(geo, PROFILE_OUTLINE_FILL.clone());
+    mesh.name = name;
+    group.add(mesh);
+  };
+
+  // Fill (behind the outline)
+  createFill(profile.outline, profile.inner_outlines || [], 'profile-clean-fill');
+
+  // Outer outline
+  createLoop(profile.outline, PROFILE_OUTLINE, 'profile-outer-loop');
+
+  // Void outlines (for hollow sections)
+  if (profile.inner_outlines) {
+    profile.inner_outlines.forEach((voidPts, i) => {
+      createLoop(voidPts, PROFILE_VOID_LINE, `profile-void-loop-${i}`);
+    });
+  }
+
+  return group;
+}
+
 export default function HUDScene({
   geometry,
   viewDimension,
