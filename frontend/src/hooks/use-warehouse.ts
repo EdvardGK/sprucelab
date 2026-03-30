@@ -54,6 +54,37 @@ export interface TypeMapping {
   created_at: string;
   updated_at: string;
   definition_layers?: TypeDefinitionLayer[];
+  // Verification (engine)
+  verification_status?: 'pending' | 'auto' | 'verified' | 'flagged';
+  verification_issues?: VerificationIssue[];
+  verified_engine_at?: string | null;
+}
+
+// Verification engine types
+export interface VerificationIssue {
+  rule_id: string;
+  rule_name: string;
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+}
+
+export interface ModelVerificationResult {
+  model_id: string;
+  total_types: number;
+  checked: number;
+  passed: number;
+  warnings: number;
+  failed: number;
+  skipped: number;
+  health_score: number;
+  rules_applied: string[];
+  timestamp: string;
+  type_results: Array<{
+    type_id: string;
+    type_name: string;
+    status: 'pass' | 'warning' | 'fail';
+    issues: VerificationIssue[];
+  }>;
 }
 
 export interface NS3451HierarchyNode {
