@@ -324,10 +324,10 @@ export function TypeLibraryView({ projectId, initialModelId }: TypeLibraryViewPr
         )}
       </div>
 
-      {/* Main Content - Split Panel */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Type List - Left Panel */}
-        <div className="flex-1 flex flex-col min-w-0 border-r overflow-hidden">
+      {/* Main Content - 2-column layout */}
+      <div className="flex-1 grid grid-cols-[1fr_minmax(420px,_2fr)] min-h-0 overflow-hidden">
+        {/* Type List - Left Column (scrollable full height) */}
+        <div className="flex flex-col min-w-0 border-r overflow-hidden">
           {scopeMode === 'project' ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               {t('typeLibrary.projectWideComingSoon')}
@@ -369,8 +369,8 @@ export function TypeLibraryView({ projectId, initialModelId }: TypeLibraryViewPr
           )}
         </div>
 
-        {/* Instance Viewer - Right Panel */}
-        <div className="w-[400px] flex-shrink-0 bg-muted/5">
+        {/* Instance Viewer - Right Column (proportional, aspect-ratio friendly) */}
+        <div className="flex flex-col min-h-0 bg-muted/5">
           {selectedModelId && selectedTypeId ? (
             <TypeInstanceViewer
               modelId={selectedModelId}
