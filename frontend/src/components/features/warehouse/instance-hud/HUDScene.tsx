@@ -729,8 +729,15 @@ export default function HUDScene({
 
     if (!geometry || !geometry.vertices.length) return;
 
-    // Build BufferGeometry from API data
-    const positions = new Float32Array(geometry.vertices.flat());
+    // Build BufferGeometry — transform from IFC Z-up to Three.js Y-up
+    // IFC (x, y, z) → Three.js (x, z, -y)
+    const positions = new Float32Array(geometry.vertices.length * 3);
+    for (let i = 0; i < geometry.vertices.length; i++) {
+      const [x, y, z] = geometry.vertices[i];
+      positions[i * 3] = x;       // X → X
+      positions[i * 3 + 1] = z;   // Z → Y (up)
+      positions[i * 3 + 2] = -y;  // Y → -Z (forward)
+    }
     const indices = new Uint32Array(geometry.faces.flat());
 
     const bufferGeometry = new THREE.BufferGeometry();
