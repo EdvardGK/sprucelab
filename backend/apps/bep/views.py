@@ -224,6 +224,14 @@ class TechnicalRequirementViewSet(viewsets.ModelViewSet):
     queryset = TechnicalRequirement.objects.all()
     serializer_class = TechnicalRequirementSerializer
 
+    def get_queryset(self):
+        """Filter by BEP if ?bep= is provided."""
+        queryset = TechnicalRequirement.objects.all()
+        bep_id = self.request.query_params.get('bep', None)
+        if bep_id:
+            queryset = queryset.filter(bep_id=bep_id)
+        return queryset
+
 
 class NamingConventionViewSet(viewsets.ModelViewSet):
     """API endpoints for naming conventions."""
