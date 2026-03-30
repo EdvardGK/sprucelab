@@ -42,20 +42,12 @@ import { MaterialLayerEditor } from './MaterialLayerEditor';
 import { MappingProgressBar, KeyboardShortcutsHint } from './MappingProgressBar';
 import { TypeStatusIndicator } from './shared/TypeStatusBadge';
 
+import { useTypeNavigation } from '@/hooks/use-type-navigation';
 import {
-  useTypeNavigation,
-  getStatusCounts,
-} from '@/hooks/use-type-navigation';
-import {
-  useModelTypes,
   useTypeMappingSummary,
   useUpdateTypeMapping,
   useCreateTypeMapping,
-  useExportTypesExcel,
-  useExportTypesReduzer,
-  useImportTypesExcel,
   type IFCType,
-  type ExcelImportResult,
 } from '@/hooks/use-warehouse';
 import { getProcurementTier } from '@/lib/procurement-tiers';
 import { cn } from '@/lib/utils';
