@@ -346,6 +346,140 @@ function buildDimensionAnnotations(
   return group;
 }
 
+// Layer fill colors — muted palette, alternating for visual distinction
+const LAYER_COLORS = [
+  0x2a3a4a, 0x3a2a3a, 0x2a3a2a, 0x3a3a2a,
+  0x2a2a3a, 0x3a2a2a, 0x2a3a3a, 0x3a3a3a,
+];
+
+const LAYER_OUTLINE_MATERIAL = new THREE.LineBasicMaterial({
+  color: 0x44ccff,
+  linewidth: 1,
+});
+
+const LAYER_SEPARATOR_MATERIAL = new THREE.LineBasicMaterial({
+  color: 0x335566,
+  linewidth: 1,
+});
+
+/**
+ * Build a sandwich layer diagram from TypeDefinitionLayers.
+ * Draws stacked horizontal rectangles (one per layer), with
+ * dimension annotations showing each layer's thickness and material name.
+ * Layers stack bottom-to-top (layer_order 1 = exterior = bottom).
+ *
+ * The diagram uses a fixed width (wider than tall) to look like a wall section cut.
+ */
+function buildSandwichDiagram(layers: TypeDefinitionLayer[]): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'sandwich-diagram';
+
+  // Filter to layers with thickness
+  const validLayers = layers
+    .filter((l) => l.thickness_mm && l.thickness_mm > 0)
+    .sort((a, b) => a.layer_order - b.layer_order);
+
+  if (validLayers.length === 0) return group;
+
+  const totalThickness = validLayers.reduce((sum, l) => sum + (l.thickness_mm || 0), 0);
+  const diagramWidth = totalThickness * 1.5; // wider than tall for wall-section look
+  const halfW = diagramWidth / 2;
+
+  // Build layers bottom-to-top
+  let yOffset = 0;
+  validLayers.forEach((layer, i) => {
+    const t = layer.thickness_mm!;
+    const y0 = yOffset;
+    const y1 = yOffset + t;
+
+    // Layer fill rectangle
+    const shape = new THREE.Shape();
+    shape.moveTo(-halfW, y0);
+    shape.lineTo(halfW, y0);
+    shape.lineTo(halfW, y1);
+    shape.lineTo(-halfW, y1);
+    shape.lineTo(-halfW, y0);
+
+    const fillGeo = new THREE.ShapeGeometry(shape);
+    const fillMat = new THREE.MeshBasicMaterial({
+      color: LAYER_COLORS[i % LAYER_COLORS.length],
+      side: THREE.DoubleSide,
+    });
+    const fillMesh = new THREE.Mesh(fillGeo, fillMat);
+    fillMesh.name = `layer-fill-${i}`;
+    group.add(fillMesh);
+
+    // Layer outline
+    const outlinePts = [
+      new THREE.Vector3(-halfW, y0, 0.05),
+      new THREE.Vector3(halfW, y0, 0.05),
+      new THREE.Vector3(halfW, y1, 0.05),
+      new THREE.Vector3(-halfW, y1, 0.05),
+      new THREE.Vector3(-halfW, y0, 0.05),
+    ];
+    const outlineGeo = new THREE.BufferGeometry().setFromPoints(outlinePts);
+    group.add(new THREE.Line(outlineGeo, LAYER_OUTLINE_MATERIAL.clone()));
+
+    // Separator line between layers (not on first layer)
+    if (i > 0) {
+      const sepPts = [
+        new THREE.Vector3(-halfW, y0, 0.05),
+        new THREE.Vector3(halfW, y0, 0.05),
+      ];
+      const sepGeo = new THREE.BufferGeometry().setFromPoints(sepPts);
+      group.add(new THREE.Line(sepGeo, LAYER_SEPARATOR_MATERIAL.clone()));
+    }
+
+    yOffset = y1;
+  });
+
+  // Center vertically
+  const centerY = totalThickness / 2;
+  group.position.set(0, -centerY, 0);
+
+  // --- Dimension annotations ---
+  const scale = Math.max(totalThickness, diagramWidth);
+  const rightOffset = halfW + scale * 0.08;
+
+  // Individual layer thicknesses (right side)
+  let dimY = 0;
+  validLayers.forEach((layer, i) => {
+    const t = layer.thickness_mm!;
+    const y0 = dimY - centerY;
+    const y1 = dimY + t - centerY;
+
+    // Thickness dimension
+    group.add(createDimension(
+      new THREE.Vector2(halfW, y0 + centerY),
+      new THREE.Vector2(halfW, y1 + centerY),
+      `${fmtDim(t)} mm`,
+      new THREE.Vector2(scale * 0.15, 0),
+      scale * 0.5,
+    ));
+
+    // Material name label (inside layer, left-aligned)
+    const labelY = (y0 + y1) / 2 + centerY;
+    const label = createTextSprite(layer.material_name, scale * 0.45);
+    label.position.set(0, labelY, 0.2);
+    group.add(label);
+
+    dimY += t;
+  });
+
+  // Total thickness (far right)
+  if (validLayers.length > 1) {
+    group.add(createDimension(
+      new THREE.Vector2(halfW, 0),
+      new THREE.Vector2(halfW, totalThickness),
+      `${fmtDim(totalThickness)} mm`,
+      new THREE.Vector2(scale * 0.35, 0),
+      scale * 0.6,
+    ));
+  }
+
+  return group;
+}
+
 /**
  * Create an axis label sprite (X, Y, Z) with the given color.
  */
