@@ -80,7 +80,6 @@ export function TypeBrowserListView({
   modelId,
   modelFilename,
   filteredTypes,
-  allTypes,
   summary,
   className,
 }: TypeBrowserListViewProps) {
