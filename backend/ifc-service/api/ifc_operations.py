@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Depends
 from typing import Optional
 
 from services.ifc_loader import ifc_loader
+from services.profile_extractor import ProfileExtractor
 from models.schemas import (
     IFCOpenRequest,
     IFCOpenResponse,
@@ -18,10 +19,14 @@ from models.schemas import (
     ElementDetail,
     ElementListResponse,
     MeshGeometry,
+    ProfileData,
+    ProfilePoint,
     TypeInstance,
     TypeInstancesResponse,
 )
 from core.auth import optional_api_key
+
+profile_extractor = ProfileExtractor()
 
 router = APIRouter(prefix="/ifc", tags=["ifc"])
 
