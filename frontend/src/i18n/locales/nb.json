@@ -534,6 +534,10 @@
       "loadModels": "Laster modellobservasjoner..."
     }
   },
+  "inlineViewer": {
+    "hud": "HUD",
+    "model": "Modell"
+  },
   "instanceHUD": {
     "solid": "Solid",
     "wireframe": "Tråd",
