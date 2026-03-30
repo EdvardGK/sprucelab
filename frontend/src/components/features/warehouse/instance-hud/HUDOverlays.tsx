@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft,
   ChevronRight,
-  Box,
-  Grid3x3,
   RotateCcw,
   Copy,
   Check,
@@ -12,7 +10,6 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { ElementDetail } from '@/lib/ifc-service-client';
-import type { RenderMode } from './HUDScene';
 
 const hudPanel = 'bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg';
 
