@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { MeshGeometry } from '@/lib/ifc-service-client';
+import type { MeshGeometry, ProfileData } from '@/lib/ifc-service-client';
 
 export type ViewDimension = '2d' | '3d';
 export type RenderMode = 'solid' | 'wireframe';
@@ -17,6 +17,7 @@ interface SectionSetup {
 
 interface HUDSceneProps {
   geometry: MeshGeometry | null;
+  profileData?: ProfileData | null;
   viewDimension: ViewDimension;
   renderMode?: RenderMode;
   resetTrigger?: number;
