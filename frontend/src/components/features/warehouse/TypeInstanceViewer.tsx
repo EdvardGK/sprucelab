@@ -820,7 +820,6 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
     const components = componentsRef.current;
     const highlighter = highlighterRef.current;
-    const group = fragmentsGroupRef.current;
 
     if (!highlighter) {
       console.log('[TypeInstanceViewer] No highlighter, just zooming');
