@@ -29,7 +29,7 @@ import { Loader2, Save, XCircle, Flag, FileQuestion, Download, Upload, CheckCirc
 
 import { NS3451CascadingSelector } from './NS3451CascadingSelector';
 import { TypeInfoPanel } from './TypeInfoPanel';
-import { InstanceViewer } from './InstanceViewer';
+import { InlineViewer } from '../viewer/InlineViewer';
 import { MappingProgressBar, KeyboardShortcutsHint } from './MappingProgressBar';
 import { MaterialLayerEditor } from './MaterialLayerEditor';
 
