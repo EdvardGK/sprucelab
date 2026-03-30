@@ -254,7 +254,6 @@ export function TypeBrowser({ projectId, className }: TypeBrowserProps) {
             modelId={selectedModelId}
             modelFilename={selectedModel?.original_filename}
             filteredTypes={filteredTypes}
-            allTypes={types}
             summary={summary}
             onExportExcel={handleExportExcel}
             onImportExcel={handleImportExcel}
