@@ -951,21 +951,24 @@ export default function HUDScene({
     const camFar = maxDim * 5;
 
     if (longest === 'x') {
-      // Wall/beam along X: cut perpendicular to X, camera looks along +X, Z-up
+      // Beam along Three.js X: cut perpendicular to X, camera looks along +X
+      // Y-up in Three.js = BIM Z-up
       clipNormal = new THREE.Vector3(1, 0, 0);
       camPos = new THREE.Vector3(camDist, 0, 0);
-      camUp = new THREE.Vector3(0, 0, 1);
-      secW = size.y;
-      secH = size.z;
+      camUp = new THREE.Vector3(0, 1, 0);
+      secW = size.z;  // horizontal: Three.js Z (BIM Y depth)
+      secH = size.y;  // vertical: Three.js Y (BIM Z up)
     } else if (longest === 'y') {
-      // Object extends along Y: cut perpendicular to Y, camera looks along +Y, Z-up
+      // Column along Three.js Y (BIM Z): cut perpendicular to Y, camera looks down
+      // Plan view: Three.js -Z up on screen = BIM +Y forward
       clipNormal = new THREE.Vector3(0, 1, 0);
       camPos = new THREE.Vector3(0, camDist, 0);
-      camUp = new THREE.Vector3(0, 0, 1);
-      secW = size.x;
-      secH = size.z;
+      camUp = new THREE.Vector3(0, 0, -1);
+      secW = size.x;  // horizontal: Three.js X (BIM X)
+      secH = size.z;  // vertical: Three.js Z (BIM Y)
     } else {
-      // Column along Z: cut perpendicular to Z, camera looks along +Z, Y-up
+      // Extends along Three.js Z (BIM Y): cut perpendicular to Z, camera looks along +Z
+      // Y-up in Three.js = BIM Z-up
       clipNormal = new THREE.Vector3(0, 0, 1);
       camPos = new THREE.Vector3(0, 0, camDist);
       camUp = new THREE.Vector3(0, 1, 0);
