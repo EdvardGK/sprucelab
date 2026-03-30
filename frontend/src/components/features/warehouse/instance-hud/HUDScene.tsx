@@ -4,11 +4,20 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { MeshGeometry } from '@/lib/ifc-service-client';
 
 export type ViewDimension = '2d' | '3d';
+export type RenderMode = 'solid' | 'wireframe';
+
+interface SectionSetup {
+  clipPlane: THREE.Plane;
+  cameraPosition: THREE.Vector3;
+  cameraUp: THREE.Vector3;
+  sectionWidth: number;
+  sectionHeight: number;
+}
 
 interface HUDSceneProps {
   geometry: MeshGeometry | null;
   viewDimension: ViewDimension;
-  isLoading?: boolean;
+  renderMode?: RenderMode;
   resetTrigger?: number;
   className?: string;
 }
@@ -32,7 +41,13 @@ const PROFILE_LINE = new THREE.LineBasicMaterial({
   linewidth: 1,
 });
 
-export default function HUDScene({ geometry, viewDimension, resetTrigger, className }: HUDSceneProps) {
+export default function HUDScene({
+  geometry,
+  viewDimension,
+  renderMode = 'solid',
+  resetTrigger,
+  className,
+}: HUDSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -45,8 +60,9 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
   const lightRef = useRef<THREE.DirectionalLight | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const viewDimRef = useRef<ViewDimension>(viewDimension);
+  const sectionRef = useRef<SectionSetup | null>(null);
 
-  // Keep ref in sync for use in animation loop
+  // Keep ref in sync for animation loop
   viewDimRef.current = viewDimension;
 
   // Initialize Three.js scene
@@ -67,6 +83,7 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
     renderer.setClearColor(0x0a0a0f, 1);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
+    renderer.localClippingEnabled = true;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -128,7 +145,7 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
       MIDDLE: THREE.MOUSE.DOLLY,
       RIGHT: THREE.MOUSE.PAN,
     };
-    orthoControls.enabled = false; // start disabled, 3D is default
+    orthoControls.enabled = false;
     orthoControlsRef.current = orthoControls;
 
     // Mesh container
@@ -187,6 +204,48 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
     };
   }, []);
 
+  // Apply section view: clip plane + ortho camera along longest axis
+  function applySectionView() {
+    const orthoCamera = orthoCameraRef.current;
+    const orthoControls = orthoControlsRef.current;
+    const renderer = rendererRef.current;
+    const container = containerRef.current;
+    const section = sectionRef.current;
+    if (!orthoCamera || !orthoControls || !renderer || !container || !section) return;
+
+    // Clip at midpoint perpendicular to longest axis
+    renderer.clippingPlanes = [section.clipPlane];
+
+    // Camera looks along longest axis, Z-up
+    orthoCamera.position.copy(section.cameraPosition);
+    orthoCamera.up.copy(section.cameraUp);
+    orthoCamera.lookAt(0, 0, 0);
+
+    // Fit frustum to the cross-section dimensions
+    const aspect = container.clientWidth / container.clientHeight;
+    const padding = 1.4;
+    const sW = section.sectionWidth * padding;
+    const sH = section.sectionHeight * padding;
+    const sectionAspect = sW / sH;
+
+    let frustumH: number;
+    if (aspect >= sectionAspect) {
+      frustumH = sH; // viewport wider than section — fit by height
+    } else {
+      frustumH = sW / aspect; // viewport narrower — fit by width
+    }
+    frustumH = Math.max(frustumH, 0.5);
+
+    orthoCamera.top = frustumH / 2;
+    orthoCamera.bottom = -frustumH / 2;
+    orthoCamera.left = -(frustumH * aspect) / 2;
+    orthoCamera.right = (frustumH * aspect) / 2;
+    orthoCamera.updateProjectionMatrix();
+
+    orthoControls.target.set(0, 0, 0);
+    orthoControls.update();
+  }
+
   // Build mesh from geometry data
   useEffect(() => {
     const group = meshGroupRef.current;
@@ -217,7 +276,7 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
     solidMesh.name = 'solid';
     group.add(solidMesh);
 
-    // 2D profile: subtle fill + prominent edges
+    // 2D profile: fill + edge lines
     const profileFill = new THREE.Mesh(bufferGeometry, PROFILE_FILL.clone());
     profileFill.name = 'profile-fill';
     group.add(profileFill);
@@ -227,7 +286,7 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
     profileEdges.name = 'profile-edges';
     group.add(profileEdges);
 
-    // Center geometry and fit camera
+    // Center geometry
     bufferGeometry.computeBoundingBox();
     const bbox = bufferGeometry.boundingBox!;
     const center = new THREE.Vector3();
@@ -255,49 +314,65 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
       perspControls.update();
     }
 
-    // Fit 2D ortho camera — front view (looking along -Z)
-    fitOrthoCamera(size);
-  }, [geometry]);
+    // Compute section setup: find longest axis, set clip plane + camera
+    const dims = [
+      { axis: 'x' as const, len: size.x },
+      { axis: 'y' as const, len: size.y },
+      { axis: 'z' as const, len: size.z },
+    ];
+    dims.sort((a, b) => b.len - a.len);
+    const longest = dims[0].axis;
 
-  // Helper: fit ortho camera to geometry bounds
-  function fitOrthoCamera(size?: THREE.Vector3) {
-    const orthoCamera = orthoCameraRef.current;
-    const orthoControls = orthoControlsRef.current;
-    const container = containerRef.current;
-    if (!orthoCamera || !orthoControls || !container) return;
+    let clipNormal: THREE.Vector3;
+    let camPos: THREE.Vector3;
+    let camUp: THREE.Vector3;
+    let secW: number, secH: number;
+    const camDist = 100;
 
-    // Get size from geometry if not provided
-    if (!size) {
-      const group = meshGroupRef.current;
-      if (!group || group.children.length === 0) return;
-      const bbox = new THREE.Box3().setFromObject(group);
-      size = new THREE.Vector3();
-      bbox.getSize(size);
+    if (longest === 'x') {
+      // Wall/beam along X: cut perpendicular to X, camera looks along +X, Z-up
+      clipNormal = new THREE.Vector3(1, 0, 0);
+      camPos = new THREE.Vector3(camDist, 0, 0);
+      camUp = new THREE.Vector3(0, 0, 1);
+      secW = size.y;
+      secH = size.z;
+    } else if (longest === 'y') {
+      // Object extends along Y: cut perpendicular to Y, camera looks along +Y, Z-up
+      clipNormal = new THREE.Vector3(0, 1, 0);
+      camPos = new THREE.Vector3(0, camDist, 0);
+      camUp = new THREE.Vector3(0, 0, 1);
+      secW = size.x;
+      secH = size.z;
+    } else {
+      // Column along Z: cut perpendicular to Z, camera looks along +Z, Y-up
+      clipNormal = new THREE.Vector3(0, 0, 1);
+      camPos = new THREE.Vector3(0, 0, camDist);
+      camUp = new THREE.Vector3(0, 1, 0);
+      secW = size.x;
+      secH = size.y;
     }
 
-    const aspect = container.clientWidth / container.clientHeight;
-    // Profile: look from front, show XY plane. Pad 20% around object.
-    const viewHeight = Math.max(size.x, size.y, 1) * 1.4;
-    const viewWidth = viewHeight * aspect;
+    sectionRef.current = {
+      clipPlane: new THREE.Plane(clipNormal, 0),
+      cameraPosition: camPos,
+      cameraUp: camUp,
+      sectionWidth: Math.max(secW, 0.1),
+      sectionHeight: Math.max(secH, 0.1),
+    };
 
-    orthoCamera.left = -viewWidth / 2;
-    orthoCamera.right = viewWidth / 2;
-    orthoCamera.top = viewHeight / 2;
-    orthoCamera.bottom = -viewHeight / 2;
-    orthoCamera.position.set(0, 0, 50);
-    orthoCamera.lookAt(0, 0, 0);
-    orthoCamera.updateProjectionMatrix();
-
-    orthoControls.target.set(0, 0, 0);
-    orthoControls.update();
-  }
+    // If currently in 2D, apply section view
+    if (viewDimRef.current === '2d') {
+      applySectionView();
+    }
+  }, [geometry]);
 
   // Switch between 2D/3D view mode
   useEffect(() => {
     const perspControls = perspControlsRef.current;
     const orthoControls = orthoControlsRef.current;
+    const renderer = rendererRef.current;
     const group = meshGroupRef.current;
-    if (!perspControls || !orthoControls || !group) return;
+    if (!perspControls || !orthoControls || !renderer || !group) return;
 
     const is3D = viewDimension === '3d';
 
@@ -305,12 +380,12 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
     perspControls.enabled = is3D;
     orthoControls.enabled = !is3D;
 
-    // Toggle visibility: grid only in 3D
+    // Grid: 3D only
     if (gridRef.current) {
       gridRef.current.visible = is3D;
     }
 
-    // Toggle meshes
+    // Toggle mesh visibility
     const solid = group.getObjectByName('solid');
     const profileFill = group.getObjectByName('profile-fill');
     const profileEdges = group.getObjectByName('profile-edges');
@@ -319,11 +394,34 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
     if (profileFill) profileFill.visible = !is3D;
     if (profileEdges) profileEdges.visible = !is3D;
 
-    // Fit ortho camera when switching to 2D
     if (!is3D) {
-      fitOrthoCamera();
+      applySectionView();
+    } else {
+      // Clear clipping in 3D
+      renderer.clippingPlanes = [];
     }
   }, [viewDimension, geometry]);
+
+  // Handle render mode (solid vs wireframe)
+  useEffect(() => {
+    const group = meshGroupRef.current;
+    if (!group) return;
+
+    const solid = group.getObjectByName('solid') as THREE.Mesh | undefined;
+    const profileFill = group.getObjectByName('profile-fill');
+
+    if (viewDimension === '3d') {
+      // 3D: toggle wireframe on solid material
+      if (solid?.material instanceof THREE.MeshStandardMaterial) {
+        solid.material.wireframe = renderMode === 'wireframe';
+      }
+    } else {
+      // 2D: wireframe = edges only (hide fill), solid = fill + edges
+      if (profileFill) {
+        profileFill.visible = renderMode === 'solid';
+      }
+    }
+  }, [renderMode, viewDimension, geometry]);
 
   // Reset camera when trigger changes
   useEffect(() => {
@@ -345,7 +443,7 @@ export default function HUDScene({ geometry, viewDimension, resetTrigger, classN
       controls.target.set(0, 0, 0);
       controls.update();
     } else {
-      fitOrthoCamera();
+      applySectionView();
     }
   }, [resetTrigger, viewDimension]);
 
