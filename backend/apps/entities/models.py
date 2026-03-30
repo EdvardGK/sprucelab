@@ -1217,6 +1217,18 @@ class TypeMapping(models.Model):
         help_text="Reason for flagging (required when verification_status='flagged')"
     )
 
+    # === Engine Verification Results ===
+    verification_issues = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Issues from last engine verification: [{rule_id, severity, message}]"
+    )
+    verified_engine_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the verification engine last ran on this type"
+    )
+
     class Meta:
         db_table = 'type_mappings'
         indexes = [
