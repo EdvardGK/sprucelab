@@ -91,7 +91,7 @@ if [ ! -f "$PROJECT_ROOT/frontend/.env.local" ]; then
     echo -e "${YELLOW}  Creating frontend/.env.local${NC}"
     cat > "$PROJECT_ROOT/frontend/.env.local" << 'EOF'
 VITE_API_URL=http://localhost:8000
-VITE_IFC_SERVICE_URL=http://localhost:8001/api/v1
+VITE_IFC_SERVICE_URL=http://localhost:8100/api/v1
 EOF
 fi
 
