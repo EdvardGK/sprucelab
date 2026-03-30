@@ -240,7 +240,9 @@ export default function HUDScene({ geometry, renderMode, isLoading, resetTrigger
     }
   }, [renderMode, geometry]);
 
-  const resetCamera = useCallback(() => {
+  // Reset camera when trigger changes
+  useEffect(() => {
+    if (resetTrigger === undefined) return;
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     const group = meshGroupRef.current;
@@ -254,7 +256,7 @@ export default function HUDScene({ geometry, renderMode, isLoading, resetTrigger
     camera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
     controls.target.set(0, 0, 0);
     controls.update();
-  }, []);
+  }, [resetTrigger]);
 
   return (
     <div
