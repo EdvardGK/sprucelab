@@ -256,6 +256,24 @@ export async function getElementGeometry(fileId: string, guid: string): Promise<
 }
 
 /**
+ * Get 2D cross-section profile (IfcProfileDef) for an element.
+ * Returns null if element has no extractable profile.
+ */
+export async function getElementProfile(fileId: string, guid: string): Promise<ProfileData | null> {
+  const response = await fetchWithRetry(`${IFC_SERVICE_URL}/ifc/${fileId}/profile/${guid}`);
+
+  if (!response.ok) {
+    if (response.status === 404 || response.status === 422) {
+      return null;
+    }
+    const error = await response.text();
+    throw new Error(`Failed to get profile: ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Get the cached file_id for a URL, or null if not cached.
  */
 export function getCachedFileId(fileUrl: string): string | null {
