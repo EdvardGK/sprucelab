@@ -9,6 +9,7 @@ interface HUDSceneProps {
   geometry: MeshGeometry | null;
   renderMode: RenderMode;
   isLoading: boolean;
+  resetTrigger?: number;
   className?: string;
 }
 
