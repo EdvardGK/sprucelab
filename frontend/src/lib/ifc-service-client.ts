@@ -108,6 +108,23 @@ interface MeshGeometry {
   face_count: number;
 }
 
+interface ProfilePoint {
+  x: number;
+  y: number;
+}
+
+interface ProfileData {
+  guid: string;
+  ifc_type: string;
+  name: string | null;
+  profile_type: string;
+  profile_name: string | null;
+  params: Record<string, number>;
+  outline: ProfilePoint[];
+  has_voids: boolean;
+  inner_outlines: ProfilePoint[][];
+}
+
 // Cache file_id per URL to avoid re-loading
 const fileIdCache = new Map<string, string>();
 
