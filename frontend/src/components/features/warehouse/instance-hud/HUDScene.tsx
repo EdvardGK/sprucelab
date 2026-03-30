@@ -1208,6 +1208,7 @@ export default function HUDScene({
 
     const is3D = viewDimension === '3d';
     const hasProfile = hasProfileRef.current;
+    const hasSandwich = hasSandwichRef.current;
 
     // Toggle controls
     perspControls.enabled = is3D;
@@ -1224,29 +1225,41 @@ export default function HUDScene({
     const profileEdges = group.getObjectByName('profile-edges');
 
     if (is3D) {
-      // 3D: show solid mesh, hide clipped mesh and profile outline
+      // 3D: show solid mesh, hide 2D overlays
       if (solid) solid.visible = true;
       if (profileFill) profileFill.visible = false;
       if (profileEdges) profileEdges.visible = false;
       if (profileGroupRef.current) profileGroupRef.current.visible = false;
+      if (sandwichGroupRef.current) sandwichGroupRef.current.visible = false;
       renderer.clippingPlanes = [];
     } else if (hasProfile) {
-      // 2D with clean profile: show profile outline, hide 3D mesh entirely
+      // 2D with clean profile (beams, columns, ducts, pipes)
       if (solid) solid.visible = false;
       if (profileFill) profileFill.visible = false;
       if (profileEdges) profileEdges.visible = false;
       if (profileGroupRef.current) profileGroupRef.current.visible = true;
+      if (sandwichGroupRef.current) sandwichGroupRef.current.visible = false;
       renderer.clippingPlanes = [];
       applyProfileView();
+    } else if (hasSandwich) {
+      // 2D with sandwich layer diagram (walls, slabs, coverings)
+      if (solid) solid.visible = false;
+      if (profileFill) profileFill.visible = false;
+      if (profileEdges) profileEdges.visible = false;
+      if (profileGroupRef.current) profileGroupRef.current.visible = false;
+      if (sandwichGroupRef.current) sandwichGroupRef.current.visible = true;
+      renderer.clippingPlanes = [];
+      applySandwichView();
     } else {
-      // 2D fallback: clipped 3D mesh (no profile data)
+      // 2D fallback: clipped 3D mesh
       if (solid) solid.visible = false;
       if (profileFill) profileFill.visible = true;
       if (profileEdges) profileEdges.visible = true;
       if (profileGroupRef.current) profileGroupRef.current.visible = false;
+      if (sandwichGroupRef.current) sandwichGroupRef.current.visible = false;
       applySectionView();
     }
-  }, [viewDimension, geometry, profileData]);
+  }, [viewDimension, geometry, profileData, definitionLayers]);
 
   // Axis indicator — shows XYZ in 3D, local XY in 2D profile
   useEffect(() => {
