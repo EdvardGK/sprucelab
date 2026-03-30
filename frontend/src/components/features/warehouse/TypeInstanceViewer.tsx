@@ -851,22 +851,12 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         hasMatches,
       });
 
-      if (hasMatches) {
-        // Use Three.js visibility directly on fragment meshes
-        // First, hide all fragment items
-        for (const fragment of group.items) {
-          if (fragment.mesh) {
-            fragment.mesh.visible = false;
-          }
-        }
-
-        // Then show only the ones we want
-        for (const [fragmentId] of Object.entries(fragmentIdMapToShow)) {
-          const fragment = group.items.find(f => f.id === fragmentId);
-          if (fragment?.mesh) {
-            fragment.mesh.visible = true;
-          }
-        }
+      const hider = hiderRef.current;
+      if (hasMatches && hider) {
+        // Use Hider to isolate specific instances within fragment meshes
+        // (mesh.visible only hides entire fragments; Hider handles instanced rendering)
+        hider.set(false); // Hide all elements
+        hider.set(true, fragmentIdMapToShow); // Show only matching instances
 
         // Highlight current instance
         if (currentInstance) {
@@ -875,6 +865,9 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
             highlighter.highlightByID('current', currentFragIdMap, false, false);
           }
         }
+      } else if (!hasMatches) {
+        // No GUID matches found - show full model as fallback
+        console.warn('[TypeInstanceViewer] No fragment matches for GUIDs, showing full model');
       }
 
       // Zoom to visible elements (behaves like double-click - animated zoom with 2x multiplier)
