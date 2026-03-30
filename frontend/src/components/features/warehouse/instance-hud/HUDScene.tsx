@@ -145,6 +145,8 @@ export default function HUDScene({
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const viewDimRef = useRef<ViewDimension>(viewDimension);
   const sectionRef = useRef<SectionSetup | null>(null);
+  const profileGroupRef = useRef<THREE.Group | null>(null);
+  const hasProfileRef = useRef<boolean>(false);
 
   // Keep ref in sync for animation loop
   viewDimRef.current = viewDimension;
