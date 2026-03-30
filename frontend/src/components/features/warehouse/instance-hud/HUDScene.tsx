@@ -35,7 +35,7 @@ const WIREFRAME_LINE = new THREE.LineBasicMaterial({
   linewidth: 1,
 });
 
-export default function HUDScene({ geometry, renderMode, isLoading, resetTrigger, className }: HUDSceneProps) {
+export default function HUDScene({ geometry, renderMode, resetTrigger, className }: HUDSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
