@@ -439,11 +439,10 @@ function buildSandwichDiagram(layers: TypeDefinitionLayer[]): THREE.Group {
 
   // --- Dimension annotations ---
   const scale = Math.max(totalThickness, diagramWidth);
-  const rightOffset = halfW + scale * 0.08;
 
   // Individual layer thicknesses (right side)
   let dimY = 0;
-  validLayers.forEach((layer, i) => {
+  validLayers.forEach((layer) => {
     const t = layer.thickness_mm!;
     const y0 = dimY - centerY;
     const y1 = dimY + t - centerY;
