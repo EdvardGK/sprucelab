@@ -18,6 +18,8 @@ export function useModelAnalysis(modelId: string) {
     },
     enabled: !!modelId,
     staleTime: 5 * 60 * 1000,
+    // Poll every 5s while analysis hasn't arrived yet (auto-triggered on upload)
+    refetchInterval: (query) => query.state.data === null ? 5000 : false,
   });
 }
 
