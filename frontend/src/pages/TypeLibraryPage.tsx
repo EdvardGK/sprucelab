@@ -130,27 +130,14 @@ export default function TypeLibraryPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('common.export')}
-                  <ChevronDown className="h-3.5 w-3.5 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  {t('typeLibrary.exportExcel')}
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  {t('typeLibrary.exportReducer')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              {t('common.import')}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={exportExcel.isPending}
+              onClick={() => exportExcel.mutate()}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {exportExcel.isPending ? t('common.exporting') : t('typeLibrary.exportExcel')}
             </Button>
           </div>
         </div>
