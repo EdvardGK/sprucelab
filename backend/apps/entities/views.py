@@ -762,6 +762,37 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             'mapping_data': mapping_fields
         })
 
+    @action(detail=False, methods=['post'], url_path='verify')
+    def verify(self, request):
+        """
+        Run verification engine on all types for a model.
+
+        POST /api/types/verify/?model={id}
+        Optional query param: project_id (auto-detected from model if not provided)
+
+        Returns verification summary with per-type issues and health score.
+        Updates TypeMapping.verification_status and verification_issues for each type.
+        """
+        model_id = request.query_params.get('model')
+        if not model_id:
+            return Response(
+                {'error': 'model query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        project_id = request.query_params.get('project_id')
+
+        try:
+            from apps.entities.services.verification_engine import VerificationEngine
+            engine = VerificationEngine()
+            result = engine.verify_model(model_id, project_id=project_id)
+            return Response(result.to_dict())
+        except Exception as e:
+            return Response(
+                {'error': f'Verification failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['get'], url_path='instances')
     def instances(self, request, pk=None):
         """
