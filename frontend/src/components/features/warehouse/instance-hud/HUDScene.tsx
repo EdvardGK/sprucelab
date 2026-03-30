@@ -679,6 +679,8 @@ export default function HUDScene({
       camera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
       controls.target.set(0, 0, 0);
       controls.update();
+    } else if (hasProfileRef.current) {
+      applyProfileView();
     } else {
       applySectionView();
     }
