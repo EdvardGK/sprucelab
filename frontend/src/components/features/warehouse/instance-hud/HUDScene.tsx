@@ -12,6 +12,7 @@ interface SectionSetup {
   cameraUp: THREE.Vector3;
   sectionWidth: number;
   sectionHeight: number;
+  cameraFar: number;
 }
 
 interface HUDSceneProps {
