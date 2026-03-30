@@ -247,16 +247,16 @@ export function Sidebar() {
               </div>
               <div className="mt-1 space-y-0.5">
                 <Link
-                  to={`/projects/${projectId}/type-library`}
+                  to={`/projects/${projectId}/types`}
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/type-library`)
+                    isActive(`/projects/${projectId}/types`) || isActive(`/projects/${projectId}/type-library`)
                       ? 'bg-primary/10 text-primary font-medium'
                       : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                   )}
                 >
                   <FileText className="h-4 w-4" />
-                  <span>{t('nav.typeLibrary')}</span>
+                  <span>{t('nav.types')}</span>
                 </Link>
                 <Link
                   to={`/projects/${projectId}/material-library`}
