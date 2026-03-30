@@ -346,6 +346,77 @@ function buildDimensionAnnotations(
 }
 
 /**
+ * Create an axis label sprite (X, Y, Z) with the given color.
+ */
+function createAxisLabel(text: string, color: string, scale: number): THREE.Sprite {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
+  const fontSize = 64;
+  canvas.width = 80;
+  canvas.height = 80;
+
+  ctx.font = `bold ${fontSize}px monospace`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 40, 42);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(scale, scale, 1);
+  return sprite;
+}
+
+/**
+ * Build XYZ axis indicator.
+ * In 3D: shows X (red), Y (green), Z (blue) from origin.
+ * In 2D: shows local X (red), Y (green) only.
+ */
+function buildAxisHelper(axisLength: number, mode: '3d' | '2d'): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'axis-helper';
+
+  const labelOffset = 1.2;
+  const labelScale = axisLength * 0.15;
+
+  // X axis (red)
+  const xGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(axisLength, 0, 0),
+  ]);
+  group.add(new THREE.Line(xGeo, new THREE.LineBasicMaterial({ color: 0xff4444 })));
+  const xLabel = createAxisLabel('X', '#ff4444', labelScale);
+  xLabel.position.set(axisLength * labelOffset, 0, 0);
+  group.add(xLabel);
+
+  // Y axis (green)
+  const yGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, axisLength, 0),
+  ]);
+  group.add(new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x44ff44 })));
+  const yLabel = createAxisLabel('Y', '#44ff44', labelScale);
+  yLabel.position.set(0, axisLength * labelOffset, 0);
+  group.add(yLabel);
+
+  // Z axis (blue) — only in 3D
+  if (mode === '3d') {
+    const zGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, axisLength),
+    ]);
+    group.add(new THREE.Line(zGeo, new THREE.LineBasicMaterial({ color: 0x4488ff })));
+    const zLabel = createAxisLabel('Z', '#4488ff', labelScale);
+    zLabel.position.set(0, 0, axisLength * labelOffset);
+    group.add(zLabel);
+  }
+
+  return group;
+}
+
+/**
  * Build THREE.js objects from ProfileData outline points.
  * Returns a group with outline loops and optional fill.
  */
