@@ -128,7 +128,7 @@ export default function TypeLibraryPage() {
               variant="outline"
               size="sm"
               disabled={exportExcel.isPending}
-              onClick={() => exportExcel.mutate()}
+              onClick={() => exportExcel.mutate({})}
             >
               <Download className="h-4 w-4 mr-2" />
               {exportExcel.isPending ? t('common.exporting') : t('typeLibrary.exportExcel')}
