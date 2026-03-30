@@ -302,7 +302,7 @@ function buildDimensionAnnotations(
     ));
   }
 
-  if ((type === 'IfcLShapeProfileDef' || type === 'IfcCShapeProfileDef') && p.Thickness || p.WallThickness) {
+  if ((type === 'IfcLShapeProfileDef' || type === 'IfcCShapeProfileDef') && (p.Thickness || p.WallThickness)) {
     const t = p.Thickness || p.WallThickness || 0;
     if (t) {
       const halfW = w / 2;
