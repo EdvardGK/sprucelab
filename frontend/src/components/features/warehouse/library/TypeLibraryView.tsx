@@ -375,9 +375,9 @@ export function TypeLibraryView({ projectId, initialModelId }: TypeLibraryViewPr
           )}
         </div>
 
-        {/* Instance HUD - Right Column */}
+        {/* Inline Viewer - Right Column */}
         <div className="flex flex-col min-h-0 rounded-lg overflow-hidden">
-          <InstanceHUD
+          <InlineViewer
             modelId={selectedModelId || ''}
             typeId={selectedTypeId}
             typeName={selectedType?.type_name}
