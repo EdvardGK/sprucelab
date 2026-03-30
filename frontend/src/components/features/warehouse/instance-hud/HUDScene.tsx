@@ -61,6 +61,290 @@ const PROFILE_VOID_LINE = new THREE.LineBasicMaterial({
   transparent: true,
 });
 
+// Dimension annotation materials
+const DIM_LINE_MATERIAL = new THREE.LineBasicMaterial({
+  color: 0x889999,
+  linewidth: 1,
+});
+
+const DIM_EXT_MATERIAL = new THREE.LineBasicMaterial({
+  color: 0x556666,
+  linewidth: 1,
+});
+
+/**
+ * Create a text sprite for dimension labels.
+ * Renders text to a canvas, then uses it as a sprite texture.
+ */
+function createTextSprite(text: string, scale: number): THREE.Sprite {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
+
+  const fontSize = 48;
+  const font = `${fontSize}px monospace`;
+  ctx.font = font;
+  const metrics = ctx.measureText(text);
+  const textWidth = metrics.width;
+
+  const padding = 12;
+  canvas.width = textWidth + padding * 2;
+  canvas.height = fontSize + padding * 2;
+
+  // Background
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.85)';
+  ctx.roundRect(0, 0, canvas.width, canvas.height, 6);
+  ctx.fill();
+
+  // Text
+  ctx.font = font;
+  ctx.fillStyle = '#99bbcc';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+  const sprite = new THREE.Sprite(spriteMat);
+
+  // Scale sprite proportional to profile size
+  const aspect = canvas.width / canvas.height;
+  const spriteH = scale * 0.12;
+  sprite.scale.set(spriteH * aspect, spriteH, 1);
+
+  return sprite;
+}
+
+/**
+ * Create a dimension line with extension lines and a text label.
+ *
+ * @param from - Start point (on the profile feature)
+ * @param to - End point (on the profile feature)
+ * @param label - Dimension text (e.g., "340 mm")
+ * @param offset - Perpendicular offset for the dimension line (positive = away from profile)
+ * @param scale - Overall profile scale for sizing text
+ */
+function createDimension(
+  from: THREE.Vector2,
+  to: THREE.Vector2,
+  label: string,
+  offset: THREE.Vector2,
+  scale: number,
+): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'dimension';
+
+  const gapFrac = 0.03; // gap between profile and extension line start
+  const tickLen = scale * 0.025; // tick mark length at dimension line ends
+
+  // Offset start/end to the dimension line position
+  const a = new THREE.Vector3(from.x + offset.x, from.y + offset.y, 0.1);
+  const b = new THREE.Vector3(to.x + offset.x, to.y + offset.y, 0.1);
+
+  // Dimension line
+  const dimGeo = new THREE.BufferGeometry().setFromPoints([a, b]);
+  group.add(new THREE.Line(dimGeo, DIM_LINE_MATERIAL.clone()));
+
+  // Extension lines (from feature point to dimension line)
+  const gap = offset.clone().normalize().multiplyScalar(scale * gapFrac);
+  const extA1 = new THREE.Vector3(from.x + gap.x, from.y + gap.y, 0.1);
+  const extA2 = a.clone();
+  const extB1 = new THREE.Vector3(to.x + gap.x, to.y + gap.y, 0.1);
+  const extB2 = b.clone();
+
+  const extGeoA = new THREE.BufferGeometry().setFromPoints([extA1, extA2]);
+  group.add(new THREE.Line(extGeoA, DIM_EXT_MATERIAL.clone()));
+  const extGeoB = new THREE.BufferGeometry().setFromPoints([extB1, extB2]);
+  group.add(new THREE.Line(extGeoB, DIM_EXT_MATERIAL.clone()));
+
+  // Tick marks (perpendicular to dimension line)
+  const dir = new THREE.Vector2(b.x - a.x, b.y - a.y).normalize();
+  const perp = new THREE.Vector2(-dir.y, dir.x);
+
+  for (const pt of [a, b]) {
+    const t1 = new THREE.Vector3(pt.x + perp.x * tickLen, pt.y + perp.y * tickLen, 0.1);
+    const t2 = new THREE.Vector3(pt.x - perp.x * tickLen, pt.y - perp.y * tickLen, 0.1);
+    const tickGeo = new THREE.BufferGeometry().setFromPoints([t1, t2]);
+    group.add(new THREE.Line(tickGeo, DIM_LINE_MATERIAL.clone()));
+  }
+
+  // Label sprite at midpoint of dimension line
+  const mid = new THREE.Vector3((a.x + b.x) / 2, (a.y + b.y) / 2, 0.2);
+  const sprite = createTextSprite(label, scale);
+  sprite.position.copy(mid);
+  group.add(sprite);
+
+  return group;
+}
+
+/** Format a dimension value as a readable mm string. */
+function fmtDim(value: number): string {
+  // If value is a whole number or close to it, skip decimals
+  if (Math.abs(value - Math.round(value)) < 0.05) {
+    return `${Math.round(value)}`;
+  }
+  return value.toFixed(1);
+}
+
+/**
+ * Build dimension annotations for a profile based on its type and params.
+ * Returns a group of dimension lines + labels, positioned relative to centered profile.
+ */
+function buildDimensionAnnotations(
+  profile: ProfileData,
+  profileBox: THREE.Box3,
+): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'dimension-annotations';
+
+  const size = new THREE.Vector3();
+  profileBox.getSize(size);
+  const center = new THREE.Vector3();
+  profileBox.getCenter(center);
+
+  const w = size.x;
+  const h = size.y;
+  const scale = Math.max(w, h, 1);
+  const offsetDist = scale * 0.18; // how far dimension lines sit from profile
+
+  const p = profile.params;
+  const type = profile.profile_type;
+
+  // --- Overall width (bottom) ---
+  if (p.XDim || p.OverallWidth || p.Width || p.FlangeWidth || p.Radius || p.SemiAxis1) {
+    const dimVal =
+      p.XDim || p.OverallWidth || p.Width || p.FlangeWidth ||
+      (p.Radius ? p.Radius * 2 : 0) || (p.SemiAxis1 ? p.SemiAxis1 * 2 : 0);
+    if (dimVal) {
+      const halfW = dimVal / 2;
+      group.add(createDimension(
+        new THREE.Vector2(-halfW, -h / 2),
+        new THREE.Vector2(halfW, -h / 2),
+        `${fmtDim(dimVal)} mm`,
+        new THREE.Vector2(0, -offsetDist),
+        scale,
+      ));
+    }
+  }
+
+  // --- Overall height (right side) ---
+  if (p.YDim || p.OverallDepth || p.Depth || p.Radius || p.SemiAxis2) {
+    const dimVal =
+      p.YDim || p.OverallDepth || p.Depth ||
+      (p.Radius ? p.Radius * 2 : 0) || (p.SemiAxis2 ? p.SemiAxis2 * 2 : 0);
+    if (dimVal) {
+      const halfH = dimVal / 2;
+      group.add(createDimension(
+        new THREE.Vector2(w / 2, -halfH),
+        new THREE.Vector2(w / 2, halfH),
+        `${fmtDim(dimVal)} mm`,
+        new THREE.Vector2(offsetDist, 0),
+        scale,
+      ));
+    }
+  }
+
+  // --- Detail dimensions per profile type ---
+
+  if (type === 'IfcIShapeProfileDef' && p.WebThickness && p.FlangeThickness) {
+    const tw = p.WebThickness;
+    const tf = p.FlangeThickness;
+    const halfD = (p.OverallDepth || h) / 2;
+    const detailOffset = scale * 0.08;
+
+    // Web thickness (horizontal, at mid-height, left side)
+    group.add(createDimension(
+      new THREE.Vector2(-tw / 2, 0),
+      new THREE.Vector2(tw / 2, 0),
+      `${fmtDim(tw)}`,
+      new THREE.Vector2(0, detailOffset),
+      scale * 0.6,
+    ));
+
+    // Flange thickness (vertical, at left edge, bottom flange)
+    group.add(createDimension(
+      new THREE.Vector2(-w / 2, -halfD),
+      new THREE.Vector2(-w / 2, -halfD + tf),
+      `${fmtDim(tf)}`,
+      new THREE.Vector2(-offsetDist, 0),
+      scale * 0.6,
+    ));
+  }
+
+  if (type === 'IfcRectangleHollowProfileDef' && p.WallThickness) {
+    const t = p.WallThickness;
+    const halfW = (p.XDim || w) / 2;
+    const halfH = (p.YDim || h) / 2;
+    const detailOffset = scale * 0.08;
+
+    // Wall thickness (horizontal at top)
+    group.add(createDimension(
+      new THREE.Vector2(-halfW, halfH - t),
+      new THREE.Vector2(-halfW, halfH),
+      `t=${fmtDim(t)}`,
+      new THREE.Vector2(-offsetDist, 0),
+      scale * 0.6,
+    ));
+  }
+
+  if (type === 'IfcCircleHollowProfileDef' && p.WallThickness && p.Radius) {
+    const r = p.Radius;
+    const t = p.WallThickness;
+
+    // Wall thickness (horizontal at top)
+    group.add(createDimension(
+      new THREE.Vector2(0, r - t),
+      new THREE.Vector2(0, r),
+      `t=${fmtDim(t)}`,
+      new THREE.Vector2(offsetDist * 0.7, 0),
+      scale * 0.6,
+    ));
+  }
+
+  if ((type === 'IfcLShapeProfileDef' || type === 'IfcCShapeProfileDef') && p.Thickness || p.WallThickness) {
+    const t = p.Thickness || p.WallThickness || 0;
+    if (t) {
+      const halfW = w / 2;
+      const halfH = h / 2;
+
+      group.add(createDimension(
+        new THREE.Vector2(-halfW, -halfH),
+        new THREE.Vector2(-halfW, -halfH + t),
+        `t=${fmtDim(t)}`,
+        new THREE.Vector2(-offsetDist, 0),
+        scale * 0.6,
+      ));
+    }
+  }
+
+  if (type === 'IfcTShapeProfileDef' && p.WebThickness && p.FlangeThickness) {
+    const tw = p.WebThickness;
+    const tf = p.FlangeThickness;
+    const halfH = (p.Depth || h) / 2;
+    const detailOffset = scale * 0.08;
+
+    // Web thickness
+    group.add(createDimension(
+      new THREE.Vector2(-tw / 2, -halfH),
+      new THREE.Vector2(tw / 2, -halfH),
+      `${fmtDim(tw)}`,
+      new THREE.Vector2(0, -detailOffset),
+      scale * 0.6,
+    ));
+
+    // Flange thickness
+    group.add(createDimension(
+      new THREE.Vector2(-w / 2, halfH - tf),
+      new THREE.Vector2(-w / 2, halfH),
+      `${fmtDim(tf)}`,
+      new THREE.Vector2(-offsetDist, 0),
+      scale * 0.6,
+    ));
+  }
+
+  return group;
+}
+
 /**
  * Build THREE.js objects from ProfileData outline points.
  * Returns a group with outline loops and optional fill.
