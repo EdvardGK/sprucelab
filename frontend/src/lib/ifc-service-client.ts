@@ -287,4 +287,4 @@ export function clearCache(): void {
   fileIdCache.clear();
 }
 
-export type { IFCOpenResponse, ElementSummary, ElementDetail, ElementListResponse, MeshGeometry };
+export type { IFCOpenResponse, ElementSummary, ElementDetail, ElementListResponse, MeshGeometry, ProfilePoint, ProfileData };
