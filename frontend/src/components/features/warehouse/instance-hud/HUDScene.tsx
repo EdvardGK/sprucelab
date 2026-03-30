@@ -368,9 +368,9 @@ function createAxisLabel(text: string, color: string, scale: number): THREE.Spri
 }
 
 /**
- * Build XYZ axis indicator.
- * In 3D: shows X (red), Y (green), Z (blue) from origin.
- * In 2D: shows local X (red), Y (green) only.
+ * Build XYZ axis indicator (Z-up convention).
+ * In 3D: shows X (red, right), Y (green, forward), Z (blue, up).
+ * In 2D profile: shows local X (red, right), Y (green, up) in profile plane.
  */
 function buildAxisHelper(axisLength: number, mode: '3d' | '2d'): THREE.Group {
   const group = new THREE.Group();
@@ -379,28 +379,46 @@ function buildAxisHelper(axisLength: number, mode: '3d' | '2d'): THREE.Group {
   const labelOffset = 1.2;
   const labelScale = axisLength * 0.15;
 
-  // X axis (red)
-  const xGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(axisLength, 0, 0),
-  ]);
-  group.add(new THREE.Line(xGeo, new THREE.LineBasicMaterial({ color: 0xff4444 })));
-  const xLabel = createAxisLabel('X', '#ff4444', labelScale);
-  xLabel.position.set(axisLength * labelOffset, 0, 0);
-  group.add(xLabel);
+  if (mode === '2d') {
+    // 2D profile: local X (right) and Y (up) in profile XY plane
+    const xGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(axisLength, 0, 0),
+    ]);
+    group.add(new THREE.Line(xGeo, new THREE.LineBasicMaterial({ color: 0xff4444 })));
+    const xLabel = createAxisLabel('X', '#ff4444', labelScale);
+    xLabel.position.set(axisLength * labelOffset, 0, 0.1);
+    group.add(xLabel);
 
-  // Y axis (green)
-  const yGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, axisLength, 0),
-  ]);
-  group.add(new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x44ff44 })));
-  const yLabel = createAxisLabel('Y', '#44ff44', labelScale);
-  yLabel.position.set(0, axisLength * labelOffset, 0);
-  group.add(yLabel);
+    const yGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, axisLength, 0),
+    ]);
+    group.add(new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x44ff44 })));
+    const yLabel = createAxisLabel('Y', '#44ff44', labelScale);
+    yLabel.position.set(0, axisLength * labelOffset, 0.1);
+    group.add(yLabel);
+  } else {
+    // 3D: X (red, right), Y (green, forward), Z (blue, up)
+    const xGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(axisLength, 0, 0),
+    ]);
+    group.add(new THREE.Line(xGeo, new THREE.LineBasicMaterial({ color: 0xff4444 })));
+    const xLabel = createAxisLabel('X', '#ff4444', labelScale);
+    xLabel.position.set(axisLength * labelOffset, 0, 0);
+    group.add(xLabel);
 
-  // Z axis (blue) — only in 3D
-  if (mode === '3d') {
+    const yGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, axisLength, 0),
+    ]);
+    group.add(new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x44ff44 })));
+    const yLabel = createAxisLabel('Y', '#44ff44', labelScale);
+    yLabel.position.set(0, axisLength * labelOffset, 0);
+    group.add(yLabel);
+
+    // Z axis (blue, up)
     const zGeo = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 0, axisLength),
