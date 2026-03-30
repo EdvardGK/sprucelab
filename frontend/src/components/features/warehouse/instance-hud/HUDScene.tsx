@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { MeshGeometry, ProfileData } from '@/lib/ifc-service-client';
+import type { TypeDefinitionLayer } from '@/hooks/use-warehouse';
 
 export type ViewDimension = '2d' | '3d';
 export type RenderMode = 'solid' | 'wireframe';
