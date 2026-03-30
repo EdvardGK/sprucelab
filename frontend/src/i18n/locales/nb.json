@@ -434,6 +434,22 @@
     "toastPartial": "{{success}} lastet opp, {{failed}} feilet",
     "toastFailed": "{{count}} opplasting(er) feilet"
   },
+  "typeBrowser": {
+    "title": "Typer",
+    "searchTypes": "Søk typer...",
+    "ifcClass": "IFC-klasse",
+    "allIfcClasses": "Alle IFC-klasser",
+    "allCodes": "Alle koder",
+    "allStatus": "Alle statuser",
+    "totalTypes": "{{count}} typer",
+    "showingOf": "{{showing}} av {{total}}",
+    "selectModel": "Velg en modell for å bla i typer",
+    "selectType": "Velg en type",
+    "listView": "Listevisning",
+    "galleryView": "Gallerivisning",
+    "gridView": "Rutenettvisning",
+    "galleryComingSoon": "Gallerivisning kommer snart"
+  },
   "typeLibrary": {
     "title": "Typebibliotek",
     "types": "typer",
