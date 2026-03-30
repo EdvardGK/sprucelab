@@ -62,7 +62,8 @@
     "materialLibrary": "Materialbibliotek",
     "spaces": "Rom",
     "qto": "Mengder",
-    "workbench": "Arbeidsbenk"
+    "workbench": "Arbeidsbenk",
+    "bep": "BEP"
   },
   "workbench": {
     "title": "BIM-arbeidsbenk",
