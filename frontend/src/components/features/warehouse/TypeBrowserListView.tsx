@@ -23,8 +23,6 @@ import {
   Minimize2,
   ChevronDown,
   ChevronRight,
-  CheckCircle2,
-  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
