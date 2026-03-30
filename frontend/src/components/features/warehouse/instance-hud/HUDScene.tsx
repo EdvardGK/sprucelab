@@ -1053,6 +1053,91 @@ export default function HUDScene({
     }
   }, [profileData]);
 
+  // Build sandwich layer diagram from TypeDefinitionLayers
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    // Remove previous sandwich group
+    if (sandwichGroupRef.current) {
+      scene.remove(sandwichGroupRef.current);
+      sandwichGroupRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh || child instanceof THREE.Line || child instanceof THREE.Sprite) {
+          if ('geometry' in child && child.geometry) (child as THREE.Mesh).geometry.dispose();
+        }
+      });
+      sandwichGroupRef.current = null;
+    }
+    hasSandwichRef.current = false;
+
+    // Only build sandwich if we have layers with thickness AND no profile
+    // (profile takes priority for beams/columns, sandwich for walls/slabs)
+    const validLayers = definitionLayers?.filter((l) => l.thickness_mm && l.thickness_mm > 0) || [];
+    if (validLayers.length === 0 || hasProfileRef.current) return;
+
+    const group = buildSandwichDiagram(validLayers);
+    scene.add(group);
+    sandwichGroupRef.current = group;
+    hasSandwichRef.current = true;
+
+    console.log('[HUDScene] Sandwich diagram built:', {
+      layers: validLayers.length,
+      totalThickness: validLayers.reduce((s, l) => s + (l.thickness_mm || 0), 0),
+    });
+
+    if (viewDimRef.current === '2d') {
+      applySandwichView();
+    }
+  }, [definitionLayers, profileData]);
+
+  // Set up ortho camera for sandwich view
+  function applySandwichView() {
+    const orthoCamera = orthoCameraRef.current;
+    const orthoControls = orthoControlsRef.current;
+    const renderer = rendererRef.current;
+    const container = containerRef.current;
+    const group = sandwichGroupRef.current;
+    if (!orthoCamera || !orthoControls || !renderer || !container || !group) return;
+
+    renderer.clippingPlanes = [];
+
+    const box = new THREE.Box3().setFromObject(group);
+    const s = new THREE.Vector3();
+    box.getSize(s);
+    const w = s.x;
+    const h = s.y;
+    const maxDim = Math.max(w, h, 1);
+
+    orthoCamera.position.set(0, 0, maxDim * 2);
+    orthoCamera.up.set(0, 1, 0);
+    orthoCamera.lookAt(0, 0, 0);
+    orthoCamera.near = 0.01;
+    orthoCamera.far = maxDim * 5;
+
+    const aspect = container.clientWidth / container.clientHeight;
+    const padding = 1.7;
+    const pW = w * padding;
+    const pH = h * padding;
+    const profAspect = pW / pH;
+
+    let frustumH: number;
+    if (aspect >= profAspect) {
+      frustumH = pH;
+    } else {
+      frustumH = pW / aspect;
+    }
+    frustumH = Math.max(frustumH, 0.5);
+
+    orthoCamera.top = frustumH / 2;
+    orthoCamera.bottom = -frustumH / 2;
+    orthoCamera.left = -(frustumH * aspect) / 2;
+    orthoCamera.right = (frustumH * aspect) / 2;
+    orthoCamera.updateProjectionMatrix();
+
+    orthoControls.target.set(0, 0, 0);
+    orthoControls.update();
+  }
+
   // Set up ortho camera for clean profile view (XY plane, Z-up camera)
   function applyProfileView(profileSize?: THREE.Vector3) {
     const orthoCamera = orthoCameraRef.current;
