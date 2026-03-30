@@ -829,10 +829,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
           // Calculate step size based on camera distance to plane
           // Closer = finer control, farther = larger steps
-          const camera = world.camera?.three;
+          const wheelCam = getCamera(world);
           let stepSize = 0.5; // default
-          if (camera && activePlane.point) {
-            const cameraPos = camera.position;
+          if (wheelCam?.three && activePlane.point) {
+            const cameraPos = wheelCam.three.position;
             const planePos = activePlane.point;
             const distance = cameraPos.distanceTo(planePos);
             // Scale: 1% of distance, clamped between 0.01m and 2m
