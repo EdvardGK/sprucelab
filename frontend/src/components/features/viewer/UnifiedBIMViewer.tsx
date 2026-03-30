@@ -50,6 +50,19 @@ const toAbsoluteUrl = (url: string): string => {
   return `${DJANGO_BASE}${url}`;
 };
 
+/**
+ * Safely access world.camera which throws in ThatOpen if not initialized.
+ * Returns null instead of throwing, so callers can use optional chaining.
+ */
+function getCamera(world: OBC.SimpleWorld<any, any, any> | null): OBC.OrthoPerspectiveCamera | null {
+  if (!world) return null;
+  try {
+    return world.camera as OBC.OrthoPerspectiveCamera;
+  } catch {
+    return null;
+  }
+}
+
 // Imperative handle interface for parent components
 export interface UnifiedBIMViewerHandle {
   deleteSectionPlane: (planeId: string) => void;
