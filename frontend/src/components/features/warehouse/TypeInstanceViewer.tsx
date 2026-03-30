@@ -753,30 +753,33 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
     loadModel();
   }, [isInitialized, modelId]);
 
-  // Zoom to visible instances with double-click style behavior
+  // Zoom to instances identified by their fragment ID map
   // Uses 2x bounding box multiplier and maintains camera viewing angle
-  const zoomToVisibleInstances = useCallback(() => {
-    if (!worldRef.current || !fragmentsGroupRef.current) return;
+  const zoomToFragments = useCallback((fragmentIdMap?: Record<string, Set<number>>) => {
+    if (!worldRef.current || !fragmentsGroupRef.current || !componentsRef.current) return;
 
-    const group = fragmentsGroupRef.current;
-
-    // Compute bounding box from visible items only
+    const components = componentsRef.current;
+    const fragmentsManager = components.get(OBC.FragmentsManager);
     const bbox = new THREE.Box3();
-    let hasVisibleItems = false;
+    let hasItems = false;
 
-    for (const fragment of group.items) {
-      if (fragment.mesh?.visible) {
-        const meshBbox = new THREE.Box3().setFromObject(fragment.mesh);
-        if (!meshBbox.isEmpty()) {
-          bbox.union(meshBbox);
-          hasVisibleItems = true;
+    if (fragmentIdMap && Object.keys(fragmentIdMap).length > 0) {
+      // Compute bounding box from fragments containing our target instances
+      for (const fragmentId of Object.keys(fragmentIdMap)) {
+        const fragment = fragmentsManager.list.get(fragmentId);
+        if (fragment?.mesh) {
+          const meshBbox = new THREE.Box3().setFromObject(fragment.mesh);
+          if (!meshBbox.isEmpty()) {
+            bbox.union(meshBbox);
+            hasItems = true;
+          }
         }
       }
     }
 
-    // Fallback to entire group if no visible items
-    if (!hasVisibleItems) {
-      bbox.setFromObject(group);
+    // Fallback to entire group
+    if (!hasItems) {
+      bbox.setFromObject(fragmentsGroupRef.current);
     }
 
     if (bbox.isEmpty()) return;
