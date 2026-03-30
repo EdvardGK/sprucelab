@@ -1468,6 +1468,14 @@ class ModelViewSet(viewsets.ModelViewSet):
             type_count = request.data.get('type_count', 0)
             print(f"✅ Processing complete for {model.name}: {model.element_count} elements, {type_count} types in {duration:.1f}s")
 
+            # Auto-trigger model analysis in background
+            try:
+                from apps.entities.tasks import run_model_analysis_task
+                run_model_analysis_task.delay(str(model.id))
+                print(f"📊 Triggered background analysis for {model.name}")
+            except Exception as analysis_err:
+                print(f"⚠️  Could not trigger analysis: {analysis_err}")
+
         return Response({'status': 'ok'})
 
     @action(detail=True, methods=['post'], url_path='validation-complete')
