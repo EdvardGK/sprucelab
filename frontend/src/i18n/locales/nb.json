@@ -559,6 +559,8 @@
     "addLayers": "Legg til lag"
   },
   "instanceHUD": {
+    "solid": "Solid",
+    "wireframe": "Tråd",
     "resetCamera": "Nullstill visning",
     "seeInModel": "Se i modell",
     "instanceOf": "Instans {{current}} / {{total}}",
