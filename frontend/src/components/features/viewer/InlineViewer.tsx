@@ -63,6 +63,10 @@ export function InlineViewer({
     modelId,
     !showModel ? currentGuid : null
   );
+  const { data: profileData } = useInstanceProfile(
+    modelId,
+    !showModel ? currentGuid : null
+  );
 
   // Debug: log data flow
   console.log('[InlineViewer]', {
