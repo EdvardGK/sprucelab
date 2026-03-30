@@ -639,19 +639,26 @@ export default function HUDScene({
 
     const solid = group.getObjectByName('solid') as THREE.Mesh | undefined;
     const profileFill = group.getObjectByName('profile-fill');
+    const hasProfile = hasProfileRef.current;
 
     if (viewDimension === '3d') {
       // 3D: toggle wireframe on solid material
       if (solid?.material instanceof THREE.MeshStandardMaterial) {
         solid.material.wireframe = renderMode === 'wireframe';
       }
+    } else if (hasProfile) {
+      // 2D with clean profile: wireframe = outline only, solid = fill + outline
+      const cleanFill = profileGroupRef.current?.getObjectByName('profile-clean-fill');
+      if (cleanFill) {
+        cleanFill.visible = renderMode === 'solid';
+      }
     } else {
-      // 2D: wireframe = edges only (hide fill), solid = fill + edges
+      // 2D fallback: wireframe = edges only (hide fill), solid = fill + edges
       if (profileFill) {
         profileFill.visible = renderMode === 'solid';
       }
     }
-  }, [renderMode, viewDimension, geometry]);
+  }, [renderMode, viewDimension, geometry, profileData]);
 
   // Reset camera when trigger changes
   useEffect(() => {
