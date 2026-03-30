@@ -663,7 +663,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
             // Get camera from world
-            const camera = world.camera?.three;
+            const ctxCam = getCamera(world);
+            const camera = ctxCam?.three;
             if (!camera) return;
 
             // Create Three.js raycaster
