@@ -434,6 +434,22 @@
     "toastPartial": "{{success}} uploaded, {{failed}} failed",
     "toastFailed": "{{count}} upload(s) failed"
   },
+  "typeBrowser": {
+    "title": "Types",
+    "searchTypes": "Search types...",
+    "ifcClass": "IFC Class",
+    "allIfcClasses": "All IFC Classes",
+    "allCodes": "All Codes",
+    "allStatus": "All Status",
+    "totalTypes": "{{count}} types",
+    "showingOf": "{{showing}} of {{total}}",
+    "selectModel": "Select a model to browse types",
+    "selectType": "Select a type",
+    "listView": "List View",
+    "galleryView": "Gallery View",
+    "gridView": "Grid View",
+    "galleryComingSoon": "Gallery view coming soon"
+  },
   "typeLibrary": {
     "title": "Type Library",
     "types": "types",
