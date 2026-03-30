@@ -3,17 +3,17 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { MeshGeometry } from '@/lib/ifc-service-client';
 
-export type RenderMode = 'solid' | 'wireframe';
+export type ViewDimension = '2d' | '3d';
 
 interface HUDSceneProps {
   geometry: MeshGeometry | null;
-  renderMode: RenderMode;
+  viewDimension: ViewDimension;
   isLoading?: boolean;
   resetTrigger?: number;
   className?: string;
 }
 
-// Materials
+// 3D materials
 const SOLID_MATERIAL = new THREE.MeshStandardMaterial({
   color: 0x7799bb,
   metalness: 0.15,
@@ -21,29 +21,33 @@ const SOLID_MATERIAL = new THREE.MeshStandardMaterial({
   side: THREE.DoubleSide,
 });
 
-const WIREFRAME_SOLID = new THREE.MeshStandardMaterial({
-  color: 0x334455,
-  metalness: 0.1,
-  roughness: 0.8,
-  transparent: true,
-  opacity: 0.15,
+// 2D profile materials
+const PROFILE_FILL = new THREE.MeshBasicMaterial({
+  color: 0x1a2a3a,
   side: THREE.DoubleSide,
 });
 
-const WIREFRAME_LINE = new THREE.LineBasicMaterial({
+const PROFILE_LINE = new THREE.LineBasicMaterial({
   color: 0x44ccff,
   linewidth: 1,
 });
 
-export default function HUDScene({ geometry, renderMode, resetTrigger, className }: HUDSceneProps) {
+export default function HUDScene({ geometry, viewDimension, resetTrigger, className }: HUDSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const controlsRef = useRef<OrbitControls | null>(null);
+  const perspCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const orthoCameraRef = useRef<THREE.OrthographicCamera | null>(null);
+  const perspControlsRef = useRef<OrbitControls | null>(null);
+  const orthoControlsRef = useRef<OrbitControls | null>(null);
   const meshGroupRef = useRef<THREE.Group | null>(null);
   const frameIdRef = useRef<number>(0);
   const lightRef = useRef<THREE.DirectionalLight | null>(null);
+  const gridRef = useRef<THREE.GridHelper | null>(null);
+  const viewDimRef = useRef<ViewDimension>(viewDimension);
+
+  // Keep ref in sync for use in animation loop
+  viewDimRef.current = viewDimension;
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -70,15 +74,28 @@ export default function HUDScene({ geometry, renderMode, resetTrigger, className
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Grid
+    // Grid (3D only)
     const grid = new THREE.GridHelper(20, 40, 0x1a2a3a, 0x111820);
     grid.position.y = -0.01;
     scene.add(grid);
+    gridRef.current = grid;
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 500);
-    camera.position.set(5, 4, 5);
-    cameraRef.current = camera;
+    // Perspective camera (3D)
+    const perspCamera = new THREE.PerspectiveCamera(45, width / height, 0.01, 500);
+    perspCamera.position.set(5, 4, 5);
+    perspCameraRef.current = perspCamera;
+
+    // Orthographic camera (2D profile)
+    const frustumSize = 10;
+    const aspect = width / height;
+    const orthoCamera = new THREE.OrthographicCamera(
+      -frustumSize * aspect / 2, frustumSize * aspect / 2,
+      frustumSize / 2, -frustumSize / 2,
+      0.01, 500
+    );
+    orthoCamera.position.set(0, 0, 50);
+    orthoCamera.lookAt(0, 0, 0);
+    orthoCameraRef.current = orthoCamera;
 
     // Lighting
     const ambient = new THREE.AmbientLight(0xffffff, 0.5);
@@ -89,18 +106,30 @@ export default function HUDScene({ geometry, renderMode, resetTrigger, className
     scene.add(directional);
     lightRef.current = directional;
 
-    // Subtle rim light from behind
     const rim = new THREE.DirectionalLight(0x4488cc, 0.3);
     rim.position.set(-3, 2, -5);
     scene.add(rim);
 
-    // Controls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.minDistance = 0.5;
-    controls.maxDistance = 100;
-    controlsRef.current = controls;
+    // Perspective controls (3D)
+    const perspControls = new OrbitControls(perspCamera, renderer.domElement);
+    perspControls.enableDamping = true;
+    perspControls.dampingFactor = 0.08;
+    perspControls.minDistance = 0.5;
+    perspControls.maxDistance = 100;
+    perspControlsRef.current = perspControls;
+
+    // Ortho controls (2D) — pan and zoom only, no rotation
+    const orthoControls = new OrbitControls(orthoCamera, renderer.domElement);
+    orthoControls.enableRotate = false;
+    orthoControls.enableDamping = true;
+    orthoControls.dampingFactor = 0.08;
+    orthoControls.mouseButtons = {
+      LEFT: THREE.MOUSE.PAN,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.PAN,
+    };
+    orthoControls.enabled = false; // start disabled, 3D is default
+    orthoControlsRef.current = orthoControls;
 
     // Mesh container
     const meshGroup = new THREE.Group();
@@ -110,15 +139,19 @@ export default function HUDScene({ geometry, renderMode, resetTrigger, className
     // Render loop
     const animate = () => {
       frameIdRef.current = requestAnimationFrame(animate);
-      controls.update();
 
-      // Track light to camera
-      if (lightRef.current && cameraRef.current) {
-        lightRef.current.position.copy(cameraRef.current.position);
+      const is3D = viewDimRef.current === '3d';
+      const activeControls = is3D ? perspControls : orthoControls;
+      const activeCamera = is3D ? perspCamera : orthoCamera;
+      activeControls.update();
+
+      // Track light to camera in 3D
+      if (is3D && lightRef.current) {
+        lightRef.current.position.copy(perspCamera.position);
         lightRef.current.position.y += 3;
       }
 
-      renderer.render(scene, camera);
+      renderer.render(scene, activeCamera);
     };
     animate();
 
@@ -128,8 +161,16 @@ export default function HUDScene({ geometry, renderMode, resetTrigger, className
       if (!entry) return;
       const { width: w, height: h } = entry.contentRect;
       if (w === 0 || h === 0) return;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
+
+      perspCamera.aspect = w / h;
+      perspCamera.updateProjectionMatrix();
+
+      const a = w / h;
+      const fs = (orthoCamera.top - orthoCamera.bottom);
+      orthoCamera.left = -fs * a / 2;
+      orthoCamera.right = fs * a / 2;
+      orthoCamera.updateProjectionMatrix();
+
       renderer.setSize(w, h);
     });
     resizeObserver.observe(container);
@@ -137,7 +178,8 @@ export default function HUDScene({ geometry, renderMode, resetTrigger, className
     return () => {
       resizeObserver.disconnect();
       cancelAnimationFrame(frameIdRef.current);
-      controls.dispose();
+      perspControls.dispose();
+      orthoControls.dispose();
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -170,21 +212,20 @@ export default function HUDScene({ geometry, renderMode, resetTrigger, className
     bufferGeometry.setIndex(new THREE.BufferAttribute(indices, 1));
     bufferGeometry.computeVertexNormals();
 
-    // Solid mesh
+    // 3D solid mesh
     const solidMesh = new THREE.Mesh(bufferGeometry, SOLID_MATERIAL.clone());
     solidMesh.name = 'solid';
     group.add(solidMesh);
 
-    // Wireframe edges (always created, visibility toggled)
-    const edgesGeometry = new THREE.EdgesGeometry(bufferGeometry, 15);
-    const edgeLines = new THREE.LineSegments(edgesGeometry, WIREFRAME_LINE.clone());
-    edgeLines.name = 'edges';
-    group.add(edgeLines);
+    // 2D profile: subtle fill + prominent edges
+    const profileFill = new THREE.Mesh(bufferGeometry, PROFILE_FILL.clone());
+    profileFill.name = 'profile-fill';
+    group.add(profileFill);
 
-    // Transparent solid for wireframe mode
-    const ghostMesh = new THREE.Mesh(bufferGeometry, WIREFRAME_SOLID.clone());
-    ghostMesh.name = 'ghost';
-    group.add(ghostMesh);
+    const edgesGeometry = new THREE.EdgesGeometry(bufferGeometry, 15);
+    const profileEdges = new THREE.LineSegments(edgesGeometry, PROFILE_LINE.clone());
+    profileEdges.name = 'profile-edges';
+    group.add(profileEdges);
 
     // Center geometry and fit camera
     bufferGeometry.computeBoundingBox();
@@ -194,69 +235,119 @@ export default function HUDScene({ geometry, renderMode, resetTrigger, className
     bbox.getCenter(center);
     bbox.getSize(size);
 
-    // Center the group
     group.position.set(-center.x, -center.y, -center.z);
 
     // Position grid at bottom of object
-    const grid = sceneRef.current?.children.find(c => c instanceof THREE.GridHelper);
-    if (grid) {
-      grid.position.y = -size.y / 2 - 0.01;
-      // Scale grid to object
+    if (gridRef.current) {
+      gridRef.current.position.y = -size.y / 2 - 0.01;
       const maxHorizontal = Math.max(size.x, size.z, 2);
-      grid.scale.set(maxHorizontal / 10, 1, maxHorizontal / 10);
+      gridRef.current.scale.set(maxHorizontal / 10, 1, maxHorizontal / 10);
     }
 
-    // Fit camera
+    // Fit 3D camera
     const maxDim = Math.max(size.x, size.y, size.z, 1);
     const distance = maxDim * 2.5;
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    if (camera && controls) {
-      camera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
-      controls.target.set(0, 0, 0);
-      controls.update();
+    const perspCamera = perspCameraRef.current;
+    const perspControls = perspControlsRef.current;
+    if (perspCamera && perspControls) {
+      perspCamera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
+      perspControls.target.set(0, 0, 0);
+      perspControls.update();
     }
+
+    // Fit 2D ortho camera — front view (looking along -Z)
+    fitOrthoCamera(size);
   }, [geometry]);
 
-  // Toggle render mode
-  useEffect(() => {
-    const group = meshGroupRef.current;
-    if (!group) return;
+  // Helper: fit ortho camera to geometry bounds
+  function fitOrthoCamera(size?: THREE.Vector3) {
+    const orthoCamera = orthoCameraRef.current;
+    const orthoControls = orthoControlsRef.current;
+    const container = containerRef.current;
+    if (!orthoCamera || !orthoControls || !container) return;
 
-    const solid = group.getObjectByName('solid') as THREE.Mesh | undefined;
-    const edges = group.getObjectByName('edges') as THREE.LineSegments | undefined;
-    const ghost = group.getObjectByName('ghost') as THREE.Mesh | undefined;
-
-    if (!solid || !edges || !ghost) return;
-
-    if (renderMode === 'solid') {
-      solid.visible = true;
-      edges.visible = false;
-      ghost.visible = false;
-    } else {
-      solid.visible = false;
-      edges.visible = true;
-      ghost.visible = true;
+    // Get size from geometry if not provided
+    if (!size) {
+      const group = meshGroupRef.current;
+      if (!group || group.children.length === 0) return;
+      const bbox = new THREE.Box3().setFromObject(group);
+      size = new THREE.Vector3();
+      bbox.getSize(size);
     }
-  }, [renderMode, geometry]);
+
+    const aspect = container.clientWidth / container.clientHeight;
+    // Profile: look from front, show XY plane. Pad 20% around object.
+    const viewHeight = Math.max(size.x, size.y, 1) * 1.4;
+    const viewWidth = viewHeight * aspect;
+
+    orthoCamera.left = -viewWidth / 2;
+    orthoCamera.right = viewWidth / 2;
+    orthoCamera.top = viewHeight / 2;
+    orthoCamera.bottom = -viewHeight / 2;
+    orthoCamera.position.set(0, 0, 50);
+    orthoCamera.lookAt(0, 0, 0);
+    orthoCamera.updateProjectionMatrix();
+
+    orthoControls.target.set(0, 0, 0);
+    orthoControls.update();
+  }
+
+  // Switch between 2D/3D view mode
+  useEffect(() => {
+    const perspControls = perspControlsRef.current;
+    const orthoControls = orthoControlsRef.current;
+    const group = meshGroupRef.current;
+    if (!perspControls || !orthoControls || !group) return;
+
+    const is3D = viewDimension === '3d';
+
+    // Toggle controls
+    perspControls.enabled = is3D;
+    orthoControls.enabled = !is3D;
+
+    // Toggle visibility: grid only in 3D
+    if (gridRef.current) {
+      gridRef.current.visible = is3D;
+    }
+
+    // Toggle meshes
+    const solid = group.getObjectByName('solid');
+    const profileFill = group.getObjectByName('profile-fill');
+    const profileEdges = group.getObjectByName('profile-edges');
+
+    if (solid) solid.visible = is3D;
+    if (profileFill) profileFill.visible = !is3D;
+    if (profileEdges) profileEdges.visible = !is3D;
+
+    // Fit ortho camera when switching to 2D
+    if (!is3D) {
+      fitOrthoCamera();
+    }
+  }, [viewDimension, geometry]);
 
   // Reset camera when trigger changes
   useEffect(() => {
     if (resetTrigger === undefined) return;
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
     const group = meshGroupRef.current;
-    if (!camera || !controls || !group || group.children.length === 0) return;
+    if (!group || group.children.length === 0) return;
 
-    const bbox = new THREE.Box3().setFromObject(group);
-    const size = new THREE.Vector3();
-    bbox.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z, 1);
-    const distance = maxDim * 2.5;
-    camera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
-    controls.target.set(0, 0, 0);
-    controls.update();
-  }, [resetTrigger]);
+    if (viewDimension === '3d') {
+      const camera = perspCameraRef.current;
+      const controls = perspControlsRef.current;
+      if (!camera || !controls) return;
+
+      const bbox = new THREE.Box3().setFromObject(group);
+      const size = new THREE.Vector3();
+      bbox.getSize(size);
+      const maxDim = Math.max(size.x, size.y, size.z, 1);
+      const distance = maxDim * 2.5;
+      camera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    } else {
+      fitOrthoCamera();
+    }
+  }, [resetTrigger, viewDimension]);
 
   return (
     <div
