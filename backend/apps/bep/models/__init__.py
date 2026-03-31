@@ -20,6 +20,11 @@ from .bep import (
     ProjectCoordinates,
     ProjectStorey,
 )
+from .eir import (
+    EIR,
+    EIRRequirement,
+    IDSSpecification,
+)
 
 __all__ = [
     # Core BEP
@@ -34,4 +39,8 @@ __all__ = [
     'ProjectDiscipline',
     'ProjectCoordinates',
     'ProjectStorey',
+    # EIR + IDS
+    'EIR',
+    'EIRRequirement',
+    'IDSSpecification',
 ]
