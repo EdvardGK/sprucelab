@@ -242,38 +242,37 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
   return (
     <>
-      <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto w-full">
-        <div className="grid grid-cols-6 gap-3">
+      <div className="p-[clamp(0.75rem,1.5vw,1rem)] max-w-[1440px] mx-auto w-full h-[calc(100vh-9rem)] overflow-hidden">
+        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)] h-full grid-rows-[auto_1fr]">
           {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
           <div className="col-span-2">
             <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} />
           </div>
           <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent />
-          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} />
-          <KpiCard value={analysis.total_storeys} label="Storeys" subValue={stats.proxyCount} subLabel="proxy-typed" warn={stats.proxyCount > 0} />
-          <KpiCard value={analysis.total_spaces} label="Spaces" subValue={analysis.duplicate_guid_count} subLabel="dup. GUIDs" warn={analysis.duplicate_guid_count > 0} />
+          <KpiCard value={stats.totalInstances.toLocaleString()} label="Instances" subValue={stats.typeRatio} subLabel="per type" warn={stats.typeRatio < 5} />
+          <KpiCard value={analysis.total_storeys} label="Spatial" subValue={analysis.total_spaces} subLabel="spaces" />
 
-          {/* Row 2: Charts stacked (left) | Viewer (right, square) */}
-          <div className="col-span-3 flex flex-col gap-3">
-            <Card className="overflow-hidden flex flex-col card-accent-forest">
-              <CardContent className="p-4 min-h-0 overflow-y-auto">
+          {/* Row 2: Charts stacked (left) | Viewer (right) */}
+          <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
+            <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+              <CardContent className="p-3 min-h-0 overflow-y-auto">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
                 <StoreyChart storeys={analysis.storeys} />
               </CardContent>
             </Card>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-[clamp(0.3rem,0.6vw,0.5rem)] flex-1 min-h-0">
               <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-4 flex flex-col">
+                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
                   <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
-                  <div className="aspect-square relative">
+                  <div className="flex-1 min-h-0 relative">
                     <Treemap types={analysis.types} />
                   </div>
                 </CardContent>
               </Card>
               <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-4 flex flex-col">
+                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
                   <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
-                  <div className="aspect-square flex items-center justify-center">
+                  <div className="flex-1 min-h-0 flex items-center justify-center">
                     <GeometryDonut types={analysis.types} />
                   </div>
                 </CardContent>
@@ -281,22 +280,36 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             </div>
             <ModelInfoCard analysis={analysis} />
           </div>
-          <div className="col-span-3 flex flex-col justify-end">
+          <div className="col-span-3 flex flex-col min-h-0">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-4 flex flex-col">
-                  <CardHeader title="3D Viewer" onExpand={() => setOverlay('viewer')} />
-                  <div className="aspect-square rounded-lg overflow-hidden bg-black/20">
-                    <UnifiedBIMViewer
-                      modelId={model.id}
-                      showPropertiesPanel={false}
-                    />
+              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
+                  <ViewerCardHeader
+                    mode={viewerMode}
+                    onToggle={() => setViewerMode(v => v === '3d' ? 'footprint' : '3d')}
+                    onExpand={() => setOverlay('viewer')}
+                    hasSpatialData={!!analysis.spatial_data?.bounding_box}
+                  />
+                  <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/20">
+                    {viewerMode === '3d' ? (
+                      <UnifiedBIMViewer
+                        modelId={model.id}
+                        showPropertiesPanel={false}
+                        classColorMap={classColorMap}
+                      />
+                    ) : (
+                      <FootprintView
+                        spatialData={analysis.spatial_data}
+                        classColorMap={classColorMap}
+                        units={analysis.units}
+                      />
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-4 aspect-square flex items-center justify-center">
+              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+                <CardContent className="p-3 flex-1 flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
