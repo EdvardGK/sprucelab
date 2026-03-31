@@ -688,23 +688,71 @@ function GeometryDonut({ types, showAll }: { types: AnalysisTypeRecord[]; showAl
   );
 }
 
-// ─── Info Card ──────────────────────────────────────────────────────────────
+// ─── Model Info Card (combined Context / Units / Coordinates) ────────────────
 
-function InfoCard({ title, rows }: { title: string; rows: [string, string][] }) {
+function ModelInfoCard({ analysis }: { analysis: ModelAnalysis }) {
+  const unitRows: [string, string][] = analysis.units && typeof analysis.units === 'object'
+    ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
+        if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
+          const u = v as { name?: string; prefix?: string; symbol?: string };
+          return [k, u.symbol || u.name || '—'];
+        }
+        return [k, String(v ?? '—')];
+      })
+    : [];
+
+  const coordRows: [string, string][] = analysis.coordinates && typeof analysis.coordinates === 'object'
+    ? (() => {
+        const c = analysis.coordinates as Record<string, unknown>;
+        const rows: [string, string][] = [];
+        if (c.crs) rows.push(['CRS', String(c.crs)]);
+        if (c.true_north) {
+          const tn = c.true_north as { angle_deg?: number };
+          rows.push(['True North', `${tn.angle_deg ?? 0}°`]);
+        }
+        if (c.wcs_origin) {
+          const o = c.wcs_origin as { x?: number; y?: number; z?: number };
+          rows.push(['WCS Origin', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
+        }
+        if (c.site_reference) {
+          const s = c.site_reference as { latitude?: number; longitude?: number; elevation?: number };
+          if (s.latitude || s.longitude) rows.push(['Site', `${s.latitude}°N, ${s.longitude}°E`]);
+          if (s.elevation) rows.push(['Elevation', `${s.elevation}m`]);
+        }
+        return rows;
+      })()
+    : [];
+
+  const sections: { title: string; rows: [string, string][] }[] = [
+    { title: 'Context', rows: [
+      ['Project', analysis.project_name || '—'],
+      ['Site', analysis.site_name || '—'],
+      ['Building', analysis.building_name || '—'],
+      ['Application', analysis.application || '—'],
+      ['Schema', analysis.ifc_schema || '—'],
+    ]},
+    ...(unitRows.length ? [{ title: 'Units', rows: unitRows }] : []),
+    ...(coordRows.length ? [{ title: 'Coordinates', rows: coordRows }] : []),
+  ];
+
   return (
-    <Card className="card-accent-lavender">
-      <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)]">
-        <h3 className="text-[clamp(0.6rem,1vw,0.75rem)] font-semibold text-text-primary mb-[clamp(0.2rem,0.4vw,0.3rem)]">
-          {title}
-        </h3>
-        <div className="space-y-[clamp(0.1rem,0.2vw,0.15rem)]">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex justify-between text-[clamp(0.5rem,0.85vw,0.6rem)]">
-              <span className="text-text-secondary">{label}</span>
-              <span className="text-text-primary tabular-nums font-medium truncate ml-2 max-w-[60%] text-right">{value}</span>
+    <Card className="card-accent-lavender h-full">
+      <CardContent className="p-4 space-y-3">
+        {sections.map((section) => (
+          <div key={section.title}>
+            <h4 className="text-[0.65rem] font-semibold text-text-primary uppercase tracking-wide mb-1">
+              {section.title}
+            </h4>
+            <div className="space-y-px">
+              {section.rows.map(([label, value]) => (
+                <div key={label} className="flex justify-between text-xs">
+                  <span className="text-text-secondary">{label}</span>
+                  <span className="text-text-primary font-medium truncate ml-2 max-w-[60%] text-right">{value}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );
