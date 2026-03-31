@@ -35,3 +35,6 @@ api_router.include_router(health_check_router)
 
 # CRS lookup (EPSG database via pyproj)
 api_router.include_router(crs_router)
+
+# IDS validation (buildingSMART Information Delivery Specification)
+api_router.include_router(ids_router)
