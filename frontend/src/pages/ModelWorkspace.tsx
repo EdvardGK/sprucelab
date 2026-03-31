@@ -515,7 +515,7 @@ function StoreyChart({ storeys }: { storeys: AnalysisStorey[] }) {
     <div className="space-y-[clamp(0.1rem,0.3vw,0.2rem)]">
       {sorted.map((s) => (
         <div key={s.name} className="grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)]"
-             style={{ gridTemplateColumns: 'minmax(0, 8rem) auto 1fr auto' }}>
+             style={{ gridTemplateColumns: 'minmax(0, 5rem) auto 1fr auto' }}>
           <span className="text-text-secondary truncate" title={s.name}>{s.name}</span>
           <span className="text-text-tertiary tabular-nums w-[3.5em] text-right">
             {s.elevation != null ? `${s.elevation.toFixed(1)}m` : '—'}
