@@ -263,7 +263,9 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           </div>
           <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent />
           <KpiCard value={stats.totalInstances.toLocaleString()} label="Instances" subValue={stats.typeRatio} subLabel="per type" warn={stats.typeRatio < 5} />
-          <KpiCard value={analysis.total_storeys} label="Spatial" subValue={analysis.total_spaces} subLabel="spaces" />
+          <div className="col-span-2">
+            <KpiCard value={`${analysis.total_storeys} storeys`} label="Spatial" subValue={analysis.total_spaces} subLabel="spaces" />
+          </div>
 
           {/* Row 2: Charts stacked (left) | Viewer (right) */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
