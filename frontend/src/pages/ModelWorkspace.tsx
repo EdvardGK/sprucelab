@@ -415,24 +415,26 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
 // ─── KPI Card ───────────────────────────────────────────────────────────────
 
 function KpiCard({ value, label, subValue, subLabel, accent, warn }: {
-  value: number; label: string; subValue?: number; subLabel?: string; accent?: boolean; warn?: boolean;
+  value: number | string; label: string; subValue?: number | string; subLabel?: string; accent?: boolean; warn?: boolean;
 }) {
+  const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
+  const displaySubValue = typeof subValue === 'number' ? subValue.toLocaleString() : (subValue ?? '');
   return (
     <Card className={`h-full ${accent ? 'bg-forest text-white' : ''}`}>
-      <CardContent className="p-4 text-center flex flex-col justify-between h-full">
+      <CardContent className="p-3 text-center flex flex-col justify-between h-full">
         <div>
           <div className={`text-[clamp(1.25rem,3vw,1.75rem)] font-bold tabular-nums leading-tight ${accent ? 'text-white' : 'text-text-primary'}`}>
-            {value.toLocaleString()}
+            {displayValue}
           </div>
           <div className={`text-[clamp(0.5rem,0.9vw,0.65rem)] uppercase tracking-wide mt-0.5 ${accent ? 'text-white/70' : 'text-text-tertiary'}`}>
             {label}
           </div>
         </div>
         {subLabel != null && (
-          <div className={`mt-3 pt-3 border-t flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)] ${accent ? 'border-white/20' : 'border-border'}`}>
+          <div className={`mt-2 pt-2 border-t flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)] ${accent ? 'border-white/20' : 'border-border'}`}>
             <span className={accent ? 'text-white/70' : 'text-text-secondary'}>{subLabel}</span>
             <span className={`font-semibold tabular-nums ${warn ? (accent ? 'text-yellow-300' : 'text-warning') : (accent ? 'text-white' : 'text-forest')}`}>
-              {(subValue ?? 0).toLocaleString()}
+              {displaySubValue}
             </span>
           </div>
         )}
