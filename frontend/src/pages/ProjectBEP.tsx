@@ -14,6 +14,9 @@ import {
   LayoutDashboard,
   Plus,
   Loader2,
+  ClipboardList,
+  MessageSquareReply,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   useProjectBEP,
