@@ -349,5 +349,6 @@ export default function FederatedViewer() {
         existingModelIds={group?.models?.map(m => m.model) || []}
       />
     </div>
+    </AppLayout>
   );
 }
