@@ -147,7 +147,7 @@ export function useBEPs(filters?: { project?: string; status?: string }) {
       if (filters?.project) params.append('project', filters.project);
       if (filters?.status) params.append('status', filters.status);
       const response = await apiClient.get<BEPConfiguration[]>(
-        `/bep/?${params.toString()}`
+        `/bep/configs/?${params.toString()}`
       );
       return response.data;
     },
