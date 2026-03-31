@@ -170,7 +170,7 @@ export function useProjectBEP(projectId: string) {
     queryKey: bepKeys.projectBEP(projectId),
     queryFn: async () => {
       const response = await apiClient.get<BEPConfiguration[]>(
-        `/bep/?project=${projectId}&status=active`
+        `/bep/configs/?project=${projectId}&status=active`
       );
       return response.data[0] || null;
     },
