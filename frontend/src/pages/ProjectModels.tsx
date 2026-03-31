@@ -215,7 +215,7 @@ export default function ProjectModels() {
                     className="group relative bg-surface border border-border rounded-md p-5 flex flex-col transition-all duration-150 cursor-pointer hover:bg-surface/80 hover:border-primary/50 h-44 pt-5 pb-0"
                     onClick={() => {
                       // Allow viewing even during processing - WebIfcViewer loads file directly
-                      navigate(`/models/${model.id}`);
+                      navigate(`/projects/${id}/models/${model.id}`);
                     }}
                   >
                     {/* Top section: Name, version, status */}
@@ -364,37 +364,37 @@ export default function ProjectModels() {
                     >
                       <td
                         className="px-4 py-3 text-sm text-text-primary font-medium cursor-pointer"
-                        onClick={() => navigate(`/models/${model.id}`)}
+                        onClick={() => navigate(`/projects/${id}/models/${model.id}`)}
                       >
                         {model.name}
                       </td>
                       <td
                         className="px-4 py-3 text-sm text-text-secondary cursor-pointer"
-                        onClick={() => navigate(`/models/${model.id}`)}
+                        onClick={() => navigate(`/projects/${id}/models/${model.id}`)}
                       >
                         v{model.version_number}
                       </td>
                       <td
                         className="px-4 py-3 cursor-pointer"
-                        onClick={() => navigate(`/models/${model.id}`)}
+                        onClick={() => navigate(`/projects/${id}/models/${model.id}`)}
                       >
                         <ModelStatusBadge status={model.status} />
                       </td>
                       <td
                         className="px-4 py-3 text-sm text-text-secondary text-right cursor-pointer"
-                        onClick={() => navigate(`/models/${model.id}`)}
+                        onClick={() => navigate(`/projects/${id}/models/${model.id}`)}
                       >
                         {model.status === 'ready' ? model.element_count.toLocaleString() : '—'}
                       </td>
                       <td
                         className="px-4 py-3 text-sm text-text-secondary text-right cursor-pointer"
-                        onClick={() => navigate(`/models/${model.id}`)}
+                        onClick={() => navigate(`/projects/${id}/models/${model.id}`)}
                       >
                         {model.status === 'ready' ? model.storey_count : '—'}
                       </td>
                       <td
                         className="px-4 py-3 cursor-pointer"
-                        onClick={() => navigate(`/models/${model.id}`)}
+                        onClick={() => navigate(`/projects/${id}/models/${model.id}`)}
                       >
                         {model.status === 'ready' && model.type_count > 0 ? (
                           <div className="flex items-center gap-2">
@@ -419,13 +419,13 @@ export default function ProjectModels() {
                       </td>
                       <td
                         className="px-4 py-3 text-sm text-text-secondary text-right cursor-pointer"
-                        onClick={() => navigate(`/models/${model.id}`)}
+                        onClick={() => navigate(`/projects/${id}/models/${model.id}`)}
                       >
                         {model.file_size ? formatFileSize(model.file_size) : '—'}
                       </td>
                       <td
                         className="px-4 py-3 text-sm text-text-tertiary cursor-pointer"
-                        onClick={() => navigate(`/models/${model.id}`)}
+                        onClick={() => navigate(`/projects/${id}/models/${model.id}`)}
                       >
                         {new Date(model.created_at).toLocaleDateString()}
                       </td>
