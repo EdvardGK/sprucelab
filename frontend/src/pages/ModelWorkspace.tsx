@@ -683,40 +683,51 @@ function GeometryDonut({ types, showAll }: { types: AnalysisTypeRecord[]; showAl
 // ─── Model Info Card (combined Context / Units / Coordinates) ────────────────
 
 function ModelInfoCard({ analysis }: { analysis: ModelAnalysis }) {
-  const items: [string, string][] = [
-    ['Schema', analysis.ifc_schema || '—'],
-    ['App', analysis.application || '—'],
-    ['Project', analysis.project_name || '—'],
-    ['Building', analysis.building_name || '—'],
-  ];
+  const unitRows: [string, string][] = analysis.units && typeof analysis.units === 'object'
+    ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
+        if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
+          return [k, (v as { symbol?: string }).symbol || '?'];
+        }
+        return [k, String(v ?? '—')];
+      })
+    : [];
 
-  // Add units summary (compact: just length + area)
-  if (analysis.units && typeof analysis.units === 'object') {
-    const u = analysis.units as Record<string, unknown>;
-    const parts: string[] = [];
-    for (const [k, v] of Object.entries(u)) {
-      if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
-        parts.push(`${k}: ${(v as { symbol?: string }).symbol || '?'}`);
-      }
-    }
-    if (parts.length) items.push(['Units', parts.join(', ')]);
-  }
-
-  // Add CRS if present
+  const coordRows: [string, string][] = [];
   if (analysis.coordinates && typeof analysis.coordinates === 'object') {
     const c = analysis.coordinates as Record<string, unknown>;
-    if (c.crs) items.push(['CRS', String(c.crs)]);
+    if (c.crs) coordRows.push(['CRS', String(c.crs)]);
+    if (c.true_north) coordRows.push(['True N', `${(c.true_north as { angle_deg?: number }).angle_deg ?? 0}°`]);
+    if (c.wcs_origin) {
+      const o = c.wcs_origin as { x?: number; y?: number; z?: number };
+      coordRows.push(['WCS', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
+    }
   }
+
+  const sections = [
+    { title: 'Context', rows: [
+      ['Project', analysis.project_name || '—'],
+      ['Building', analysis.building_name || '—'],
+      ['App', analysis.application || '—'],
+      ['Schema', analysis.ifc_schema || '—'],
+    ] as [string, string][] },
+    { title: 'Units', rows: unitRows.length ? unitRows : [['—', 'N/A']] as [string, string][] },
+    { title: 'Coords', rows: coordRows.length ? coordRows : [['—', 'N/A']] as [string, string][] },
+  ];
 
   return (
     <Card className="card-accent-lavender">
-      <CardContent className="px-4 py-2">
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[0.65rem]">
-          {items.map(([label, value]) => (
-            <span key={label}>
-              <span className="text-text-tertiary">{label}</span>{' '}
-              <span className="text-text-secondary font-medium">{value}</span>
-            </span>
+      <CardContent className="px-3 py-2">
+        <div className="grid grid-cols-3 gap-x-3">
+          {sections.map((s) => (
+            <div key={s.title}>
+              <h4 className="text-[0.6rem] font-semibold text-text-primary uppercase tracking-wide mb-0.5">{s.title}</h4>
+              {s.rows.map(([label, value]) => (
+                <div key={label} className="flex justify-between text-[0.6rem] leading-tight">
+                  <span className="text-text-tertiary">{label}</span>
+                  <span className="text-text-secondary font-medium truncate ml-1">{value}</span>
+                </div>
+              ))}
+            </div>
           ))}
         </div>
       </CardContent>
