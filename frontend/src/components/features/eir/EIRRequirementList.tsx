@@ -184,7 +184,7 @@ function RequirementRow({
   expanded,
   onToggle,
   readOnly,
-  onUpdate,
+  onUpdate: _onUpdate,
   onDelete,
 }: {
   requirement: EIRRequirement;
