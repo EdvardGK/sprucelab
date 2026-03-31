@@ -228,7 +228,7 @@ class BEPConfigurationListSerializer(serializers.ModelSerializer):
         model = BEPConfiguration
         fields = [
             'id', 'project', 'project_name', 'template', 'template_name',
-            'version', 'status', 'name', 'description', 'framework',
+            'version', 'status', 'name', 'description', 'framework', 'classification_system',
             'mmi_scale_count', 'validation_rules_count', 'milestones_count',
             'created_at', 'updated_at', 'activated_at'
         ]
