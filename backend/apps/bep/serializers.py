@@ -204,7 +204,7 @@ class BEPConfigurationSerializer(serializers.ModelSerializer):
             'id', 'project', 'project_name', 'template', 'template_detail',
             'version', 'status', 'name', 'description',
             'eir_document_url', 'bep_document_url',
-            'framework', 'cde_structure',
+            'framework', 'classification_system', 'cde_structure',
             'technical_requirements', 'mmi_scale', 'naming_conventions',
             'required_property_sets', 'validation_rules', 'milestones',
             'created_by', 'created_at', 'updated_at', 'activated_at'
