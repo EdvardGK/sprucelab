@@ -101,6 +101,9 @@ interface UnifiedBIMViewerProps {
   // Camera
   autoFitToView?: boolean;          // Default: true
   initialCameraPosition?: THREE.Vector3;
+
+  // Element coloring by IFC class (matches treemap palette)
+  classColorMap?: Record<string, string>;  // e.g. { 'IfcWall': '#157954', 'Wall': '#157954' }
 }
 
 // ElementProperties is now imported from ElementPropertiesPanel
