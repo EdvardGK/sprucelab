@@ -182,7 +182,7 @@ export function useBEPTemplates() {
   return useQuery({
     queryKey: bepKeys.templates(),
     queryFn: async () => {
-      const response = await apiClient.get<BEPTemplate[]>('/bep/templates/');
+      const response = await apiClient.get<BEPTemplate[]>('/bep/configs/templates/');
       return response.data;
     },
   });
