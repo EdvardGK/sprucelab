@@ -253,9 +253,9 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <KpiCard value={analysis.total_storeys} label="Storeys" subValue={stats.proxyCount} subLabel="proxy-typed" warn={stats.proxyCount > 0} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue={analysis.duplicate_guid_count} subLabel="dup. GUIDs" warn={analysis.duplicate_guid_count > 0} />
 
-          {/* Row 2: Storeys (3 cols) + Viewer (3 cols) */}
+          {/* Row 2: Storeys (3 cols) + Viewer (3 cols, square) */}
           <div className="col-span-3">
-            <Card className="overflow-hidden flex flex-col card-accent-forest h-full min-h-[280px]">
+            <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
               <CardContent className="p-4 flex-1 min-h-0 overflow-y-auto">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
                 <StoreyChart storeys={analysis.storeys} />
@@ -264,10 +264,10 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           </div>
           <div className="col-span-3">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest h-full min-h-[280px]">
-                <CardContent className="p-4 flex-1 flex flex-col">
+              <Card className="overflow-hidden flex flex-col card-accent-forest">
+                <CardContent className="p-4 flex flex-col">
                   <CardHeader title="3D Viewer" onExpand={() => setOverlay('viewer')} />
-                  <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/20">
+                  <div className="aspect-square rounded-lg overflow-hidden bg-black/20">
                     <UnifiedBIMViewer
                       modelId={model.id}
                       showPropertiesPanel={false}
@@ -276,87 +276,37 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </CardContent>
               </Card>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest h-full min-h-[280px]">
-                <CardContent className="p-4 flex-1 flex items-center justify-center">
+              <Card className="overflow-hidden flex flex-col card-accent-forest">
+                <CardContent className="p-4 aspect-square flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Row 3: Element Distribution (4 cols) + Geometry (2 cols) */}
-          <div className="col-span-4 min-h-[250px]">
+          {/* Row 3: Treemap (2 cols, square) + Geometry (2 cols, square) + Info (2 cols) */}
+          <div className="col-span-2">
             <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
-              <CardContent className="p-4 flex-1 min-h-0 flex flex-col">
+              <CardContent className="p-4 flex flex-col h-full">
                 <CardHeader title="Element Distribution" onExpand={() => setOverlay('elements')} />
-                <div className="flex-1 min-h-0 relative">
+                <div className="aspect-square relative">
                   <Treemap types={analysis.types} />
                 </div>
               </CardContent>
             </Card>
           </div>
-          <div className="col-span-2 min-h-[250px]">
+          <div className="col-span-2">
             <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
-              <CardContent className="p-4 flex-1 min-h-0 flex flex-col">
+              <CardContent className="p-4 flex flex-col h-full">
                 <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
-                <div className="flex-1 min-h-0 flex items-center justify-center">
+                <div className="aspect-square flex items-center justify-center">
                   <GeometryDonut types={analysis.types} />
                 </div>
               </CardContent>
             </Card>
           </div>
-
-          {/* Row 4: Context / Units / Coordinates (2 cols each) */}
           <div className="col-span-2">
-            <InfoCard title="Context" rows={[
-              ['Project', analysis.project_name || '—'],
-              ['Site', analysis.site_name || '—'],
-              ['Building', analysis.building_name || '—'],
-              ['Application', analysis.application || '—'],
-              ['Schema', analysis.ifc_schema || '—'],
-            ]} />
-          </div>
-          <div className="col-span-2">
-            <InfoCard title="Units" rows={
-              analysis.units && typeof analysis.units === 'object'
-                ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
-                    if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
-                      const u = v as { name?: string; prefix?: string; symbol?: string };
-                      return [k, u.symbol || u.name || '—'];
-                    }
-                    return [k, String(v ?? '—')];
-                  })
-                : [['—', 'No unit data']]
-            } />
-          </div>
-          <div className="col-span-2">
-            <InfoCard title="Coordinates" rows={
-              analysis.coordinates && typeof analysis.coordinates === 'object'
-                ? (() => {
-                    const c = analysis.coordinates as Record<string, unknown>;
-                    const rows: [string, string][] = [];
-                    if (c.crs) rows.push(['CRS', String(c.crs)]);
-                    if (c.true_north) {
-                      const tn = c.true_north as { angle_deg?: number };
-                      rows.push(['True North', `${tn.angle_deg ?? 0}°`]);
-                    }
-                    if (c.wcs_origin) {
-                      const o = c.wcs_origin as { x?: number; y?: number; z?: number };
-                      rows.push(['WCS Origin', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
-                    }
-                    if (c.site_reference) {
-                      const s = c.site_reference as { latitude?: number; longitude?: number; elevation?: number };
-                      if (s.latitude || s.longitude) rows.push(['Site', `${s.latitude}°N, ${s.longitude}°E`]);
-                      if (s.elevation) rows.push(['Elevation', `${s.elevation}m`]);
-                    }
-                    if (c.orientation_sample) {
-                      const os = c.orientation_sample as { dominant?: string };
-                      rows.push(['Orientation', os.dominant || '—']);
-                    }
-                    return rows.length ? rows : [['—', 'No coordinate data']];
-                  })()
-                : [['—', 'No coordinate data']]
-            } />
+            <ModelInfoCard analysis={analysis} />
           </div>
         </div>
       </div>
