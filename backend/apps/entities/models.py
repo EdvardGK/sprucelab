@@ -2139,6 +2139,7 @@ class ModelAnalysis(models.Model):
     # Model-level data (not per-type, not filterable)
     units = models.JSONField(default=dict)
     coordinates = models.JSONField(default=dict)
+    spatial_data = models.JSONField(default=dict, blank=True)
     project_name = models.CharField(max_length=255, blank=True)
     site_name = models.CharField(max_length=255, blank=True)
     building_name = models.CharField(max_length=255, blank=True)
