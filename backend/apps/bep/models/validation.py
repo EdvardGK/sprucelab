@@ -19,7 +19,7 @@ class IDSValidationRun(models.Model):
 
     # What was validated
     model = models.ForeignKey(
-        'models.IFCModel',
+        'models.Model',
         on_delete=models.CASCADE,
         related_name='ids_validation_runs',
     )
