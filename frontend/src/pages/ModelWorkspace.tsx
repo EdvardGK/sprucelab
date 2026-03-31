@@ -242,119 +242,122 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
   return (
     <>
-      <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto w-full space-y-[clamp(0.5rem,1vw,0.75rem)]">
-        {/* Row 1: Quality + KPIs */}
-        <div className="grid grid-cols-5 gap-[clamp(0.5rem,1vw,0.75rem)]">
-          {/* Quality checks card (spans 2 rows via nested flex) */}
-          <div className="row-span-2 flex flex-col">
+      <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto w-full">
+        <div className="grid grid-cols-6 gap-3">
+          {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
+          <div className="col-span-2">
             <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} />
           </div>
-          {/* KPI cards */}
-          <KpiCard value={analysis.total_types} label="Types" accent />
-          <KpiCard value={analysis.total_products} label="Products" />
-          <KpiCard value={analysis.total_storeys} label="Storeys" />
-          <KpiCard value={analysis.total_spaces} label="Spaces" />
-        </div>
+          <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent />
+          <KpiCard value={analysis.total_products} label="Products" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} />
+          <KpiCard value={analysis.total_storeys} label="Storeys" subValue={stats.proxyCount} subLabel="proxy-typed" warn={stats.proxyCount > 0} />
+          <KpiCard value={analysis.total_spaces} label="Spaces" subValue={analysis.duplicate_guid_count} subLabel="dup. GUIDs" warn={analysis.duplicate_guid_count > 0} />
 
-        {/* Row 2: Sub-KPIs */}
-        <div className="grid grid-cols-5 gap-[clamp(0.5rem,1vw,0.75rem)]">
-          <div /> {/* spacer for quality card column */}
-          <SubKpiCard value={stats.emptyTypes} label="Empty Types" warn={stats.emptyTypes > 0} />
-          <SubKpiCard value={stats.untypedCount} label="Untyped" warn={stats.untypedCount > 0} />
-          <SubKpiCard value={stats.proxyCount} label="Proxy-typed" warn={stats.proxyCount > 0} />
-          <SubKpiCard value={analysis.duplicate_guid_count} label="Duplicate GUIDs" warn={analysis.duplicate_guid_count > 0} />
-        </div>
+          {/* Row 2: Storeys (3 cols) + Viewer (3 cols) */}
+          <div className="col-span-3">
+            <Card className="overflow-hidden flex flex-col card-accent-forest h-full min-h-[280px]">
+              <CardContent className="p-4 flex-1 min-h-0 overflow-y-auto">
+                <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
+                <StoreyChart storeys={analysis.storeys} />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="col-span-3">
+            {hasFile ? (
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full min-h-[280px]">
+                <CardContent className="p-4 flex-1 flex flex-col">
+                  <CardHeader title="3D Viewer" onExpand={() => setOverlay('viewer')} />
+                  <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/20">
+                    <UnifiedBIMViewer
+                      modelId={model.id}
+                      showPropertiesPanel={false}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full min-h-[280px]">
+                <CardContent className="p-4 flex-1 flex items-center justify-center">
+                  <span className="text-text-tertiary text-sm">No IFC file</span>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-        {/* Row 3: Storeys bar chart */}
-        <Card className="overflow-hidden flex flex-col card-accent-forest min-h-[180px]">
-          <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex-1 min-h-0 overflow-y-auto">
-            <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
-            <StoreyChart storeys={analysis.storeys} />
-          </CardContent>
-        </Card>
+          {/* Row 3: Element Distribution (4 cols) + Geometry (2 cols) */}
+          <div className="col-span-4 min-h-[250px]">
+            <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
+              <CardContent className="p-4 flex-1 min-h-0 flex flex-col">
+                <CardHeader title="Element Distribution" onExpand={() => setOverlay('elements')} />
+                <div className="flex-1 min-h-0 relative">
+                  <Treemap types={analysis.types} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="col-span-2 min-h-[250px]">
+            <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
+              <CardContent className="p-4 flex-1 min-h-0 flex flex-col">
+                <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
+                <div className="flex-1 min-h-0 flex items-center justify-center">
+                  <GeometryDonut types={analysis.types} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Row 4: 3D Viewer */}
-        {hasFile && (
-          <Card className="overflow-hidden flex flex-col card-accent-forest">
-            <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex flex-col">
-              <CardHeader title="3D Viewer" onExpand={() => setOverlay('viewer')} />
-              <div className="h-[400px] rounded-lg overflow-hidden bg-black/20">
-                <UnifiedBIMViewer
-                  modelId={model.id}
-                  showPropertiesPanel={false}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Row 5: Treemap + Geometry donut */}
-        <div className="grid grid-cols-[1.5fr_1fr] gap-[clamp(0.5rem,1vw,0.75rem)] min-h-[250px]">
-          <Card className="overflow-hidden flex flex-col card-accent-forest">
-            <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex-1 min-h-0 flex flex-col">
-              <CardHeader title="Element Distribution" onExpand={() => setOverlay('elements')} />
-              <div className="flex-1 min-h-0 relative">
-                <Treemap types={analysis.types} />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="overflow-hidden flex flex-col card-accent-forest">
-            <CardContent className="p-[clamp(0.75rem,1.5vw,1.25rem)] flex-1 min-h-0 flex flex-col">
-              <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
-              <div className="flex-1 min-h-0 flex items-center justify-center">
-                <GeometryDonut types={analysis.types} />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Row 5: Context / Units / Coordinates */}
-        <div className="grid grid-cols-3 gap-[clamp(0.5rem,1vw,0.75rem)]">
-          <InfoCard title="Context" rows={[
-            ['Project', analysis.project_name || '—'],
-            ['Site', analysis.site_name || '—'],
-            ['Building', analysis.building_name || '—'],
-            ['Application', analysis.application || '—'],
-            ['Schema', analysis.ifc_schema || '—'],
-          ]} />
-          <InfoCard title="Units" rows={
-            analysis.units && typeof analysis.units === 'object'
-              ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
-                  if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
-                    const u = v as { name?: string; prefix?: string; symbol?: string };
-                    return [k, u.symbol || u.name || '—'];
-                  }
-                  return [k, String(v ?? '—')];
-                })
-              : [['—', 'No unit data']]
-          } />
-          <InfoCard title="Coordinates" rows={
-            analysis.coordinates && typeof analysis.coordinates === 'object'
-              ? (() => {
-                  const c = analysis.coordinates as Record<string, unknown>;
-                  const rows: [string, string][] = [];
-                  if (c.crs) rows.push(['CRS', String(c.crs)]);
-                  if (c.true_north) {
-                    const tn = c.true_north as { angle_deg?: number };
-                    rows.push(['True North', `${tn.angle_deg ?? 0}°`]);
-                  }
-                  if (c.wcs_origin) {
-                    const o = c.wcs_origin as { x?: number; y?: number; z?: number };
-                    rows.push(['WCS Origin', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
-                  }
-                  if (c.site_reference) {
-                    const s = c.site_reference as { latitude?: number; longitude?: number; elevation?: number };
-                    if (s.latitude || s.longitude) rows.push(['Site', `${s.latitude}°N, ${s.longitude}°E`]);
-                    if (s.elevation) rows.push(['Elevation', `${s.elevation}m`]);
-                  }
-                  if (c.orientation_sample) {
-                    const os = c.orientation_sample as { dominant?: string };
-                    rows.push(['Orientation', os.dominant || '—']);
-                  }
-                  return rows.length ? rows : [['—', 'No coordinate data']];
-                })()
-              : [['—', 'No coordinate data']]
-          } />
+          {/* Row 4: Context / Units / Coordinates (2 cols each) */}
+          <div className="col-span-2">
+            <InfoCard title="Context" rows={[
+              ['Project', analysis.project_name || '—'],
+              ['Site', analysis.site_name || '—'],
+              ['Building', analysis.building_name || '—'],
+              ['Application', analysis.application || '—'],
+              ['Schema', analysis.ifc_schema || '—'],
+            ]} />
+          </div>
+          <div className="col-span-2">
+            <InfoCard title="Units" rows={
+              analysis.units && typeof analysis.units === 'object'
+                ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
+                    if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
+                      const u = v as { name?: string; prefix?: string; symbol?: string };
+                      return [k, u.symbol || u.name || '—'];
+                    }
+                    return [k, String(v ?? '—')];
+                  })
+                : [['—', 'No unit data']]
+            } />
+          </div>
+          <div className="col-span-2">
+            <InfoCard title="Coordinates" rows={
+              analysis.coordinates && typeof analysis.coordinates === 'object'
+                ? (() => {
+                    const c = analysis.coordinates as Record<string, unknown>;
+                    const rows: [string, string][] = [];
+                    if (c.crs) rows.push(['CRS', String(c.crs)]);
+                    if (c.true_north) {
+                      const tn = c.true_north as { angle_deg?: number };
+                      rows.push(['True North', `${tn.angle_deg ?? 0}°`]);
+                    }
+                    if (c.wcs_origin) {
+                      const o = c.wcs_origin as { x?: number; y?: number; z?: number };
+                      rows.push(['WCS Origin', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
+                    }
+                    if (c.site_reference) {
+                      const s = c.site_reference as { latitude?: number; longitude?: number; elevation?: number };
+                      if (s.latitude || s.longitude) rows.push(['Site', `${s.latitude}°N, ${s.longitude}°E`]);
+                      if (s.elevation) rows.push(['Elevation', `${s.elevation}m`]);
+                    }
+                    if (c.orientation_sample) {
+                      const os = c.orientation_sample as { dominant?: string };
+                      rows.push(['Orientation', os.dominant || '—']);
+                    }
+                    return rows.length ? rows : [['—', 'No coordinate data']];
+                  })()
+                : [['—', 'No coordinate data']]
+            } />
+          </div>
         </div>
       </div>
 
