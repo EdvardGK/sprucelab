@@ -25,6 +25,13 @@ from .eir import (
     EIRRequirement,
     IDSSpecification,
 )
+from .response import (
+    BEPResponse,
+    BEPResponseItem,
+)
+from .validation import (
+    IDSValidationRun,
+)
 
 __all__ = [
     # Core BEP
@@ -43,4 +50,9 @@ __all__ = [
     'EIR',
     'EIRRequirement',
     'IDSSpecification',
+    # BEP Response
+    'BEPResponse',
+    'BEPResponseItem',
+    # Validation
+    'IDSValidationRun',
 ]
