@@ -174,6 +174,50 @@ export default function ProjectBEP() {
                 isActivating={activateBEP.isPending}
               />
             )}
+            {activeSection === 'eir' && (
+              activeEIR ? (
+                <div className="space-y-8">
+                  <EIROverview eir={activeEIR} />
+                  <EIRRequirementList eirId={activeEIR.id} readOnly={activeEIR.status !== 'draft'} />
+                  <IDSSpecList eirId={activeEIR.id} readOnly={activeEIR.status !== 'draft'} />
+                </div>
+              ) : (
+                <Card className="max-w-md mx-auto">
+                  <CardHeader>
+                    <CardTitle>{t('eir.create.title')}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">{t('eir.create.description')}</p>
+                    <Button
+                      onClick={() => createEIR.mutate({ project: projectId!, title: t('eir.title'), framework: 'iso19650' })}
+                      disabled={createEIR.isPending}
+                      className="w-full"
+                    >
+                      {createEIR.isPending ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="mr-1.5 h-4 w-4" />
+                      )}
+                      {t('eir.create.button')}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            )}
+            {activeSection === 'response' && (
+              activeEIR ? (
+                <BEPResponsePanel eirId={activeEIR.id} />
+              ) : (
+                <p className="text-sm text-muted-foreground">{t('eir.compliance.noData')}</p>
+              )
+            )}
+            {activeSection === 'compliance' && (
+              activeEIR ? (
+                <ComplianceDashboard eirId={activeEIR.id} />
+              ) : (
+                <p className="text-sm text-muted-foreground">{t('eir.compliance.noData')}</p>
+              )
+            )}
             {activeSection === 'coordinates' && (
               <CoordinateSystemForm projectId={projectId!} />
             )}
