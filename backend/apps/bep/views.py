@@ -620,8 +620,10 @@ class IDSSpecificationViewSet(viewsets.ModelViewSet):
         POST /api/bep/ids/{id}/validate/
         Body: { "model_id": "uuid" }
 
-        Creates an IDSValidationRun and calls FastAPI for validation.
+        Creates an IDSValidationRun, calls FastAPI IDS service, stores results.
         """
+        from apps.models.models import Model as IFCModel
+
         ids_spec = self.get_object()
         model_id = request.data.get('model_id')
         if not model_id:
@@ -630,22 +632,108 @@ class IDSSpecificationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Resolve the IFC model
+        try:
+            ifc_model = IFCModel.objects.get(id=model_id)
+        except IFCModel.DoesNotExist:
+            return Response(
+                {'error': f'Model {model_id} not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not ifc_model.file_url:
+            return Response(
+                {'error': 'Model has no file_url'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get or generate IDS XML
+        ids_xml = ids_spec.ids_xml
+        if not ids_xml and ids_spec.structured_specs:
+            # Generate XML from structured specs via FastAPI
+            fastapi_url = getattr(settings, 'IFC_SERVICE_URL', 'http://localhost:8100')
+            try:
+                with httpx.Client(timeout=30.0) as client:
+                    gen_resp = client.post(
+                        f"{fastapi_url}/api/v1/ifc/ids/generate",
+                        json={
+                            'structured_specs': ids_spec.structured_specs,
+                            'title': ids_spec.title,
+                            'author': ids_spec.author,
+                        },
+                    )
+                    gen_resp.raise_for_status()
+                    ids_xml = gen_resp.json().get('ids_xml')
+            except Exception as e:
+                return Response(
+                    {'error': f'Failed to generate IDS XML: {e}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        if not ids_xml:
+            return Response(
+                {'error': 'IDS specification has no XML content and no structured specs'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Create validation run
         run = IDSValidationRun.objects.create(
             model_id=model_id,
             ids_specification=ids_spec,
             eir=ids_spec.eir,
-            status='pending',
+            status='running',
+            started_at=timezone.now(),
             triggered_by=str(request.user) if request.user.is_authenticated else 'anonymous',
         )
 
-        # TODO: Call FastAPI service for actual validation (Step 6)
-        # For now, return the run ID for polling
-        return Response({
-            'run_id': str(run.id),
-            'status': 'pending',
-            'message': 'Validation run created. IDS validation via FastAPI not yet wired.',
-        }, status=status.HTTP_202_ACCEPTED)
+        # Call FastAPI IDS validation
+        fastapi_url = getattr(settings, 'IFC_SERVICE_URL', 'http://localhost:8100')
+        try:
+            with httpx.Client(timeout=300.0) as client:
+                resp = client.post(
+                    f"{fastapi_url}/api/v1/ifc/ids/validate",
+                    json={
+                        'ids_xml': ids_xml,
+                        'file_url': ifc_model.file_url,
+                    },
+                )
+                resp.raise_for_status()
+                result = resp.json()
+        except httpx.HTTPStatusError as e:
+            run.status = 'failed'
+            run.error_message = f'FastAPI returned {e.response.status_code}: {e.response.text}'
+            run.completed_at = timezone.now()
+            run.save()
+            return Response(
+                {'run_id': str(run.id), 'status': 'failed', 'error': run.error_message},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except Exception as e:
+            run.status = 'failed'
+            run.error_message = str(e)
+            run.completed_at = timezone.now()
+            run.save()
+            return Response(
+                {'run_id': str(run.id), 'status': 'failed', 'error': str(e)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # Store results
+        run.status = result.get('status', 'completed')
+        run.overall_pass = result.get('overall_pass')
+        run.total_specifications = result.get('total_specifications', 0)
+        run.specifications_passed = result.get('specifications_passed', 0)
+        run.specifications_failed = result.get('specifications_failed', 0)
+        run.total_checks = result.get('total_checks', 0)
+        run.checks_passed = result.get('checks_passed', 0)
+        run.checks_failed = result.get('checks_failed', 0)
+        run.results_json = result.get('results', {})
+        run.duration_seconds = result.get('duration_seconds')
+        run.completed_at = timezone.now()
+        run.save()
+
+        serializer = IDSValidationRunSerializer(run)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class BEPResponseViewSet(viewsets.ModelViewSet):
