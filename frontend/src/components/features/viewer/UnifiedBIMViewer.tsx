@@ -1352,6 +1352,49 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     }
   }, [typeVisibility, typeInfo, viewerState.components]);
 
+  // Apply class-based coloring when classColorMap is provided
+  useEffect(() => {
+    if (!classColorMap || !viewerState.components || typeInfo.size === 0) return;
+
+    const fragmentsManager = viewerState.components.get(OBC.FragmentsManager);
+    if (!fragmentsManager) return;
+
+    for (const [ifcClass, data] of typeInfo) {
+      // Try both full name (IfcWall) and stripped (Wall)
+      const hexColor = classColorMap[ifcClass] || classColorMap[ifcClass.replace('Ifc', '')];
+      if (!hexColor) continue;
+
+      const color = new THREE.Color(hexColor);
+
+      try {
+        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(data.guids);
+
+        for (const [fragId, expressIds] of fragmentIdMap) {
+          const fragment = fragmentsManager.list.get(fragId);
+          if (!fragment) continue;
+
+          // ThatOpen Fragment.setColor(color, itemIDs) colors specific instances
+          try {
+            fragment.setColor(color, [...expressIds]);
+          } catch {
+            // Fallback: color entire fragment mesh
+            if (fragment.mesh?.material) {
+              const mat = (fragment.mesh.material as THREE.MeshLambertMaterial);
+              if (!mat.userData?._originalColor) {
+                const cloned = mat.clone();
+                cloned.userData._originalColor = true;
+                cloned.color.copy(color);
+                fragment.mesh.material = cloned;
+              }
+            }
+          }
+        }
+      } catch {
+        // Fragment mapping failed for this class, skip
+      }
+    }
+  }, [classColorMap, typeInfo, viewerState.components]);
+
   // HUD handlers (only used in uncontrolled mode with showFilterHUD=true)
   const handleToggleType = useCallback((type: string) => {
     setTypeVisibility?.(prev => ({
