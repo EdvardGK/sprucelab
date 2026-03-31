@@ -10,6 +10,7 @@ from api.ifc_process import router as process_router
 from api.fragments import router as fragments_router
 from api.ifc_validate import router as validate_router
 from api.ifc_health_check import router as health_check_router
+from api.crs_lookup import router as crs_router
 
 api_router = APIRouter()
 
