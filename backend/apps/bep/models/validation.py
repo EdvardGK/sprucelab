@@ -86,4 +86,4 @@ class IDSValidationRun(models.Model):
         verbose_name_plural = 'IDS Validation Runs'
 
     def __str__(self):
-        return f"IDS Run {self.id[:8]} - {self.status}"
+        return f"IDS Run {str(self.id)[:8]} - {self.status}"
