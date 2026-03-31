@@ -118,13 +118,9 @@ export function BEPResponsePanel({ eirId }: BEPResponsePanelProps) {
   );
 }
 
-function ResponseMetadataForm({ response }: { response: BEPResponse }) {
-  const { t } = useTranslation();
-  const { mutate: update } = useCreateBEPResponse(); // reuse for simplicity
-  // We'll use useUpdateBEPResponse in reality
-  const { useUpdateBEPResponse: useUpdate } = require('@/hooks/use-eir');
-
-  return null; // Simplified — metadata editing can be added later
+function ResponseMetadataForm({ response: _response }: { response: BEPResponse }) {
+  // Metadata editing (respondent name, org, notes) can be added here
+  return null;
 }
 
 function ResponseItemList({ responseId, readOnly }: { responseId: string; readOnly: boolean }) {
