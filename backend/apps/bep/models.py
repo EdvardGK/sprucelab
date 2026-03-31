@@ -207,6 +207,21 @@ class BEPConfiguration(models.Model):
         help_text="BIM framework this BEP follows"
     )
 
+    # Classification system
+    classification_system = models.CharField(
+        max_length=50,
+        choices=[
+            ('ns3451', 'NS 3451 (Bygningsdelstabell)'),
+            ('omniclass', 'OmniClass'),
+            ('uniclass', 'Uniclass 2015'),
+            ('coclass', 'CoClass'),
+            ('sfb', 'SfB'),
+            ('custom', 'Custom'),
+        ],
+        default='ns3451',
+        help_text="Primary classification system for type mapping"
+    )
+
     # Common Data Environment structure
     cde_structure = models.JSONField(
         default=dict,
