@@ -123,7 +123,7 @@ export function BEPOverview({
             <QuickRefRow
               icon={<Archive className="h-3.5 w-3.5" />}
               label={t('bep.overview.classification')}
-              value="NS 3451"
+              value={bep.classification_system ? t(`bep.classificationSystems.${bep.classification_system}`) : t('bep.overview.notConfigured')}
             />
           </div>
         </CardContent>
