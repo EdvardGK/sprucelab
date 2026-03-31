@@ -146,10 +146,10 @@ export function useBEPs(filters?: { project?: string; status?: string }) {
       const params = new URLSearchParams();
       if (filters?.project) params.append('project', filters.project);
       if (filters?.status) params.append('status', filters.status);
-      const response = await apiClient.get<BEPConfiguration[]>(
+      const response = await apiClient.get<{ results: BEPConfiguration[] }>(
         `/bep/configs/?${params.toString()}`
       );
-      return response.data;
+      return response.data.results || [];
     },
   });
 }
