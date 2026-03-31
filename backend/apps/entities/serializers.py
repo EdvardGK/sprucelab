@@ -756,7 +756,7 @@ class ModelAnalysisSerializer(serializers.ModelSerializer):
             'ifc_schema', 'file_size_mb', 'application',
             'total_types', 'total_products', 'total_storeys', 'total_spaces',
             'duplicate_guid_count',
-            'units', 'coordinates',
+            'units', 'coordinates', 'spatial_data',
             'project_name', 'site_name', 'building_name',
             'storeys', 'types',
         ]
