@@ -253,21 +253,22 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <KpiCard value={analysis.total_storeys} label="Storeys" subValue={stats.proxyCount} subLabel="proxy-typed" warn={stats.proxyCount > 0} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue={analysis.duplicate_guid_count} subLabel="dup. GUIDs" warn={analysis.duplicate_guid_count > 0} />
 
-          {/* Row 2: Storeys (3 cols) + Viewer (3 cols, square) */}
-          <div className="col-span-3">
-            <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
-              <CardContent className="p-4 flex-1 min-h-0 overflow-y-auto">
+          {/* Row 2: Storeys + Info (left) | Viewer (right, square) */}
+          <div className="col-span-3 flex flex-col gap-3">
+            <Card className="overflow-hidden flex flex-col card-accent-forest">
+              <CardContent className="p-4 min-h-0 overflow-y-auto">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
                 <StoreyChart storeys={analysis.storeys} />
               </CardContent>
             </Card>
+            <ModelInfoCard analysis={analysis} />
           </div>
           <div className="col-span-3">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-4 flex flex-col">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
+                <CardContent className="p-4 flex flex-col h-full">
                   <CardHeader title="3D Viewer" onExpand={() => setOverlay('viewer')} />
-                  <div className="aspect-square rounded-lg overflow-hidden bg-black/20">
+                  <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/20">
                     <UnifiedBIMViewer
                       modelId={model.id}
                       showPropertiesPanel={false}
@@ -276,20 +277,20 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </CardContent>
               </Card>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-4 aspect-square flex items-center justify-center">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
+                <CardContent className="p-4 flex-1 flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Row 3: Treemap (2 cols, square) + Geometry (2 cols, square) + Info (2 cols) */}
-          <div className="col-span-2">
+          {/* Row 3: Treemap (4 cols) + Geometry (2 cols) */}
+          <div className="col-span-4">
             <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
               <CardContent className="p-4 flex flex-col h-full">
                 <CardHeader title="Element Distribution" onExpand={() => setOverlay('elements')} />
-                <div className="aspect-square relative">
+                <div className="aspect-[4/3] relative">
                   <Treemap types={analysis.types} />
                 </div>
               </CardContent>
@@ -304,9 +305,6 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </div>
               </CardContent>
             </Card>
-          </div>
-          <div className="col-span-2">
-            <ModelInfoCard analysis={analysis} />
           </div>
         </div>
       </div>
