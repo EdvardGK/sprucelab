@@ -31,7 +31,9 @@ export default function ProjectTypesPage() {
 
   return (
     <AppLayout>
-      <TypeBrowser projectId={project.id} />
+      <div className="h-full p-4">
+        <TypeBrowser projectId={project.id} className="h-full" />
+      </div>
     </AppLayout>
   );
 }
