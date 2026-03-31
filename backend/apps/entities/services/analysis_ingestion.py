@@ -51,6 +51,7 @@ def ingest_type_analysis(model_id: str, data: dict[str, Any]) -> ModelAnalysis:
         duplicate_guid_count=ma_data.get("duplicate_guid_count", 0),
         units=ma_data.get("units", {}),
         coordinates=ma_data.get("coordinates", {}),
+        spatial_data=ma_data.get("spatial_data", {}),
         project_name=ma_data.get("project_name", ""),
         site_name=ma_data.get("site_name", ""),
         building_name=ma_data.get("building_name", ""),
