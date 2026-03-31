@@ -1081,6 +1081,47 @@ def type_analysis(path: str | Path) -> dict[str, Any]:
             "element_count": eps.get(s["name"], 0),
         })
 
+    # --- Spatial data: sample element positions for footprint/heatmap ---
+    import random as _random
+
+    all_products_flat: list = []
+    for instances in type_groups.values():
+        all_products_flat.extend(instances)
+
+    sampled = (
+        _random.sample(all_products_flat, 2000)
+        if len(all_products_flat) > 2000
+        else all_products_flat
+    )
+
+    positions: list[dict[str, Any]] = []
+    for inst in sampled:
+        xy = get_world_xy(inst)
+        if xy is not None:
+            positions.append({
+                "x": round(xy[0], 2),
+                "y": round(xy[1], 2),
+                "cls": inst.is_a(),
+            })
+
+    if positions:
+        xs = [p["x"] for p in positions]
+        ys = [p["y"] for p in positions]
+        bbox: dict[str, Any] | None = {
+            "min_x": round(min(xs), 2),
+            "max_x": round(max(xs), 2),
+            "min_y": round(min(ys), 2),
+            "max_y": round(max(ys), 2),
+        }
+    else:
+        bbox = None
+
+    spatial_data = {
+        "bounding_box": bbox,
+        "positions": positions,
+        "origin": {"x": 0, "y": 0},
+    }
+
     return {
         "model_analysis": {
             "ifc_schema": ifc.schema,
@@ -1101,6 +1142,7 @@ def type_analysis(path: str | Path) -> dict[str, Any]:
             "project_name": project_name,
             "site_name": site_name,
             "building_name": building_name,
+            "spatial_data": spatial_data,
         },
         "storeys": storey_records,
         "types": type_records,
