@@ -389,7 +389,7 @@ function KpiCard({ value, label, subValue, subLabel, accent, warn }: {
   value: number; label: string; subValue?: number; subLabel?: string; accent?: boolean; warn?: boolean;
 }) {
   return (
-    <Card className={`h-full ${accent ? 'card-accent-lime' : ''}`}>
+    <Card className={`h-full ${accent ? 'bg-forest/15' : ''}`}>
       <CardContent className="p-4 text-center flex flex-col justify-between h-full">
         <div>
           <div className={`text-[clamp(1.25rem,3vw,1.75rem)] font-bold tabular-nums leading-tight ${accent ? 'text-lime' : 'text-text-primary'}`}>
