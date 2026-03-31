@@ -31,3 +31,6 @@ api_router.include_router(validate_router)
 
 # Universal health check (traffic lights + QTO)
 api_router.include_router(health_check_router)
+
+# CRS lookup (EPSG database via pyproj)
+api_router.include_router(crs_router)
