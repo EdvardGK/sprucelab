@@ -344,6 +344,122 @@
     "mmi": {
       "title": "MMI-skala",
       "levels": "nivåer"
+    },
+    "sections_eir": "Informasjonskrav",
+    "sections_response": "BEP-respons",
+    "sections_compliance": "Samsvar"
+  },
+  "eir": {
+    "title": "Informasjonskrav (EIR)",
+    "description": "Definer krav til informasjonsleveranser og valideringsregler",
+    "sections": {
+      "requirements": "Krav",
+      "ids": "IDS-spesifikasjoner",
+      "response": "BEP-respons",
+      "compliance": "Samsvar"
+    },
+    "status": {
+      "draft": "Utkast",
+      "issued": "Utstedt",
+      "responded": "Besvart",
+      "agreed": "Avtalt",
+      "superseded": "Erstattet"
+    },
+    "create": {
+      "title": "Opprett informasjonskrav",
+      "description": "Definer hva som kreves av informasjonsleveranser i prosjektet.",
+      "button": "Opprett EIR"
+    },
+    "overview": {
+      "version": "Versjon",
+      "framework": "Rammeverk",
+      "issuer": "Utsteder",
+      "organization": "Organisasjon",
+      "issuedAt": "Utstedt",
+      "requirementCount": "Antall krav",
+      "idsCount": "IDS-spesifikasjoner",
+      "noRequirements": "Ingen krav definert ennå."
+    },
+    "requirement": {
+      "add": "Legg til krav",
+      "code": "Kode",
+      "title": "Tittel",
+      "description": "Beskrivelse",
+      "instructions": "Instruksjoner",
+      "category": "Kategori",
+      "severity": "Alvorlighetsgrad",
+      "disciplines": "Gjelder fagdisipliner",
+      "ifcTypes": "Gjelder IFC-typer",
+      "mmiLevel": "Gjelder fra MMI-nivå",
+      "idsLink": "IDS-kobling",
+      "categories": {
+        "technical": "Teknisk",
+        "property": "Egenskaper",
+        "classification": "Klassifisering",
+        "geometry": "Geometri",
+        "coordination": "Koordinering",
+        "naming": "Navngivning",
+        "general": "Generelt"
+      },
+      "severities": {
+        "mandatory": "Obligatorisk",
+        "recommended": "Anbefalt",
+        "optional": "Valgfritt"
+      }
+    },
+    "ids": {
+      "title": "IDS-spesifikasjoner",
+      "add": "Legg til IDS",
+      "import": "Importer .ids",
+      "author": "Forfatter",
+      "source": "Kilde",
+      "specCount": "Spesifikasjoner",
+      "validate": "Valider",
+      "noSpecs": "Ingen IDS-spesifikasjoner.",
+      "sources": {
+        "imported": "Importert",
+        "authored": "Forfatter",
+        "library": "Bibliotek"
+      }
+    },
+    "response": {
+      "title": "BEP-respons",
+      "create": "Opprett respons",
+      "submit": "Send inn",
+      "autoPopulate": "Generer svar",
+      "respondent": "Respondent",
+      "organization": "Organisasjon",
+      "generalNotes": "Generelle merknader",
+      "noResponse": "Ingen respons opprettet. Opprett en for å svare på kravene.",
+      "status": {
+        "draft": "Utkast",
+        "submitted": "Innsendt",
+        "accepted": "Akseptert",
+        "revision_requested": "Revisjon etterspurt"
+      },
+      "compliance": {
+        "will_comply": "Vil oppfylle",
+        "partially": "Delvis",
+        "cannot_comply": "Kan ikke oppfylle",
+        "not_applicable": "Ikke aktuelt",
+        "pending": "Venter"
+      },
+      "item": {
+        "method": "Metode",
+        "issues": "Problemer",
+        "wishes": "Ønsker",
+        "discipline": "Ansvarlig fag",
+        "toolNotes": "Verktøymerknader"
+      }
+    },
+    "compliance": {
+      "title": "Samsvarsoversikt",
+      "requirementStatus": "Kravstatus",
+      "validationStatus": "Valideringsstatus",
+      "noData": "Ingen data tilgjengelig. Opprett en EIR med krav og en respons.",
+      "passed": "Bestått",
+      "failed": "Ikke bestått",
+      "notValidated": "Ikke validert"
     }
   },
   "scriptingTab": {
