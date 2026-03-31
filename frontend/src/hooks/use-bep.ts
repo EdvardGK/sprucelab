@@ -226,7 +226,7 @@ export function useUpdateBEP() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<BEPConfiguration>) => {
-      const response = await apiClient.patch<BEPConfiguration>(`/bep/${id}/`, data);
+      const response = await apiClient.patch<BEPConfiguration>(`/bep/configs/${id}/`, data);
       return response.data;
     },
     onSuccess: (data) => {
