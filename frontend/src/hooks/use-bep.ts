@@ -193,7 +193,7 @@ export function useMMIScale(bepId: string) {
     queryKey: bepKeys.mmiScale(bepId),
     queryFn: async () => {
       const response = await apiClient.get<MMIScaleResponse>(
-        `/bep/${bepId}/mmi-scale/`
+        `/bep/configs/${bepId}/mmi-scale/`
       );
       return response.data;
     },
