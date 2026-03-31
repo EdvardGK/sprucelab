@@ -255,10 +255,10 @@ export function useProjectCoordinates(projectId: string) {
   return useQuery({
     queryKey: bepKeys.coordinates(projectId),
     queryFn: async () => {
-      const response = await apiClient.get<ProjectCoordinates[]>(
+      const response = await apiClient.get<{ results: ProjectCoordinates[] }>(
         `/bep/coordinates/?project=${projectId}`
       );
-      return response.data[0] || null;
+      return response.data.results?.[0] || null;
     },
     enabled: !!projectId,
   });
