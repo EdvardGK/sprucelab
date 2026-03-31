@@ -11,6 +11,7 @@ import { QTODashboard } from '@/components/features/qto/QTODashboard';
 import { MMIDashboard } from '@/components/features/mmi/MMIDashboard';
 import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer';
 import { ElementPropertiesPanel, ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
+import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
 
 // Tab definitions
