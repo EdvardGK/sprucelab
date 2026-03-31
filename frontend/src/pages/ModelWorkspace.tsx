@@ -263,8 +263,8 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           </div>
           <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent />
           <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} />
-          <KpiCard value={analysis.total_storeys} label="Storeys" subValue={stats.elevationRange} subLabel="elevation" />
-          <KpiCard value={analysis.total_spaces} label="Spaces" />
+          <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" />
+          <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
           {/* Row 2: Charts stacked (left) | Viewer (right) */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
