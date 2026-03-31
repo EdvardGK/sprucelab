@@ -384,7 +384,6 @@ interface AnalysisStats {
   missingFireRating: number;
   classCounts: Record<string, number>;
   repCounts: Record<string, number>;
-  elevationRange: string;
 }
 
 function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
