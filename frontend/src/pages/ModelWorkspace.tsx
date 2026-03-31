@@ -37,106 +37,107 @@ export default function ModelWorkspace() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="flex h-screen items-center justify-center">
+      <AppLayout>
+        <div className="flex h-full items-center justify-center">
           <div className="text-text-secondary">Loading model...</div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!model) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="flex h-screen items-center justify-center">
+      <AppLayout>
+        <div className="flex h-full items-center justify-center">
           <div className="text-error">Model not found</div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   const isReady = model.status === 'ready';
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="border-gradient-header bg-background-elevated px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
+    <AppLayout>
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Header */}
+        <header className="border-gradient-header bg-background-elevated px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
 
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-xl font-semibold text-text-primary">{model.name}</h1>
-                <p className="text-sm text-text-tertiary">Version {model.version_number}</p>
-              </div>
-              <ModelStatusBadge status={model.status} />
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          {isReady && (
-            <div className="flex items-center gap-6 text-sm">
-              <div>
-                <span className="text-text-secondary">Elements:</span>{' '}
-                <span className="text-text-primary font-medium">
-                  {model.element_count.toLocaleString()}
-                </span>
-              </div>
-              <div>
-                <span className="text-text-secondary">Storeys:</span>{' '}
-                <span className="text-text-primary font-medium">{model.storey_count}</span>
-              </div>
-              {model.system_count > 0 && (
+              <div className="flex items-center gap-3">
                 <div>
-                  <span className="text-text-secondary">Systems:</span>{' '}
-                  <span className="text-text-primary font-medium">{model.system_count}</span>
+                  <h1 className="text-xl font-semibold text-text-primary">{model.name}</h1>
+                  <p className="text-sm text-text-tertiary">Version {model.version_number}</p>
                 </div>
-              )}
+                <ModelStatusBadge status={model.status} />
+              </div>
             </div>
-          )}
+
+            {/* Quick Stats */}
+            {isReady && (
+              <div className="flex items-center gap-6 text-sm">
+                <div>
+                  <span className="text-text-secondary">Elements:</span>{' '}
+                  <span className="text-text-primary font-medium">
+                    {model.element_count.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-text-secondary">Storeys:</span>{' '}
+                  <span className="text-text-primary font-medium">{model.storey_count}</span>
+                </div>
+                {model.system_count > 0 && (
+                  <div>
+                    <span className="text-text-secondary">Systems:</span>{' '}
+                    <span className="text-text-primary font-medium">{model.system_count}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Tabs Navigation */}
+        <div className="border-b border-border bg-background-elevated flex-shrink-0">
+          <nav className="flex px-6 space-x-1 overflow-x-auto">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap
+                  border-b-2 -mb-px
+                  ${activeTab === tab.id
+                    ? 'text-text-primary border-primary'
+                    : 'text-text-secondary border-transparent hover:text-text-primary hover:border-border'
+                  }
+                `}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
         </div>
-      </header>
 
-      {/* Tabs Navigation */}
-      <div className="border-b border-border bg-background-elevated">
-        <nav className="flex px-6 space-x-1 overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`
-                px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap
-                border-b-2 -mb-px
-                ${activeTab === tab.id
-                  ? 'text-text-primary border-primary'
-                  : 'text-text-secondary border-transparent hover:text-text-primary hover:border-border'
-                }
-              `}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+        {/* Tab Content */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+          {activeTab === 'validation' && (isReady ? <PlaceholderTab title="Validation" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+          {activeTab === 'metadata' && <MetadataTab model={model} />}
+          {activeTab === 'scripts' && (isReady ? <PlaceholderTab title="Scripts" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+          {activeTab === 'history' && (isReady ? <PlaceholderTab title="History" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+        </div>
       </div>
-
-      {/* Tab Content */}
-      <div className="bg-background">
-        {/* All tabs - show content or processing message */}
-        {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === 'validation' && (isReady ? <PlaceholderTab title="Validation" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === 'metadata' && <MetadataTab model={model} />}
-        {activeTab === 'scripts' && (isReady ? <PlaceholderTab title="Scripts" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-        {activeTab === 'history' && (isReady ? <PlaceholderTab title="History" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-      </div>
-    </div>
+    </AppLayout>
   );
 }
 
