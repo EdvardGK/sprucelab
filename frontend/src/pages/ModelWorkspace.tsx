@@ -402,6 +402,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 // ─── Stats computation ──────────────────────────────────────────────────────
 
 interface AnalysisStats {
+  totalInstances: number;
   emptyTypes: number;
   untypedCount: number;
   proxyCount: number;
