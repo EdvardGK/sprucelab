@@ -2,10 +2,10 @@
 URL configuration for BEP (BIM Execution Plan) API.
 
 Available endpoints:
-- /api/bep/ - BEP configurations (list, create, retrieve, update, delete)
-- /api/bep/templates/ - List available BEP templates (action)
-- /api/bep/{id}/activate/ - Activate a BEP
-- /api/bep/{id}/mmi-scale/ - Get MMI scale for BEP
+- /api/bep/configs/ - BEP configurations (list, create, retrieve, update, delete)
+- /api/bep/configs/templates/ - List available BEP templates (action)
+- /api/bep/configs/{id}/activate/ - Activate a BEP
+- /api/bep/configs/{id}/mmi-scale/ - Get MMI scale for BEP
 - /api/bep/mmi-scale/ - MMI scale definitions CRUD
 - /api/bep/technical/ - Technical requirements CRUD
 - /api/bep/naming/ - Naming conventions CRUD
