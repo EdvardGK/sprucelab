@@ -373,6 +373,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
 interface AnalysisStats {
   totalInstances: number;
+  typeRatio: number;
   emptyTypes: number;
   untypedCount: number;
   proxyCount: number;
