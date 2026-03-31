@@ -212,7 +212,7 @@ export function useCreateBEP() {
       framework?: string;
       description?: string;
     }) => {
-      const response = await apiClient.post<BEPConfiguration>('/bep/', data);
+      const response = await apiClient.post<BEPConfiguration>('/bep/configs/', data);
       return response.data;
     },
     onSuccess: (data) => {
