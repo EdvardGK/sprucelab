@@ -354,6 +354,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               <UnifiedBIMViewer
                 modelId={model.id}
                 showPropertiesPanel={false}
+                classColorMap={classColorMap}
                 onSelectionChange={(element) => setSelectedElement(element)}
               />
             </div>
