@@ -21,7 +21,7 @@ import ifcopenshell.util.unit
 from .context import detect_discipline, parse_filename
 from .core import open_ifc
 from .performance import build_pset_map, build_storey_map, build_type_map
-from .placement import detect_orientation
+from .placement import detect_orientation, get_world_xy
 from .storeys import extract_storeys
 
 # ---------------------------------------------------------------------------
