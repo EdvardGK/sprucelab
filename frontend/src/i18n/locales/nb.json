@@ -282,6 +282,14 @@
       "classification": "Klassifisering",
       "description": "Beskrivelse"
     },
+    "classificationSystems": {
+      "ns3451": "NS 3451",
+      "omniclass": "OmniClass",
+      "uniclass": "Uniclass 2015",
+      "coclass": "CoClass",
+      "sfb": "SfB",
+      "custom": "Egendefinert"
+    },
     "coordinates": {
       "crs": "Koordinatsystem",
       "crsTitle": "Koordinatreferansesystem",
