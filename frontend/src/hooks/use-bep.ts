@@ -94,6 +94,7 @@ export interface BEPConfiguration {
   eir_document_url: string;
   bep_document_url: string;
   framework: string;
+  classification_system: string;
   cde_structure: Record<string, any>;
   technical_requirements?: TechnicalRequirement;
   mmi_scale?: MMIScaleDefinition[];
