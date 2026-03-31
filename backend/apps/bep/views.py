@@ -6,12 +6,19 @@ Provides endpoints for:
 - BEP templates listing
 - Project BEP assignment
 - MMI scale retrieval for analysis
+- EIR / IDS / BEP Response management
 """
+import logging
+
+import httpx
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 from .models import (
     BEPTemplate,
     BEPConfiguration,
