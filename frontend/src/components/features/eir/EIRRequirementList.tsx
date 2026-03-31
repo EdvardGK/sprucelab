@@ -191,7 +191,7 @@ function RequirementRow({
   expanded: boolean;
   onToggle: () => void;
   readOnly?: boolean;
-  onUpdate: (data: Partial<EIRRequirement>) => void;
+  onUpdate: (_data: Partial<EIRRequirement>) => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
