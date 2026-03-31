@@ -253,8 +253,24 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <KpiCard value={analysis.total_storeys} label="Storeys" subValue={stats.proxyCount} subLabel="proxy-typed" warn={stats.proxyCount > 0} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue={analysis.duplicate_guid_count} subLabel="dup. GUIDs" warn={analysis.duplicate_guid_count > 0} />
 
-          {/* Row 2: Storeys + Info (left) | Viewer (right, square) */}
+          {/* Row 2: 4 stacked cards (left) | Viewer (right, fills height) */}
           <div className="col-span-3 flex flex-col gap-3">
+            <Card className="overflow-hidden flex flex-col card-accent-forest">
+              <CardContent className="p-4 flex flex-col">
+                <CardHeader title="Element Distribution" onExpand={() => setOverlay('elements')} />
+                <div className="aspect-square relative">
+                  <Treemap types={analysis.types} />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden flex flex-col card-accent-forest">
+              <CardContent className="p-4 flex flex-col">
+                <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
+                <div className="flex items-center justify-center py-2">
+                  <GeometryDonut types={analysis.types} />
+                </div>
+              </CardContent>
+            </Card>
             <Card className="overflow-hidden flex flex-col card-accent-forest">
               <CardContent className="p-4 min-h-0 overflow-y-auto">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
@@ -283,28 +299,6 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </CardContent>
               </Card>
             )}
-          </div>
-
-          {/* Row 3: Treemap (4 cols) + Geometry (2 cols) */}
-          <div className="col-span-4">
-            <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
-              <CardContent className="p-4 flex flex-col h-full">
-                <CardHeader title="Element Distribution" onExpand={() => setOverlay('elements')} />
-                <div className="aspect-[4/3] relative">
-                  <Treemap types={analysis.types} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          <div className="col-span-2">
-            <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
-              <CardContent className="p-4 flex flex-col h-full">
-                <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
-                <div className="aspect-square flex items-center justify-center">
-                  <GeometryDonut types={analysis.types} />
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
