@@ -169,10 +169,10 @@ export function useProjectBEP(projectId: string) {
   return useQuery({
     queryKey: bepKeys.projectBEP(projectId),
     queryFn: async () => {
-      const response = await apiClient.get<BEPConfiguration[]>(
+      const response = await apiClient.get<{ results: BEPConfiguration[] }>(
         `/bep/configs/?project=${projectId}&status=active`
       );
-      return response.data[0] || null;
+      return response.data.results?.[0] || null;
     },
     enabled: !!projectId,
   });
