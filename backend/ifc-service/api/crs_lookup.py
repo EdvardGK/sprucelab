@@ -2,7 +2,7 @@
 CRS (Coordinate Reference System) lookup via pyproj EPSG database.
 
 Endpoints:
-- GET /crs/norway - Curated Norwegian CRS codes (NTM, UTM, vertical datums)
+- GET /crs/norway - Curated Norwegian CRS codes (NTM, UTM, vertical datums, compounds)
 - GET /crs/search?q=... - Search by name or code
 - GET /crs/{epsg_code} - Look up a specific EPSG code
 """
@@ -20,7 +20,10 @@ class CRSInfo(BaseModel):
     name: str
     area_of_use: str | None = None
     bounds: list[float] | None = None  # [west, south, east, north]
-    type: str  # PROJECTED, GEOGRAPHIC, VERTICAL
+    type: str  # PROJECTED, GEOGRAPHIC, VERTICAL, COMPOUND
+    is_compound: bool = False
+    horizontal_epsg: int | None = None  # sub-CRS if compound
+    vertical_epsg: int | None = None  # sub-CRS if compound
 
 
 class CRSGroup(BaseModel):
@@ -40,12 +43,14 @@ class CRSSearchResult(BaseModel):
 
 # Curated Norwegian EPSG codes
 _NORWAY_CODES = {
-    "NTM-soner": list(range(5105, 5131)),  # NTM zone 5-30
-    "UTM-soner": [25831, 25832, 25833, 25834, 25835, 25836],  # UTM 31N-36N
+    "NTM + NN2000": list(range(5945, 5971)),  # NTM zone 5-30 + NN2000
+    "UTM + NN2000": [5971, 5972, 5973, 5974, 5975, 5976],  # UTM 31N-36N + NN2000
+    "NTM (kun horisontal)": list(range(5105, 5131)),  # NTM zone 5-30
+    "UTM (kun horisontal)": [25831, 25832, 25833, 25834, 25835, 25836],
     "Høydesystem": [5941, 5776],  # NN2000, NN54
 }
 
-# Cache to avoid repeated pyproj lookups
+# Cache
 _norway_cache: NorwayCRSResponse | None = None
 
 
@@ -55,8 +60,12 @@ def _build_crs_info(epsg_code: int) -> CRSInfo | None:
         crs = pyproj.CRS.from_epsg(epsg_code)
     except Exception:
         return None
+
     area = crs.area_of_use
-    if crs.is_projected:
+
+    if crs.is_compound:
+        crs_type = "COMPOUND"
+    elif crs.is_projected:
         crs_type = "PROJECTED"
     elif crs.is_geographic:
         crs_type = "GEOGRAPHIC"
@@ -64,18 +73,32 @@ def _build_crs_info(epsg_code: int) -> CRSInfo | None:
         crs_type = "VERTICAL"
     else:
         crs_type = "OTHER"
+
+    horizontal_epsg = None
+    vertical_epsg = None
+    if crs.is_compound and crs.sub_crs_list:
+        for sub in crs.sub_crs_list:
+            sub_epsg = sub.to_epsg()
+            if sub.is_projected or sub.is_geographic:
+                horizontal_epsg = sub_epsg
+            elif sub.is_vertical:
+                vertical_epsg = sub_epsg
+
     return CRSInfo(
         epsg_code=epsg_code,
         name=crs.name,
         area_of_use=area.name if area else None,
         bounds=list(area.bounds) if area else None,
         type=crs_type,
+        is_compound=crs.is_compound,
+        horizontal_epsg=horizontal_epsg,
+        vertical_epsg=vertical_epsg,
     )
 
 
 @router.get("/norway", response_model=NorwayCRSResponse)
 async def norway_crs():
-    """Curated Norwegian CRS codes: NTM zones, UTM zones, vertical datums."""
+    """Curated Norwegian CRS codes: compound (NTM/UTM + NN2000), projected, vertical."""
     global _norway_cache
     if _norway_cache is not None:
         return _norway_cache
@@ -107,9 +130,9 @@ async def search_crs(
         if info:
             return CRSSearchResult(results=[info], count=1)
 
-    # Text search across all EPSG projected + geographic + vertical CRS
+    # Text search across EPSG projected + geographic + vertical + compound CRS
     all_results = []
-    for pj_type in ["PROJECTED_CRS", "GEOGRAPHIC_2D_CRS", "VERTICAL_CRS"]:
+    for pj_type in ["PROJECTED_CRS", "GEOGRAPHIC_2D_CRS", "VERTICAL_CRS", "COMPOUND_CRS"]:
         all_results.extend(query_crs_info(auth_name="EPSG", pj_types=pj_type))
 
     q_lower = q.lower()
