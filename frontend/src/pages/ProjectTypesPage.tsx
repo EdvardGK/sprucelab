@@ -31,7 +31,7 @@ export default function ProjectTypesPage() {
 
   return (
     <AppLayout>
-      <div className="h-full px-6 md:px-8 lg:px-12 py-6">
+      <div className="h-[calc(100vh-4rem)] overflow-hidden px-6 md:px-8 lg:px-12 py-6">
         <TypeBrowser projectId={project.id} className="h-full" />
       </div>
     </AppLayout>
