@@ -647,7 +647,7 @@ function Treemap({ types }: { types: AnalysisTypeRecord[] }) {
 
 // ─── Geometry Donut ─────────────────────────────────────────────────────────
 
-const DONUT_COLORS = ['#157954', '#D0D34D', '#C7CEE8', '#2dd4a0', '#fb923c', '#818cf8', '#f87171', '#38bdf8'];
+const DONUT_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#94a3b8', '#64748b', '#475569', '#cbd5e1'];
 
 function GeometryDonut({ types, showAll }: { types: AnalysisTypeRecord[]; showAll?: boolean }) {
   const data = useMemo(() => {
