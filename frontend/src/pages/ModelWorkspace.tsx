@@ -417,28 +417,28 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
 
 function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio }: {
   value: number | string; label: string; subValue?: number | string; subLabel?: string; accent?: boolean; warn?: boolean;
-  ratio?: string;  // e.g. "14:1" shown below the label
+  ratio?: string;
 }) {
   const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
   const displaySubValue = typeof subValue === 'number' ? subValue.toLocaleString() : (subValue ?? '');
   return (
     <Card className={`h-full ${accent ? 'bg-forest text-white' : ''}`}>
-      <CardContent className="p-3 text-center flex flex-col justify-between h-full">
-        <div>
-          <div className={`text-[clamp(1.25rem,3vw,1.75rem)] font-bold tabular-nums leading-tight ${accent ? 'text-white' : 'text-text-primary'}`}>
+      <CardContent className="p-3 flex flex-col justify-between h-full">
+        <div className={`text-[clamp(0.55rem,0.9vw,0.7rem)] font-semibold uppercase tracking-wide ${accent ? 'text-white/70' : 'text-text-tertiary'}`}>
+          {label}
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className={`text-[clamp(1.5rem,4vw,2.25rem)] font-bold tabular-nums leading-none ${accent ? 'text-white' : 'text-text-primary'}`}>
             {displayValue}
           </div>
-          <div className={`text-[clamp(0.5rem,0.9vw,0.65rem)] uppercase tracking-wide mt-0.5 ${accent ? 'text-white/70' : 'text-text-tertiary'}`}>
-            {label}
-          </div>
           {ratio && (
-            <div className={`text-[clamp(0.5rem,0.9vw,0.65rem)] tabular-nums mt-0.5 ${accent ? 'text-white/60' : 'text-text-tertiary'}`}>
+            <div className={`text-[clamp(0.5rem,0.8vw,0.6rem)] tabular-nums mt-1 ${accent ? 'text-white/50' : 'text-text-tertiary'}`}>
               {ratio} per type
             </div>
           )}
         </div>
         {subLabel != null && (
-          <div className={`mt-2 pt-2 border-t flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)] ${accent ? 'border-white/20' : 'border-border'}`}>
+          <div className={`pt-2 border-t flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)] ${accent ? 'border-white/20' : 'border-border'}`}>
             <span className={accent ? 'text-white/70' : 'text-text-secondary'}>{subLabel}</span>
             <span className={`font-semibold tabular-nums ${warn ? (accent ? 'text-yellow-300' : 'text-warning') : (accent ? 'text-white' : 'text-forest')}`}>
               {displaySubValue}
