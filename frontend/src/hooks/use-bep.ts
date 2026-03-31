@@ -240,7 +240,7 @@ export function useActivateBEP() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (bepId: string) => {
-      const response = await apiClient.post(`/bep/${bepId}/activate/`);
+      const response = await apiClient.post(`/bep/configs/${bepId}/activate/`);
       return response.data;
     },
     onSuccess: () => {
