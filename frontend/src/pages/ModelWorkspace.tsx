@@ -455,10 +455,10 @@ function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio }: {
 function QualityCard({ analysis, stats, onExpand }: { analysis: ModelAnalysis; stats: AnalysisStats; onExpand?: () => void }) {
   const checks = [
     { label: 'Duplicate GUIDs', value: analysis.duplicate_guid_count, ok: analysis.duplicate_guid_count === 0 },
+    { label: 'Proxy-typed', value: stats.proxyCount, ok: stats.proxyCount === 0 },
     { label: 'IsExternal unset', value: stats.missingIsExternal, ok: stats.missingIsExternal === 0 },
     { label: 'LoadBearing unset', value: stats.missingLoadBearing, ok: stats.missingLoadBearing === 0 },
     { label: 'FireRating unset', value: stats.missingFireRating, ok: stats.missingFireRating === 0 },
-    { label: 'Empty types', value: stats.emptyTypes, ok: stats.emptyTypes === 0 },
   ];
 
   return (
