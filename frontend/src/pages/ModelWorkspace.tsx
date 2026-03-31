@@ -407,7 +407,9 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
     }
   }
 
-  return { totalInstances, emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts };
+  const typeRatio = analysis.total_types > 0 ? Math.round(totalInstances / analysis.total_types) : 0;
+
+  return { totalInstances, typeRatio, emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts };
 }
 
 // ─── KPI Card ───────────────────────────────────────────────────────────────
