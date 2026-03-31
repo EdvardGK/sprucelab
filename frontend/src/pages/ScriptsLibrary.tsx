@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 export default function ScriptsLibrary() {
   return (
     <AppLayout>
-      <div className="container mx-auto p-6">
+      <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
         {/* Page header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
