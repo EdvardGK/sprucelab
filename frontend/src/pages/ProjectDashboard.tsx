@@ -92,7 +92,7 @@ export default function ProjectDashboard() {
 
   return (
     <AppLayout>
-      <div className="h-[calc(100vh-4rem)] overflow-hidden p-4">
+      <div className="h-[calc(100vh-4rem)] overflow-hidden p-6">
         <div className="max-w-7xl mx-auto h-full flex flex-col gap-4">
           {/* Header */}
           <header className="flex items-center justify-between flex-shrink-0">
