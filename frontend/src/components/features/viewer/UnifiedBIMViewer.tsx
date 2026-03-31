@@ -1369,26 +1369,23 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       try {
         const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(data.guids);
 
-        for (const [fragId, expressIds] of fragmentIdMap) {
+        fragmentIdMap.forEach((expressIds: Set<number>, fragId: string) => {
           const fragment = fragmentsManager.list.get(fragId);
-          if (!fragment) continue;
+          if (!fragment) return;
 
           // ThatOpen Fragment.setColor(color, itemIDs) colors specific instances
           try {
             fragment.setColor(color, [...expressIds]);
           } catch {
-            // Fallback: color entire fragment mesh
-            if (fragment.mesh?.material) {
-              const mat = (fragment.mesh.material as THREE.MeshLambertMaterial);
-              if (!mat.userData?._originalColor) {
-                const cloned = mat.clone();
-                cloned.userData._originalColor = true;
-                cloned.color.copy(color);
-                fragment.mesh.material = cloned;
-              }
+            // Fallback: color entire fragment mesh material
+            const mat = fragment.mesh?.material;
+            if (mat && !Array.isArray(mat)) {
+              const cloned = (mat as THREE.MeshLambertMaterial).clone();
+              cloned.color.copy(color);
+              fragment.mesh.material = cloned;
             }
           }
-        }
+        });
       } catch {
         // Fragment mapping failed for this class, skip
       }
