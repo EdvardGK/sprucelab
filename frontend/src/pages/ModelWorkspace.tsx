@@ -26,10 +26,10 @@ const TABS = [
 type TabId = typeof TABS[number]['id'];
 
 export default function ModelWorkspace() {
-  const { id } = useParams<{ id: string }>();
+  const { modelId } = useParams<{ id: string; modelId: string }>();
   const navigate = useNavigate();
   // const location = useLocation();
-  const { data: model, isLoading } = useModel(id!);
+  const { data: model, isLoading } = useModel(modelId!);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   // Get preparsed scene from navigation state (if uploaded)
