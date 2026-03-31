@@ -415,8 +415,9 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
 
 // ─── KPI Card ───────────────────────────────────────────────────────────────
 
-function KpiCard({ value, label, subValue, subLabel, accent, warn }: {
+function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio }: {
   value: number | string; label: string; subValue?: number | string; subLabel?: string; accent?: boolean; warn?: boolean;
+  ratio?: string;  // e.g. "14:1" shown below the label
 }) {
   const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
   const displaySubValue = typeof subValue === 'number' ? subValue.toLocaleString() : (subValue ?? '');
@@ -430,6 +431,11 @@ function KpiCard({ value, label, subValue, subLabel, accent, warn }: {
           <div className={`text-[clamp(0.5rem,0.9vw,0.65rem)] uppercase tracking-wide mt-0.5 ${accent ? 'text-white/70' : 'text-text-tertiary'}`}>
             {label}
           </div>
+          {ratio && (
+            <div className={`text-[clamp(0.5rem,0.9vw,0.65rem)] tabular-nums mt-0.5 ${accent ? 'text-white/60' : 'text-text-tertiary'}`}>
+              {ratio} per type
+            </div>
+          )}
         </div>
         {subLabel != null && (
           <div className={`mt-2 pt-2 border-t flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)] ${accent ? 'border-white/20' : 'border-border'}`}>
