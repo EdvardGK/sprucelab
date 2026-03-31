@@ -11,6 +11,7 @@ import { ViewerTypeToolbar, type TypeInfo } from '@/components/features/viewer/V
 import { ViewerColorHUD, type ColorMode, type FilterPreset, type ModelColorInfo } from '@/components/features/viewer/ViewerColorHUD';
 import { type ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { AddModelsDialog } from '@/components/features/viewers/AddModelsDialog';
+import { AppLayout } from '@/components/Layout/AppLayout';
 
 // localStorage keys for persistence
 const STORAGE_KEYS = {
