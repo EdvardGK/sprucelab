@@ -253,38 +253,40 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <KpiCard value={analysis.total_storeys} label="Storeys" subValue={stats.proxyCount} subLabel="proxy-typed" warn={stats.proxyCount > 0} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue={analysis.duplicate_guid_count} subLabel="dup. GUIDs" warn={analysis.duplicate_guid_count > 0} />
 
-          {/* Row 2: 4 stacked cards (left) | Viewer (right, fills height) */}
+          {/* Row 2: Charts stacked (left) | Viewer (right, square) */}
           <div className="col-span-3 flex flex-col gap-3">
-            <Card className="overflow-hidden flex flex-col card-accent-forest">
-              <CardContent className="p-4 flex flex-col">
-                <CardHeader title="Element Distribution" onExpand={() => setOverlay('elements')} />
-                <div className="aspect-square relative">
-                  <Treemap types={analysis.types} />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="overflow-hidden flex flex-col card-accent-forest">
-              <CardContent className="p-4 flex flex-col">
-                <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
-                <div className="flex items-center justify-center py-2">
-                  <GeometryDonut types={analysis.types} />
-                </div>
-              </CardContent>
-            </Card>
             <Card className="overflow-hidden flex flex-col card-accent-forest">
               <CardContent className="p-4 min-h-0 overflow-y-auto">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
                 <StoreyChart storeys={analysis.storeys} />
               </CardContent>
             </Card>
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="overflow-hidden flex flex-col card-accent-forest">
+                <CardContent className="p-4 flex flex-col">
+                  <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
+                  <div className="aspect-square relative">
+                    <Treemap types={analysis.types} />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="overflow-hidden flex flex-col card-accent-forest">
+                <CardContent className="p-4 flex flex-col">
+                  <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
+                  <div className="aspect-square flex items-center justify-center">
+                    <GeometryDonut types={analysis.types} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
             <ModelInfoCard analysis={analysis} />
           </div>
-          <div className="col-span-3">
+          <div className="col-span-3 flex flex-col justify-end">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
-                <CardContent className="p-4 flex flex-col h-full">
+              <Card className="overflow-hidden flex flex-col card-accent-forest">
+                <CardContent className="p-4 flex flex-col">
                   <CardHeader title="3D Viewer" onExpand={() => setOverlay('viewer')} />
-                  <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/20">
+                  <div className="aspect-square rounded-lg overflow-hidden bg-black/20">
                     <UnifiedBIMViewer
                       modelId={model.id}
                       showPropertiesPanel={false}
@@ -293,8 +295,8 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </CardContent>
               </Card>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
-                <CardContent className="p-4 flex-1 flex items-center justify-center">
+              <Card className="overflow-hidden flex flex-col card-accent-forest">
+                <CardContent className="p-4 aspect-square flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
