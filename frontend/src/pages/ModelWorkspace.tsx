@@ -660,10 +660,19 @@ function GeometryDonut({ types, showAll }: { types: AnalysisTypeRecord[]; showAl
   }
 
   return (
-    <div className="flex items-center justify-center">
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-full max-h-full">
+    <div className="flex flex-col items-center gap-2">
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-[clamp(5rem,12vw,9rem)] h-[clamp(5rem,12vw,9rem)]">
         {paths}
       </svg>
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-0.5">
+        {(showAll ? data : data.slice(0, 6)).map(([label, value], i) => (
+          <div key={label} className="flex items-center gap-1 text-[0.55rem]">
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+            <span className="text-text-secondary">{label}</span>
+            <span className="text-text-tertiary tabular-nums">{((value / total) * 100).toFixed(0)}%</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
