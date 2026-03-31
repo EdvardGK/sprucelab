@@ -706,9 +706,9 @@ function ModelInfoCard({ analysis }: { analysis: ModelAnalysis }) {
         <div className="grid grid-cols-3 gap-x-3">
           {sections.map((s) => (
             <div key={s.title}>
-              <h4 className="text-[0.6rem] font-semibold text-text-primary uppercase tracking-wide mb-0.5">{s.title}</h4>
+              <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wide mb-0.5">{s.title}</h4>
               {s.rows.map(([label, value]) => (
-                <div key={label} className="flex justify-between text-[0.6rem] leading-tight">
+                <div key={label} className="flex justify-between text-[0.7rem] leading-snug">
                   <span className="text-text-tertiary">{label}</span>
                   <span className="text-text-secondary font-medium truncate ml-1">{value}</span>
                 </div>
