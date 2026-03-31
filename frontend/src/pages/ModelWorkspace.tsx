@@ -774,6 +774,195 @@ function CardHeader({ title, onExpand }: { title: string; onExpand?: () => void 
   );
 }
 
+// ─── Viewer Card Header with 3D/Footprint toggle ────────────────────────────
+
+function ViewerCardHeader({ mode, onToggle, onExpand, hasSpatialData }: {
+  mode: '3d' | 'footprint';
+  onToggle: () => void;
+  onExpand: () => void;
+  hasSpatialData: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between mb-[clamp(0.25rem,0.5vw,0.4rem)]">
+      <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary">
+        {mode === '3d' ? '3D Viewer' : 'Footprint'}
+      </h3>
+      <div className="flex items-center gap-1">
+        {hasSpatialData && (
+          <button
+            onClick={onToggle}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
+                       bg-forest/15 border border-forest/30 text-lime
+                       hover:bg-forest hover:text-white hover:border-forest transition-all"
+            title={mode === '3d' ? 'Show footprint' : 'Show 3D'}
+          >
+            {mode === '3d' ? <Grid3x3 className="h-3 w-3" /> : <Box className="h-3 w-3" />}
+          </button>
+        )}
+        <button
+          onClick={onExpand}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
+                     bg-forest/15 border border-forest/30 text-lime
+                     hover:bg-forest hover:text-white hover:border-forest transition-all"
+        >
+          <Maximize2 className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Footprint View (Canvas 2D) ─────────────────────────────────────────────
+
+interface SpatialData {
+  bounding_box: { min_x: number; max_x: number; min_y: number; max_y: number } | null;
+  positions: Array<{ x: number; y: number; cls: string }>;
+  origin: { x: number; y: number };
+}
+
+function FootprintView({ spatialData, classColorMap, units }: {
+  spatialData: SpatialData | null;
+  classColorMap: Record<string, string>;
+  units: Record<string, unknown>;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container || !spatialData?.bounding_box) return;
+
+    // Size canvas to container
+    const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const W = Math.floor(rect.width * dpr);
+    const H = Math.floor(rect.height * dpr);
+    canvas.width = W;
+    canvas.height = H;
+    canvas.style.width = `${rect.width}px`;
+    canvas.style.height = `${rect.height}px`;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    const logicalW = rect.width;
+    const logicalH = rect.height;
+
+    const { bounding_box: bb, positions, origin } = spatialData;
+    const padding = 48;
+
+    const rangeX = bb.max_x - bb.min_x || 1;
+    const rangeY = bb.max_y - bb.min_y || 1;
+    const scale = Math.min((logicalW - 2 * padding) / rangeX, (logicalH - 2 * padding) / rangeY);
+
+    // Center the drawing
+    const drawW = rangeX * scale;
+    const drawH = rangeY * scale;
+    const offsetX = (logicalW - drawW) / 2;
+    const offsetY = (logicalH - drawH) / 2;
+
+    const toCanvas = (x: number, y: number) => ({
+      cx: offsetX + (x - bb.min_x) * scale,
+      cy: logicalH - offsetY - (y - bb.min_y) * scale,
+    });
+
+    // Determine unit conversion factor (model units → meters)
+    let unitFactor = 0.001; // default: mm → m
+    if (units && typeof units === 'object') {
+      const lengthUnit = units['LENGTHUNIT'] as { symbol?: string } | undefined;
+      if (lengthUnit?.symbol === 'm') unitFactor = 1;
+      else if (lengthUnit?.symbol === 'cm') unitFactor = 0.01;
+      else if (lengthUnit?.symbol === 'ft') unitFactor = 0.3048;
+    }
+
+    // Clear
+    ctx.fillStyle = '#1a1f2e';
+    ctx.fillRect(0, 0, logicalW, logicalH);
+
+    // Draw bounding box
+    const tl = toCanvas(bb.min_x, bb.max_y);
+    const br = toCanvas(bb.max_x, bb.min_y);
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(tl.cx, tl.cy, br.cx - tl.cx, br.cy - tl.cy);
+    ctx.setLineDash([]);
+
+    // Dimension labels
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    const widthM = (rangeX * unitFactor).toFixed(1);
+    const depthM = (rangeY * unitFactor).toFixed(1);
+    ctx.fillText(`${widthM} m`, (tl.cx + br.cx) / 2, br.cy + 20);
+    ctx.save();
+    ctx.translate(tl.cx - 20, (tl.cy + br.cy) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText(`${depthM} m`, 0, 0);
+    ctx.restore();
+
+    // Origin crosshair
+    const o = toCanvas(origin.x, origin.y);
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(o.cx - 10, o.cy); ctx.lineTo(o.cx + 10, o.cy);
+    ctx.moveTo(o.cx, o.cy - 10); ctx.lineTo(o.cx, o.cy + 10);
+    ctx.stroke();
+    ctx.fillStyle = '#ef4444';
+    ctx.font = '9px ui-monospace, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('origin', o.cx + 12, o.cy - 4);
+
+    // Heatmap dots (colored by IFC class)
+    ctx.globalAlpha = 0.35;
+    for (const pos of positions) {
+      const p = toCanvas(pos.x, pos.y);
+      const color = classColorMap[pos.cls] || classColorMap[pos.cls.replace('Ifc', '')] || '#94a3b8';
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(p.cx, p.cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // N arrow (top-right)
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 11px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', logicalW - 20, 20);
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(logicalW - 20, 24);
+    ctx.lineTo(logicalW - 20, 38);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(logicalW - 23, 28);
+    ctx.lineTo(logicalW - 20, 24);
+    ctx.lineTo(logicalW - 17, 28);
+    ctx.stroke();
+
+  }, [spatialData, classColorMap, units]);
+
+  if (!spatialData?.bounding_box) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-[#1a1f2e]">
+        <span className="text-text-tertiary text-xs">No spatial data — re-run analysis</span>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="w-full h-full">
+      <canvas ref={canvasRef} className="w-full h-full" />
+    </div>
+  );
+}
+
 // ─── Dashboard Overlay ──────────────────────────────────────────────────────
 
 function DashboardOverlay({ open, onClose, title, children, fullscreen }: {
