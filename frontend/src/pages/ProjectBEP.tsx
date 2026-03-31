@@ -32,11 +32,20 @@ import { StoreyTable } from '@/components/features/bep/StoreyTable';
 import { DisciplineTable } from '@/components/features/bep/DisciplineTable';
 import { TechnicalRequirementsForm } from '@/components/features/bep/TechnicalRequirementsForm';
 import { MMITableMaker } from '@/components/features/bep/MMITableMaker';
+import { EIROverview } from '@/components/features/eir/EIROverview';
+import { EIRRequirementList } from '@/components/features/eir/EIRRequirementList';
+import { IDSSpecList } from '@/components/features/eir/IDSSpecList';
+import { BEPResponsePanel } from '@/components/features/eir/BEPResponsePanel';
+import { ComplianceDashboard } from '@/components/features/eir/ComplianceDashboard';
+import { useEIRs, useCreateEIR } from '@/hooks/use-eir';
 
-type Section = 'overview' | 'coordinates' | 'storeys' | 'disciplines' | 'technical' | 'mmi';
+type Section = 'overview' | 'eir' | 'response' | 'compliance' | 'coordinates' | 'storeys' | 'disciplines' | 'technical' | 'mmi';
 
 const SECTIONS: { id: Section; icon: React.ElementType; labelKey: string }[] = [
   { id: 'overview', icon: LayoutDashboard, labelKey: 'bep.sections.overview' },
+  { id: 'eir', icon: ClipboardList, labelKey: 'bep.sections_eir' },
+  { id: 'response', icon: MessageSquareReply, labelKey: 'bep.sections_response' },
+  { id: 'compliance', icon: ShieldCheck, labelKey: 'bep.sections_compliance' },
   { id: 'coordinates', icon: MapPin, labelKey: 'bep.sections.coordinates' },
   { id: 'storeys', icon: Building2, labelKey: 'bep.sections.storeys' },
   { id: 'disciplines', icon: Users, labelKey: 'bep.sections.disciplines' },
