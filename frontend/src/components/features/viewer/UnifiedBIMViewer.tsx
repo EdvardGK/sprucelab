@@ -137,6 +137,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   onTypesDiscovered,        // New callback with full type info
   autoFitToView = true,
   initialCameraPosition,
+  classColorMap,
 }, ref) {
   // Handle convenience prop: modelId → modelIds
   const modelIds = modelIdsProp || (singleModelId ? [singleModelId] : []);
