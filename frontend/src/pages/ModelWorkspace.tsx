@@ -436,7 +436,7 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
     }
   }
 
-  return { emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts };
+  return { totalInstances, emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts };
 }
 
 // ─── KPI Card ───────────────────────────────────────────────────────────────
