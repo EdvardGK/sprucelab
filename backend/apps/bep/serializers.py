@@ -269,3 +269,198 @@ class BEPTemplateSerializer(serializers.Serializer):
         help_text="List of features (e.g., ['Full 19-level scale', 'Official colors'])"
     )
     recommended_for = serializers.CharField(help_text="Recommended use case")
+
+
+# --- EIR / IDS / BEP Response serializers ---
+
+
+class IDSSpecificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IDSSpecification
+        fields = [
+            'id', 'eir', 'title', 'description', 'author', 'version',
+            'ids_xml', 'structured_specs', 'source', 'original_filename',
+            'ifc_versions', 'specification_count', 'is_library',
+            'created_by', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class IDSSpecificationListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IDSSpecification
+        fields = [
+            'id', 'eir', 'title', 'description', 'source',
+            'ifc_versions', 'specification_count', 'is_library',
+            'created_at',
+        ]
+
+
+class EIRRequirementSerializer(serializers.ModelSerializer):
+    ids_specification_detail = IDSSpecificationListSerializer(
+        source='ids_specification', read_only=True
+    )
+
+    class Meta:
+        model = EIRRequirement
+        fields = [
+            'id', 'eir', 'code', 'title', 'description', 'instructions',
+            'category', 'severity',
+            'applies_to_disciplines', 'applies_to_ifc_types', 'applies_from_mmi_level',
+            'ids_specification', 'ids_specification_detail',
+            'order', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class EIRSerializer(serializers.ModelSerializer):
+    requirements = EIRRequirementSerializer(many=True, read_only=True)
+    ids_specifications = IDSSpecificationListSerializer(many=True, read_only=True)
+    requirement_count = serializers.SerializerMethodField()
+    ids_count = serializers.SerializerMethodField()
+    project_name = serializers.CharField(source='project.name', read_only=True)
+
+    class Meta:
+        model = EIR
+        fields = [
+            'id', 'project', 'project_name',
+            'title', 'description', 'version', 'status',
+            'issuer_name', 'issuer_organization', 'issued_at',
+            'framework', 'ifc_version', 'classification_system',
+            'requirements', 'ids_specifications',
+            'requirement_count', 'ids_count',
+            'created_by', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'project_name']
+
+    def get_requirement_count(self, obj):
+        return obj.requirements.count()
+
+    def get_ids_count(self, obj):
+        return obj.ids_specifications.count()
+
+
+class EIRListSerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    requirement_count = serializers.SerializerMethodField()
+    ids_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EIR
+        fields = [
+            'id', 'project', 'project_name',
+            'title', 'version', 'status', 'framework',
+            'requirement_count', 'ids_count',
+            'issued_at', 'created_at',
+        ]
+
+    def get_requirement_count(self, obj):
+        return obj.requirements.count()
+
+    def get_ids_count(self, obj):
+        return obj.ids_specifications.count()
+
+
+class BEPResponseItemSerializer(serializers.ModelSerializer):
+    requirement_code = serializers.CharField(source='requirement.code', read_only=True)
+    requirement_title = serializers.CharField(source='requirement.title', read_only=True)
+    requirement_category = serializers.CharField(source='requirement.category', read_only=True)
+    requirement_severity = serializers.CharField(source='requirement.severity', read_only=True)
+
+    class Meta:
+        model = BEPResponseItem
+        fields = [
+            'id', 'response', 'requirement',
+            'requirement_code', 'requirement_title',
+            'requirement_category', 'requirement_severity',
+            'compliance_status', 'method_description',
+            'issues', 'wishes',
+            'responsible_discipline', 'tool_notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class BEPResponseSerializer(serializers.ModelSerializer):
+    items = BEPResponseItemSerializer(many=True, read_only=True)
+    item_count = serializers.SerializerMethodField()
+    compliance_summary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BEPResponse
+        fields = [
+            'id', 'eir', 'bep_configuration',
+            'version', 'status',
+            'respondent_name', 'respondent_organization', 'submitted_at',
+            'general_notes',
+            'items', 'item_count', 'compliance_summary',
+            'created_by', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_item_count(self, obj):
+        return obj.items.count()
+
+    def get_compliance_summary(self, obj):
+        items = obj.items.all()
+        total = items.count()
+        if total == 0:
+            return {'total': 0}
+        return {
+            'total': total,
+            'will_comply': items.filter(compliance_status='will_comply').count(),
+            'partially': items.filter(compliance_status='partially').count(),
+            'cannot_comply': items.filter(compliance_status='cannot_comply').count(),
+            'not_applicable': items.filter(compliance_status='not_applicable').count(),
+            'pending': items.filter(compliance_status='pending').count(),
+        }
+
+
+class BEPResponseListSerializer(serializers.ModelSerializer):
+    item_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BEPResponse
+        fields = [
+            'id', 'eir', 'bep_configuration',
+            'version', 'status',
+            'respondent_name', 'respondent_organization', 'submitted_at',
+            'item_count', 'created_at',
+        ]
+
+    def get_item_count(self, obj):
+        return obj.items.count()
+
+
+class IDSValidationRunSerializer(serializers.ModelSerializer):
+    model_name = serializers.CharField(source='model.name', read_only=True)
+    ids_title = serializers.CharField(source='ids_specification.title', read_only=True)
+
+    class Meta:
+        model = IDSValidationRun
+        fields = [
+            'id', 'model', 'model_name',
+            'ids_specification', 'ids_title', 'eir',
+            'status', 'overall_pass',
+            'total_specifications', 'specifications_passed', 'specifications_failed',
+            'total_checks', 'checks_passed', 'checks_failed',
+            'results_json',
+            'started_at', 'completed_at', 'duration_seconds',
+            'error_message', 'triggered_by', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class IDSValidationRunListSerializer(serializers.ModelSerializer):
+    model_name = serializers.CharField(source='model.name', read_only=True)
+    ids_title = serializers.CharField(source='ids_specification.title', read_only=True)
+
+    class Meta:
+        model = IDSValidationRun
+        fields = [
+            'id', 'model', 'model_name',
+            'ids_specification', 'ids_title', 'eir',
+            'status', 'overall_pass',
+            'total_specifications', 'specifications_passed', 'specifications_failed',
+            'started_at', 'completed_at', 'created_at',
+        ]
