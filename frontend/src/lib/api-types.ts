@@ -259,4 +259,9 @@ export interface ModelAnalysis {
   building_name: string;
   storeys: AnalysisStorey[];
   types: AnalysisTypeRecord[];
+  spatial_data: {
+    bounding_box: { min_x: number; max_x: number; min_y: number; max_y: number } | null;
+    positions: Array<{ x: number; y: number; cls: string }>;
+    origin: { x: number; y: number };
+  } | null;
 }
