@@ -414,12 +414,13 @@ interface AnalysisStats {
 }
 
 function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
-  let emptyTypes = 0, untypedCount = 0, proxyCount = 0;
+  let totalInstances = 0, emptyTypes = 0, untypedCount = 0, proxyCount = 0;
   let missingIsExternal = 0, missingLoadBearing = 0, missingFireRating = 0;
   const classCounts: Record<string, number> = {};
   const repCounts: Record<string, number> = {};
 
   for (const t of analysis.types) {
+    totalInstances += t.instance_count;
     if (t.is_empty) emptyTypes++;
     if (t.is_untyped) untypedCount += t.instance_count;
     if (t.is_proxy) proxyCount += t.instance_count;
