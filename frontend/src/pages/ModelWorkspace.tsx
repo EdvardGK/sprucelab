@@ -257,7 +257,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
   return (
     <>
-      <div className="p-[clamp(0.75rem,1.5vw,1rem)] max-w-[1440px] mx-auto w-full h-[calc(100vh-9rem)] overflow-hidden">
+      <div className="p-[clamp(0.75rem,1.5vw,1rem)] max-w-[1440px] mx-auto w-full h-full overflow-hidden">
         <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)] h-full grid-rows-[auto_1fr]">
           {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
           <div className="col-span-2">
