@@ -38,7 +38,7 @@ from .views import (
 # Router for all BEP-related endpoints
 router = DefaultRouter()
 router.register(r'library', BEPTemplateViewSet, basename='bep-template')
-router.register(r'', BEPConfigurationViewSet, basename='bep')
+router.register(r'configs', BEPConfigurationViewSet, basename='bep')
 router.register(r'mmi-scale', MMIScaleDefinitionViewSet, basename='mmi-scale')
 router.register(r'technical', TechnicalRequirementViewSet, basename='technical')
 router.register(r'naming', NamingConventionViewSet, basename='naming')
