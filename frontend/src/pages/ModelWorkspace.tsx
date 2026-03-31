@@ -411,17 +411,7 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
 
   const typeRatio = analysis.total_types > 0 ? Math.round(totalInstances / analysis.total_types) : 0;
 
-  // Elevation range from storeys
-  const elevations = analysis.storeys
-    .map(s => s.elevation)
-    .filter((e): e is number => e != null);
-  const elevationRange = elevations.length >= 2
-    ? `${Math.min(...elevations).toFixed(1)}→${Math.max(...elevations).toFixed(1)}m`
-    : elevations.length === 1
-      ? `${elevations[0].toFixed(1)}m`
-      : '—';
-
-  return { totalInstances, typeRatio, emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts, elevationRange };
+  return { totalInstances, typeRatio, emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts };
 }
 
 // ─── KPI Card ───────────────────────────────────────────────────────────────
