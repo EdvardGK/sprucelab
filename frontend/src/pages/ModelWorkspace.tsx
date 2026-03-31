@@ -392,17 +392,17 @@ function KpiCard({ value, label, subValue, subLabel, accent, warn }: {
     <Card className={`h-full ${accent ? 'bg-forest text-white' : ''}`}>
       <CardContent className="p-4 text-center flex flex-col justify-between h-full">
         <div>
-          <div className={`text-[clamp(1.25rem,3vw,1.75rem)] font-bold tabular-nums leading-tight ${accent ? 'text-lime' : 'text-text-primary'}`}>
+          <div className={`text-[clamp(1.25rem,3vw,1.75rem)] font-bold tabular-nums leading-tight ${accent ? 'text-white' : 'text-text-primary'}`}>
             {value.toLocaleString()}
           </div>
-          <div className="text-[clamp(0.5rem,0.9vw,0.65rem)] uppercase tracking-wide text-text-tertiary mt-0.5">
+          <div className={`text-[clamp(0.5rem,0.9vw,0.65rem)] uppercase tracking-wide mt-0.5 ${accent ? 'text-white/70' : 'text-text-tertiary'}`}>
             {label}
           </div>
         </div>
         {subLabel != null && (
-          <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)]">
-            <span className="text-text-secondary">{subLabel}</span>
-            <span className={`font-semibold tabular-nums ${warn ? 'text-warning' : 'text-forest'}`}>
+          <div className={`mt-3 pt-3 border-t flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)] ${accent ? 'border-white/20' : 'border-border'}`}>
+            <span className={accent ? 'text-white/70' : 'text-text-secondary'}>{subLabel}</span>
+            <span className={`font-semibold tabular-nums ${warn ? (accent ? 'text-yellow-300' : 'text-warning') : (accent ? 'text-white' : 'text-forest')}`}>
               {(subValue ?? 0).toLocaleString()}
             </span>
           </div>
