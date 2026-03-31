@@ -350,10 +350,10 @@ export function useProjectStoreys(projectId: string) {
   return useQuery({
     queryKey: bepKeys.storeys(projectId),
     queryFn: async () => {
-      const response = await apiClient.get<ProjectStorey[]>(
+      const response = await apiClient.get<{ results: ProjectStorey[] }>(
         `/bep/storeys/?project=${projectId}`
       );
-      return response.data;
+      return response.data.results || [];
     },
     enabled: !!projectId,
   });
