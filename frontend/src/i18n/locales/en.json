@@ -344,6 +344,122 @@
     "mmi": {
       "title": "MMI Scale",
       "levels": "levels"
+    },
+    "sections_eir": "Information Requirements",
+    "sections_response": "BEP Response",
+    "sections_compliance": "Compliance"
+  },
+  "eir": {
+    "title": "Information Requirements (EIR)",
+    "description": "Define information delivery requirements and validation rules",
+    "sections": {
+      "requirements": "Requirements",
+      "ids": "IDS Specifications",
+      "response": "BEP Response",
+      "compliance": "Compliance"
+    },
+    "status": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "responded": "Responded",
+      "agreed": "Agreed",
+      "superseded": "Superseded"
+    },
+    "create": {
+      "title": "Create Information Requirements",
+      "description": "Define the information delivery requirements for the project.",
+      "button": "Create EIR"
+    },
+    "overview": {
+      "version": "Version",
+      "framework": "Framework",
+      "issuer": "Issuer",
+      "organization": "Organization",
+      "issuedAt": "Issued",
+      "requirementCount": "Requirements",
+      "idsCount": "IDS Specifications",
+      "noRequirements": "No requirements defined yet."
+    },
+    "requirement": {
+      "add": "Add Requirement",
+      "code": "Code",
+      "title": "Title",
+      "description": "Description",
+      "instructions": "Instructions",
+      "category": "Category",
+      "severity": "Severity",
+      "disciplines": "Applies to Disciplines",
+      "ifcTypes": "Applies to IFC Types",
+      "mmiLevel": "Applies from MMI Level",
+      "idsLink": "IDS Link",
+      "categories": {
+        "technical": "Technical",
+        "property": "Property",
+        "classification": "Classification",
+        "geometry": "Geometry",
+        "coordination": "Coordination",
+        "naming": "Naming",
+        "general": "General"
+      },
+      "severities": {
+        "mandatory": "Mandatory",
+        "recommended": "Recommended",
+        "optional": "Optional"
+      }
+    },
+    "ids": {
+      "title": "IDS Specifications",
+      "add": "Add IDS",
+      "import": "Import .ids",
+      "author": "Author",
+      "source": "Source",
+      "specCount": "Specifications",
+      "validate": "Validate",
+      "noSpecs": "No IDS specifications.",
+      "sources": {
+        "imported": "Imported",
+        "authored": "Authored",
+        "library": "Library"
+      }
+    },
+    "response": {
+      "title": "BEP Response",
+      "create": "Create Response",
+      "submit": "Submit",
+      "autoPopulate": "Auto-populate",
+      "respondent": "Respondent",
+      "organization": "Organization",
+      "generalNotes": "General Notes",
+      "noResponse": "No response created. Create one to respond to the requirements.",
+      "status": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "accepted": "Accepted",
+        "revision_requested": "Revision Requested"
+      },
+      "compliance": {
+        "will_comply": "Will Comply",
+        "partially": "Partially",
+        "cannot_comply": "Cannot Comply",
+        "not_applicable": "Not Applicable",
+        "pending": "Pending"
+      },
+      "item": {
+        "method": "Method",
+        "issues": "Issues",
+        "wishes": "Wishes",
+        "discipline": "Responsible Discipline",
+        "toolNotes": "Tool Notes"
+      }
+    },
+    "compliance": {
+      "title": "Compliance Overview",
+      "requirementStatus": "Requirement Status",
+      "validationStatus": "Validation Status",
+      "noData": "No data available. Create an EIR with requirements and a response.",
+      "passed": "Passed",
+      "failed": "Failed",
+      "notValidated": "Not Validated"
     }
   },
   "scriptingTab": {
