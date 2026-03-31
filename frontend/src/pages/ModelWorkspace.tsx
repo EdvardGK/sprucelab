@@ -238,7 +238,20 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
   const [overlay, setOverlay] = useState<OverlayType>(null);
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
+  const [viewerMode, setViewerMode] = useState<'3d' | 'footprint'>('3d');
   const hasFile = !!model.file_url;
+
+  // Build class → color map matching treemap ordering (sorted by instance count desc)
+  const classColorMap = useMemo(() => {
+    const sorted = Object.entries(stats.classCounts).sort((a, b) => b[1] - a[1]);
+    const map: Record<string, string> = {};
+    sorted.forEach(([cls, _], i) => {
+      const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
+      map[cls] = color;           // "Wall" (treemap key, Ifc prefix stripped)
+      map['Ifc' + cls] = color;   // "IfcWall" (viewer typeInfo key)
+    });
+    return map;
+  }, [stats.classCounts]);
 
   return (
     <>
