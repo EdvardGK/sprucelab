@@ -1,9 +1,9 @@
 """
 URL configuration for BEP (BIM Execution Plan) API.
 
-Available endpoints:
-- /api/bep/configs/ - BEP configurations (list, create, retrieve, update, delete)
-- /api/bep/configs/templates/ - List available BEP templates (action)
+Core BEP:
+- /api/bep/configs/ - BEP configurations CRUD
+- /api/bep/configs/templates/ - List available BEP templates
 - /api/bep/configs/{id}/activate/ - Activate a BEP
 - /api/bep/configs/{id}/mmi-scale/ - Get MMI scale for BEP
 - /api/bep/mmi-scale/ - MMI scale definitions CRUD
@@ -12,14 +12,24 @@ Available endpoints:
 - /api/bep/property-sets/ - Required property sets CRUD
 - /api/bep/validation/ - Validation rules CRUD
 - /api/bep/milestones/ - Submission milestones CRUD
-
-NEW:
-- /api/bep/library/ - BEP template library (global templates)
+- /api/bep/library/ - BEP template library
 - /api/bep/disciplines/ - Project discipline assignments
 - /api/bep/coordinates/ - Project coordinate systems
 - /api/bep/storeys/ - Project storey structures
+
+EIR / IDS / BEP Response:
+- /api/bep/eir/ - Employer's Information Requirements CRUD
+- /api/bep/eir/{id}/issue/ - Issue EIR
+- /api/bep/eir/{id}/compliance/ - Compliance summary
+- /api/bep/eir-requirements/ - EIR requirements CRUD
+- /api/bep/ids/ - IDS specifications CRUD
+- /api/bep/ids/{id}/validate/ - Trigger IDS validation
+- /api/bep/responses/ - BEP responses CRUD
+- /api/bep/responses/{id}/submit/ - Submit response
+- /api/bep/responses/{id}/auto-populate/ - Auto-create response items
+- /api/bep/response-items/ - BEP response items CRUD
+- /api/bep/ids-runs/ - IDS validation runs (read-only)
 """
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     BEPTemplateViewSet,
@@ -33,10 +43,17 @@ from .views import (
     ProjectDisciplineViewSet,
     ProjectCoordinatesViewSet,
     ProjectStoreyViewSet,
+    EIRViewSet,
+    EIRRequirementViewSet,
+    IDSSpecificationViewSet,
+    BEPResponseViewSet,
+    BEPResponseItemViewSet,
+    IDSValidationRunViewSet,
 )
 
-# Router for all BEP-related endpoints
 router = DefaultRouter()
+
+# Core BEP
 router.register(r'library', BEPTemplateViewSet, basename='bep-template')
 router.register(r'configs', BEPConfigurationViewSet, basename='bep')
 router.register(r'mmi-scale', MMIScaleDefinitionViewSet, basename='mmi-scale')
@@ -48,5 +65,13 @@ router.register(r'milestones', SubmissionMilestoneViewSet, basename='milestones'
 router.register(r'disciplines', ProjectDisciplineViewSet, basename='disciplines')
 router.register(r'coordinates', ProjectCoordinatesViewSet, basename='coordinates')
 router.register(r'storeys', ProjectStoreyViewSet, basename='storeys')
+
+# EIR / IDS / BEP Response
+router.register(r'eir', EIRViewSet, basename='eir')
+router.register(r'eir-requirements', EIRRequirementViewSet, basename='eir-requirements')
+router.register(r'ids', IDSSpecificationViewSet, basename='ids')
+router.register(r'responses', BEPResponseViewSet, basename='bep-responses')
+router.register(r'response-items', BEPResponseItemViewSet, basename='response-items')
+router.register(r'ids-runs', IDSValidationRunViewSet, basename='ids-runs')
 
 urlpatterns = router.urls
