@@ -16,6 +16,12 @@ from .models import (
     ProjectDiscipline,
     ProjectCoordinates,
     ProjectStorey,
+    EIR,
+    EIRRequirement,
+    IDSSpecification,
+    BEPResponse,
+    BEPResponseItem,
+    IDSValidationRun,
 )
 
 
