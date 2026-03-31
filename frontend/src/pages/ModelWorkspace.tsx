@@ -262,10 +262,9 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} />
           </div>
           <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent />
-          <KpiCard value={stats.totalInstances.toLocaleString()} label="Instances" subValue={stats.typeRatio} subLabel="per type" warn={stats.typeRatio < 5} />
-          <div className="col-span-2">
-            <KpiCard value={`${analysis.total_storeys} storeys`} label="Spatial" subValue={analysis.total_spaces} subLabel="spaces" />
-          </div>
+          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.typeRatio} subLabel="per type" warn={stats.typeRatio < 5} />
+          <KpiCard value={analysis.total_storeys} label="Storeys" subValue={stats.proxyCount} subLabel="proxy-typed" warn={stats.proxyCount > 0} />
+          <KpiCard value={analysis.total_spaces} label="Spaces" subValue={analysis.duplicate_guid_count} subLabel="dup. GUIDs" warn={analysis.duplicate_guid_count > 0} />
 
           {/* Row 2: Charts stacked (left) | Viewer (right) */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
