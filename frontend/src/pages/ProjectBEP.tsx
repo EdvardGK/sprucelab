@@ -62,8 +62,12 @@ export default function ProjectBEP() {
   const { data: coordinates } = useProjectCoordinates(projectId!);
   const { data: disciplines = [] } = useProjectDisciplines(projectId!);
   const { data: storeys = [] } = useProjectStoreys(projectId!);
+  const { data: eirs = [] } = useEIRs({ project: projectId! });
   const createBEP = useCreateBEP();
   const activateBEP = useActivateBEP();
+  const createEIR = useCreateEIR();
+
+  const activeEIR = eirs[0] || null;
 
   const handleCreateBEP = () => {
     createBEP.mutate(
