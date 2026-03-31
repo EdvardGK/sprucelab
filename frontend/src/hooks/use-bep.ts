@@ -292,10 +292,10 @@ export function useProjectDisciplines(projectId: string) {
   return useQuery({
     queryKey: bepKeys.disciplines(projectId),
     queryFn: async () => {
-      const response = await apiClient.get<ProjectDiscipline[]>(
+      const response = await apiClient.get<{ results: ProjectDiscipline[] }>(
         `/bep/disciplines/?project=${projectId}&include_inactive=true`
       );
-      return response.data;
+      return response.data.results || [];
     },
     enabled: !!projectId,
   });
