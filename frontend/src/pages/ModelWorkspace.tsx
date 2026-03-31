@@ -683,68 +683,42 @@ function GeometryDonut({ types, showAll }: { types: AnalysisTypeRecord[]; showAl
 // ─── Model Info Card (combined Context / Units / Coordinates) ────────────────
 
 function ModelInfoCard({ analysis }: { analysis: ModelAnalysis }) {
-  const unitRows: [string, string][] = analysis.units && typeof analysis.units === 'object'
-    ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
-        if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
-          const u = v as { name?: string; prefix?: string; symbol?: string };
-          return [k, u.symbol || u.name || '—'];
-        }
-        return [k, String(v ?? '—')];
-      })
-    : [];
-
-  const coordRows: [string, string][] = analysis.coordinates && typeof analysis.coordinates === 'object'
-    ? (() => {
-        const c = analysis.coordinates as Record<string, unknown>;
-        const rows: [string, string][] = [];
-        if (c.crs) rows.push(['CRS', String(c.crs)]);
-        if (c.true_north) {
-          const tn = c.true_north as { angle_deg?: number };
-          rows.push(['True North', `${tn.angle_deg ?? 0}°`]);
-        }
-        if (c.wcs_origin) {
-          const o = c.wcs_origin as { x?: number; y?: number; z?: number };
-          rows.push(['WCS Origin', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
-        }
-        if (c.site_reference) {
-          const s = c.site_reference as { latitude?: number; longitude?: number; elevation?: number };
-          if (s.latitude || s.longitude) rows.push(['Site', `${s.latitude}°N, ${s.longitude}°E`]);
-          if (s.elevation) rows.push(['Elevation', `${s.elevation}m`]);
-        }
-        return rows;
-      })()
-    : [];
-
-  const sections: { title: string; rows: [string, string][] }[] = [
-    { title: 'Context', rows: [
-      ['Project', analysis.project_name || '—'],
-      ['Site', analysis.site_name || '—'],
-      ['Building', analysis.building_name || '—'],
-      ['Application', analysis.application || '—'],
-      ['Schema', analysis.ifc_schema || '—'],
-    ]},
-    ...(unitRows.length ? [{ title: 'Units', rows: unitRows }] : []),
-    ...(coordRows.length ? [{ title: 'Coordinates', rows: coordRows }] : []),
+  const items: [string, string][] = [
+    ['Schema', analysis.ifc_schema || '—'],
+    ['App', analysis.application || '—'],
+    ['Project', analysis.project_name || '—'],
+    ['Building', analysis.building_name || '—'],
   ];
 
+  // Add units summary (compact: just length + area)
+  if (analysis.units && typeof analysis.units === 'object') {
+    const u = analysis.units as Record<string, unknown>;
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries(u)) {
+      if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
+        parts.push(`${k}: ${(v as { symbol?: string }).symbol || '?'}`);
+      }
+    }
+    if (parts.length) items.push(['Units', parts.join(', ')]);
+  }
+
+  // Add CRS if present
+  if (analysis.coordinates && typeof analysis.coordinates === 'object') {
+    const c = analysis.coordinates as Record<string, unknown>;
+    if (c.crs) items.push(['CRS', String(c.crs)]);
+  }
+
   return (
-    <Card className="card-accent-lavender h-full">
-      <CardContent className="p-4 space-y-3">
-        {sections.map((section) => (
-          <div key={section.title}>
-            <h4 className="text-[0.65rem] font-semibold text-text-primary uppercase tracking-wide mb-1">
-              {section.title}
-            </h4>
-            <div className="space-y-px">
-              {section.rows.map(([label, value]) => (
-                <div key={label} className="flex justify-between text-xs">
-                  <span className="text-text-secondary">{label}</span>
-                  <span className="text-text-primary font-medium truncate ml-2 max-w-[60%] text-right">{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+    <Card className="card-accent-lavender">
+      <CardContent className="px-4 py-2">
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[0.65rem]">
+          {items.map(([label, value]) => (
+            <span key={label}>
+              <span className="text-text-tertiary">{label}</span>{' '}
+              <span className="text-text-secondary font-medium">{value}</span>
+            </span>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
