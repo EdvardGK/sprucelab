@@ -185,31 +185,36 @@ export default function FederatedViewer() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="text-text-secondary">Loading viewer...</div>
-      </div>
+      <AppLayout>
+        <div className="flex h-full items-center justify-center">
+          <div className="text-text-secondary">Loading viewer...</div>
+        </div>
+      </AppLayout>
     );
   }
 
   if (!group) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="text-error mb-2">Group not found</div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/projects/${projectId}/viewer-groups`)}
-          >
-            Back to Groups
-          </Button>
+      <AppLayout>
+        <div className="flex h-full items-center justify-center">
+          <div className="text-center">
+            <div className="text-error mb-2">Group not found</div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/projects/${projectId}/viewer-groups`)}
+            >
+              Back to Groups
+            </Button>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <AppLayout>
+    <div className="h-full flex flex-col">
       {/* Compact Header */}
       <header className="h-12 flex-shrink-0 border-b border-border flex items-center justify-between px-3 bg-surface">
         <div className="flex items-center gap-2">
