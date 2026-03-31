@@ -408,10 +408,10 @@ export function useTechnicalRequirement(bepId: string) {
   return useQuery({
     queryKey: bepKeys.technical(bepId),
     queryFn: async () => {
-      const response = await apiClient.get<TechnicalRequirement[]>(
+      const response = await apiClient.get<{ results: TechnicalRequirement[] }>(
         `/bep/technical/?bep=${bepId}`
       );
-      return response.data[0] || null;
+      return response.data.results?.[0] || null;
     },
     enabled: !!bepId,
   });
