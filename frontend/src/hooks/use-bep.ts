@@ -158,7 +158,7 @@ export function useBEP(id: string) {
   return useQuery({
     queryKey: bepKeys.detail(id),
     queryFn: async () => {
-      const response = await apiClient.get<BEPConfiguration>(`/bep/${id}/`);
+      const response = await apiClient.get<BEPConfiguration>(`/bep/configs/${id}/`);
       return response.data;
     },
     enabled: !!id,
