@@ -779,5 +779,23 @@
     "storey": "Storey",
     "copyGuid": "Copy GUID",
     "guidCopied": "Copied!"
+  },
+  "field": {
+    "title": "Field & Compliance",
+    "subtitle": "Checklists and deviation handling for the project",
+    "newChecklist": "New Checklist",
+    "createFromTemplate": "Create from template",
+    "template": "Template",
+    "selectTemplate": "Select a template...",
+    "location": "Location",
+    "locationPlaceholder": "E.g. 2nd floor, main bathroom",
+    "create": "Create",
+    "noChecklists": "No checklists yet",
+    "noChecklistsHint": "Create a checklist from a template to get started",
+    "backToList": "Back to checklists",
+    "progress": "Progress",
+    "checked": "checked",
+    "deviations": "deviations",
+    "remaining": "remaining"
   }
 }
