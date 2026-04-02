@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import type { CheckItem, DeviationResponsible, DeviationAction } from './types'
 import { DEVIATION_RESPONSIBLE_LABELS, DEVIATION_ACTION_LABELS } from './types'
@@ -38,107 +40,85 @@ export function DeviationPanel({ item, onClose, onSubmit }: DeviationPanelProps)
   }
 
   return (
-    <div className="border-t border-warning/20 bg-warning-light px-5 py-5">
-      {/* Header */}
+    <div className="border-t border-warning/20 bg-warning/5 px-5 py-5">
       <div className="mb-4 flex items-center justify-between">
-        <h4 className="flex items-center gap-2 text-sm font-bold text-text-primary">
+        <h4 className="flex items-center gap-2 text-sm font-bold">
           <AlertTriangle className="h-4 w-4 text-warning" />
           Registrer avvik
         </h4>
         <button
           onClick={onClose}
-          className="focus-ring rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-white/50 hover:text-text-primary"
+          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Context: what was required */}
       {item.reference_description && (
-        <div className="mb-4 rounded-lg bg-white/60 px-3.5 py-2.5">
-          <span className="text-xs font-semibold text-text-tertiary">
-            Krav:{' '}
-          </span>
-          <span className="text-sm text-text-primary">
-            {item.reference_description}
-          </span>
+        <div className="mb-4 rounded-lg bg-background px-3.5 py-2.5">
+          <span className="text-xs font-semibold text-muted-foreground">Krav: </span>
+          <span className="text-sm">{item.reference_description}</span>
         </div>
       )}
 
-      {/* Measured value context */}
       {item.measured_value !== null && item.measurement_unit && (
-        <div className="mb-4 rounded-lg bg-white/60 px-3.5 py-2.5">
-          <span className="text-xs font-semibold text-text-tertiary">
-            Målt:{' '}
-          </span>
-          <span className="text-sm font-semibold text-text-primary">
+        <div className="mb-4 rounded-lg bg-background px-3.5 py-2.5">
+          <span className="text-xs font-semibold text-muted-foreground">Målt: </span>
+          <span className="text-sm font-semibold">
             {item.measured_value} {item.measurement_unit}
           </span>
         </div>
       )}
 
-      {/* Description */}
       <div className="mb-4">
-        <label className="mb-1.5 block text-xs font-semibold text-text-primary">
+        <label className="mb-1.5 block text-xs font-semibold">
           Beskriv avviket *
         </label>
-        <textarea
+        <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
           placeholder="Hva er avviket? Hva var forventet vs. hva ble funnet?"
-          className="focus-ring h-auto w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm text-text-primary outline-none resize-none transition-colors placeholder:text-text-tertiary hover:border-border-strong"
         />
       </div>
 
-      {/* Responsibility */}
       <div className="mb-4">
-        <label className="mb-2 block text-xs font-semibold text-text-primary">
+        <label className="mb-2 block text-xs font-semibold">
           Hvem har ansvar for å løse dette? *
         </label>
         <div className="flex gap-2">
           {(
-            Object.entries(DEVIATION_RESPONSIBLE_LABELS) as [
-              DeviationResponsible,
-              string,
-            ][]
+            Object.entries(DEVIATION_RESPONSIBLE_LABELS) as [DeviationResponsible, string][]
           ).map(([value, label]) => (
-            <button
+            <Button
               key={value}
+              variant={responsible === value ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setResponsible(value)}
-              className={cn(
-                'focus-ring flex-1 rounded-lg border px-2 py-2.5 text-sm font-medium transition-all',
-                responsible === value
-                  ? 'border-accent bg-accent text-white shadow-sm'
-                  : 'border-border bg-white text-text-primary hover:border-border-strong'
-              )}
+              className="flex-1"
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      {/* Action */}
       <div className="mb-5">
-        <label className="mb-2 block text-xs font-semibold text-text-primary">
+        <label className="mb-2 block text-xs font-semibold">
           Hva gjør du nå? *
         </label>
         <div className="space-y-2">
           {(
-            Object.entries(DEVIATION_ACTION_LABELS) as [
-              DeviationAction,
-              string,
-            ][]
+            Object.entries(DEVIATION_ACTION_LABELS) as [DeviationAction, string][]
           ).map(([value, label]) => (
             <button
               key={value}
               onClick={() => setAction(value)}
               className={cn(
-                'focus-ring w-full rounded-lg border px-3.5 py-3 text-left text-sm transition-all',
+                'w-full rounded-lg border px-3.5 py-3 text-left text-sm transition-all',
                 action === value
-                  ? 'border-accent bg-accent-light font-semibold text-accent'
-                  : 'border-border bg-white text-text-secondary hover:border-border-strong hover:text-text-primary'
+                  ? 'border-primary bg-primary/10 font-semibold text-primary'
+                  : 'border-border bg-background text-muted-foreground hover:border-border-strong hover:text-foreground'
               )}
             >
               {label}
@@ -147,19 +127,14 @@ export function DeviationPanel({ item, onClose, onSubmit }: DeviationPanelProps)
         </div>
       </div>
 
-      {/* Submit */}
-      <button
+      <Button
         onClick={handleSubmit}
         disabled={!canSubmit}
-        className={cn(
-          'focus-ring w-full rounded-lg px-4 py-3 text-sm font-bold transition-all',
-          canSubmit
-            ? 'bg-warning text-white shadow-sm hover:bg-warning/90 active:scale-[0.99]'
-            : 'bg-bone text-text-tertiary cursor-not-allowed'
-        )}
+        className="w-full"
+        variant={canSubmit ? 'default' : 'secondary'}
       >
         Registrer avvik
-      </button>
+      </Button>
     </div>
   )
 }
