@@ -779,5 +779,23 @@
     "storey": "Etasje",
     "copyGuid": "Kopier GUID",
     "guidCopied": "Kopiert!"
+  },
+  "field": {
+    "title": "Felt & kontroll",
+    "subtitle": "Sjekklister og avvikshåndtering for prosjektet",
+    "newChecklist": "Ny sjekkliste",
+    "createFromTemplate": "Opprett fra mal",
+    "template": "Mal",
+    "selectTemplate": "Velg en mal...",
+    "location": "Lokasjon",
+    "locationPlaceholder": "F.eks. 2. etasje, bad hovedsoverom",
+    "create": "Opprett",
+    "noChecklists": "Ingen sjekklister ennå",
+    "noChecklistsHint": "Opprett en sjekkliste fra en mal for å komme i gang",
+    "backToList": "Tilbake til sjekklister",
+    "progress": "Fremdrift",
+    "checked": "kontrollert",
+    "deviations": "avvik",
+    "remaining": "gjenstår"
   }
 }
