@@ -63,7 +63,9 @@
     "spaces": "Spaces",
     "qto": "QTO",
     "workbench": "Workbench",
-    "bep": "BEP"
+    "bep": "BEP",
+    "field": "FIELD & COMPLIANCE",
+    "fieldChecklists": "Checklists"
   },
   "workbench": {
     "title": "BIM Workbench",
