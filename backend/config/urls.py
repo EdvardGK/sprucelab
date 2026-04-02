@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/viewers/', include('apps.viewers.urls')),
     path('api/', include('apps.scripting.urls')),
     path('api/automation/', include('apps.automation.urls')),
+    path('api/field/', include('apps.field.urls')),
 ]
 
 # Serve media files in development
