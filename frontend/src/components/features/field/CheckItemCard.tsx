@@ -9,6 +9,10 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
 import { ReferencePanel } from './ReferencePanel'
 import { DeviationPanel } from './DeviationPanel'
 import type { CheckItem, CheckItemStatus, DeviationResponsible, DeviationAction } from './types'
@@ -30,19 +34,19 @@ const STATUS_STYLES: Record<
   { card: string; icon: React.ReactNode | null }
 > = {
   pending: {
-    card: 'glass shadow-glass',
+    card: 'glass',
     icon: null,
   },
   ok: {
-    card: 'glass shadow-glass ring-1 ring-success/20',
+    card: 'glass ring-1 ring-success/20',
     icon: <CheckCircle2 className="h-6 w-6 text-success" />,
   },
   deviation: {
-    card: 'glass shadow-glass ring-1 ring-warning/30',
+    card: 'glass ring-1 ring-warning/30',
     icon: <AlertTriangle className="h-6 w-6 text-warning" />,
   },
   not_applicable: {
-    card: 'glass-subtle shadow-glass opacity-60',
+    card: 'glass-subtle opacity-60',
     icon: null,
   },
 }
@@ -98,12 +102,12 @@ export function CheckItemCard({
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bone text-xs font-semibold text-text-secondary">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
                 {item.sort_order}
               </span>
               <h4
                 className={cn(
-                  'text-base font-semibold text-text-primary',
+                  'text-base font-semibold text-foreground',
                   item.status === 'not_applicable' && 'line-through opacity-50'
                 )}
               >
@@ -114,22 +118,22 @@ export function CheckItemCard({
             {/* Tags */}
             <div className="mt-2 flex flex-wrap gap-1.5">
               {item.is_critical && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-error-light px-2 py-0.5 text-xs font-medium text-error">
+                <Badge variant="destructive" className="gap-1">
                   <ShieldAlert className="h-3 w-3" />
                   Kritisk
-                </span>
+                </Badge>
               )}
               {item.requires_photo && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-bone px-2 py-0.5 text-xs font-medium text-text-secondary">
+                <Badge variant="secondary" className="gap-1">
                   <Camera className="h-3 w-3" />
                   Foto
-                </span>
+                </Badge>
               )}
               {item.measurement_unit && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-bone px-2 py-0.5 text-xs font-medium text-text-secondary">
+                <Badge variant="secondary" className="gap-1">
                   <Ruler className="h-3 w-3" />
                   Måling ({item.measurement_unit})
-                </span>
+                </Badge>
               )}
             </div>
           </div>
@@ -142,7 +146,7 @@ export function CheckItemCard({
         {hasReference && (
           <button
             onClick={() => setShowRef(!showRef)}
-            className="focus-ring mt-3 flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent-light"
+            className="mt-3 flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {showRef ? (
               <ChevronUp className="h-3.5 w-3.5" />
@@ -163,35 +167,32 @@ export function CheckItemCard({
         {/* Measurement input */}
         {item.measurement_unit && item.status !== 'not_applicable' && (
           <div className="mt-4">
-            <label className="mb-1.5 block text-xs font-medium text-text-secondary">
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
               Målt verdi ({item.measurement_unit})
               {item.tolerance_min !== null && item.tolerance_max !== null && (
-                <span className="ml-1 font-normal text-text-tertiary">
+                <span className="ml-1 font-normal opacity-70">
                   (godkjent: {item.tolerance_min}–{item.tolerance_max} {item.measurement_unit})
                 </span>
               )}
               {item.tolerance_min !== null && item.tolerance_max === null && (
-                <span className="ml-1 font-normal text-text-tertiary">
+                <span className="ml-1 font-normal opacity-70">
                   (min {item.tolerance_min} {item.measurement_unit})
                 </span>
               )}
               {item.tolerance_min === null && item.tolerance_max !== null && (
-                <span className="ml-1 font-normal text-text-tertiary">
+                <span className="ml-1 font-normal opacity-70">
                   (maks {item.tolerance_max} {item.measurement_unit})
                 </span>
               )}
             </label>
-            <input
+            <Input
               type="number"
               value={measureInput}
               onChange={(e) => setMeasureInput(e.target.value)}
               onBlur={handleMeasurementBlur}
               placeholder={`Skriv inn verdi i ${item.measurement_unit}`}
               className={cn(
-                'focus-ring h-10 w-full rounded-lg border bg-white px-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary',
-                measurementWarning
-                  ? 'border-warning bg-warning-light'
-                  : 'border-border hover:border-border-strong'
+                measurementWarning && 'border-warning bg-warning/10'
               )}
             />
             {measurementWarning && (
@@ -209,22 +210,21 @@ export function CheckItemCard({
             {!showNotes ? (
               <button
                 onClick={() => setShowNotes(true)}
-                className="text-xs font-medium text-text-tertiary transition-colors hover:text-text-secondary"
+                className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 + Legg til notat
               </button>
             ) : (
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-text-secondary">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                   Notat
                 </label>
-                <textarea
+                <Textarea
                   value={notesInput}
                   onChange={(e) => setNotesInput(e.target.value)}
                   onBlur={handleNotesBlur}
                   rows={2}
                   placeholder="Valgfri kommentar..."
-                  className="focus-ring h-auto w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-primary outline-none resize-none transition-colors placeholder:text-text-tertiary hover:border-border-strong"
                 />
               </div>
             )}
@@ -233,39 +233,41 @@ export function CheckItemCard({
 
         {/* Action buttons */}
         <div className="mt-4 flex gap-2">
-          <button
+          <Button
             onClick={() => handleStatusClick('ok')}
+            variant={item.status === 'ok' ? 'default' : 'outline'}
             className={cn(
-              'focus-ring flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all',
+              'flex-1',
               item.status === 'ok'
-                ? 'bg-success text-white shadow-sm'
-                : 'border border-border bg-white text-text-primary hover:border-success hover:bg-success-light hover:text-success'
+                ? 'bg-success text-white hover:bg-success/90'
+                : 'hover:border-success hover:bg-success/10 hover:text-success'
             )}
           >
             OK
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => handleStatusClick('deviation')}
+            variant={item.status === 'deviation' ? 'default' : 'outline'}
             className={cn(
-              'focus-ring flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all',
+              'flex-1',
               item.status === 'deviation'
-                ? 'bg-warning text-white shadow-sm'
-                : 'border border-border bg-white text-text-primary hover:border-warning hover:bg-warning-light hover:text-warning'
+                ? 'bg-warning text-white hover:bg-warning/90'
+                : 'hover:border-warning hover:bg-warning/10 hover:text-warning'
             )}
           >
             Avvik
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => handleStatusClick('not_applicable')}
+            variant={item.status === 'not_applicable' ? 'default' : 'outline'}
             className={cn(
-              'focus-ring rounded-lg px-3 py-2.5 text-sm font-semibold transition-all',
               item.status === 'not_applicable'
-                ? 'bg-concrete text-white shadow-sm'
-                : 'border border-border bg-white text-text-secondary hover:border-border-strong hover:bg-bone'
+                ? 'bg-muted-foreground text-white hover:bg-muted-foreground/90'
+                : 'hover:bg-muted'
             )}
           >
             N/A
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -280,18 +282,18 @@ export function CheckItemCard({
 
       {/* Existing deviation summary */}
       {item.status === 'deviation' && item.deviation_description && !showDeviation && (
-        <div className="border-t border-warning/20 bg-warning-light px-5 py-4">
+        <div className="border-t border-warning/20 bg-warning/5 px-5 py-4">
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-text-primary">
+              <p className="text-sm font-semibold text-foreground">
                 Registrert avvik
               </p>
-              <p className="mt-1 text-sm text-text-secondary">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {item.deviation_description}
               </p>
               {item.deviation_responsible && (
-                <p className="mt-1.5 text-xs text-text-tertiary">
+                <p className="mt-1.5 text-xs text-muted-foreground/70">
                   Ansvar:{' '}
                   {item.deviation_responsible === 'prosjekterende'
                     ? 'Prosjekterende'
