@@ -63,7 +63,9 @@
     "spaces": "Rom",
     "qto": "Mengder",
     "workbench": "Arbeidsbenk",
-    "bep": "BEP"
+    "bep": "BEP",
+    "field": "FELT & KONTROLL",
+    "fieldChecklists": "Sjekklister"
   },
   "workbench": {
     "title": "BIM-arbeidsbenk",
