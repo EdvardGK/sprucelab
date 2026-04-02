@@ -44,6 +44,7 @@ const router = createBrowserRouter([
   { path: "/projects/:id/type-library", element: <ProjectTypeLibrary /> },
   { path: "/projects/:id/material-library", element: <ProjectMaterialLibrary /> },
   { path: "/projects/:id/bep", element: <ProjectBEP /> },
+  { path: "/projects/:id/field", element: <ProjectField /> },
   { path: "/projects/:id/workbench", element: <BIMWorkbench /> },
   { path: "/projects/:id/models/:modelId", element: <ModelWorkspace /> },
   { path: "/my-issues", element: <MyIssues /> },
