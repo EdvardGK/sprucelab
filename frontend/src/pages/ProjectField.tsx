@@ -27,7 +27,6 @@ import { cn } from '@/lib/utils';
 
 export default function ProjectField() {
   const { id: projectId } = useParams<{ id: string }>();
-  const { t } = useTranslation();
   const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
