@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'apps.bep',
     'apps.viewers',
     'apps.automation',
+    'apps.field',
 ]
 
 MIDDLEWARE = [
