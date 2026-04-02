@@ -204,7 +204,6 @@ function ChecklistListView({
         <div className="space-y-3">
           {checklists.map((cl) => {
             const done = cl.progress.ok + cl.progress.not_applicable;
-            const pct = cl.progress.total > 0 ? (done / cl.progress.total) * 100 : 0;
 
             return (
               <button
