@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprucelab — Min side</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #eeeeed;
+      --bg-gradient: linear-gradient(135deg, #eeeeed 0%, #e4e6f0 50%, #eeeeed 100%);
+      --card: #ffffff;
+      --primary: #157954;
+      --primary-light: rgba(21, 121, 84, 0.1);
+      --accent: #D0D34D;
+      --navy: #21263A;
+      --text-primary: #21263A;
+      --text-secondary: #525d78;
+      --text-tertiary: #717b94;
+      --border: #d2d4d3;
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --radius: 0.75rem;
+      --sidebar-w: 256px;
+
+      --tl-green-bg: #dcfce7;
+      --tl-green-text: #166534;
+      --tl-green-dot: #22c55e;
+      --tl-yellow-bg: #fef9c3;
+      --tl-yellow-text: #854d0e;
+      --tl-yellow-dot: #eab308;
+      --tl-red-bg: #fee2e2;
+      --tl-red-text: #991b1b;
+      --tl-red-dot: #ef4444;
+      --tl-gray-bg: #f1f5f9;
+      --tl-gray-text: #94a3b8;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-feature-settings: 'rlig' 1, 'calt' 1;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(199, 206, 232, 0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(199, 206, 232, 0.25); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(199, 206, 232, 0.4); }
+
+    /* ═══════════════════════════════════════════
+       SHELL
+       ═══════════════════════════════════════════ */
+    .shell { display: flex; height: 100vh; width: 100vw; }
+
+    /* ─── SIDEBAR (global variant) ─── */
+    .sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      display: flex; flex-direction: column;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--glass-border);
+    }
+    .sidebar-brand { padding: 12px; border-bottom: 1px solid var(--glass-border); }
+    .sidebar-brand button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit;
+      color: var(--text-primary); transition: background 0.15s;
+    }
+    .sidebar-brand button:hover { background: rgba(255,255,255,0.6); }
+    .brand-icon {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .brand-name { flex: 1; text-align: left; font-weight: 600; font-size: 13px; }
+    .brand-home { color: var(--text-tertiary); flex-shrink: 0; }
+
+    .sidebar-search {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px; border-bottom: 1px solid var(--glass-border);
+    }
+    .search-btn {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px;
+      color: var(--text-secondary); transition: background 0.15s;
+    }
+    .search-btn:hover { background: rgba(255,255,255,0.6); }
+    .icon-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; border-radius: 6px;
+      cursor: pointer; color: var(--text-secondary); transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.6); }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      color: var(--text-secondary); text-decoration: none;
+      transition: all 0.15s; cursor: pointer;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.6); color: var(--text-primary); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 500; }
+    .nav-item svg { flex-shrink: 0; }
+
+    .nav-section { margin-top: 16px; margin-bottom: 4px; }
+    .nav-section-label {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-tertiary); cursor: pointer;
+      border: none; background: none; width: 100%;
+      border-radius: 6px; transition: background 0.15s;
+    }
+    .nav-section-label:hover { background: rgba(255,255,255,0.4); }
+    .nav-section-items { margin-top: 4px; }
+    .nav-section-items .nav-item { padding-left: 32px; }
+
+    .sidebar-footer { border-top: 1px solid var(--border); padding: 8px; }
+    .user-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; cursor: pointer;
+      border: none; background: none; width: 100%; font: inherit;
+      text-align: left; transition: background 0.15s;
+    }
+    .user-row:hover { background: rgba(255,255,255,0.6); }
+    .user-avatar {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600; flex-shrink: 0;
+    }
+    .user-name { flex: 1; font-size: 13px; color: var(--text-primary); }
+    .footer-actions { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
+    .lang-btn {
+      padding: 4px 8px; border: none; background: transparent;
+      border-radius: 4px; cursor: pointer; font: inherit;
+      font-size: 11px; font-weight: 600; color: var(--text-tertiary); transition: all 0.15s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.6); }
+    .lang-btn.active { color: var(--primary); background: var(--primary-light); }
+
+    /* ─── MAIN ─── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .top-accent { height: 3px; background: linear-gradient(to right, #D0D34D, #157954, #21263A); flex-shrink: 0; }
+    .content { flex: 1; overflow-y: auto; padding: 24px 32px; }
+
+    /* ═══════════════════════════════════════════
+       PAGE: MIN SIDE
+       ═══════════════════════════════════════════ */
+
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .page-header h1 { font-size: 22px; font-weight: 700; }
+    .page-header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+
+    /* 2-column layout */
+    .dashboard-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 20px; align-items: start;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .card-title {
+      font-size: 13px; font-weight: 600; color: var(--text-primary);
+    }
+    .card-body { padding: 0; }
+    .card-count {
+      font-size: 11px; color: var(--text-tertiary);
+      background: var(--tl-gray-bg); padding: 2px 8px; border-radius: 999px;
+    }
+
+    /* ─── Project list ─── */
+    .project-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .project-item:last-child { border-bottom: none; }
+    .project-item:hover { background: #f8fafc; }
+    .project-info { flex: 1; min-width: 0; }
+    .project-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .project-role { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+    .project-right { text-align: right; flex-shrink: 0; }
+    .project-date { font-size: 11px; color: var(--text-tertiary); }
+    .project-progress {
+      display: flex; align-items: center; gap: 8px; margin-top: 4px;
+    }
+    .progress-bar {
+      width: 80px; height: 6px; background: #e5e7eb;
+      border-radius: 3px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--primary); border-radius: 3px;
+      transition: width 0.4s;
+    }
+    .progress-pct {
+      font-size: 11px; font-weight: 600; color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ─── Task list ─── */
+    .task-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .task-item:last-child { border-bottom: none; }
+    .task-check {
+      width: 16px; height: 16px; border: 2px solid var(--border);
+      border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .task-check:hover { border-color: var(--primary); }
+    .task-priority {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+    }
+    .task-priority.red { background: var(--tl-red-dot); }
+    .task-priority.yellow { background: var(--tl-yellow-dot); }
+    .task-priority.green { background: var(--tl-green-dot); }
+    .task-priority.gray { background: var(--tl-gray-text); }
+    .task-content { flex: 1; min-width: 0; }
+    .task-text { font-size: 12px; color: var(--text-primary); line-height: 1.4; }
+    .task-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+    .task-due { flex-shrink: 0; font-size: 11px; color: var(--text-tertiary); }
+    .task-due.overdue { color: var(--tl-red-text); font-weight: 500; }
+
+    /* ─── Activity feed ─── */
+    .activity-list { padding: 8px 0; }
+    .activity-item {
+      display: flex; gap: 12px; padding: 10px 20px;
+      position: relative;
+    }
+    .activity-item:not(:last-child)::after {
+      content: '';
+      position: absolute; left: 29px; top: 30px; bottom: -2px;
+      width: 1px; background: var(--border);
+    }
+    .activity-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--primary); flex-shrink: 0; margin-top: 4px;
+      border: 2px solid var(--card);
+      box-shadow: 0 0 0 2px var(--primary-light);
+    }
+    .activity-dot.secondary {
+      background: var(--text-tertiary);
+      box-shadow: 0 0 0 2px var(--tl-gray-bg);
+    }
+    .activity-content { flex: 1; min-width: 0; }
+    .activity-text { font-size: 12px; color: var(--text-primary); line-height: 1.4; }
+    .activity-time { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+
+    /* ─── Quick stats ─── */
+    .stat-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .stat-cell {
+      padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      border-right: 1px solid rgba(0,0,0,0.04);
+    }
+    .stat-cell:nth-child(even) { border-right: none; }
+    .stat-cell:nth-last-child(-n+2) { border-bottom: none; }
+    .stat-cell-value {
+      font-size: 24px; font-weight: 700; color: var(--primary); line-height: 1;
+    }
+    .stat-cell-label {
+      font-size: 11px; color: var(--text-tertiary); margin-top: 4px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.25s ease both; }
+    .fade-in-1 { animation-delay: 0.05s; }
+    .fade-in-2 { animation-delay: 0.1s; }
+    .fade-in-3 { animation-delay: 0.15s; }
+    .fade-in-4 { animation-delay: 0.2s; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- ═══════════════════════════════════════
+         SIDEBAR — Global variant
+         ═══════════════════════════════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <button onclick="window.location='00-projects-gallery.html'">
+          <span class="brand-icon">SF</span>
+          <span class="brand-name">Spruce Forge</span>
+          <svg class="brand-home" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </button>
+      </div>
+
+      <div class="sidebar-search">
+        <button class="search-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Sok...</span>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <!-- Main nav -->
+        <div style="margin-bottom: 16px;">
+          <a class="nav-item active" href="#">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Min side</span>
+          </a>
+          <a class="nav-item" href="#">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            <span>Mine saker</span>
+          </a>
+          <a class="nav-item" href="#">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+            <span>Mine RFI-er</span>
+          </a>
+        </div>
+
+        <!-- Workspace section -->
+        <div class="nav-section">
+          <button class="nav-section-label" onclick="toggleSection(this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <span>Arbeidsomrade</span>
+          </button>
+          <div class="nav-section-items">
+            <a class="nav-item" href="00-projects-gallery.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+              <span>Prosjekter</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span>Skriptbibliotek</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+              <span>Hurtigstatistikk</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Developer section -->
+        <div class="nav-section">
+          <button class="nav-section-label" onclick="toggleSection(this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <span>Utvikler</span>
+          </button>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+              <span>Prosesseringsrapporter</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="user-row">
+          <span class="user-avatar">EK</span>
+          <span class="user-name">Edvard</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <div class="footer-actions">
+          <button class="lang-btn active">NO</button>
+          <button class="lang-btn">EN</button>
+          <button class="icon-btn" style="margin-left: auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════
+         MAIN CONTENT — Min side
+         ═══════════════════════════════════════ -->
+    <div class="main">
+      <div class="top-accent"></div>
+      <div class="content">
+        <!-- Header -->
+        <div class="page-header fade-in">
+          <div>
+            <h1>Min side</h1>
+            <div class="page-header-sub">Velkommen tilbake, Edvard</div>
+          </div>
+        </div>
+
+        <!-- 2-column grid -->
+        <div class="dashboard-grid">
+          <!-- LEFT COLUMN -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Mine prosjekter -->
+            <div class="card fade-in fade-in-1">
+              <div class="card-header">
+                <span class="card-title">Mine prosjekter</span>
+                <span class="card-count">3</span>
+              </div>
+              <div class="card-body">
+                <div class="project-item" onclick="window.location='01-project-dashboard.html'">
+                  <div class="project-info">
+                    <div class="project-name">Lillebekken Borettslag</div>
+                    <div class="project-role">BIM-koordinator</div>
+                  </div>
+                  <div class="project-right">
+                    <div class="project-date">2. apr 2026</div>
+                    <div class="project-progress">
+                      <div class="progress-bar"><div class="progress-fill" style="width: 60%"></div></div>
+                      <span class="progress-pct">60%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="project-item" onclick="window.location='01-project-dashboard.html'">
+                  <div class="project-info">
+                    <div class="project-name">Havnepromenaden K3</div>
+                    <div class="project-role">Kontrollor</div>
+                  </div>
+                  <div class="project-right">
+                    <div class="project-date">1. apr 2026</div>
+                    <div class="project-progress">
+                      <div class="progress-bar"><div class="progress-fill" style="width: 85%"></div></div>
+                      <span class="progress-pct">85%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="project-item" onclick="window.location='01-project-dashboard.html'">
+                  <div class="project-info">
+                    <div class="project-name">Skolen i Fjorden</div>
+                    <div class="project-role">BIM-koordinator</div>
+                  </div>
+                  <div class="project-right">
+                    <div class="project-date">28. mar 2026</div>
+                    <div class="project-progress">
+                      <div class="progress-bar"><div class="progress-fill" style="width: 46%"></div></div>
+                      <span class="progress-pct">46%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mine oppgaver -->
+            <div class="card fade-in fade-in-2">
+              <div class="card-header">
+                <span class="card-title">Mine oppgaver</span>
+                <span class="card-count">4</span>
+              </div>
+              <div class="card-body">
+                <div class="task-item">
+                  <div class="task-check"></div>
+                  <span class="task-priority red"></span>
+                  <div class="task-content">
+                    <div class="task-text">Klassifiser 143 typer (LBK ARK)</div>
+                    <div class="task-meta">Lillebekken Borettslag</div>
+                  </div>
+                  <span class="task-due overdue">Frist: 8. apr</span>
+                </div>
+                <div class="task-item">
+                  <div class="task-check"></div>
+                  <span class="task-priority yellow"></span>
+                  <div class="task-content">
+                    <div class="task-text">Gjennomga branndor-kartlegging</div>
+                    <div class="task-meta">Havnepromenaden K3</div>
+                  </div>
+                  <span class="task-due">Frist: 10. apr</span>
+                </div>
+                <div class="task-item">
+                  <div class="task-check"></div>
+                  <span class="task-priority green"></span>
+                  <div class="task-content">
+                    <div class="task-text">Eksporter LCA-data til Reduzer</div>
+                    <div class="task-meta">Lillebekken Borettslag</div>
+                  </div>
+                  <span class="task-due">Frist: 15. apr</span>
+                </div>
+                <div class="task-item">
+                  <div class="task-check"></div>
+                  <span class="task-priority gray"></span>
+                  <div class="task-content">
+                    <div class="task-text">Oppdater BEP leveranseplan</div>
+                    <div class="task-meta">Skolen i Fjorden</div>
+                  </div>
+                  <span class="task-due">Ingen frist</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Siste aktivitet -->
+            <div class="card fade-in fade-in-3">
+              <div class="card-header">
+                <span class="card-title">Siste aktivitet</span>
+              </div>
+              <div class="card-body">
+                <div class="activity-list">
+                  <div class="activity-item">
+                    <div class="activity-dot"></div>
+                    <div class="activity-content">
+                      <div class="activity-text">Du lastet opp <strong>LBK_RIE.ifc</strong> (v2)</div>
+                      <div class="activity-time">2 timer siden</div>
+                    </div>
+                  </div>
+                  <div class="activity-item">
+                    <div class="activity-dot secondary"></div>
+                    <div class="activity-content">
+                      <div class="activity-text">Kari Nordmann fullforte sjekkliste <strong>Brannisolasjon U1</strong></div>
+                      <div class="activity-time">I gar</div>
+                    </div>
+                  </div>
+                  <div class="activity-item">
+                    <div class="activity-dot secondary"></div>
+                    <div class="activity-content">
+                      <div class="activity-text">Ny versjon: <strong>LBK_ARK_F-KJ.ifc</strong> v6</div>
+                      <div class="activity-time">2. apr</div>
+                    </div>
+                  </div>
+                  <div class="activity-item">
+                    <div class="activity-dot secondary"></div>
+                    <div class="activity-content">
+                      <div class="activity-text">Ole Hansen kommenterte pa avvik <strong>#12</strong></div>
+                      <div class="activity-time">1. apr</div>
+                    </div>
+                  </div>
+                  <div class="activity-item">
+                    <div class="activity-dot secondary"></div>
+                    <div class="activity-content">
+                      <div class="activity-text">Du kartla <strong>28 typer</strong> i Lillebekken</div>
+                      <div class="activity-time">31. mar</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hurtigstatistikk -->
+            <div class="card fade-in fade-in-4">
+              <div class="card-header">
+                <span class="card-title">Hurtigstatistikk</span>
+              </div>
+              <div class="card-body">
+                <div class="stat-grid">
+                  <div class="stat-cell">
+                    <div class="stat-cell-value">48</div>
+                    <div class="stat-cell-label">Typer kartlagt denne uken</div>
+                  </div>
+                  <div class="stat-cell">
+                    <div class="stat-cell-value">4</div>
+                    <div class="stat-cell-label">Aktive sjekklister</div>
+                  </div>
+                  <div class="stat-cell">
+                    <div class="stat-cell-value">3</div>
+                    <div class="stat-cell-label">Apne avvik</div>
+                  </div>
+                  <div class="stat-cell">
+                    <div class="stat-cell-value">1</div>
+                    <div class="stat-cell-label">Modeller lastet opp</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleSection(btn) {
+      const items = btn.nextElementSibling;
+      const chevron = btn.querySelector('svg');
+      if (items.style.display === 'none') {
+        items.style.display = '';
+        chevron.style.transform = '';
+      } else {
+        items.style.display = 'none';
+        chevron.style.transform = 'rotate(-90deg)';
+      }
+    }
+  </script>
+</body>
+</html>
