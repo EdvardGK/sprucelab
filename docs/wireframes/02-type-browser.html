@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprucelab — Typebibliotek</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #eeeeed;
+      --bg-gradient: linear-gradient(135deg, #eeeeed 0%, #e4e6f0 50%, #eeeeed 100%);
+      --card: #ffffff;
+      --primary: #157954;
+      --primary-light: rgba(21, 121, 84, 0.1);
+      --accent: #D0D34D;
+      --navy: #21263A;
+      --text-primary: #21263A;
+      --text-secondary: #525d78;
+      --text-tertiary: #717b94;
+      --border: #d2d4d3;
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --radius: 0.75rem;
+      --sidebar-w: 256px;
+
+      /* Status colors */
+      --st-mapped-bg: #dcfce7;
+      --st-mapped-text: #166534;
+      --st-mapped-dot: #22c55e;
+      --st-pending-bg: #f1f5f9;
+      --st-pending-text: #64748b;
+      --st-pending-dot: #94a3b8;
+      --st-review-bg: #fef9c3;
+      --st-review-text: #854d0e;
+      --st-review-dot: #eab308;
+      --st-followup-bg: #fee2e2;
+      --st-followup-text: #991b1b;
+      --st-followup-dot: #ef4444;
+      --st-ignored-bg: #f1f5f9;
+      --st-ignored-text: #94a3b8;
+      --st-ignored-dot: #cbd5e1;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-feature-settings: 'rlig' 1, 'calt' 1;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(199, 206, 232, 0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(199, 206, 232, 0.25); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(199, 206, 232, 0.4); }
+
+    /* ═══════════════════════════════════════════
+       SHELL
+       ═══════════════════════════════════════════ */
+    .shell { display: flex; height: 100vh; width: 100vw; }
+
+    /* ─── SIDEBAR (project variant) ─── */
+    .sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      display: flex; flex-direction: column;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--glass-border);
+    }
+    .sidebar-brand { padding: 12px; border-bottom: 1px solid var(--glass-border); }
+    .sidebar-brand button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit;
+      color: var(--text-primary); transition: background 0.15s;
+    }
+    .sidebar-brand button:hover { background: rgba(255,255,255,0.6); }
+    .brand-icon {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .brand-name { flex: 1; text-align: left; font-weight: 600; font-size: 13px; }
+
+    .sidebar-search {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px; border-bottom: 1px solid var(--glass-border);
+    }
+    .search-btn {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px;
+      color: var(--text-secondary); transition: background 0.15s;
+    }
+    .search-btn:hover { background: rgba(255,255,255,0.6); }
+    .icon-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; border-radius: 6px;
+      cursor: pointer; color: var(--text-secondary); transition: background 0.15s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.6); }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px; }
+    .project-label {
+      padding: 6px 12px; font-size: 11px; color: var(--text-tertiary);
+      font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      color: var(--text-secondary); text-decoration: none;
+      transition: all 0.15s; cursor: pointer;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.6); color: var(--text-primary); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 500; }
+    .nav-item svg { flex-shrink: 0; }
+    .nav-section { margin-top: 16px; }
+    .nav-section-label {
+      padding: 6px 12px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+    }
+    .nav-section-items { margin-top: 4px; }
+
+    .sidebar-footer { border-top: 1px solid var(--border); padding: 8px; }
+    .user-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; cursor: pointer;
+      border: none; background: none; width: 100%; font: inherit;
+      text-align: left; transition: background 0.15s;
+    }
+    .user-row:hover { background: rgba(255,255,255,0.6); }
+    .user-avatar {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600;
+    }
+    .user-name { flex: 1; font-size: 13px; color: var(--text-primary); }
+    .footer-actions { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
+    .lang-btn {
+      padding: 4px 8px; border: none; background: transparent;
+      border-radius: 4px; cursor: pointer; font: inherit;
+      font-size: 11px; font-weight: 600; color: var(--text-tertiary); transition: all 0.15s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.6); }
+    .lang-btn.active { color: var(--primary); background: var(--primary-light); }
+
+    /* ─── MAIN ─── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .top-accent { height: 3px; background: linear-gradient(to right, #D0D34D, #157954, #21263A); flex-shrink: 0; }
+
+    /* ═══════════════════════════════════════════
+       TYPE BROWSER LAYOUT
+       ═══════════════════════════════════════════ */
+
+    /* Header bar */
+    .tb-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      flex-shrink: 0;
+    }
+    .tb-header h1 { font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .tb-model-select {
+      padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+      font: inherit; font-size: 12px; color: var(--text-primary);
+      background: white; cursor: pointer; min-width: 200px;
+    }
+    .tb-stats {
+      display: flex; align-items: center; gap: 12px;
+      margin-left: auto; font-size: 12px; color: var(--text-secondary);
+    }
+    .tb-stats strong { color: var(--text-primary); font-weight: 600; }
+
+    /* Filter bar */
+    .tb-filters {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.5);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .tb-search {
+      position: relative; width: 180px;
+    }
+    .tb-search input {
+      width: 100%; padding: 5px 10px 5px 30px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font: inherit; font-size: 12px; background: white;
+      outline: none; transition: border-color 0.15s;
+    }
+    .tb-search input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(21,121,84,0.1); }
+    .tb-search svg {
+      position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+      color: var(--text-tertiary);
+    }
+    .tb-select {
+      padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+      font: inherit; font-size: 12px; color: var(--text-primary);
+      background: white; cursor: pointer;
+    }
+    .tb-filter-sep { width: 1px; height: 20px; background: var(--border); }
+    .tb-count { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+    .tb-actions { display: flex; gap: 4px; margin-left: auto; }
+    .tb-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+      font: inherit; font-size: 11px; font-weight: 500;
+      color: var(--text-secondary); background: white; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tb-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .tb-btn svg { flex-shrink: 0; }
+    .view-toggle {
+      display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    }
+    .view-toggle button {
+      padding: 5px 8px; border: none; background: white;
+      cursor: pointer; color: var(--text-tertiary); transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .view-toggle button:not(:last-child) { border-right: 1px solid var(--border); }
+    .view-toggle button.active { background: var(--primary-light); color: var(--primary); }
+    .view-toggle button:hover:not(.active) { background: #f8f8f8; }
+
+    /* Progress bar */
+    .tb-progress {
+      display: flex; align-items: center; gap: 12px;
+      padding: 6px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.3);
+      flex-shrink: 0;
+    }
+    .progress-bar {
+      flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px;
+      overflow: hidden; display: flex;
+    }
+    .progress-fill-mapped { height: 100%; background: var(--st-mapped-dot); }
+    .progress-fill-review { height: 100%; background: var(--st-review-dot); }
+    .progress-fill-followup { height: 100%; background: var(--st-followup-dot); }
+    .progress-label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+    .progress-label strong { color: var(--text-primary); font-weight: 600; }
+    .progress-legend {
+      display: flex; gap: 10px; font-size: 10px; color: var(--text-tertiary);
+    }
+    .legend-dot {
+      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      margin-right: 3px; vertical-align: middle;
+    }
+
+    /* 3-column layout */
+    .tb-body {
+      flex: 1; display: grid;
+      grid-template-columns: minmax(200px, 1fr) minmax(300px, 1.6fr) minmax(260px, 1.4fr);
+      min-height: 0;
+    }
+
+    /* Grid view */
+    .tb-body.grid-view {
+      grid-template-columns: 1fr;
+    }
+
+    /* ─── LEFT: Type Navigation ─── */
+    .tb-nav {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      background: rgba(255,255,255,0.4);
+    }
+    .type-group { border-bottom: 1px solid rgba(0,0,0,0.04); }
+    .type-group-header {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 12px;
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+      cursor: pointer; transition: background 0.15s;
+      background: rgba(0,0,0,0.02);
+    }
+    .type-group-header:hover { background: rgba(0,0,0,0.05); }
+    .type-group-header svg { flex-shrink: 0; transition: transform 0.15s; }
+    .type-group-header.collapsed svg { transform: rotate(-90deg); }
+    .type-group-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .type-group-count {
+      font-size: 10px; color: var(--text-tertiary); font-weight: 400;
+      font-variant-numeric: tabular-nums;
+    }
+    .type-group-mapped {
+      font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums;
+    }
+    .type-group-mapped.complete { color: var(--st-mapped-text); }
+    .type-group-mapped.partial { color: var(--text-tertiary); }
+
+    .type-group-items { }
+    .type-group.collapsed .type-group-items { display: none; }
+
+    .type-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px 6px 24px;
+      font-size: 11px; cursor: pointer;
+      transition: background 0.1s;
+      border-left: 2px solid transparent;
+    }
+    .type-row:hover { background: rgba(0,0,0,0.03); }
+    .type-row.selected {
+      background: var(--primary-light);
+      border-left-color: var(--primary);
+    }
+    .type-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+    }
+    .type-row-name {
+      flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      color: var(--text-primary);
+    }
+    .type-row-code {
+      font-size: 10px; color: var(--text-tertiary); font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    .type-row-count {
+      font-size: 10px; color: var(--text-tertiary); flex-shrink: 0;
+      min-width: 20px; text-align: right;
+    }
+
+    /* ─── CENTER: Classification Form ─── */
+    .tb-form {
+      overflow-y: auto;
+      padding: 16px 20px;
+      background: var(--card);
+    }
+    .form-identity {
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+    }
+    .form-type-name { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .form-type-meta {
+      font-size: 11px; color: var(--text-tertiary); margin-top: 2px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .form-type-meta .ifc-badge {
+      display: inline-flex; padding: 1px 6px;
+      background: #f1f5f9; border-radius: 4px;
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 10px; font-weight: 500; color: var(--text-secondary);
+    }
+
+    .form-section {
+      margin-bottom: 16px;
+    }
+    .form-section-label {
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+      margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .form-field { margin-bottom: 12px; }
+    .form-label {
+      display: block; font-size: 11px; font-weight: 500;
+      color: var(--text-secondary); margin-bottom: 4px;
+    }
+    .form-input {
+      width: 100%; padding: 7px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font: inherit; font-size: 12px; color: var(--text-primary);
+      background: white; outline: none; transition: all 0.15s;
+    }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(21,121,84,0.1); }
+    select.form-input { cursor: pointer; }
+    textarea.form-input { resize: vertical; min-height: 56px; }
+
+    /* NS3451 cascading selector */
+    .ns3451-cascade { display: flex; gap: 6px; }
+    .ns3451-cascade select {
+      flex: 1; padding: 7px 8px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font: inherit; font-size: 12px; cursor: pointer;
+      background: white; outline: none;
+    }
+    .ns3451-cascade select:focus { border-color: var(--primary); }
+    .ns3451-result {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; margin-top: 6px;
+      background: var(--primary-light); border-radius: 6px;
+      font-size: 12px; color: var(--primary); font-weight: 500;
+    }
+
+    /* Material layers mini */
+    .layers-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 11px;
+    }
+    .layers-table th {
+      text-align: left; padding: 4px 8px;
+      font-weight: 600; color: var(--text-tertiary);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .layers-table td {
+      padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      color: var(--text-primary);
+    }
+    .layers-table .layer-color {
+      width: 12px; height: 12px; border-radius: 2px; display: inline-block;
+      vertical-align: middle; margin-right: 6px;
+    }
+    .layer-add {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 8px; margin-top: 4px;
+      font-size: 11px; color: var(--text-tertiary);
+      cursor: pointer; border: none; background: none;
+      transition: color 0.15s;
+    }
+    .layer-add:hover { color: var(--primary); }
+
+    /* Unit + notes row */
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-field { flex: 1; }
+
+    /* Action buttons */
+    .form-actions {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.06);
+      margin-top: 16px;
+    }
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 6px;
+      font: inherit; font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-action kbd {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 1px 5px; border-radius: 3px;
+      font-size: 9px; font-weight: 600;
+      font-family: inherit;
+    }
+    .btn-save {
+      background: var(--primary); color: white; border: none;
+    }
+    .btn-save:hover { background: #126b4a; box-shadow: 0 2px 8px rgba(21,121,84,0.3); }
+    .btn-save kbd { background: rgba(255,255,255,0.2); color: white; }
+    .btn-flag {
+      background: white; color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-flag:hover { border-color: var(--st-review-dot); color: var(--st-review-text); }
+    .btn-flag kbd { background: #f1f5f9; color: var(--text-tertiary); }
+    .btn-ignore {
+      background: transparent; color: var(--text-tertiary);
+      border: none;
+    }
+    .btn-ignore:hover { color: var(--text-primary); }
+    .btn-ignore kbd { background: #f1f5f9; color: var(--text-tertiary); }
+
+    .form-empty {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; color: var(--text-tertiary); font-size: 13px;
+    }
+
+    /* ─── RIGHT: Info + Viewer ─── */
+    .tb-right {
+      border-left: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      background: rgba(255,255,255,0.4);
+    }
+
+    /* Info panel */
+    .info-panel {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .info-type-name { font-size: 14px; font-weight: 600; }
+    .info-badges {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;
+    }
+    .info-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-weight: 500;
+    }
+    .info-badge.ifc {
+      background: #f1f5f9; color: var(--text-secondary);
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+    }
+    .info-badge.ns3451 { background: var(--primary-light); color: var(--primary); }
+    .info-badge.disc { background: #e8f0fe; color: #1a56db; }
+    .info-badge.unit { background: #fef9c3; color: #854d0e; }
+    .info-badge.count { background: #f1f5f9; color: var(--text-secondary); }
+
+    .info-props {
+      margin-top: 10px; font-size: 11px;
+    }
+    .info-prop-row {
+      display: flex; justify-content: space-between;
+      padding: 3px 0;
+    }
+    .info-prop-label { color: var(--text-tertiary); }
+    .info-prop-value { color: var(--text-primary); font-weight: 500; }
+
+    /* 3D viewer placeholder */
+    .viewer-panel {
+      flex: 1; display: flex; flex-direction: column; min-height: 0;
+    }
+    .viewer-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 12px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    }
+    .viewer-header button {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: none; border-radius: 4px;
+      cursor: pointer; color: var(--text-tertiary); transition: all 0.15s;
+    }
+    .viewer-header button:hover { background: rgba(0,0,0,0.05); color: var(--text-primary); }
+    .viewer-canvas {
+      flex: 1; min-height: 0;
+      background: linear-gradient(135deg, #1a1f35 0%, #0f1321 100%);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .viewer-placeholder {
+      text-align: center; color: rgba(255,255,255,0.3);
+    }
+    .viewer-placeholder svg { opacity: 0.2; }
+    .viewer-placeholder p { font-size: 11px; margin-top: 8px; }
+    /* Fake 3D wireframe grid */
+    .viewer-grid {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      transform: perspective(600px) rotateX(45deg);
+      transform-origin: center bottom;
+    }
+    /* Fake 3D object */
+    .viewer-object {
+      width: 80px; height: 120px;
+      border: 2px solid rgba(21, 121, 84, 0.5);
+      background: rgba(21, 121, 84, 0.08);
+      position: relative; z-index: 1;
+      transform: perspective(300px) rotateY(-15deg) rotateX(5deg);
+    }
+    .viewer-object::before {
+      content: ''; position: absolute;
+      top: 30%; left: 10%; right: 10%; height: 1px;
+      background: rgba(21, 121, 84, 0.3);
+    }
+    .viewer-object::after {
+      content: ''; position: absolute;
+      top: 60%; left: 10%; right: 10%; height: 1px;
+      background: rgba(21, 121, 84, 0.3);
+    }
+
+    .viewer-shortcut {
+      position: absolute; bottom: 8px; right: 8px;
+      font-size: 10px; color: rgba(255,255,255,0.25);
+    }
+    .viewer-shortcut kbd {
+      padding: 1px 4px; border-radius: 3px;
+      background: rgba(255,255,255,0.08);
+      font-family: inherit; font-size: 9px;
+    }
+
+    /* ═══════════════════════════════════════════
+       GRID VIEW (Airtable-style)
+       ═══════════════════════════════════════════ */
+    .grid-container {
+      flex: 1; overflow: auto;
+      display: none;
+    }
+    .grid-container.active { display: block; }
+    .list-container { display: contents; }
+    .list-container.hidden { display: none; }
+    .list-container.hidden .tb-nav,
+    .list-container.hidden .tb-form,
+    .list-container.hidden .tb-right { display: none; }
+
+    .grid-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 12px;
+    }
+    .grid-table thead { position: sticky; top: 0; z-index: 2; }
+    .grid-table th {
+      padding: 8px 12px; text-align: left;
+      font-weight: 600; font-size: 11px; color: var(--text-secondary);
+      background: #f8f9fa;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap; cursor: pointer;
+      user-select: none;
+    }
+    .grid-table th:hover { color: var(--text-primary); }
+    .grid-table td {
+      padding: 6px 12px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 220px;
+    }
+    .grid-table tr:hover td { background: rgba(21,121,84,0.03); }
+    .grid-group-row td {
+      background: #f8f9fa; font-weight: 600; font-size: 11px;
+      color: var(--text-secondary); padding: 6px 12px;
+      cursor: pointer;
+    }
+    .grid-editable {
+      background: rgba(21,121,84,0.02);
+      cursor: text;
+    }
+    .grid-editable:hover {
+      background: rgba(21,121,84,0.06);
+      outline: 1px solid rgba(21,121,84,0.2);
+      outline-offset: -1px;
+      border-radius: 2px;
+    }
+    .grid-status {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 500;
+    }
+    .grid-status.mapped { background: var(--st-mapped-bg); color: var(--st-mapped-text); }
+    .grid-status.pending { background: var(--st-pending-bg); color: var(--st-pending-text); }
+    .grid-status.review { background: var(--st-review-bg); color: var(--st-review-text); }
+    .grid-status.followup { background: var(--st-followup-bg); color: var(--st-followup-text); }
+
+    /* ═══════════════════════════════════════════
+       FULLSCREEN VIEWER OVERLAY
+       ═══════════════════════════════════════════ */
+    .fullscreen-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: #0f1321;
+      display: none; flex-direction: column;
+    }
+    .fullscreen-overlay.open { display: flex; }
+    .fullscreen-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8); font-size: 13px;
+    }
+    .fullscreen-header span { font-weight: 500; }
+    .fullscreen-header small { font-size: 11px; color: rgba(255,255,255,0.4); margin-left: 8px; }
+    .fullscreen-close {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: rgba(255,255,255,0.08);
+      border-radius: 6px; cursor: pointer; color: rgba(255,255,255,0.6);
+      transition: all 0.15s;
+    }
+    .fullscreen-close:hover { background: rgba(255,255,255,0.15); color: white; }
+    .fullscreen-canvas {
+      flex: 1;
+      background: linear-gradient(135deg, #1a1f35 0%, #0f1321 100%);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 0.2s ease; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- ═══════════════════════════════════════
+         SIDEBAR — Project variant
+         ═══════════════════════════════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <button onclick="window.location='00-projects-gallery.html'">
+          <span class="brand-icon">SF</span>
+          <span class="brand-name">Spruce Forge</span>
+        </button>
+      </div>
+      <div class="sidebar-search">
+        <button class="search-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Sok...</span>
+        </button>
+        <button class="icon-btn" title="Nytt">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </button>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="project-label">Lillebekken Borettslag</div>
+        <div>
+          <a class="nav-item" href="10-my-page.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Min side
+          </a>
+          <a class="nav-item" href="03-3d-viewer.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            3D Visning
+          </a>
+        </div>
+        <div style="margin-top: 8px;">
+          <a class="nav-item" href="01-project-dashboard.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            Dashboard
+          </a>
+        </div>
+        <!-- FILES -->
+        <div class="nav-section">
+          <div class="nav-section-label">Filer</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="04-project-models.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+              Modeller
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              Tegninger
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Dokumenter
+            </a>
+          </div>
+        </div>
+        <!-- DATA -->
+        <div class="nav-section">
+          <div class="nav-section-label">Data</div>
+          <div class="nav-section-items">
+            <a class="nav-item active" href="02-type-browser.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Typer
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              Materialbibliotek
+            </a>
+            <a class="nav-item" href="08-spaces.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+              Rom
+            </a>
+            <a class="nav-item" href="09-qto.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+              QTO
+            </a>
+          </div>
+        </div>
+        <!-- WORKBENCH -->
+        <div class="nav-section">
+          <div class="nav-section-label">Arbeidsbenk</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+              Verifikasjon
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              IFC-redigering
+            </a>
+            <a class="nav-item" href="06-bep-eir.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              BEP
+            </a>
+          </div>
+        </div>
+        <!-- FIELD -->
+        <div class="nav-section">
+          <div class="nav-section-label">Felt</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="07-field-compliance.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+              Sjekklister
+            </a>
+          </div>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="user-row">
+          <span class="user-avatar">EK</span>
+          <span class="user-name">Edvard</span>
+        </button>
+        <div class="footer-actions">
+          <button class="lang-btn active">NO</button>
+          <button class="lang-btn">EN</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════
+         MAIN CONTENT — Type Browser
+         ═══════════════════════════════════════ -->
+    <div class="main">
+      <div class="top-accent"></div>
+
+      <!-- Header bar -->
+      <div class="tb-header">
+        <h1>Typebibliotek</h1>
+        <select class="tb-model-select">
+          <option>LBK_ARK_F-KJ.ifc (v6)</option>
+          <option>LBK_RIB_F-KJ.ifc (v3)</option>
+          <option>LBK_RIV.ifc (v1)</option>
+          <option>LBK_RIE.ifc (v2)</option>
+        </select>
+        <div class="tb-stats">
+          <span><strong>357</strong> typer</span>
+          <span>&middot;</span>
+          <span style="color: var(--st-mapped-text)"><strong>214</strong> kartlagt</span>
+          <span>&middot;</span>
+          <span><strong>143</strong> gjenstår</span>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="tb-filters">
+        <div class="tb-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Sok i typer...">
+        </div>
+        <select class="tb-select">
+          <option>Alle IFC-klasser</option>
+          <option>IfcWallType</option>
+          <option>IfcSlabType</option>
+          <option>IfcDoorType</option>
+          <option>IfcWindowType</option>
+          <option>IfcColumnType</option>
+          <option>IfcBeamType</option>
+        </select>
+        <select class="tb-select">
+          <option>Alle NS3451-koder</option>
+          <option>231 — Yttervegg</option>
+          <option>234 — Innervegg</option>
+          <option>243 — Dekke</option>
+          <option>253 — Soyle</option>
+          <option>255 — Bjelke</option>
+        </select>
+        <select class="tb-select">
+          <option>Alle statuser</option>
+          <option>Kartlagt</option>
+          <option>Ventende</option>
+          <option>Ignorert</option>
+          <option>Til gjennomgang</option>
+          <option>Oppfolging</option>
+        </select>
+        <span class="tb-count">Viser 357 av 357</span>
+
+        <div class="tb-actions">
+          <button class="tb-btn" title="Eksporter Excel">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Excel
+          </button>
+          <button class="tb-btn" title="Importer Excel">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            Importer
+          </button>
+          <div class="tb-filter-sep"></div>
+          <div class="view-toggle">
+            <button class="active" onclick="setView('list')" title="Listevisning">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+            </button>
+            <button onclick="setView('grid')" title="Rutenettvisning">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="tb-progress">
+        <div class="progress-bar">
+          <div class="progress-fill-mapped" style="width: 60%"></div>
+          <div class="progress-fill-review" style="width: 8%"></div>
+          <div class="progress-fill-followup" style="width: 3%"></div>
+        </div>
+        <span class="progress-label"><strong>214</strong> / 357 kartlagt</span>
+        <div class="progress-legend">
+          <span><span class="legend-dot" style="background: var(--st-mapped-dot)"></span>Kartlagt</span>
+          <span><span class="legend-dot" style="background: var(--st-review-dot)"></span>Gjennomgang</span>
+          <span><span class="legend-dot" style="background: var(--st-followup-dot)"></span>Oppfolging</span>
+          <span><span class="legend-dot" style="background: var(--st-pending-dot)"></span>Ventende</span>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           LIST VIEW (3-column)
+           ═══════════════════════════════════ -->
+      <div class="tb-body" id="listView">
+
+        <!-- LEFT: Type Navigation -->
+        <div class="tb-nav">
+          <!-- IfcWallType group -->
+          <div class="type-group" id="grp-wall">
+            <div class="type-group-header" onclick="toggleGroup('grp-wall')">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="type-group-name">IfcWallType</span>
+              <span class="type-group-count">(42)</span>
+              <span class="type-group-mapped partial">28/42</span>
+            </div>
+            <div class="type-group-items">
+              <div class="type-row selected" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-mapped-dot)"></span>
+                <span class="type-row-name">Basisvegg:Yttervegg 200mm</span>
+                <span class="type-row-code">231</span>
+                <span class="type-row-count">84</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-mapped-dot)"></span>
+                <span class="type-row-name">Basisvegg:Innervegg 150mm</span>
+                <span class="type-row-code">234</span>
+                <span class="type-row-count">126</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-mapped-dot)"></span>
+                <span class="type-row-name">Basisvegg:Innervegg 100mm</span>
+                <span class="type-row-code">234</span>
+                <span class="type-row-count">93</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-pending-dot)"></span>
+                <span class="type-row-name">Basisvegg:Brannvegg EI60</span>
+                <span class="type-row-code"></span>
+                <span class="type-row-count">31</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-review-dot)"></span>
+                <span class="type-row-name">Basisvegg:Lettklinkervegg</span>
+                <span class="type-row-code">231</span>
+                <span class="type-row-count">12</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-pending-dot)"></span>
+                <span class="type-row-name">Basisvegg:Baderomsvegg</span>
+                <span class="type-row-code"></span>
+                <span class="type-row-count">44</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-mapped-dot)"></span>
+                <span class="type-row-name">Basisvegg:Garasjevegg 200mm</span>
+                <span class="type-row-code">231</span>
+                <span class="type-row-count">18</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- IfcSlabType group -->
+          <div class="type-group" id="grp-slab">
+            <div class="type-group-header" onclick="toggleGroup('grp-slab')">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="type-group-name">IfcSlabType</span>
+              <span class="type-group-count">(18)</span>
+              <span class="type-group-mapped complete">18/18</span>
+            </div>
+            <div class="type-group-items">
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-mapped-dot)"></span>
+                <span class="type-row-name">Betonggulv:Dekke 250mm</span>
+                <span class="type-row-code">243</span>
+                <span class="type-row-count">67</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-mapped-dot)"></span>
+                <span class="type-row-name">Betonggulv:Gulv pa grunn</span>
+                <span class="type-row-code">243</span>
+                <span class="type-row-count">12</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-mapped-dot)"></span>
+                <span class="type-row-name">Betonggulv:Balkong 180mm</span>
+                <span class="type-row-code">243</span>
+                <span class="type-row-count">24</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- IfcDoorType group -->
+          <div class="type-group" id="grp-door">
+            <div class="type-group-header" onclick="toggleGroup('grp-door')">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="type-group-name">IfcDoorType</span>
+              <span class="type-group-count">(56)</span>
+              <span class="type-group-mapped partial">34/56</span>
+            </div>
+            <div class="type-group-items">
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-mapped-dot)"></span>
+                <span class="type-row-name">Innerdor:Standard 9x21</span>
+                <span class="type-row-code">237</span>
+                <span class="type-row-count">142</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-followup-dot)"></span>
+                <span class="type-row-name">Innerdor:Branndor EI30</span>
+                <span class="type-row-code">237</span>
+                <span class="type-row-count">38</span>
+              </div>
+              <div class="type-row" onclick="selectType(this)">
+                <span class="type-dot" style="background: var(--st-pending-dot)"></span>
+                <span class="type-row-name">Ytterdor:Hovedinngang</span>
+                <span class="type-row-code"></span>
+                <span class="type-row-count">4</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- IfcWindowType group -->
+          <div class="type-group collapsed" id="grp-window">
+            <div class="type-group-header collapsed" onclick="toggleGroup('grp-window')">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="type-group-name">IfcWindowType</span>
+              <span class="type-group-count">(38)</span>
+              <span class="type-group-mapped partial">22/38</span>
+            </div>
+            <div class="type-group-items">
+              <div class="type-row" onclick="selectType(this)"><span class="type-dot" style="background: var(--st-mapped-dot)"></span><span class="type-row-name">Vindu:2-fags 120x120</span><span class="type-row-code">236</span><span class="type-row-count">56</span></div>
+            </div>
+          </div>
+
+          <!-- IfcColumnType group -->
+          <div class="type-group collapsed" id="grp-col">
+            <div class="type-group-header collapsed" onclick="toggleGroup('grp-col')">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="type-group-name">IfcColumnType</span>
+              <span class="type-group-count">(12)</span>
+              <span class="type-group-mapped complete">12/12</span>
+            </div>
+            <div class="type-group-items">
+              <div class="type-row" onclick="selectType(this)"><span class="type-dot" style="background: var(--st-mapped-dot)"></span><span class="type-row-name">Stalsoyle:HEB200</span><span class="type-row-code">253</span><span class="type-row-count">28</span></div>
+            </div>
+          </div>
+
+          <!-- IfcBeamType group -->
+          <div class="type-group collapsed" id="grp-beam">
+            <div class="type-group-header collapsed" onclick="toggleGroup('grp-beam')">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="type-group-name">IfcBeamType</span>
+              <span class="type-group-count">(14)</span>
+              <span class="type-group-mapped partial">10/14</span>
+            </div>
+            <div class="type-group-items">
+              <div class="type-row" onclick="selectType(this)"><span class="type-dot" style="background: var(--st-mapped-dot)"></span><span class="type-row-name">Stalbjelke:IPE300</span><span class="type-row-code">255</span><span class="type-row-count">42</span></div>
+            </div>
+          </div>
+
+          <!-- IfcRoofType group -->
+          <div class="type-group collapsed" id="grp-roof">
+            <div class="type-group-header collapsed" onclick="toggleGroup('grp-roof')">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="type-group-name">IfcRoofType</span>
+              <span class="type-group-count">(6)</span>
+              <span class="type-group-mapped partial">4/6</span>
+            </div>
+            <div class="type-group-items">
+              <div class="type-row" onclick="selectType(this)"><span class="type-dot" style="background: var(--st-mapped-dot)"></span><span class="type-row-name">Tak:Flatt tak isolert</span><span class="type-row-code">244</span><span class="type-row-count">8</span></div>
+            </div>
+          </div>
+
+          <!-- IfcStairType group -->
+          <div class="type-group collapsed" id="grp-stair">
+            <div class="type-group-header collapsed" onclick="toggleGroup('grp-stair')">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="type-group-name">IfcStairType</span>
+              <span class="type-group-count">(8)</span>
+              <span class="type-group-mapped partial">6/8</span>
+            </div>
+            <div class="type-group-items">
+              <div class="type-row" onclick="selectType(this)"><span class="type-dot" style="background: var(--st-mapped-dot)"></span><span class="type-row-name">Trapp:Betongtrapp standard</span><span class="type-row-code">261</span><span class="type-row-count">6</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER: Classification Form -->
+        <div class="tb-form">
+          <!-- Identity -->
+          <div class="form-identity">
+            <div class="form-type-name">Basisvegg:Yttervegg 200mm</div>
+            <div class="form-type-meta">
+              <span class="ifc-badge">IfcWallType</span>
+              <span>84 instanser</span>
+              <span>&middot;</span>
+              <span>Modell: LBK_ARK_F-KJ.ifc</span>
+            </div>
+          </div>
+
+          <!-- NS3451 Classification -->
+          <div class="form-section">
+            <div class="form-section-label">NS3451 Klassifisering</div>
+            <div class="ns3451-cascade">
+              <select>
+                <option>2 — Bygning</option>
+                <option>3 — VVS</option>
+                <option>4 — Elkraft</option>
+              </select>
+              <select>
+                <option>23 — Yttervegger</option>
+                <option>24 — Innervegger</option>
+                <option>25 — Dekker</option>
+              </select>
+              <select>
+                <option>231 — Yttervegg</option>
+                <option>232 — Vinduer</option>
+                <option>233 — Dorer</option>
+              </select>
+            </div>
+            <div class="ns3451-result">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              231 — Yttervegg
+            </div>
+          </div>
+
+          <!-- Material Layers -->
+          <div class="form-section">
+            <div class="form-section-label">Materialsjikt</div>
+            <table class="layers-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Materiale</th>
+                  <th>Tykkelse</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td><span class="layer-color" style="background: #b0bec5"></span>Utvendig kledning</td>
+                  <td>22 mm</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><span class="layer-color" style="background: #ffcc80"></span>Vindsperre</td>
+                  <td>12 mm</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><span class="layer-color" style="background: #fff59d"></span>Mineralull</td>
+                  <td>200 mm</td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td><span class="layer-color" style="background: #81d4fa"></span>Dampsperre</td>
+                  <td>0.2 mm</td>
+                </tr>
+                <tr>
+                  <td>5</td>
+                  <td><span class="layer-color" style="background: #e0e0e0"></span>Gipsplate</td>
+                  <td>13 mm</td>
+                </tr>
+              </tbody>
+            </table>
+            <button class="layer-add">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Legg til sjikt
+            </button>
+          </div>
+
+          <!-- Unit + Notes -->
+          <div class="form-section">
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-label">Enhet</label>
+                <select class="form-input">
+                  <option>m2</option>
+                  <option>m</option>
+                  <option>stk</option>
+                  <option>m3</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Disiplin</label>
+                <select class="form-input">
+                  <option>ARK</option>
+                  <option>RIB</option>
+                  <option>RIV</option>
+                  <option>RIE</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="form-label">Notater</label>
+              <textarea class="form-input" placeholder="Valgfrie notater om denne typen...">Standard yttervegg for alle etasjer. Sjekk U-verdi mot TEK17 krav.</textarea>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="form-actions">
+            <button class="btn-action btn-save">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              Lagre kartlegging
+              <kbd>A</kbd>
+            </button>
+            <button class="btn-action btn-flag">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+              Oppfolging
+              <kbd>F</kbd>
+            </button>
+            <button class="btn-action btn-ignore">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              Ignorer
+              <kbd>I</kbd>
+            </button>
+          </div>
+        </div>
+
+        <!-- RIGHT: Info + 3D Viewer -->
+        <div class="tb-right">
+          <!-- Info panel -->
+          <div class="info-panel">
+            <div class="info-type-name">Basisvegg:Yttervegg 200mm</div>
+            <div class="info-badges">
+              <span class="info-badge ifc">IfcWallType</span>
+              <span class="info-badge ns3451">231 Yttervegg</span>
+              <span class="info-badge disc">ARK</span>
+              <span class="info-badge unit">m2</span>
+              <span class="info-badge count">84 instanser</span>
+            </div>
+            <div class="info-props">
+              <div class="info-prop-row">
+                <span class="info-prop-label">Totaltykkelse</span>
+                <span class="info-prop-value">247.2 mm</span>
+              </div>
+              <div class="info-prop-row">
+                <span class="info-prop-label">U-verdi</span>
+                <span class="info-prop-value">0.18 W/m2K</span>
+              </div>
+              <div class="info-prop-row">
+                <span class="info-prop-label">Brannklasse</span>
+                <span class="info-prop-value">REI 60</span>
+              </div>
+              <div class="info-prop-row">
+                <span class="info-prop-label">Etasjer</span>
+                <span class="info-prop-value">U1, 01, 02, 03, 04</span>
+              </div>
+              <div class="info-prop-row">
+                <span class="info-prop-label">TypeBank</span>
+                <span class="info-prop-value" style="color: var(--primary)">Koblet (3 prosjekter)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3D Viewer -->
+          <div class="viewer-panel">
+            <div class="viewer-header">
+              <span>3D Forhåndsvisning</span>
+              <button onclick="openFullscreen()" title="Fullskjerm (Shift+F)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
+              </button>
+            </div>
+            <div class="viewer-canvas">
+              <div class="viewer-grid"></div>
+              <div class="viewer-object"></div>
+              <div class="viewer-shortcut"><kbd>Shift</kbd> + <kbd>F</kbd> fullskjerm</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════
+           GRID VIEW (Airtable-style)
+           ═══════════════════════════════════ -->
+      <div class="grid-container" id="gridView">
+        <table class="grid-table">
+          <thead>
+            <tr>
+              <th style="width: 40px"><input type="checkbox"></th>
+              <th style="width: 130px">IFC-klasse</th>
+              <th style="width: 220px">Typenavn</th>
+              <th style="width: 70px; text-align: right">Ant.</th>
+              <th style="width: 110px">Status</th>
+              <th style="width: 100px">NS3451</th>
+              <th style="width: 160px">NS3451-navn</th>
+              <th style="width: 70px">Enhet</th>
+              <th style="width: 80px">Disiplin</th>
+              <th style="width: 200px">Notater</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- IfcWallType group -->
+            <tr class="grid-group-row"><td colspan="10">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px"><path d="m6 9 6 6 6-6"/></svg>
+              IfcWallType (42 typer)
+            </td></tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcWallType</td>
+              <td style="font-weight: 500">Basisvegg:Yttervegg 200mm</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">84</td>
+              <td><span class="grid-status mapped">Kartlagt</span></td>
+              <td class="grid-editable">231</td>
+              <td>Yttervegg</td>
+              <td class="grid-editable">m2</td>
+              <td class="grid-editable">ARK</td>
+              <td class="grid-editable" style="font-size: 11px; color: var(--text-secondary)">Standard yttervegg</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcWallType</td>
+              <td style="font-weight: 500">Basisvegg:Innervegg 150mm</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">126</td>
+              <td><span class="grid-status mapped">Kartlagt</span></td>
+              <td class="grid-editable">234</td>
+              <td>Innervegg</td>
+              <td class="grid-editable">m2</td>
+              <td class="grid-editable">ARK</td>
+              <td class="grid-editable" style="font-size: 11px; color: var(--text-secondary)"></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcWallType</td>
+              <td style="font-weight: 500">Basisvegg:Innervegg 100mm</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">93</td>
+              <td><span class="grid-status mapped">Kartlagt</span></td>
+              <td class="grid-editable">234</td>
+              <td>Innervegg</td>
+              <td class="grid-editable">m2</td>
+              <td class="grid-editable">ARK</td>
+              <td class="grid-editable" style="font-size: 11px; color: var(--text-secondary)"></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcWallType</td>
+              <td style="font-weight: 500">Basisvegg:Brannvegg EI60</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">31</td>
+              <td><span class="grid-status pending">Ventende</span></td>
+              <td class="grid-editable"></td>
+              <td></td>
+              <td class="grid-editable"></td>
+              <td class="grid-editable"></td>
+              <td class="grid-editable"></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcWallType</td>
+              <td style="font-weight: 500">Basisvegg:Lettklinkervegg</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">12</td>
+              <td><span class="grid-status review">Gjennomgang</span></td>
+              <td class="grid-editable">231</td>
+              <td>Yttervegg</td>
+              <td class="grid-editable">m2</td>
+              <td class="grid-editable">ARK</td>
+              <td class="grid-editable" style="font-size: 11px; color: var(--text-secondary)">Sjekk klassifisering</td>
+            </tr>
+
+            <!-- IfcSlabType group -->
+            <tr class="grid-group-row"><td colspan="10">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px"><path d="m6 9 6 6 6-6"/></svg>
+              IfcSlabType (18 typer)
+            </td></tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcSlabType</td>
+              <td style="font-weight: 500">Betonggulv:Dekke 250mm</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">67</td>
+              <td><span class="grid-status mapped">Kartlagt</span></td>
+              <td class="grid-editable">243</td>
+              <td>Dekke</td>
+              <td class="grid-editable">m2</td>
+              <td class="grid-editable">RIB</td>
+              <td class="grid-editable"></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcSlabType</td>
+              <td style="font-weight: 500">Betonggulv:Gulv pa grunn</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">12</td>
+              <td><span class="grid-status mapped">Kartlagt</span></td>
+              <td class="grid-editable">243</td>
+              <td>Dekke</td>
+              <td class="grid-editable">m2</td>
+              <td class="grid-editable">RIB</td>
+              <td class="grid-editable"></td>
+            </tr>
+
+            <!-- IfcDoorType group -->
+            <tr class="grid-group-row"><td colspan="10">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px"><path d="m6 9 6 6 6-6"/></svg>
+              IfcDoorType (56 typer)
+            </td></tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcDoorType</td>
+              <td style="font-weight: 500">Innerdor:Standard 9x21</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">142</td>
+              <td><span class="grid-status mapped">Kartlagt</span></td>
+              <td class="grid-editable">237</td>
+              <td>Dorer</td>
+              <td class="grid-editable">stk</td>
+              <td class="grid-editable">ARK</td>
+              <td class="grid-editable"></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox"></td>
+              <td style="font-size: 11px; color: var(--text-tertiary)">IfcDoorType</td>
+              <td style="font-weight: 500">Innerdor:Branndor EI30</td>
+              <td style="text-align: right; font-variant-numeric: tabular-nums">38</td>
+              <td><span class="grid-status followup">Oppfolging</span></td>
+              <td class="grid-editable">237</td>
+              <td>Dorer</td>
+              <td class="grid-editable">stk</td>
+              <td class="grid-editable">ARK</td>
+              <td class="grid-editable" style="font-size: 11px; color: var(--text-secondary)">Sjekk brannkrav</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen viewer overlay -->
+  <div class="fullscreen-overlay" id="fullscreenViewer">
+    <div class="fullscreen-header">
+      <div>
+        <span>Basisvegg:Yttervegg 200mm</span>
+        <small>84 instanser &middot; IfcWallType</small>
+      </div>
+      <button class="fullscreen-close" onclick="closeFullscreen()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="fullscreen-canvas">
+      <div class="viewer-grid"></div>
+      <div style="text-align: center; color: rgba(255,255,255,0.3);">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <p style="font-size: 13px; margin-top: 12px;">3D-visning av valgt type</p>
+        <p style="font-size: 11px; margin-top: 4px; opacity: 0.5;">Trykk Escape for a lukke</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // View toggle (list / grid)
+    function setView(mode) {
+      const listView = document.getElementById('listView');
+      const gridView = document.getElementById('gridView');
+      const btns = document.querySelectorAll('.view-toggle button');
+
+      if (mode === 'grid') {
+        listView.style.display = 'none';
+        gridView.classList.add('active');
+        btns[0].classList.remove('active');
+        btns[1].classList.add('active');
+      } else {
+        listView.style.display = '';
+        gridView.classList.remove('active');
+        btns[0].classList.add('active');
+        btns[1].classList.remove('active');
+      }
+    }
+
+    // Group toggle
+    function toggleGroup(id) {
+      const grp = document.getElementById(id);
+      const header = grp.querySelector('.type-group-header');
+      grp.classList.toggle('collapsed');
+      header.classList.toggle('collapsed');
+    }
+
+    // Type selection
+    function selectType(el) {
+      document.querySelectorAll('.type-row').forEach(r => r.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // Fullscreen viewer
+    function openFullscreen() {
+      document.getElementById('fullscreenViewer').classList.add('open');
+    }
+    function closeFullscreen() {
+      document.getElementById('fullscreenViewer').classList.remove('open');
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeFullscreen();
+      if (e.key === 'F' && e.shiftKey) {
+        e.preventDefault();
+        const overlay = document.getElementById('fullscreenViewer');
+        if (overlay.classList.contains('open')) closeFullscreen();
+        else openFullscreen();
+      }
+    });
+  </script>
+</body>
+</html>
