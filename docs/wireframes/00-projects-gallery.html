@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprucelab — Prosjekter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      /* Mindful Palettes No. 160 */
+      --bg: #eeeeed;
+      --bg-gradient: linear-gradient(135deg, #eeeeed 0%, #e4e6f0 50%, #eeeeed 100%);
+      --card: #ffffff;
+      --primary: #157954;
+      --primary-light: rgba(21, 121, 84, 0.1);
+      --accent: #D0D34D;
+      --navy: #21263A;
+      --text-primary: #21263A;
+      --text-secondary: #525d78;
+      --text-tertiary: #717b94;
+      --border: #d2d4d3;
+      --border-subtle: rgba(199, 206, 232, 0.4);
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --glass-shadow: 0 8px 32px rgba(33, 38, 58, 0.08);
+      --lavender: #C7CEE8;
+      --radius: 0.75rem;
+      --sidebar-w: 256px;
+
+      /* Gradients */
+      --grad-04: linear-gradient(135deg, #D0D34D, #157954, #21263A);
+      --grad-05: linear-gradient(135deg, #157954, #21263A);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-feature-settings: 'rlig' 1, 'calt' 1;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(199, 206, 232, 0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(199, 206, 232, 0.25); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(199, 206, 232, 0.4); }
+
+    /* ═══════════════════════════════════════════
+       SHELL LAYOUT
+       ═══════════════════════════════════════════ */
+    .shell {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      display: flex;
+      flex-direction: column;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--glass-border);
+    }
+
+    .sidebar-brand {
+      padding: 12px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .sidebar-brand button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 6px 8px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+      color: var(--text-primary);
+      transition: background 0.15s;
+    }
+    .sidebar-brand button:hover { background: rgba(255,255,255,0.6); }
+    .brand-icon {
+      width: 24px; height: 24px;
+      background: var(--primary);
+      color: white;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .brand-name { flex: 1; text-align: left; font-weight: 600; font-size: 13px; }
+    .brand-home {
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .search-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: background 0.15s;
+    }
+    .search-btn:hover { background: rgba(255,255,255,0.6); }
+    .icon-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent;
+      border-radius: 6px; cursor: pointer;
+      color: var(--text-secondary);
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.6); }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .nav-item:hover {
+      background: rgba(255,255,255,0.6);
+      color: var(--text-primary);
+    }
+    .nav-item.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .nav-item svg { flex-shrink: 0; }
+
+    .nav-section {
+      margin-top: 16px;
+      margin-bottom: 4px;
+    }
+    .nav-section-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .nav-section-label:hover { background: rgba(255,255,255,0.4); }
+    .nav-section-items { margin-top: 4px; }
+    .nav-section-items .nav-item { padding-left: 32px; }
+
+    .sidebar-footer {
+      border-top: 1px solid var(--border);
+      padding: 8px;
+    }
+    .user-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      font: inherit;
+      text-align: left;
+      transition: background 0.15s;
+    }
+    .user-row:hover { background: rgba(255,255,255,0.6); }
+    .user-avatar {
+      width: 24px; height: 24px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600;
+      flex-shrink: 0;
+    }
+    .user-name { flex: 1; font-size: 13px; color: var(--text-primary); }
+    .footer-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-top: 4px;
+    }
+    .lang-btn {
+      padding: 4px 8px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      transition: all 0.15s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.6); }
+    .lang-btn.active { color: var(--primary); background: var(--primary-light); }
+
+    /* ─── MAIN CONTENT ─── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 40px;
+    }
+
+    /* ═══════════════════════════════════════════
+       PAGE: PROJECTS GALLERY
+       ═══════════════════════════════════════════ */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+    .page-header p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover {
+      background: #126b4a;
+      box-shadow: 0 4px 12px rgba(21, 121, 84, 0.3);
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+      padding: 16px 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .stat-value.primary { color: var(--primary); }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 500;
+    }
+    .stat-divider {
+      width: 1px;
+      background: var(--border);
+      align-self: stretch;
+    }
+
+    /* Project cards grid */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+
+    .project-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--primary);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .project-card:hover {
+      border-color: rgba(21, 121, 84, 0.3);
+      box-shadow: 0 8px 24px rgba(33, 38, 58, 0.08);
+      transform: translateY(-1px);
+    }
+    .project-card:hover::before { opacity: 1; }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .card-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+    .card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .card-badge svg { flex-shrink: 0; }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-meta {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+    .meta-label { color: var(--text-secondary); }
+    .meta-value { color: var(--text-tertiary); }
+
+    .card-disciplines {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .disc-tag {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .disc-ark { background: #e8f0fe; color: #1a56db; }
+    .disc-rib { background: #fef3c7; color: #92400e; }
+    .disc-riv { background: #d1fae5; color: #065f46; }
+    .disc-rie { background: #fce7f3; color: #9d174d; }
+
+    /* Health indicator */
+    .card-health {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .health-bar {
+      flex: 1;
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .health-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+    .health-fill.good { background: var(--primary); }
+    .health-fill.warning { background: #f59e0b; }
+    .health-fill.low { background: #ef4444; }
+    .health-label {
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .health-label.good { color: var(--primary); }
+    .health-label.warning { color: #f59e0b; }
+    .health-label.low { color: #ef4444; }
+
+    /* Create project dialog */
+    .dialog-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(33, 38, 58, 0.4);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .dialog-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .dialog {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(33, 38, 58, 0.2);
+      width: 480px;
+      max-width: 90vw;
+      transform: scale(0.96) translateY(8px);
+      transition: transform 0.2s;
+    }
+    .dialog-overlay.open .dialog {
+      transform: scale(1) translateY(0);
+    }
+    .dialog-header {
+      padding: 24px 24px 0;
+    }
+    .dialog-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .dialog-header p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .dialog-body {
+      padding: 20px 24px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--text-primary);
+      background: var(--bg);
+      transition: all 0.15s;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(21, 121, 84, 0.1);
+    }
+    .form-input::placeholder { color: var(--text-tertiary); }
+    textarea.form-input { min-height: 80px; resize: vertical; }
+    .dialog-footer {
+      padding: 16px 24px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+    }
+    .btn-ghost {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-ghost:hover { background: rgba(0,0,0,0.04); }
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+
+    /* SVG icons inline */
+    .icon { width: 16px; height: 16px; display: inline-block; vertical-align: middle; }
+    .icon-sm { width: 14px; height: 14px; }
+    .icon-lg { width: 20px; height: 20px; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 80px 40px;
+      background: var(--card);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      background: var(--primary-light);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .empty-state h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .empty-state p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+      animation: fadeInUp 0.3s ease both;
+    }
+    .project-card:nth-child(1) { animation-delay: 0.05s; }
+    .project-card:nth-child(2) { animation-delay: 0.1s; }
+    .project-card:nth-child(3) { animation-delay: 0.15s; }
+    .project-card:nth-child(4) { animation-delay: 0.2s; }
+    .project-card:nth-child(5) { animation-delay: 0.25s; }
+    .project-card:nth-child(6) { animation-delay: 0.3s; }
+
+    /* Accent line at very top of page */
+    .top-accent {
+      height: 3px;
+      background: linear-gradient(to right, #D0D34D, #157954, #21263A);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- ═══════════════════════════════════════
+         SIDEBAR — Global variant (no project)
+         ═══════════════════════════════════════ -->
+    <aside class="sidebar">
+      <!-- Brand -->
+      <div class="sidebar-brand">
+        <button onclick="window.location.reload()">
+          <span class="brand-icon">SF</span>
+          <span class="brand-name">Spruce Forge</span>
+          <svg class="brand-home" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </button>
+      </div>
+
+      <!-- Search + New -->
+      <div class="sidebar-search">
+        <button class="search-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Sek...</span>
+        </button>
+        <button class="icon-btn" onclick="openDialog()" title="Nytt prosjekt">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </button>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+        <!-- Main nav -->
+        <div style="margin-bottom: 16px;">
+          <a class="nav-item" href="10-my-page.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Min side</span>
+          </a>
+          <a class="nav-item" href="#">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            <span>Mine saker</span>
+          </a>
+          <a class="nav-item" href="#">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+            <span>Mine RFI-er</span>
+          </a>
+        </div>
+
+        <!-- Workspace section -->
+        <div class="nav-section">
+          <button class="nav-section-label" onclick="toggleSection(this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <span>Arbeidsomrade</span>
+          </button>
+          <div class="nav-section-items">
+            <a class="nav-item active" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+              <span>Prosjekter</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span>Skriptbibliotek</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+              <span>Hurtigstatistikk</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Developer section -->
+        <div class="nav-section">
+          <button class="nav-section-label" onclick="toggleSection(this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <span>Utvikler</span>
+          </button>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+              <span>Prosesseringsrapporter</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Footer -->
+      <div class="sidebar-footer">
+        <button class="user-row">
+          <span class="user-avatar">EK</span>
+          <span class="user-name">Edvard</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <div class="footer-actions">
+          <button class="lang-btn active">NO</button>
+          <button class="lang-btn">EN</button>
+          <button class="icon-btn" style="margin-left: auto">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="icon-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════
+         MAIN CONTENT
+         ═══════════════════════════════════════ -->
+    <div class="main">
+      <div class="top-accent"></div>
+
+      <div class="content">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div>
+            <h1>Prosjekter</h1>
+            <p>Administrer dine BIM-prosjekter og modeller</p>
+          </div>
+          <button class="btn-primary" onclick="openDialog()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Nytt prosjekt
+          </button>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-bar animate-in">
+          <div class="stat-item">
+            <span class="stat-value">6</span>
+            <span class="stat-label">Prosjekter</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-value">18</span>
+            <span class="stat-label">Modeller</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-value primary">842</span>
+            <span class="stat-label">Typer kartlagt</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-value">68%</span>
+            <span class="stat-label">Snitt helsescore</span>
+          </div>
+        </div>
+
+        <!-- Project Cards -->
+        <div class="projects-grid">
+          <!-- Card 1 — Main project -->
+          <div class="project-card animate-in" onclick="navigateTo('01-project-dashboard.html')">
+            <div class="card-top">
+              <span class="card-title">Lillebekken Borettslag</span>
+              <span class="card-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+                4 modeller
+              </span>
+            </div>
+            <p class="card-desc">Nybygg borettslag i Lillebekken. Komplett BIM-leveranse med ARK, RIB, RIV og RIE.</p>
+            <div class="card-disciplines">
+              <span class="disc-tag disc-ark">ARK</span>
+              <span class="disc-tag disc-rib">RIB</span>
+              <span class="disc-tag disc-riv">RIV</span>
+              <span class="disc-tag disc-rie">RIE</span>
+            </div>
+            <div class="card-health">
+              <div class="health-bar"><div class="health-fill good" style="width: 72%"></div></div>
+              <span class="health-label good">72%</span>
+            </div>
+            <div class="card-meta">
+              <div class="meta-row">
+                <span class="meta-label">Opprettet</span>
+                <span class="meta-value">12. jan 2026</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Sist oppdatert</span>
+                <span class="meta-value">2. apr 2026</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="project-card animate-in" onclick="navigateTo('01-project-dashboard.html')">
+            <div class="card-top">
+              <span class="card-title">Havnepromenaden K3</span>
+              <span class="card-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+                6 modeller
+              </span>
+            </div>
+            <p class="card-desc">Kontor- og naeringsbygg ved havnepromenaden. Fase 2 av 3, RIB-modell under oppdatering.</p>
+            <div class="card-disciplines">
+              <span class="disc-tag disc-ark">ARK</span>
+              <span class="disc-tag disc-rib">RIB</span>
+              <span class="disc-tag disc-riv">RIV</span>
+            </div>
+            <div class="card-health">
+              <div class="health-bar"><div class="health-fill good" style="width: 85%"></div></div>
+              <span class="health-label good">85%</span>
+            </div>
+            <div class="card-meta">
+              <div class="meta-row">
+                <span class="meta-label">Opprettet</span>
+                <span class="meta-value">3. nov 2025</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Sist oppdatert</span>
+                <span class="meta-value">1. apr 2026</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="project-card animate-in" onclick="navigateTo('01-project-dashboard.html')">
+            <div class="card-top">
+              <span class="card-title">Skolen i Fjorden</span>
+              <span class="card-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+                3 modeller
+              </span>
+            </div>
+            <p class="card-desc">Rehabilitering av barneskole. Fokus pa energieffektivisering og universell utforming.</p>
+            <div class="card-disciplines">
+              <span class="disc-tag disc-ark">ARK</span>
+              <span class="disc-tag disc-rib">RIB</span>
+            </div>
+            <div class="card-health">
+              <div class="health-bar"><div class="health-fill warning" style="width: 45%"></div></div>
+              <span class="health-label warning">45%</span>
+            </div>
+            <div class="card-meta">
+              <div class="meta-row">
+                <span class="meta-label">Opprettet</span>
+                <span class="meta-value">20. feb 2026</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Sist oppdatert</span>
+                <span class="meta-value">28. mar 2026</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="project-card animate-in" onclick="navigateTo('01-project-dashboard.html')">
+            <div class="card-top">
+              <span class="card-title">Torget Seniorboliger</span>
+              <span class="card-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+                2 modeller
+              </span>
+            </div>
+            <p class="card-desc">Omsorgsboliger med spesialkrav til brannteknisk prosjektering og tilgjengelighet.</p>
+            <div class="card-disciplines">
+              <span class="disc-tag disc-ark">ARK</span>
+              <span class="disc-tag disc-rie">RIE</span>
+            </div>
+            <div class="card-health">
+              <div class="health-bar"><div class="health-fill good" style="width: 91%"></div></div>
+              <span class="health-label good">91%</span>
+            </div>
+            <div class="card-meta">
+              <div class="meta-row">
+                <span class="meta-label">Opprettet</span>
+                <span class="meta-value">8. sep 2025</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Sist oppdatert</span>
+                <span class="meta-value">15. mar 2026</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="project-card animate-in" onclick="navigateTo('01-project-dashboard.html')">
+            <div class="card-top">
+              <span class="card-title">Fjellheim Hotell</span>
+              <span class="card-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+                1 modell
+              </span>
+            </div>
+            <p class="card-desc">Tidligfase hotellprosjekt. Kun arkitektmodell levert sa langt.</p>
+            <div class="card-disciplines">
+              <span class="disc-tag disc-ark">ARK</span>
+            </div>
+            <div class="card-health">
+              <div class="health-bar"><div class="health-fill low" style="width: 18%"></div></div>
+              <span class="health-label low">18%</span>
+            </div>
+            <div class="card-meta">
+              <div class="meta-row">
+                <span class="meta-label">Opprettet</span>
+                <span class="meta-value">1. apr 2026</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Sist oppdatert</span>
+                <span class="meta-value">1. apr 2026</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 6 -->
+          <div class="project-card animate-in" onclick="navigateTo('01-project-dashboard.html')">
+            <div class="card-top">
+              <span class="card-title">Verdal Industri</span>
+              <span class="card-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+                2 modeller
+              </span>
+            </div>
+            <p class="card-desc">Industrihall med kontordel. Stalramme og sandwichpaneler. Enkel geometri, komplekse VVS-systemer.</p>
+            <div class="card-disciplines">
+              <span class="disc-tag disc-ark">ARK</span>
+              <span class="disc-tag disc-rib">RIB</span>
+              <span class="disc-tag disc-riv">RIV</span>
+              <span class="disc-tag disc-rie">RIE</span>
+            </div>
+            <div class="card-health">
+              <div class="health-bar"><div class="health-fill warning" style="width: 56%"></div></div>
+              <span class="health-label warning">56%</span>
+            </div>
+            <div class="card-meta">
+              <div class="meta-row">
+                <span class="meta-label">Opprettet</span>
+                <span class="meta-value">14. des 2025</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Sist oppdatert</span>
+                <span class="meta-value">22. mar 2026</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       CREATE PROJECT DIALOG
+       ═══════════════════════════════════════ -->
+  <div class="dialog-overlay" id="createDialog">
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2>Nytt prosjekt</h2>
+        <p>Opprett et nytt BIM-prosjekt for a begynne a administrere modeller</p>
+      </div>
+      <div class="dialog-body">
+        <div class="form-group">
+          <label class="form-label">Prosjektnavn</label>
+          <input class="form-input" type="text" placeholder="f.eks. Lillebekken Borettslag">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Beskrivelse</label>
+          <textarea class="form-input" placeholder="Kort beskrivelse av prosjektet..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prosjektnummer (valgfritt)</label>
+          <input class="form-input" type="text" placeholder="f.eks. 2026-042">
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn-ghost" onclick="closeDialog()">Avbryt</button>
+        <button class="btn-primary btn-sm" onclick="closeDialog()">Opprett prosjekt</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Dialog open/close
+    function openDialog() {
+      document.getElementById('createDialog').classList.add('open');
+    }
+    function closeDialog() {
+      document.getElementById('createDialog').classList.remove('open');
+    }
+    // Close on overlay click
+    document.getElementById('createDialog').addEventListener('click', function(e) {
+      if (e.target === this) closeDialog();
+    });
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeDialog();
+    });
+
+    // Section toggle
+    function toggleSection(btn) {
+      const items = btn.nextElementSibling;
+      const chevron = btn.querySelector('svg');
+      if (items.style.display === 'none') {
+        items.style.display = '';
+        chevron.style.transform = '';
+      } else {
+        items.style.display = 'none';
+        chevron.style.transform = 'rotate(-90deg)';
+      }
+    }
+
+    // Navigation between wireframes
+    function navigateTo(file) {
+      window.location.href = file;
+    }
+  </script>
+</body>
+</html>
