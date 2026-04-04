@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprucelab — Felt & Sjekklister</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #eeeeed;
+      --bg-gradient: linear-gradient(135deg, #eeeeed 0%, #e4e6f0 50%, #eeeeed 100%);
+      --card: #ffffff;
+      --primary: #157954;
+      --primary-light: rgba(21, 121, 84, 0.1);
+      --accent: #D0D34D;
+      --navy: #21263A;
+      --text-primary: #21263A;
+      --text-secondary: #525d78;
+      --text-tertiary: #717b94;
+      --border: #d2d4d3;
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --radius: 0.75rem;
+      --sidebar-w: 256px;
+
+      /* Traffic lights */
+      --tl-green-bg: #dcfce7;
+      --tl-green-text: #166534;
+      --tl-green-dot: #22c55e;
+      --tl-yellow-bg: #fef9c3;
+      --tl-yellow-text: #854d0e;
+      --tl-yellow-dot: #eab308;
+      --tl-red-bg: #fee2e2;
+      --tl-red-text: #991b1b;
+      --tl-red-dot: #ef4444;
+      --tl-gray-bg: #f1f5f9;
+      --tl-gray-text: #94a3b8;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-feature-settings: 'rlig' 1, 'calt' 1;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(199, 206, 232, 0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(199, 206, 232, 0.25); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(199, 206, 232, 0.4); }
+
+    /* ═══════════════════════════════════════════
+       SHELL
+       ═══════════════════════════════════════════ */
+    .shell { display: flex; height: 100vh; width: 100vw; }
+
+    /* ─── SIDEBAR (project variant) ─── */
+    .sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      display: flex; flex-direction: column;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--glass-border);
+    }
+    .sidebar-brand { padding: 12px; border-bottom: 1px solid var(--glass-border); }
+    .sidebar-brand button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit;
+      color: var(--text-primary); transition: background 0.15s;
+    }
+    .sidebar-brand button:hover { background: rgba(255,255,255,0.6); }
+    .brand-icon {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .brand-name { flex: 1; text-align: left; font-weight: 600; font-size: 13px; }
+
+    .sidebar-search {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px; border-bottom: 1px solid var(--glass-border);
+    }
+    .search-btn {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px;
+      color: var(--text-secondary); transition: background 0.15s;
+    }
+    .search-btn:hover { background: rgba(255,255,255,0.6); }
+    .icon-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; border-radius: 6px;
+      cursor: pointer; color: var(--text-secondary); transition: background 0.15s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.6); }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px; }
+    .project-label {
+      padding: 6px 12px; font-size: 11px; color: var(--text-tertiary);
+      font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      color: var(--text-secondary); text-decoration: none;
+      transition: all 0.15s; cursor: pointer;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.6); color: var(--text-primary); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 500; }
+    .nav-item svg { flex-shrink: 0; }
+    .nav-section { margin-top: 16px; }
+    .nav-section-label {
+      padding: 6px 12px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+    }
+    .nav-section-items { margin-top: 4px; }
+
+    .sidebar-footer { border-top: 1px solid var(--border); padding: 8px; }
+    .user-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; cursor: pointer;
+      border: none; background: none; width: 100%; font: inherit;
+      text-align: left; transition: background 0.15s;
+    }
+    .user-row:hover { background: rgba(255,255,255,0.6); }
+    .user-avatar {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600;
+    }
+    .user-name { flex: 1; font-size: 13px; color: var(--text-primary); }
+    .footer-actions { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
+    .lang-btn {
+      padding: 4px 8px; border: none; background: transparent;
+      border-radius: 4px; cursor: pointer; font: inherit;
+      font-size: 11px; font-weight: 600; color: var(--text-tertiary); transition: all 0.15s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.6); }
+    .lang-btn.active { color: var(--primary); background: var(--primary-light); }
+
+    /* ─── MAIN ─── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .top-accent { height: 3px; background: linear-gradient(to right, #D0D34D, #157954, #21263A); flex-shrink: 0; }
+
+    /* ═══════════════════════════════════════════
+       FIELD LAYOUT: master-detail
+       ═══════════════════════════════════════════ */
+    .field-layout {
+      flex: 1; display: flex; overflow: hidden;
+    }
+
+    /* ─── LEFT PANEL: checklist list ─── */
+    .list-panel {
+      width: 400px; min-width: 400px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .list-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px 12px;
+      flex-shrink: 0;
+    }
+    .list-header h2 { font-size: 18px; font-weight: 700; }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; background: var(--primary); color: white;
+      border: none; border-radius: var(--radius); font: inherit;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-primary:hover { background: #126b4a; }
+
+    /* Tabs */
+    .list-tabs {
+      display: flex; gap: 0; padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .list-tab {
+      padding: 10px 16px; font-size: 12px; font-weight: 500;
+      color: var(--text-secondary); cursor: pointer;
+      border: none; background: none; font: inherit;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s; position: relative; bottom: -1px;
+    }
+    .list-tab:hover { color: var(--text-primary); }
+    .list-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+    .list-tab .count {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; padding: 0 5px;
+      background: var(--tl-gray-bg); color: var(--text-tertiary);
+      border-radius: 9px; font-size: 10px; font-weight: 600;
+      margin-left: 4px;
+    }
+    .list-tab.active .count { background: var(--primary-light); color: var(--primary); }
+
+    /* Checklist cards in list */
+    .list-scroll {
+      flex: 1; overflow-y: auto; padding: 8px;
+    }
+    .cl-card {
+      padding: 14px 16px; border-radius: 8px; cursor: pointer;
+      transition: all 0.15s; border: 1px solid transparent;
+      margin-bottom: 4px;
+    }
+    .cl-card:hover { background: rgba(0,0,0,0.02); }
+    .cl-card.selected { background: var(--primary-light); border-color: rgba(21,121,84,0.2); }
+    .cl-card-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .cl-card-template { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+    .cl-card-meta {
+      display: flex; align-items: center; gap: 10px; margin-top: 10px;
+    }
+    .cl-progress-bar {
+      flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px;
+      overflow: hidden; display: flex;
+    }
+    .cl-progress-fill { height: 100%; }
+    .cl-progress-fill.green { background: var(--tl-green-dot); }
+    .cl-progress-fill.red { background: var(--tl-red-dot); }
+    .cl-progress-label {
+      font-size: 11px; font-weight: 600; color: var(--text-primary);
+      white-space: nowrap;
+    }
+    .cl-card-bottom {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 8px;
+    }
+    .cl-card-assignee {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--text-tertiary);
+    }
+    .cl-mini-avatar {
+      width: 18px; height: 18px; background: var(--primary); color: white;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 600;
+    }
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-weight: 600;
+    }
+    .tag-green { background: var(--tl-green-bg); color: var(--tl-green-text); }
+    .tag-yellow { background: var(--tl-yellow-bg); color: var(--tl-yellow-text); }
+    .tag-gray { background: var(--tl-gray-bg); color: #475569; }
+    .tag-red { background: var(--tl-red-bg); color: var(--tl-red-text); }
+
+    /* ─── RIGHT PANEL: detail ─── */
+    .detail-panel {
+      flex: 1; overflow-y: auto; padding: 24px 32px;
+    }
+
+    .detail-header {
+      margin-bottom: 20px;
+    }
+    .detail-header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .detail-meta {
+      display: flex; align-items: center; gap: 16px;
+      font-size: 12px; color: var(--text-tertiary);
+    }
+    .detail-meta-item {
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    /* Progress section */
+    .progress-section {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .progress-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .progress-label { font-size: 13px; font-weight: 600; }
+    .progress-pct { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .segmented-bar {
+      height: 10px; display: flex; border-radius: 5px; overflow: hidden;
+      background: #e5e7eb;
+    }
+    .seg-green { background: var(--tl-green-dot); }
+    .seg-red { background: var(--tl-red-dot); }
+    .seg-gray { background: #e5e7eb; }
+    .progress-legend {
+      display: flex; gap: 16px; margin-top: 8px; font-size: 11px; color: var(--text-tertiary);
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+    /* Check items list */
+    .check-items {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .check-items-header {
+      padding: 14px 20px;
+      font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border);
+    }
+    .check-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+      transition: background 0.15s;
+    }
+    .check-item:last-child { border-bottom: none; }
+    .check-item:hover { background: #f8fafc; }
+
+    /* Status icons */
+    .check-icon {
+      width: 22px; height: 22px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 12px; margin-top: 1px;
+    }
+    .check-icon.ok { background: var(--tl-green-bg); color: var(--tl-green-text); }
+    .check-icon.fail { background: var(--tl-red-bg); color: var(--tl-red-text); }
+    .check-icon.pending {
+      background: var(--tl-gray-bg); color: var(--tl-gray-text);
+      border: 1.5px solid var(--border);
+    }
+
+    .check-content { flex: 1; min-width: 0; }
+    .check-text { font-size: 13px; color: var(--text-primary); line-height: 1.4; }
+    .check-sub {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 4px; font-size: 11px; color: var(--text-tertiary);
+    }
+    .check-indicator {
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+
+    .check-actions {
+      display: flex; gap: 4px; flex-shrink: 0; margin-top: 1px;
+    }
+    .check-action-btn {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; border-radius: 6px;
+      cursor: pointer; color: var(--text-tertiary); transition: all 0.15s;
+    }
+    .check-action-btn:hover { background: rgba(0,0,0,0.04); color: var(--text-secondary); }
+
+    /* Deviation card */
+    .deviation-card {
+      background: var(--tl-red-bg); border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius); padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .deviation-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 12px;
+    }
+    .deviation-title { font-size: 13px; font-weight: 600; color: var(--tl-red-text); }
+    .deviation-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px 20px; margin-bottom: 12px;
+    }
+    .deviation-label { font-size: 10px; color: var(--tl-red-text); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; opacity: 0.7; }
+    .deviation-value { font-size: 12px; color: var(--tl-red-text); font-weight: 500; margin-top: 2px; }
+    .deviation-photo {
+      width: 64px; height: 64px; border-radius: 8px;
+      background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.2);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--tl-red-text);
+    }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.25s ease both; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- ═══════════════════════════════════════
+         SIDEBAR — Project variant
+         ═══════════════════════════════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <button onclick="window.location='00-projects-gallery.html'">
+          <span class="brand-icon">SF</span>
+          <span class="brand-name">Spruce Forge</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </button>
+      </div>
+      <div class="sidebar-search">
+        <button class="search-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Sok...</span>
+        </button>
+        <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="project-label">Lillebekken Borettslag</div>
+
+        <div style="margin-top: 12px;">
+          <a class="nav-item" href="10-my-page.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Min side
+          </a>
+          <a class="nav-item" href="03-3d-viewer.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            3D Visning
+          </a>
+        </div>
+
+        <div style="margin-top: 8px;">
+          <a class="nav-item" href="01-project-dashboard.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            Dashboard
+          </a>
+        </div>
+
+        <!-- FILES -->
+        <div class="nav-section">
+          <div class="nav-section-label">Filer</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="04-project-models.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+              Modeller
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              Tegninger
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Dokumenter
+            </a>
+          </div>
+        </div>
+
+        <!-- DATA -->
+        <div class="nav-section">
+          <div class="nav-section-label">Data</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="02-type-browser.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Typer
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              Materialbibliotek
+            </a>
+            <a class="nav-item" href="08-spaces.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+              Rom
+            </a>
+            <a class="nav-item" href="09-qto.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+              QTO
+            </a>
+          </div>
+        </div>
+
+        <!-- WORKBENCH -->
+        <div class="nav-section">
+          <div class="nav-section-label">Arbeidsbenk</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+              Verifikasjon
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              IFC-redigering
+            </a>
+            <a class="nav-item" href="06-bep-eir.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              BEP
+            </a>
+          </div>
+        </div>
+
+        <!-- FIELD -->
+        <div class="nav-section">
+          <div class="nav-section-label">Felt</div>
+          <div class="nav-section-items">
+            <a class="nav-item active" href="07-field-compliance.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+              Sjekklister
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="user-row">
+          <span class="user-avatar">EK</span>
+          <span class="user-name">Edvard</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <div class="footer-actions">
+          <button class="lang-btn active">NO</button>
+          <button class="lang-btn">EN</button>
+          <button class="icon-btn" style="margin-left: auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════
+         MAIN CONTENT — Field & Checklists
+         ═══════════════════════════════════════ -->
+    <div class="main">
+      <div class="top-accent"></div>
+
+      <div class="field-layout">
+        <!-- ─── LEFT PANEL: Checklist list ─── -->
+        <div class="list-panel">
+          <div class="list-header">
+            <h2>Sjekklister</h2>
+            <button class="btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Ny sjekkliste
+            </button>
+          </div>
+
+          <div class="list-tabs">
+            <button class="list-tab active">Aktive <span class="count">4</span></button>
+            <button class="list-tab">Fullforte <span class="count">2</span></button>
+            <button class="list-tab">Maler <span class="count">3</span></button>
+          </div>
+
+          <div class="list-scroll">
+            <!-- Checklist 1 — selected -->
+            <div class="cl-card selected" onclick="selectChecklist(this)">
+              <div class="cl-card-title">Brannisolasjon U1</div>
+              <div class="cl-card-template">Brannkontroll - EI60</div>
+              <div class="cl-card-meta">
+                <div class="cl-progress-bar">
+                  <div class="cl-progress-fill green" style="width: 25%;"></div>
+                  <div class="cl-progress-fill red" style="width: 12.5%;"></div>
+                </div>
+                <span class="cl-progress-label">3/8</span>
+              </div>
+              <div class="cl-card-bottom">
+                <span class="cl-card-assignee">
+                  <span class="cl-mini-avatar">EK</span>
+                  2. apr 2026
+                </span>
+                <span class="tag tag-yellow">Pagar</span>
+              </div>
+            </div>
+
+            <!-- Checklist 2 -->
+            <div class="cl-card" onclick="selectChecklist(this)">
+              <div class="cl-card-title">Betongstop Dekke 01</div>
+              <div class="cl-card-template">Betongkontroll - Dekke</div>
+              <div class="cl-card-meta">
+                <div class="cl-progress-bar">
+                  <div class="cl-progress-fill green" style="width: 100%;"></div>
+                </div>
+                <span class="cl-progress-label">6/6</span>
+              </div>
+              <div class="cl-card-bottom">
+                <span class="cl-card-assignee">
+                  <span class="cl-mini-avatar">KN</span>
+                  28. mar 2026
+                </span>
+                <span class="tag tag-green">Fullfort</span>
+              </div>
+            </div>
+
+            <!-- Checklist 3 -->
+            <div class="cl-card" onclick="selectChecklist(this)">
+              <div class="cl-card-title">Membran Vatrom 02-03</div>
+              <div class="cl-card-template">Vatromskontroll</div>
+              <div class="cl-card-meta">
+                <div class="cl-progress-bar">
+                  <!-- empty, 0/5 -->
+                </div>
+                <span class="cl-progress-label">0/5</span>
+              </div>
+              <div class="cl-card-bottom">
+                <span class="cl-card-assignee">
+                  <span class="cl-mini-avatar">PO</span>
+                  1. apr 2026
+                </span>
+                <span class="tag tag-gray">Ikke startet</span>
+              </div>
+            </div>
+
+            <!-- Checklist 4 -->
+            <div class="cl-card" onclick="selectChecklist(this)">
+              <div class="cl-card-title">Fasadekontroll Bygg A</div>
+              <div class="cl-card-template">Fasadekontroll - Mur/Puss</div>
+              <div class="cl-card-meta">
+                <div class="cl-progress-bar">
+                  <div class="cl-progress-fill green" style="width: 20%;"></div>
+                </div>
+                <span class="cl-progress-label">2/10</span>
+              </div>
+              <div class="cl-card-bottom">
+                <span class="cl-card-assignee">
+                  <span class="cl-mini-avatar">EK</span>
+                  3. apr 2026
+                </span>
+                <span class="tag tag-yellow">Pagar</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── RIGHT PANEL: Checklist detail ─── -->
+        <div class="detail-panel">
+          <!-- Header -->
+          <div class="detail-header fade-in">
+            <h1>Brannisolasjon U1</h1>
+            <div class="detail-meta">
+              <span class="detail-meta-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+                Mal: Brannkontroll - EI60
+              </span>
+              <span class="detail-meta-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                Opprettet 2. apr 2026
+              </span>
+              <span class="detail-meta-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Edvard K.
+              </span>
+            </div>
+          </div>
+
+          <!-- Progress -->
+          <div class="progress-section fade-in">
+            <div class="progress-top">
+              <span class="progress-label">Fremdrift</span>
+              <span class="progress-pct">3/8 (37%)</span>
+            </div>
+            <div class="segmented-bar">
+              <div class="seg-green" style="width: 25%;"></div>
+              <div class="seg-red" style="width: 12.5%;"></div>
+            </div>
+            <div class="progress-legend">
+              <span class="legend-item"><span class="legend-dot" style="background: var(--tl-green-dot);"></span> OK (2)</span>
+              <span class="legend-item"><span class="legend-dot" style="background: var(--tl-red-dot);"></span> Avvik (1)</span>
+              <span class="legend-item"><span class="legend-dot" style="background: #e5e7eb;"></span> Gjenstår (5)</span>
+            </div>
+          </div>
+
+          <!-- Check items -->
+          <div class="check-items fade-in" style="animation-delay: 0.05s;">
+            <div class="check-items-header">Kontrollpunkter</div>
+
+            <!-- Item 1: OK -->
+            <div class="check-item">
+              <div class="check-icon ok">&#10003;</div>
+              <div class="check-content">
+                <div class="check-text">Isolasjonstykkelse kontrollert (min. 50mm)</div>
+                <div class="check-sub">
+                  <span class="check-indicator">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    1 bilde
+                  </span>
+                  <span>OK &mdash; 2. apr 2026</span>
+                </div>
+              </div>
+              <div class="check-actions">
+                <button class="check-action-btn" title="Bilde">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
+                <button class="check-action-btn" title="Kommentar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Item 2: OK -->
+            <div class="check-item">
+              <div class="check-icon ok">&#10003;</div>
+              <div class="check-content">
+                <div class="check-text">Branntetting rundt gjennomforinger</div>
+                <div class="check-sub">
+                  <span>OK &mdash; 2. apr 2026</span>
+                </div>
+              </div>
+              <div class="check-actions">
+                <button class="check-action-btn" title="Bilde">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
+                <button class="check-action-btn" title="Kommentar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Item 3: FAIL / Avvik -->
+            <div class="check-item" style="background: rgba(254,226,226,0.3);">
+              <div class="check-icon fail">&#10007;</div>
+              <div class="check-content">
+                <div class="check-text">Sprinklerhode plassering iht. tegning</div>
+                <div class="check-sub">
+                  <span class="check-indicator" style="color: var(--tl-red-text);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    Avvik registrert
+                  </span>
+                  <span class="check-indicator">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    1 bilde
+                  </span>
+                  <span>3. apr 2026</span>
+                </div>
+              </div>
+              <div class="check-actions">
+                <button class="check-action-btn" title="Bilde">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
+                <button class="check-action-btn" title="Kommentar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Item 4: Pending -->
+            <div class="check-item">
+              <div class="check-icon pending"></div>
+              <div class="check-content">
+                <div class="check-text">Branncelle-inndeling verifisert</div>
+              </div>
+              <div class="check-actions">
+                <button class="check-action-btn" title="Bilde">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
+                <button class="check-action-btn" title="Kommentar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Item 5: Pending -->
+            <div class="check-item">
+              <div class="check-icon pending"></div>
+              <div class="check-content">
+                <div class="check-text">Romningsvei skilting montert</div>
+              </div>
+              <div class="check-actions">
+                <button class="check-action-btn" title="Bilde">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
+                <button class="check-action-btn" title="Kommentar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Item 6: Pending -->
+            <div class="check-item">
+              <div class="check-icon pending"></div>
+              <div class="check-content">
+                <div class="check-text">Brannalarm detektorer plassert iht. plan</div>
+              </div>
+              <div class="check-actions">
+                <button class="check-action-btn" title="Bilde">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
+                <button class="check-action-btn" title="Kommentar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Item 7: Pending -->
+            <div class="check-item">
+              <div class="check-icon pending"></div>
+              <div class="check-content">
+                <div class="check-text">Branndorer lukker korrekt</div>
+              </div>
+              <div class="check-actions">
+                <button class="check-action-btn" title="Bilde">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
+                <button class="check-action-btn" title="Kommentar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Item 8: Pending -->
+            <div class="check-item">
+              <div class="check-icon pending"></div>
+              <div class="check-content">
+                <div class="check-text">Brannmotstand dokumentert (EI60)</div>
+              </div>
+              <div class="check-actions">
+                <button class="check-action-btn" title="Bilde">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
+                <button class="check-action-btn" title="Kommentar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deviation detail for item 3 -->
+          <div class="deviation-card fade-in" style="animation-delay: 0.1s;">
+            <div class="deviation-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              <span class="deviation-title">Avvik: Sprinklerhode plassering</span>
+            </div>
+            <div style="display: flex; gap: 16px;">
+              <div style="flex: 1;">
+                <div class="deviation-grid">
+                  <div>
+                    <div class="deviation-label">Beskrivelse</div>
+                    <div class="deviation-value">Sprinklerhode i korridor U1 er montert 40cm for langt ost i forhold til tegning T-VVS-U1-01. Avstand til vegg er 180cm, skal vaere 140cm.</div>
+                  </div>
+                  <div>
+                    <div class="deviation-label">Alvorlighetsgrad</div>
+                    <div class="deviation-value">Middels</div>
+                  </div>
+                  <div>
+                    <div class="deviation-label">Ansvarlig</div>
+                    <div class="deviation-value">VVS Teknikk AS / Per Olsen</div>
+                  </div>
+                  <div>
+                    <div class="deviation-label">Frist</div>
+                    <div class="deviation-value">10. apr 2026</div>
+                  </div>
+                </div>
+              </div>
+              <div class="deviation-photo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Checklist card selection
+    function selectChecklist(card) {
+      document.querySelectorAll('.cl-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    }
+  </script>
+</body>
+</html>
