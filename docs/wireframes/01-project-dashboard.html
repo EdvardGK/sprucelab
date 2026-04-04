@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprucelab — Prosjekt Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #eeeeed;
+      --bg-gradient: linear-gradient(135deg, #eeeeed 0%, #e4e6f0 50%, #eeeeed 100%);
+      --card: #ffffff;
+      --primary: #157954;
+      --primary-light: rgba(21, 121, 84, 0.1);
+      --accent: #D0D34D;
+      --navy: #21263A;
+      --text-primary: #21263A;
+      --text-secondary: #525d78;
+      --text-tertiary: #717b94;
+      --border: #d2d4d3;
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --radius: 0.75rem;
+      --sidebar-w: 256px;
+
+      /* Traffic lights */
+      --tl-green-bg: #dcfce7;
+      --tl-green-text: #166534;
+      --tl-green-dot: #22c55e;
+      --tl-yellow-bg: #fef9c3;
+      --tl-yellow-text: #854d0e;
+      --tl-yellow-dot: #eab308;
+      --tl-red-bg: #fee2e2;
+      --tl-red-text: #991b1b;
+      --tl-red-dot: #ef4444;
+      --tl-gray-bg: #f1f5f9;
+      --tl-gray-text: #94a3b8;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-feature-settings: 'rlig' 1, 'calt' 1;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(199, 206, 232, 0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(199, 206, 232, 0.25); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(199, 206, 232, 0.4); }
+
+    /* ═══════════════════════════════════════════
+       SHELL
+       ═══════════════════════════════════════════ */
+    .shell { display: flex; height: 100vh; width: 100vw; }
+
+    /* ─── SIDEBAR (project variant) ─── */
+    .sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      display: flex; flex-direction: column;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--glass-border);
+    }
+    .sidebar-brand { padding: 12px; border-bottom: 1px solid var(--glass-border); }
+    .sidebar-brand button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit;
+      color: var(--text-primary); transition: background 0.15s;
+    }
+    .sidebar-brand button:hover { background: rgba(255,255,255,0.6); }
+    .brand-icon {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .brand-name { flex: 1; text-align: left; font-weight: 600; font-size: 13px; }
+
+    .sidebar-search {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px; border-bottom: 1px solid var(--glass-border);
+    }
+    .search-btn {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px;
+      color: var(--text-secondary); transition: background 0.15s;
+    }
+    .search-btn:hover { background: rgba(255,255,255,0.6); }
+    .icon-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; border-radius: 6px;
+      cursor: pointer; color: var(--text-secondary); transition: background 0.15s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.6); }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px; }
+    .project-label {
+      padding: 6px 12px; font-size: 11px; color: var(--text-tertiary);
+      font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      color: var(--text-secondary); text-decoration: none;
+      transition: all 0.15s; cursor: pointer;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.6); color: var(--text-primary); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 500; }
+    .nav-item svg { flex-shrink: 0; }
+    .nav-section { margin-top: 16px; }
+    .nav-section-label {
+      padding: 6px 12px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+    }
+    .nav-section-items { margin-top: 4px; }
+
+    .sidebar-footer { border-top: 1px solid var(--border); padding: 8px; }
+    .user-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; cursor: pointer;
+      border: none; background: none; width: 100%; font: inherit;
+      text-align: left; transition: background 0.15s;
+    }
+    .user-row:hover { background: rgba(255,255,255,0.6); }
+    .user-avatar {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600;
+    }
+    .user-name { flex: 1; font-size: 13px; color: var(--text-primary); }
+    .footer-actions { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
+    .lang-btn {
+      padding: 4px 8px; border: none; background: transparent;
+      border-radius: 4px; cursor: pointer; font: inherit;
+      font-size: 11px; font-weight: 600; color: var(--text-tertiary); transition: all 0.15s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.6); }
+    .lang-btn.active { color: var(--primary); background: var(--primary-light); }
+
+    /* ─── MAIN ─── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .top-accent { height: 3px; background: linear-gradient(to right, #D0D34D, #157954, #21263A); flex-shrink: 0; }
+    .content { flex: 1; overflow-y: auto; padding: 24px 32px; }
+
+    /* ═══════════════════════════════════════════
+       DASHBOARD LAYOUT
+       ═══════════════════════════════════════════ */
+
+    /* Page header */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .page-header h1 { font-size: 22px; font-weight: 700; }
+    .page-header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+    .header-actions { display: flex; gap: 8px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 0; margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      padding: 10px 20px; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); cursor: pointer;
+      border: none; background: none; font: inherit;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s; position: relative; bottom: -1px;
+    }
+    .tab:hover { color: var(--text-primary); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+    /* Tab panels */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Bento grid */
+    .bento {
+      display: grid;
+      gap: 16px;
+    }
+    .bento-overview {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-template-rows: auto auto auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .card-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+    .card-value { font-size: 28px; font-weight: 700; line-height: 1; }
+    .card-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+
+    /* Span helpers */
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-row-2 { grid-row: span 2; }
+
+    /* ─── Traffic light indicators ─── */
+    .tl { display: inline-flex; align-items: center; gap: 6px; }
+    .tl-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .tl-dot.green { background: var(--tl-green-dot); }
+    .tl-dot.yellow { background: var(--tl-yellow-dot); }
+    .tl-dot.red { background: var(--tl-red-dot); }
+    .tl-dot.gray { background: var(--tl-gray-text); }
+
+    .tl-cell {
+      padding: 4px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 500; text-align: center;
+    }
+    .tl-cell.green { background: var(--tl-green-bg); color: var(--tl-green-text); }
+    .tl-cell.yellow { background: var(--tl-yellow-bg); color: var(--tl-yellow-text); }
+    .tl-cell.red { background: var(--tl-red-bg); color: var(--tl-red-text); }
+    .tl-cell.gray { background: var(--tl-gray-bg); color: var(--tl-gray-text); }
+
+    /* ─── Progress bars ─── */
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .bar-label-left { font-size: 12px; color: var(--text-secondary); width: 100px; flex-shrink: 0; }
+    .bar-track { flex: 1; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+    .bar-fill.green { background: var(--tl-green-dot); }
+    .bar-fill.yellow { background: var(--tl-yellow-dot); }
+    .bar-fill.red { background: var(--tl-red-dot); }
+    .bar-fill.primary { background: var(--primary); }
+    .bar-count { font-size: 12px; font-weight: 600; color: var(--text-primary); width: 60px; text-align: right; flex-shrink: 0; }
+
+    /* ─── Tables ─── */
+    .dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .dash-table th {
+      text-align: left; padding: 8px 10px; font-weight: 600; font-size: 11px;
+      color: var(--text-secondary); background: var(--tl-gray-bg);
+      border-bottom: 2px solid #cbd5e1; text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .dash-table th.center, .dash-table td.center { text-align: center; }
+    .dash-table td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
+    .dash-table tr:hover td { background: #f8fafc; }
+    .dash-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* ─── Requirement list ─── */
+    .req-list { list-style: none; }
+    .req-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);
+      font-size: 12px;
+    }
+    .req-item:last-child { border-bottom: none; }
+    .req-status {
+      width: 20px; height: 20px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 11px;
+    }
+    .req-status.pass { background: var(--tl-green-bg); color: var(--tl-green-text); }
+    .req-status.fail { background: var(--tl-red-bg); color: var(--tl-red-text); }
+    .req-status.warn { background: var(--tl-yellow-bg); color: var(--tl-yellow-text); }
+    .req-status.na { background: var(--tl-gray-bg); color: var(--tl-gray-text); }
+    .req-text { flex: 1; color: var(--text-primary); }
+    .req-model { font-size: 11px; color: var(--text-tertiary); }
+
+    /* ─── Tags ─── */
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 500; margin: 1px 2px;
+    }
+    .tag-green { background: var(--tl-green-bg); color: var(--tl-green-text); }
+    .tag-yellow { background: var(--tl-yellow-bg); color: var(--tl-yellow-text); }
+    .tag-red { background: var(--tl-red-bg); color: var(--tl-red-text); }
+    .tag-gray { background: var(--tl-gray-bg); color: #475569; }
+    .tag-blue { background: #dbeafe; color: #1e40af; }
+
+    /* ─── Disc tags ─── */
+    .disc-tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.03em; }
+    .disc-ark { background: #e8f0fe; color: #1a56db; }
+    .disc-rib { background: #fef3c7; color: #92400e; }
+    .disc-riv { background: #d1fae5; color: #065f46; }
+    .disc-rie { background: #fce7f3; color: #9d174d; }
+
+    /* Button */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 16px; background: var(--primary); color: white;
+      border: none; border-radius: var(--radius); font: inherit;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-primary:hover { background: #126b4a; }
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius); font: inherit;
+      font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-outline:hover { background: rgba(0,0,0,0.02); border-color: var(--text-tertiary); }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.25s ease both; }
+
+    /* ─── Matrix (storey x discipline) ─── */
+    .matrix-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .matrix-table th {
+      padding: 6px 8px; font-weight: 600; font-size: 10px;
+      color: var(--text-secondary); background: var(--tl-gray-bg);
+      border-bottom: 2px solid #cbd5e1; text-align: center;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .matrix-table th:first-child { text-align: left; }
+    .matrix-table td {
+      padding: 5px 8px; border-bottom: 1px solid #e2e8f0;
+      text-align: center; font-variant-numeric: tabular-nums;
+    }
+    .matrix-table td:first-child { text-align: left; font-weight: 500; color: var(--text-primary); }
+    .matrix-table tr:hover td { background: #f8fafc; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- ═══════════════════════════════════════
+         SIDEBAR — Project variant
+         ═══════════════════════════════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <button onclick="window.location='00-projects-gallery.html'">
+          <span class="brand-icon">SF</span>
+          <span class="brand-name">Spruce Forge</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </button>
+      </div>
+      <div class="sidebar-search">
+        <button class="search-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Sok...</span>
+        </button>
+        <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="project-label">Lillebekken Borettslag</div>
+
+        <div style="margin-top: 12px;">
+          <a class="nav-item" href="#">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Min side
+          </a>
+          <a class="nav-item" href="03-3d-viewer.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            3D Visning
+          </a>
+        </div>
+
+        <div style="margin-top: 8px;">
+          <a class="nav-item active" href="#">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            Dashboard
+          </a>
+        </div>
+
+        <!-- FILES -->
+        <div class="nav-section">
+          <div class="nav-section-label">Filer</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="04-project-models.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+              Modeller
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              Tegninger
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Dokumenter
+            </a>
+          </div>
+        </div>
+
+        <!-- DATA -->
+        <div class="nav-section">
+          <div class="nav-section-label">Data</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="02-type-browser.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Typer
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              Materialbibliotek
+            </a>
+            <a class="nav-item" href="08-spaces.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+              Rom
+            </a>
+            <a class="nav-item" href="09-qto.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+              QTO
+            </a>
+          </div>
+        </div>
+
+        <!-- WORKBENCH -->
+        <div class="nav-section">
+          <div class="nav-section-label">Arbeidsbenk</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+              Verifikasjon
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              IFC-redigering
+            </a>
+            <a class="nav-item" href="06-bep-eir.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              BEP
+            </a>
+          </div>
+        </div>
+
+        <!-- FIELD -->
+        <div class="nav-section">
+          <div class="nav-section-label">Felt</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="07-field-compliance.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+              Sjekklister
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="user-row">
+          <span class="user-avatar">EK</span>
+          <span class="user-name">Edvard</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <div class="footer-actions">
+          <button class="lang-btn active">NO</button>
+          <button class="lang-btn">EN</button>
+          <button class="icon-btn" style="margin-left: auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════
+         MAIN CONTENT — Dashboard
+         ═══════════════════════════════════════ -->
+    <div class="main">
+      <div class="top-accent"></div>
+      <div class="content">
+        <!-- Header -->
+        <div class="page-header fade-in">
+          <div>
+            <h1>Lillebekken Borettslag</h1>
+            <div class="page-header-sub">4 modeller &middot; ARK, RIB, RIV, RIE &middot; Sist oppdatert 2. apr 2026</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn-outline">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Eksporter rapport
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs fade-in">
+          <button class="tab active" onclick="switchTab('overview')">Oversikt</button>
+          <button class="tab" onclick="switchTab('compliance')">Samsvar</button>
+          <button class="tab" onclick="switchTab('models')">Modeller</button>
+        </div>
+
+        <!-- ═══════════════════════════════════
+             TAB: OVERSIKT (Overview)
+             ═══════════════════════════════════ -->
+        <div class="tab-panel active" id="tab-overview">
+          <div class="bento bento-overview fade-in">
+
+            <!-- Row 1: KPI cards (4 across) -->
+            <div class="card">
+              <div class="card-title">Krav oppfylt</div>
+              <div class="card-value" style="color: var(--primary)">12/17</div>
+              <div class="card-sub">5 gjenstående</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Modeller</div>
+              <div class="card-value">4</div>
+              <div class="card-sub">Alle lastet opp</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Typer kartlagt</div>
+              <div class="card-value">87<span style="font-size: 16px; color: var(--text-tertiary); font-weight: 400">/142</span></div>
+              <div class="card-sub">61% fullfort</div>
+            </div>
+            <div class="card">
+              <div class="card-title">Siste handling</div>
+              <div class="card-value" style="font-size: 16px; font-weight: 600; margin-top: 4px;">RIB-modell oppdatert</div>
+              <div class="card-sub">2. apr 2026 kl 14:32</div>
+            </div>
+
+            <!-- Row 2: Requirement status (left, span 2) + Model compliance matrix (right, span 2) -->
+            <div class="card span-2">
+              <div class="card-header">
+                <div class="card-title">Kravstatus</div>
+                <div style="display: flex; gap: 12px; font-size: 11px;">
+                  <span class="tl"><span class="tl-dot green"></span> 12 bestått</span>
+                  <span class="tl"><span class="tl-dot yellow"></span> 2 advarsel</span>
+                  <span class="tl"><span class="tl-dot red"></span> 3 feilet</span>
+                </div>
+              </div>
+              <ul class="req-list">
+                <li class="req-item">
+                  <span class="req-status pass">&#10003;</span>
+                  <span class="req-text">Alle typer skal ha NS 3451-klassifisering</span>
+                  <span class="req-model"><span class="tag tag-green">12/12</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status pass">&#10003;</span>
+                  <span class="req-text">Alle modeller skal ha definert koordinatsystem</span>
+                  <span class="req-model"><span class="tag tag-green">4/4</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status pass">&#10003;</span>
+                  <span class="req-text">Etasjeinndeling skal samsvare pa tvers av disipliner</span>
+                  <span class="req-model"><span class="tag tag-green">OK</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status warn">!</span>
+                  <span class="req-text">Alle typer skal ha representativ enhet</span>
+                  <span class="req-model"><span class="tag tag-yellow">9/12</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status fail">&#10007;</span>
+                  <span class="req-text">Materialinformasjon kreves for alle ytterveggtyper</span>
+                  <span class="req-model"><span class="tag tag-red">2/7</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status fail">&#10007;</span>
+                  <span class="req-text">IfcMaterial skal tilordnes alle bærende elementer</span>
+                  <span class="req-model"><span class="tag tag-red">31/58</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status pass">&#10003;</span>
+                  <span class="req-text">Alle modeller skal bruke IFC4 ReferenceView</span>
+                  <span class="req-model"><span class="tag tag-green">4/4</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status warn">!</span>
+                  <span class="req-text">Pset_WallCommon skal finnes pa alle vegger</span>
+                  <span class="req-model"><span class="tag tag-yellow">142/168</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status fail">&#10007;</span>
+                  <span class="req-text">RIV-modell skal inneholde systemnavn</span>
+                  <span class="req-model"><span class="tag tag-red">0/1</span></span>
+                </li>
+                <li class="req-item">
+                  <span class="req-status pass">&#10003;</span>
+                  <span class="req-text">GUID-er skal være unike pa tvers av versjoner</span>
+                  <span class="req-model"><span class="tag tag-green">OK</span></span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Model compliance matrix -->
+            <div class="card span-2">
+              <div class="card-header">
+                <div class="card-title">Modell &times; Krav</div>
+              </div>
+              <table class="matrix-table">
+                <thead>
+                  <tr>
+                    <th style="width: 140px;">Krav</th>
+                    <th>ARK</th>
+                    <th>RIB</th>
+                    <th>RIV</th>
+                    <th>RIE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>NS 3451</td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                  </tr>
+                  <tr>
+                    <td>Koordinatsystem</td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                  </tr>
+                  <tr>
+                    <td>Etasjer samsvar</td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell yellow">Avvik</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                  </tr>
+                  <tr>
+                    <td>Repr. enhet</td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell yellow">9/12</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                  </tr>
+                  <tr>
+                    <td>Materialinfo</td>
+                    <td><span class="tl-cell red">2/7</span></td>
+                    <td><span class="tl-cell red">0/4</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                  </tr>
+                  <tr>
+                    <td>IfcMaterial</td>
+                    <td><span class="tl-cell yellow">22/31</span></td>
+                    <td><span class="tl-cell red">9/27</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                  </tr>
+                  <tr>
+                    <td>IFC4 RefView</td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                  </tr>
+                  <tr>
+                    <td>Pset_WallCommon</td>
+                    <td><span class="tl-cell green">89/92</span></td>
+                    <td><span class="tl-cell yellow">53/76</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                  </tr>
+                  <tr>
+                    <td>Systemnavn</td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                    <td><span class="tl-cell gray">N/A</span></td>
+                    <td><span class="tl-cell red">Mangler</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                  </tr>
+                  <tr>
+                    <td>GUID unikhet</td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                    <td><span class="tl-cell green">OK</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Row 3: Classification progress (span 2) + Storey matrix (span 2) -->
+            <div class="card span-2">
+              <div class="card-header">
+                <div class="card-title">Klassifiseringsfremdrift per disiplin</div>
+              </div>
+              <div style="margin-top: 4px;">
+                <div class="bar-row">
+                  <span class="bar-label-left"><span class="disc-tag disc-ark">ARK</span></span>
+                  <div class="bar-track"><div class="bar-fill green" style="width: 78%"></div></div>
+                  <span class="bar-count">47/60</span>
+                </div>
+                <div class="bar-row">
+                  <span class="bar-label-left"><span class="disc-tag disc-rib">RIB</span></span>
+                  <div class="bar-track"><div class="bar-fill yellow" style="width: 52%"></div></div>
+                  <span class="bar-count">26/50</span>
+                </div>
+                <div class="bar-row">
+                  <span class="bar-label-left"><span class="disc-tag disc-riv">RIV</span></span>
+                  <div class="bar-track"><div class="bar-fill yellow" style="width: 40%"></div></div>
+                  <span class="bar-count">8/20</span>
+                </div>
+                <div class="bar-row">
+                  <span class="bar-label-left"><span class="disc-tag disc-rie">RIE</span></span>
+                  <div class="bar-track"><div class="bar-fill primary" style="width: 50%"></div></div>
+                  <span class="bar-count">6/12</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card span-2">
+              <div class="card-header">
+                <div class="card-title">Etasjekoordinering</div>
+              </div>
+              <table class="matrix-table">
+                <thead>
+                  <tr>
+                    <th style="width: 80px;">Etasje</th>
+                    <th>Kote</th>
+                    <th>ARK</th>
+                    <th>RIB</th>
+                    <th>RIV</th>
+                    <th>RIE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Tak</td>
+                    <td style="font-variant-numeric: tabular-nums;">+16 200</td>
+                    <td><span class="tl-cell green">Tak</span></td>
+                    <td><span class="tl-cell green">Tak</span></td>
+                    <td><span class="tl-cell gray">&mdash;</span></td>
+                    <td><span class="tl-cell green">Tak</span></td>
+                  </tr>
+                  <tr>
+                    <td>04</td>
+                    <td style="font-variant-numeric: tabular-nums;">+12 600</td>
+                    <td><span class="tl-cell green">Plan 4</span></td>
+                    <td><span class="tl-cell green">Etg 4</span></td>
+                    <td><span class="tl-cell green">Plan 4</span></td>
+                    <td><span class="tl-cell green">Plan 4</span></td>
+                  </tr>
+                  <tr>
+                    <td>03</td>
+                    <td style="font-variant-numeric: tabular-nums;">+9 400</td>
+                    <td><span class="tl-cell green">Plan 3</span></td>
+                    <td><span class="tl-cell green">Etg 3</span></td>
+                    <td><span class="tl-cell green">Plan 3</span></td>
+                    <td><span class="tl-cell green">Plan 3</span></td>
+                  </tr>
+                  <tr>
+                    <td>02</td>
+                    <td style="font-variant-numeric: tabular-nums;">+6 200</td>
+                    <td><span class="tl-cell green">Plan 2</span></td>
+                    <td><span class="tl-cell green">Etg 2</span></td>
+                    <td><span class="tl-cell yellow">Nivå 2</span></td>
+                    <td><span class="tl-cell green">Plan 2</span></td>
+                  </tr>
+                  <tr>
+                    <td>01</td>
+                    <td style="font-variant-numeric: tabular-nums;">+3 000</td>
+                    <td><span class="tl-cell green">Plan 1</span></td>
+                    <td><span class="tl-cell green">Etg 1</span></td>
+                    <td><span class="tl-cell green">Plan 1</span></td>
+                    <td><span class="tl-cell green">Plan 1</span></td>
+                  </tr>
+                  <tr>
+                    <td>U1</td>
+                    <td style="font-variant-numeric: tabular-nums;">±0</td>
+                    <td><span class="tl-cell green">Kjeller</span></td>
+                    <td><span class="tl-cell green">Kjeller</span></td>
+                    <td><span class="tl-cell red">&mdash;</span></td>
+                    <td><span class="tl-cell green">Kjeller</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════
+             TAB: SAMSVAR (Compliance detail)
+             ═══════════════════════════════════ -->
+        <div class="tab-panel" id="tab-compliance">
+          <div class="fade-in" style="max-width: 1100px;">
+            <div class="card" style="margin-bottom: 16px;">
+              <div class="card-header">
+                <div class="card-title">Detaljert samsvarsstatus</div>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn-outline" style="font-size: 11px; padding: 5px 10px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    Last ned Excel
+                  </button>
+                </div>
+              </div>
+              <table class="dash-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;" class="center">#</th>
+                    <th>Krav</th>
+                    <th style="width: 90px;">Kategori</th>
+                    <th style="width: 80px;" class="center">ARK</th>
+                    <th style="width: 80px;" class="center">RIB</th>
+                    <th style="width: 80px;" class="center">RIV</th>
+                    <th style="width: 80px;" class="center">RIE</th>
+                    <th style="width: 80px;" class="center">Totalt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="center">1</td>
+                    <td>Alle typer skal ha NS 3451-klassifisering</td>
+                    <td><span class="tag tag-blue">Klassifisering</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell gray">N/A</span></td>
+                    <td class="center"><span class="tl-cell green">12/12</span></td>
+                  </tr>
+                  <tr>
+                    <td class="center">2</td>
+                    <td>Alle modeller skal ha definert koordinatsystem</td>
+                    <td><span class="tag tag-gray">Geometri</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">4/4</span></td>
+                  </tr>
+                  <tr>
+                    <td class="center">3</td>
+                    <td>Etasjeinndeling skal samsvare pa tvers av disipliner</td>
+                    <td><span class="tag tag-gray">Struktur</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell yellow">Avvik</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell yellow">3/4</span></td>
+                  </tr>
+                  <tr>
+                    <td class="center">4</td>
+                    <td>Alle typer skal ha representativ enhet</td>
+                    <td><span class="tag tag-blue">Klassifisering</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell yellow">9/12</span></td>
+                    <td class="center"><span class="tl-cell gray">N/A</span></td>
+                    <td class="center"><span class="tl-cell gray">N/A</span></td>
+                    <td class="center"><span class="tl-cell yellow">9/12</span></td>
+                  </tr>
+                  <tr>
+                    <td class="center">5</td>
+                    <td>Materialinformasjon kreves for alle ytterveggtyper</td>
+                    <td><span class="tag tag-blue">Materialer</span></td>
+                    <td class="center"><span class="tl-cell red">2/5</span></td>
+                    <td class="center"><span class="tl-cell red">0/2</span></td>
+                    <td class="center"><span class="tl-cell gray">N/A</span></td>
+                    <td class="center"><span class="tl-cell gray">N/A</span></td>
+                    <td class="center"><span class="tl-cell red">2/7</span></td>
+                  </tr>
+                  <tr>
+                    <td class="center">6</td>
+                    <td>IfcMaterial skal tilordnes alle bærende elementer</td>
+                    <td><span class="tag tag-blue">Materialer</span></td>
+                    <td class="center"><span class="tl-cell yellow">22/31</span></td>
+                    <td class="center"><span class="tl-cell red">9/27</span></td>
+                    <td class="center"><span class="tl-cell gray">N/A</span></td>
+                    <td class="center"><span class="tl-cell gray">N/A</span></td>
+                    <td class="center"><span class="tl-cell red">31/58</span></td>
+                  </tr>
+                  <tr>
+                    <td class="center">7</td>
+                    <td>Alle modeller skal bruke IFC4 ReferenceView</td>
+                    <td><span class="tag tag-gray">Format</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">OK</span></td>
+                    <td class="center"><span class="tl-cell green">4/4</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════
+             TAB: MODELLER (Models overview)
+             ═══════════════════════════════════ -->
+        <div class="tab-panel" id="tab-models">
+          <div class="fade-in">
+            <div class="bento" style="grid-template-columns: repeat(4, 1fr);">
+              <!-- ARK -->
+              <div class="card" style="border-top: 3px solid #1a56db;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div>
+                    <div style="font-size: 14px; font-weight: 600;">LBK_ARK_F-KJ.ifc</div>
+                    <div style="font-size: 11px; color: var(--text-tertiary);">v6 &middot; 42 MB</div>
+                  </div>
+                  <span class="disc-tag disc-ark">ARK</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+                  <div><span style="color: var(--text-tertiary);">Elementer</span><br><strong>4 230</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Typer</span><br><strong>60</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Etasjer</span><br><strong>6</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Klassifisert</span><br><strong>47/60</strong></div>
+                </div>
+                <div style="margin-top: 12px;">
+                  <div class="bar-row" style="margin-bottom: 0;">
+                    <div class="bar-track"><div class="bar-fill green" style="width: 78%"></div></div>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--tl-green-text);">78%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIB -->
+              <div class="card" style="border-top: 3px solid #92400e;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div>
+                    <div style="font-size: 14px; font-weight: 600;">LBK_RIB_F-KJ.ifc</div>
+                    <div style="font-size: 11px; color: var(--text-tertiary);">v3 &middot; 38 MB</div>
+                  </div>
+                  <span class="disc-tag disc-rib">RIB</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+                  <div><span style="color: var(--text-tertiary);">Elementer</span><br><strong>3 890</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Typer</span><br><strong>50</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Etasjer</span><br><strong>6</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Klassifisert</span><br><strong>26/50</strong></div>
+                </div>
+                <div style="margin-top: 12px;">
+                  <div class="bar-row" style="margin-bottom: 0;">
+                    <div class="bar-track"><div class="bar-fill yellow" style="width: 52%"></div></div>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--tl-yellow-text);">52%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIV -->
+              <div class="card" style="border-top: 3px solid #065f46;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div>
+                    <div style="font-size: 14px; font-weight: 600;">LBK_RIV.ifc</div>
+                    <div style="font-size: 11px; color: var(--text-tertiary);">v1 &middot; 15 MB</div>
+                  </div>
+                  <span class="disc-tag disc-riv">RIV</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+                  <div><span style="color: var(--text-tertiary);">Elementer</span><br><strong>2 840</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Typer</span><br><strong>20</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Etasjer</span><br><strong>5</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Klassifisert</span><br><strong>8/20</strong></div>
+                </div>
+                <div style="margin-top: 12px;">
+                  <div class="bar-row" style="margin-bottom: 0;">
+                    <div class="bar-track"><div class="bar-fill yellow" style="width: 40%"></div></div>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--tl-yellow-text);">40%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIE -->
+              <div class="card" style="border-top: 3px solid #9d174d;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div>
+                    <div style="font-size: 14px; font-weight: 600;">LBK_RIE.ifc</div>
+                    <div style="font-size: 11px; color: var(--text-tertiary);">v2 &middot; 8 MB</div>
+                  </div>
+                  <span class="disc-tag disc-rie">RIE</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+                  <div><span style="color: var(--text-tertiary);">Elementer</span><br><strong>1 340</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Typer</span><br><strong>12</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Etasjer</span><br><strong>6</strong></div>
+                  <div><span style="color: var(--text-tertiary);">Klassifisert</span><br><strong>6/12</strong></div>
+                </div>
+                <div style="margin-top: 12px;">
+                  <div class="bar-row" style="margin-bottom: 0;">
+                    <div class="bar-track"><div class="bar-fill primary" style="width: 50%"></div></div>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--primary);">50%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+  </script>
+</body>
+</html>
