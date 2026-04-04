@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprucelab — Mengdeuttak</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #eeeeed;
+      --bg-gradient: linear-gradient(135deg, #eeeeed 0%, #e4e6f0 50%, #eeeeed 100%);
+      --card: #ffffff;
+      --primary: #157954;
+      --primary-light: rgba(21, 121, 84, 0.1);
+      --accent: #D0D34D;
+      --navy: #21263A;
+      --text-primary: #21263A;
+      --text-secondary: #525d78;
+      --text-tertiary: #717b94;
+      --border: #d2d4d3;
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --radius: 0.75rem;
+      --sidebar-w: 256px;
+
+      --tl-green-bg: #dcfce7;
+      --tl-green-text: #166534;
+      --tl-yellow-bg: #fef9c3;
+      --tl-yellow-text: #854d0e;
+      --tl-red-bg: #fee2e2;
+      --tl-red-text: #991b1b;
+      --tl-gray-bg: #f1f5f9;
+      --tl-gray-text: #94a3b8;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-feature-settings: 'rlig' 1, 'calt' 1;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(199, 206, 232, 0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(199, 206, 232, 0.25); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(199, 206, 232, 0.4); }
+
+    /* ═══════════════════════════════════════════
+       SHELL
+       ═══════════════════════════════════════════ */
+    .shell { display: flex; height: 100vh; width: 100vw; }
+
+    /* ─── SIDEBAR (project variant) ─── */
+    .sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      display: flex; flex-direction: column;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--glass-border);
+    }
+    .sidebar-brand { padding: 12px; border-bottom: 1px solid var(--glass-border); }
+    .sidebar-brand button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit;
+      color: var(--text-primary); transition: background 0.15s;
+    }
+    .sidebar-brand button:hover { background: rgba(255,255,255,0.6); }
+    .brand-icon {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .brand-name { flex: 1; text-align: left; font-weight: 600; font-size: 13px; }
+
+    .sidebar-search {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px; border-bottom: 1px solid var(--glass-border);
+    }
+    .search-btn {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border: none; background: transparent;
+      border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px;
+      color: var(--text-secondary); transition: background 0.15s;
+    }
+    .search-btn:hover { background: rgba(255,255,255,0.6); }
+    .icon-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent; border-radius: 6px;
+      cursor: pointer; color: var(--text-secondary); transition: background 0.15s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.6); }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px; }
+    .project-label {
+      padding: 6px 12px; font-size: 11px; color: var(--text-tertiary);
+      font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      color: var(--text-secondary); text-decoration: none;
+      transition: all 0.15s; cursor: pointer;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.6); color: var(--text-primary); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 500; }
+    .nav-item svg { flex-shrink: 0; }
+    .nav-section { margin-top: 16px; }
+    .nav-section-label {
+      padding: 6px 12px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+    }
+    .nav-section-items { margin-top: 4px; }
+
+    .sidebar-footer { border-top: 1px solid var(--border); padding: 8px; }
+    .user-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 12px; border-radius: 6px; cursor: pointer;
+      border: none; background: none; width: 100%; font: inherit;
+      text-align: left; transition: background 0.15s;
+    }
+    .user-row:hover { background: rgba(255,255,255,0.6); }
+    .user-avatar {
+      width: 24px; height: 24px; background: var(--primary); color: white;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600;
+    }
+    .user-name { flex: 1; font-size: 13px; color: var(--text-primary); }
+    .footer-actions { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
+    .lang-btn {
+      padding: 4px 8px; border: none; background: transparent;
+      border-radius: 4px; cursor: pointer; font: inherit;
+      font-size: 11px; font-weight: 600; color: var(--text-tertiary); transition: all 0.15s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.6); }
+    .lang-btn.active { color: var(--primary); background: var(--primary-light); }
+
+    /* ─── MAIN ─── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .top-accent { height: 3px; background: linear-gradient(to right, #D0D34D, #157954, #21263A); flex-shrink: 0; }
+    .content { flex: 1; overflow-y: auto; padding: 24px 32px; }
+
+    /* ═══════════════════════════════════════════
+       PAGE: QTO
+       ═══════════════════════════════════════════ */
+
+    /* Page header */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .page-header h1 { font-size: 22px; font-weight: 700; }
+    .page-header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+    .header-actions { display: flex; gap: 8px; }
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius); font: inherit;
+      font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-outline:hover { background: rgba(0,0,0,0.02); border-color: var(--text-tertiary); }
+
+    /* KPI cards */
+    .kpi-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px; margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+    }
+    .kpi-label {
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 28px; font-weight: 700; color: var(--text-primary); line-height: 1;
+    }
+    .kpi-unit {
+      font-size: 13px; font-weight: 400; color: var(--text-tertiary);
+    }
+
+    /* Chart area */
+    .chart-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 24px; overflow: hidden;
+    }
+    .chart-tabs {
+      display: flex; gap: 0; border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+    }
+    .chart-tab {
+      padding: 12px 20px; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); cursor: pointer;
+      border: none; background: none; font: inherit;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s; position: relative; bottom: -1px;
+    }
+    .chart-tab:hover { color: var(--text-primary); }
+    .chart-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+    .chart-body {
+      display: flex; gap: 32px; padding: 24px; align-items: flex-start;
+    }
+
+    /* Bar chart (CSS) */
+    .bar-chart { flex: 1; }
+    .bar-item {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+    }
+    .bar-label {
+      width: 100px; font-size: 12px; color: var(--text-secondary);
+      text-align: right; flex-shrink: 0;
+    }
+    .bar-track {
+      flex: 1; height: 24px; background: #f1f5f9;
+      border-radius: 4px; overflow: hidden; position: relative;
+    }
+    .bar-fill {
+      height: 100%; border-radius: 4px;
+      background: var(--primary);
+      transition: width 0.6s ease;
+      display: flex; align-items: center; padding-left: 8px;
+    }
+    .bar-fill-text {
+      font-size: 11px; font-weight: 600; color: white;
+      white-space: nowrap;
+    }
+    .bar-value {
+      width: 80px; font-size: 12px; font-weight: 600;
+      color: var(--text-primary); text-align: right; flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Donut chart (CSS) */
+    .donut-area {
+      width: 220px; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .donut {
+      width: 160px; height: 160px; border-radius: 50%;
+      position: relative; margin-bottom: 16px;
+    }
+    .donut-center {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90px; height: 90px; background: var(--card);
+      border-radius: 50%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .donut-center-value { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+    .donut-center-label { font-size: 10px; color: var(--text-tertiary); }
+
+    .donut-legend { width: 100%; }
+    .legend-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;
+    }
+    .legend-dot {
+      width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+    }
+    .legend-pct {
+      margin-left: auto; font-weight: 600; color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Data table */
+    .table-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+    }
+    .table-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+
+    .export-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: 6px; font: inherit;
+      font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+      position: relative;
+    }
+    .export-btn:hover { background: rgba(0,0,0,0.02); border-color: var(--text-tertiary); }
+    .export-menu {
+      display: none; position: absolute; top: 100%; right: 0;
+      margin-top: 4px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 8px 24px rgba(33,38,58,0.12);
+      min-width: 120px; z-index: 10; overflow: hidden;
+    }
+    .export-menu.open { display: block; }
+    .export-option {
+      display: block; width: 100%; padding: 8px 14px; border: none;
+      background: none; font: inherit; font-size: 12px; color: var(--text-primary);
+      text-align: left; cursor: pointer; transition: background 0.1s;
+    }
+    .export-option:hover { background: var(--tl-gray-bg); }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table th {
+      text-align: left; padding: 10px 16px; font-weight: 600; font-size: 11px;
+      color: var(--text-secondary); background: var(--tl-gray-bg);
+      border-bottom: 2px solid #cbd5e1; text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .data-table th.num { text-align: right; }
+    .data-table td { padding: 9px 16px; border-bottom: 1px solid #e2e8f0; }
+    .data-table td.num {
+      text-align: right; font-variant-numeric: tabular-nums;
+    }
+    .data-table tr:hover td { background: #f8fafc; }
+    .data-table tr.total td {
+      font-weight: 700; background: var(--tl-gray-bg);
+      border-bottom: none; border-top: 2px solid #cbd5e1;
+    }
+    .data-table .pct-bar {
+      display: inline-block; height: 6px; border-radius: 3px;
+      background: var(--primary); vertical-align: middle; margin-right: 6px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.25s ease both; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- ═══════════════════════════════════════
+         SIDEBAR — Project variant
+         ═══════════════════════════════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <button onclick="window.location='00-projects-gallery.html'">
+          <span class="brand-icon">SF</span>
+          <span class="brand-name">Spruce Forge</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </button>
+      </div>
+      <div class="sidebar-search">
+        <button class="search-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Sok...</span>
+        </button>
+        <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="project-label">Lillebekken Borettslag</div>
+
+        <div style="margin-top: 12px;">
+          <a class="nav-item" href="10-my-page.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Min side
+          </a>
+          <a class="nav-item" href="03-3d-viewer.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            3D Visning
+          </a>
+        </div>
+
+        <div style="margin-top: 8px;">
+          <a class="nav-item" href="01-project-dashboard.html">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            Dashboard
+          </a>
+        </div>
+
+        <!-- FILES -->
+        <div class="nav-section">
+          <div class="nav-section-label">Filer</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="04-project-models.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
+              Modeller
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              Tegninger
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Dokumenter
+            </a>
+          </div>
+        </div>
+
+        <!-- DATA -->
+        <div class="nav-section">
+          <div class="nav-section-label">Data</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="02-type-browser.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+              Typer
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              Materialbibliotek
+            </a>
+            <a class="nav-item" href="08-spaces.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+              Rom
+            </a>
+            <a class="nav-item active" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+              QTO
+            </a>
+          </div>
+        </div>
+
+        <!-- WORKBENCH -->
+        <div class="nav-section">
+          <div class="nav-section-label">Arbeidsbenk</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+              Verifikasjon
+            </a>
+            <a class="nav-item" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              IFC-redigering
+            </a>
+            <a class="nav-item" href="06-bep-eir.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              BEP
+            </a>
+          </div>
+        </div>
+
+        <!-- FIELD -->
+        <div class="nav-section">
+          <div class="nav-section-label">Felt</div>
+          <div class="nav-section-items">
+            <a class="nav-item" href="07-field-compliance.html">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+              Sjekklister
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="user-row">
+          <span class="user-avatar">EK</span>
+          <span class="user-name">Edvard</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <div class="footer-actions">
+          <button class="lang-btn active">NO</button>
+          <button class="lang-btn">EN</button>
+          <button class="icon-btn" style="margin-left: auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════
+         MAIN CONTENT — QTO
+         ═══════════════════════════════════════ -->
+    <div class="main">
+      <div class="top-accent"></div>
+      <div class="content">
+        <!-- Header -->
+        <div class="page-header fade-in">
+          <div>
+            <h1>Mengdeuttak</h1>
+            <div class="page-header-sub">Lillebekken Borettslag &middot; 4 modeller &middot; Sist beregnet 2. apr 2026</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn-outline">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Eksporter
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="kpi-row fade-in">
+          <div class="kpi-card">
+            <div class="kpi-label">Totalt volum</div>
+            <div class="kpi-value">2 847 <span class="kpi-unit">m&sup3;</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Totalt areal</div>
+            <div class="kpi-value">8 412 <span class="kpi-unit">m&sup2;</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total lengde</div>
+            <div class="kpi-value">3 240 <span class="kpi-unit">m</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Totalt antall</div>
+            <div class="kpi-value">3 481 <span class="kpi-unit">elementer</span></div>
+          </div>
+        </div>
+
+        <!-- Chart Area -->
+        <div class="chart-card fade-in">
+          <div class="chart-tabs">
+            <button class="chart-tab active" onclick="switchChartTab(this)">Materiale</button>
+            <button class="chart-tab" onclick="switchChartTab(this)">Type</button>
+            <button class="chart-tab" onclick="switchChartTab(this)">Etasje</button>
+            <button class="chart-tab" onclick="switchChartTab(this)">System</button>
+          </div>
+          <div class="chart-body">
+            <!-- Bar chart -->
+            <div class="bar-chart">
+              <div class="bar-item">
+                <span class="bar-label">Betong</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: 100%; background: #157954;">
+                    <span class="bar-fill-text">1 842 m&sup3;</span>
+                  </div>
+                </div>
+                <span class="bar-value">1 842 m&sup3;</span>
+              </div>
+              <div class="bar-item">
+                <span class="bar-label">Gips</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: 22%; background: #22c55e;"></div>
+                </div>
+                <span class="bar-value">412 m&sup2;</span>
+              </div>
+              <div class="bar-item">
+                <span class="bar-label">Mineralull</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: 13.5%; background: #D0D34D;"></div>
+                </div>
+                <span class="bar-value">248 m&sup3;</span>
+              </div>
+              <div class="bar-item">
+                <span class="bar-label">Glass</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: 10%; background: #525d78;"></div>
+                </div>
+                <span class="bar-value">186 m&sup2;</span>
+              </div>
+              <div class="bar-item">
+                <span class="bar-label">Stal</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: 6.7%; background: #21263A;"></div>
+                </div>
+                <span class="bar-value">124 m&sup3;</span>
+              </div>
+              <div class="bar-item">
+                <span class="bar-label">Tre</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: 4.7%; background: #92400e;"></div>
+                </div>
+                <span class="bar-value">86 m&sup3;</span>
+              </div>
+            </div>
+
+            <!-- Donut chart -->
+            <div class="donut-area">
+              <div class="donut" style="background: conic-gradient(
+                #157954 0deg 233deg,
+                #22c55e 233deg 270deg,
+                #D0D34D 270deg 300deg,
+                #525d78 300deg 323deg,
+                #21263A 323deg 342deg,
+                #92400e 342deg 360deg
+              );">
+                <div class="donut-center">
+                  <span class="donut-center-value">6</span>
+                  <span class="donut-center-label">materialer</span>
+                </div>
+              </div>
+              <div class="donut-legend">
+                <div class="legend-item">
+                  <span class="legend-dot" style="background: #157954;"></span>
+                  <span>Betong</span>
+                  <span class="legend-pct">63.5%</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background: #22c55e;"></span>
+                  <span>Gips</span>
+                  <span class="legend-pct">14.2%</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background: #D0D34D;"></span>
+                  <span>Mineralull</span>
+                  <span class="legend-pct">8.6%</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background: #525d78;"></span>
+                  <span>Glass</span>
+                  <span class="legend-pct">6.4%</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background: #21263A;"></span>
+                  <span>Stal</span>
+                  <span class="legend-pct">4.3%</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background: #92400e;"></span>
+                  <span>Tre</span>
+                  <span class="legend-pct">3.0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-card fade-in">
+          <div class="table-header">
+            <span class="table-title">Materialfordeling</span>
+            <div style="position: relative;">
+              <button class="export-btn" onclick="toggleExport(this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Eksporter
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div class="export-menu" id="exportMenu">
+                <button class="export-option">JSON</button>
+                <button class="export-option">Excel (.xlsx)</button>
+              </div>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Materiale</th>
+                <th class="num">Volum (m&sup3;)</th>
+                <th class="num">Areal (m&sup2;)</th>
+                <th class="num">Lengde (m)</th>
+                <th class="num">Antall</th>
+                <th>Andel</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Betong</td>
+                <td class="num">1 842</td>
+                <td class="num">4 210</td>
+                <td class="num">—</td>
+                <td class="num">482</td>
+                <td><span class="pct-bar" style="width: 63px;"></span>63.5%</td>
+              </tr>
+              <tr>
+                <td>Gips</td>
+                <td class="num">—</td>
+                <td class="num">2 186</td>
+                <td class="num">—</td>
+                <td class="num">864</td>
+                <td><span class="pct-bar" style="width: 14px;"></span>14.2%</td>
+              </tr>
+              <tr>
+                <td>Mineralull</td>
+                <td class="num">248</td>
+                <td class="num">1 420</td>
+                <td class="num">—</td>
+                <td class="num">645</td>
+                <td><span class="pct-bar" style="width: 9px;"></span>8.6%</td>
+              </tr>
+              <tr>
+                <td>Glass</td>
+                <td class="num">—</td>
+                <td class="num">186</td>
+                <td class="num">—</td>
+                <td class="num">312</td>
+                <td><span class="pct-bar" style="width: 6px;"></span>6.4%</td>
+              </tr>
+              <tr>
+                <td>Stal</td>
+                <td class="num">124</td>
+                <td class="num">—</td>
+                <td class="num">2 480</td>
+                <td class="num">896</td>
+                <td><span class="pct-bar" style="width: 4px;"></span>4.3%</td>
+              </tr>
+              <tr>
+                <td>Tre</td>
+                <td class="num">86</td>
+                <td class="num">410</td>
+                <td class="num">760</td>
+                <td class="num">282</td>
+                <td><span class="pct-bar" style="width: 3px;"></span>3.0%</td>
+              </tr>
+            </tbody>
+            <tr class="total">
+              <td>Totalt</td>
+              <td class="num">2 300</td>
+              <td class="num">8 412</td>
+              <td class="num">3 240</td>
+              <td class="num">3 481</td>
+              <td>100%</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchChartTab(tab) {
+      document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    }
+
+    function toggleExport(btn) {
+      const menu = btn.nextElementSibling;
+      menu.classList.toggle('open');
+    }
+
+    // Close export menu on outside click
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.export-btn') && !e.target.closest('.export-menu')) {
+        document.querySelectorAll('.export-menu').forEach(m => m.classList.remove('open'));
+      }
+    });
+  </script>
+</body>
+</html>
