@@ -247,7 +247,20 @@
     .kpi-sub { font-size: 10px; color: var(--text-tertiary); }
 
     /* Model identity card */
-    .model-id { grid-column: span 5; }
+    .model-id { grid-column: 1 / 6; }
+
+    /* Geometry distribution card */
+    .geom-card { grid-column: 1 / 6; }
+    .geom-stack {
+      height: 14px; border-radius: 7px; overflow: hidden;
+      display: flex; margin-bottom: 8px;
+    }
+    .geom-seg { height: 100%; }
+    .geom-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11px; }
+    .geom-legend-item { display: flex; align-items: center; gap: 4px; }
+    .geom-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .geom-legend-count { font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .geom-legend-label { color: var(--text-secondary); }
     .id-grid {
       display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 24px;
     }
