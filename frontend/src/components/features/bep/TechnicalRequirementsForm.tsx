@@ -70,7 +70,7 @@ export function TechnicalRequirementsForm({ bepId }: TechnicalRequirementsFormPr
       ...(existing?.id ? { id: existing.id } : {}),
       bep: bepId,
       ...form,
-    }, {
+    } as Partial<import('@/hooks/use-bep').TechnicalRequirement> & { bep: string }, {
       onSuccess: () => setHasChanges(false),
     });
   };
