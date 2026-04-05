@@ -307,15 +307,27 @@
 
     /* MMI distribution card */
     .mmi-card { grid-column: span 3; }
-    .mmi-bars { display: flex; flex-direction: column; gap: 6px; }
-    .mmi-row {
-      display: grid; grid-template-columns: 42px 1fr 32px; gap: 6px;
-      align-items: center; font-size: 11px;
+    .mmi-layout { display: flex; align-items: center; gap: 14px; }
+    .mmi-donut-wrap {
+      position: relative; width: 100px; height: 100px; flex-shrink: 0;
     }
-    .mmi-level { font-weight: 600; font-variant-numeric: tabular-nums; }
-    .mmi-level-bar { height: 7px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
-    .mmi-level-fill { height: 100%; border-radius: 3px; }
-    .mmi-count { font-size: 11px; font-weight: 600; color: var(--text-primary); text-align: right; font-variant-numeric: tabular-nums; }
+    .mmi-donut { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .mmi-donut circle {
+      fill: none; stroke-width: 10; cx: 50; cy: 50; r: 40;
+    }
+    .mmi-donut-label {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .mmi-donut-val { font-size: 18px; font-weight: 700; line-height: 1; color: var(--text-primary); }
+    .mmi-donut-sub { font-size: 9px; color: var(--text-tertiary); margin-top: 1px; }
+    .mmi-legend { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .mmi-legend-row {
+      display: flex; align-items: center; gap: 6px; font-size: 11px;
+    }
+    .mmi-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .mmi-legend-label { color: var(--text-secondary); }
+    .mmi-legend-count { margin-left: auto; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
     .mmi-expected {
       margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06);
       font-size: 10px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px;
