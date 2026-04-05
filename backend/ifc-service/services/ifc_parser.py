@@ -259,10 +259,15 @@ class IFCParserService:
             for type_element in ifc_file.by_type('IfcTypeObject'):
                 try:
                     # Count instances via IfcRelDefinesByType relationship
+                    # IFC2X3 uses 'ObjectTypeOf', IFC4 uses 'Types' as the inverse attribute name
                     instance_count = 0
-                    if hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
-                        # ObjectTypeOf is a list of IfcRelDefinesByType relationships
-                        for rel in type_element.ObjectTypeOf:
+                    type_rels = None
+                    if hasattr(type_element, 'Types') and type_element.Types:
+                        type_rels = type_element.Types
+                    elif hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+                        type_rels = type_element.ObjectTypeOf
+                    if type_rels:
+                        for rel in type_rels:
                             if rel.RelatedObjects:
                                 instance_count += len(rel.RelatedObjects)
 
