@@ -99,7 +99,7 @@ export function MMITableMaker({ projectId }: MMITableMakerProps) {
 
   const handleAddLevel = () => {
     const maxLevel = Math.max(...mmiLevels.map((l) => l.mmi_level), 0);
-    const newLevel: Omit<MMIScaleDefinition, 'id'> = {
+    const newLevel: Omit<MMIScaleDefinition, 'id' | 'bep'> = {
       mmi_level: maxLevel + 100,
       name: `MMI ${maxLevel + 100}`,
       name_en: `MMI ${maxLevel + 100}`,
