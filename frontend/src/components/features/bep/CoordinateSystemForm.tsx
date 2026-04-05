@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Loader2 } from 'lucide-react';
-import { useProjectCoordinates, useSaveCoordinates, type ProjectCoordinates } from '@/hooks/use-bep';
+import { useProjectCoordinates, useSaveCoordinates } from '@/hooks/use-bep';
 
 interface CoordinateSystemFormProps {
   projectId: string;
