@@ -9,7 +9,6 @@ import {
   useCreateStorey,
   useUpdateStorey,
   useDeleteStorey,
-  type ProjectStorey,
 } from '@/hooks/use-bep';
 
 interface StoreyTableProps {
