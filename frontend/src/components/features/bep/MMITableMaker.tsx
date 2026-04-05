@@ -63,7 +63,7 @@ export function MMITableMaker({ projectId }: MMITableMakerProps) {
   const { data: _templates } = useBEPTemplates(); // TODO: Use templates for template selector
 
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('mmi-veileder');
-  const [mmiLevels, setMmiLevels] = useState<Omit<MMIScaleDefinition, 'id'>[]>(MMI_VEILEDER_TEMPLATE);
+  const [mmiLevels, setMmiLevels] = useState<Omit<MMIScaleDefinition, 'id' | 'bep'>[]>(MMI_VEILEDER_TEMPLATE);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Load from active BEP if available
@@ -90,7 +90,7 @@ export function MMITableMaker({ projectId }: MMITableMakerProps) {
     setHasChanges(true);
   };
 
-  const handleUpdateLevel = (index: number, field: keyof Omit<MMIScaleDefinition, 'id'>, value: any) => {
+  const handleUpdateLevel = (index: number, field: keyof Omit<MMIScaleDefinition, 'id' | 'bep'>, value: any) => {
     const updated = [...mmiLevels];
     updated[index] = { ...updated[index], [field]: value };
     setMmiLevels(updated);
