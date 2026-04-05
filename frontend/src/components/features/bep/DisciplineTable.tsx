@@ -11,7 +11,6 @@ import {
   useUpdateDiscipline,
   useDeleteDiscipline,
   STANDARD_DISCIPLINES,
-  type ProjectDiscipline,
 } from '@/hooks/use-bep';
 
 interface DisciplineTableProps {
