@@ -521,10 +521,16 @@ class IFCLoaderService:
         if not type_element.is_a("IfcTypeObject"):
             raise ValueError(f"Element {type_guid} is not an IfcTypeObject (is {type_element.is_a()})")
 
-        # Get instances via ObjectTypeOf relationship (IfcRelDefinesByType)
+        # Get instances via inverse relationship (IfcRelDefinesByType)
+        # IFC2X3 uses 'ObjectTypeOf', IFC4 uses 'Types'
         instances = []
-        if hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
-            for rel in type_element.ObjectTypeOf:
+        type_rels = None
+        if hasattr(type_element, 'Types') and type_element.Types:
+            type_rels = type_element.Types
+        elif hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+            type_rels = type_element.ObjectTypeOf
+        if type_rels:
+            for rel in type_rels:
                 if rel.RelatedObjects:
                     for obj in rel.RelatedObjects:
                         storey = self._get_element_storey(obj)
