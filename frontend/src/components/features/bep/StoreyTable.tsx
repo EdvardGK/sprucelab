@@ -34,7 +34,7 @@ export function StoreyTable({ projectId }: StoreyTableProps) {
   const deleteMutation = useDeleteStorey();
   const [localStoreys, setLocalStoreys] = useState<LocalStorey[] | null>(null);
 
-  const displayStoreys: LocalStorey[] = localStoreys ?? storeys.map((s) => ({
+  const displayStoreys: LocalStorey[] = (localStoreys ?? storeys.map((s) => ({
     id: s.id,
     storey_name: s.storey_name,
     storey_code: s.storey_code,
