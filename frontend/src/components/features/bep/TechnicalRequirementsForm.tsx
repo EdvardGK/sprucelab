@@ -13,7 +13,7 @@ interface TechnicalRequirementsFormProps {
 }
 
 type FormData = {
-  ifc_schema: string;
+  ifc_schema: 'IFC2X3' | 'IFC4' | 'IFC4X3';
   model_view_definition: string;
   coordinate_system_name: string;
   coordinate_system_description: string;
