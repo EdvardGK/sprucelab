@@ -49,7 +49,7 @@ export function DisciplineTable({ projectId }: DisciplineTableProps) {
     is_active: d.is_active,
   }));
 
-  const setLocal = (updated: LocalDiscipline[]) => {
+  const setLocal = (updated: LocalDiscipline[] | null) => {
     setLocalDisciplines(updated);
   };
 
