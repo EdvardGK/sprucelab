@@ -47,7 +47,7 @@ const MMI_VEILEDER_TEMPLATE: Omit<MMIScaleDefinition, 'id' | 'bep'>[] = [
 ];
 
 // Simplified template (6 levels)
-const SIMPLIFIED_TEMPLATE: Omit<MMIScaleDefinition, 'id'>[] = [
+const SIMPLIFIED_TEMPLATE: Omit<MMIScaleDefinition, 'id' | 'bep'>[] = [
   { mmi_level: 0, name: 'Ikke definert', name_en: 'Not defined', description: 'Ingen krav', color_hex: '#CCCCCC', color_rgb: '204,204,204', geometry_requirements: {}, information_requirements: {}, discipline_specific_rules: {}, applies_to_disciplines: [], display_order: 0 },
   { mmi_level: 100, name: 'Konsept', name_en: 'Concept', description: 'Skissefase', color_hex: '#BE2823', color_rgb: '190,40,35', geometry_requirements: { detail_level: 'symbolic' }, information_requirements: { requires_name: true }, discipline_specific_rules: {}, applies_to_disciplines: [], display_order: 1 },
   { mmi_level: 200, name: 'Forprosjekt', name_en: 'Preliminary', description: 'Forprosjekt', color_hex: '#ED9D3D', color_rgb: '237,157,61', geometry_requirements: { detail_level: 'approximate' }, information_requirements: { requires_name: true, requires_classification: true }, discipline_specific_rules: {}, applies_to_disciplines: [], display_order: 2 },
