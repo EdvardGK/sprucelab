@@ -810,31 +810,47 @@
               <div class="card-header">
                 <div class="card-title">Modellmodenhet (MMI)</div>
               </div>
-              <div class="mmi-bars">
-                <div class="mmi-row">
-                  <span class="mmi-level" style="color: var(--tl-red-text);">500</span>
-                  <div class="mmi-level-bar"><div class="mmi-level-fill" style="width: 0%; background: var(--tl-red-dot);"></div></div>
-                  <span class="mmi-count">0</span>
+              <!-- 357 types total. Circumference = 2π×40 ≈ 251.3
+                   MMI 500: 0 (0%)       → dash: 0 251.3     offset: 0
+                   MMI 400: 28 (7.8%)    → dash: 19.7 251.3  offset: 0
+                   MMI 300: 221 (61.9%)  → dash: 155.6 251.3 offset: -19.7
+                   MMI 200: 86 (24.1%)   → dash: 60.6 251.3  offset: -175.3
+                   MMI 100: 22 (6.2%)    → dash: 15.4 251.3  offset: -235.9 -->
+              <div class="mmi-layout">
+                <div class="mmi-donut-wrap">
+                  <svg class="mmi-donut" viewBox="0 0 100 100">
+                    <circle stroke="#e5e7eb" stroke-dasharray="251.3 251.3" stroke-dashoffset="0"/>
+                    <circle stroke="#6366f1" stroke-dasharray="19.7 251.3" stroke-dashoffset="0"/>
+                    <circle stroke="var(--tl-green-dot)" stroke-dasharray="155.6 251.3" stroke-dashoffset="-19.7"/>
+                    <circle stroke="var(--tl-yellow-dot)" stroke-dasharray="60.6 251.3" stroke-dashoffset="-175.3"/>
+                    <circle stroke="#cbd5e1" stroke-dasharray="15.4 251.3" stroke-dashoffset="-235.9"/>
+                  </svg>
+                  <div class="mmi-donut-label">
+                    <span class="mmi-donut-val">300</span>
+                    <span class="mmi-donut-sub">median</span>
+                  </div>
                 </div>
-                <div class="mmi-row">
-                  <span class="mmi-level" style="color: var(--tl-yellow-text);">400</span>
-                  <div class="mmi-level-bar"><div class="mmi-level-fill" style="width: 8%; background: var(--tl-yellow-dot);"></div></div>
-                  <span class="mmi-count">28</span>
-                </div>
-                <div class="mmi-row">
-                  <span class="mmi-level" style="color: var(--tl-green-text);">300</span>
-                  <div class="mmi-level-bar"><div class="mmi-level-fill" style="width: 62%; background: var(--tl-green-dot);"></div></div>
-                  <span class="mmi-count">221</span>
-                </div>
-                <div class="mmi-row">
-                  <span class="mmi-level" style="color: var(--text-secondary);">200</span>
-                  <div class="mmi-level-bar"><div class="mmi-level-fill" style="width: 24%; background: #94a3b8;"></div></div>
-                  <span class="mmi-count">86</span>
-                </div>
-                <div class="mmi-row">
-                  <span class="mmi-level" style="color: var(--text-tertiary);">100</span>
-                  <div class="mmi-level-bar"><div class="mmi-level-fill" style="width: 6%; background: #cbd5e1;"></div></div>
-                  <span class="mmi-count">22</span>
+                <div class="mmi-legend">
+                  <div class="mmi-legend-row">
+                    <div class="mmi-legend-dot" style="background: #6366f1;"></div>
+                    <span class="mmi-legend-label">MMI 400</span>
+                    <span class="mmi-legend-count">28</span>
+                  </div>
+                  <div class="mmi-legend-row">
+                    <div class="mmi-legend-dot" style="background: var(--tl-green-dot);"></div>
+                    <span class="mmi-legend-label">MMI 300</span>
+                    <span class="mmi-legend-count">221</span>
+                  </div>
+                  <div class="mmi-legend-row">
+                    <div class="mmi-legend-dot" style="background: var(--tl-yellow-dot);"></div>
+                    <span class="mmi-legend-label">MMI 200</span>
+                    <span class="mmi-legend-count">86</span>
+                  </div>
+                  <div class="mmi-legend-row">
+                    <div class="mmi-legend-dot" style="background: #cbd5e1;"></div>
+                    <span class="mmi-legend-label">MMI 100</span>
+                    <span class="mmi-legend-count">22</span>
+                  </div>
                 </div>
               </div>
               <div class="mmi-expected">
