@@ -405,28 +405,55 @@
       font-size: 12px; color: var(--primary); font-weight: 500;
     }
 
-    /* Material layers mini */
+    /* Material layers */
     .layers-table {
       width: 100%; border-collapse: collapse;
       font-size: 11px;
     }
     .layers-table th {
-      text-align: left; padding: 4px 8px;
+      text-align: left; padding: 4px 6px;
       font-weight: 600; color: var(--text-tertiary);
       border-bottom: 1px solid var(--border);
       font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
     }
     .layers-table td {
-      padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.04);
-      color: var(--text-primary);
+      padding: 5px 6px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      color: var(--text-primary); vertical-align: top;
     }
     .layers-table .layer-color {
-      width: 12px; height: 12px; border-radius: 2px; display: inline-block;
-      vertical-align: middle; margin-right: 6px;
+      width: 10px; height: 10px; border-radius: 2px; display: inline-block;
+      vertical-align: middle; margin-right: 5px;
     }
     .layers-table .unit-col {
       color: var(--text-tertiary); font-size: 10px; white-space: nowrap;
     }
+    .layers-table .qty-input {
+      width: 48px; padding: 2px 4px; border: 1px solid transparent;
+      border-radius: 3px; font: inherit; font-size: 11px;
+      text-align: right; font-variant-numeric: tabular-nums;
+      background: transparent; color: var(--text-primary);
+      transition: all 0.15s;
+    }
+    .layers-table .qty-input:hover { border-color: var(--border); background: white; }
+    .layers-table .qty-input:focus { border-color: var(--primary); background: white; outline: none; box-shadow: 0 0 0 2px rgba(21,121,84,0.1); }
+    .layers-table .unit-select {
+      padding: 2px 2px; border: 1px solid transparent;
+      border-radius: 3px; font: inherit; font-size: 10px;
+      color: var(--text-tertiary); background: transparent;
+      cursor: pointer; transition: all 0.15s; appearance: none;
+    }
+    .layers-table .unit-select:hover { border-color: var(--border); background: white; }
+    .layers-table .unit-select:focus { border-color: var(--primary); background: white; outline: none; }
+    .layer-epd {
+      display: flex; align-items: center; gap: 3px;
+      font-size: 10px; color: var(--text-tertiary); margin-top: 1px;
+    }
+    .layer-epd a { color: var(--primary); text-decoration: none; }
+    .layer-epd a:hover { text-decoration: underline; }
+    .layer-epd .epd-none {
+      font-style: italic; cursor: pointer;
+    }
+    .layer-epd .epd-none:hover { color: var(--primary); }
     .layer-add {
       display: flex; align-items: center; gap: 4px;
       padding: 4px 8px; margin-top: 4px;
