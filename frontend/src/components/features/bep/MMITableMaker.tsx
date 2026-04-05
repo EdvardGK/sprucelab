@@ -24,7 +24,7 @@ interface MMITableMakerProps {
 }
 
 // Standard Norwegian MMI-veileder 2.0 template (19 levels: 0-600)
-const MMI_VEILEDER_TEMPLATE: Omit<MMIScaleDefinition, 'id'>[] = [
+const MMI_VEILEDER_TEMPLATE: Omit<MMIScaleDefinition, 'id' | 'bep'>[] = [
   { mmi_level: 0, name: 'Ikke definert', name_en: 'Not defined', description: 'Ingen krav til modellinnhold', color_hex: '#CCCCCC', color_rgb: '204,204,204', geometry_requirements: {}, information_requirements: {}, discipline_specific_rules: {}, applies_to_disciplines: [], display_order: 0 },
   { mmi_level: 100, name: 'MMI 100', name_en: 'MMI 100', description: 'Skissefase - Symbolsk/skjematisk', color_hex: '#BE2823', color_rgb: '190,40,35', geometry_requirements: { detail_level: 'symbolic' }, information_requirements: { requires_name: true }, discipline_specific_rules: {}, applies_to_disciplines: [], display_order: 1 },
   { mmi_level: 125, name: 'MMI 125', name_en: 'MMI 125', description: 'Utvidet skisse', color_hex: '#D44C3F', color_rgb: '212,76,63', geometry_requirements: { detail_level: 'symbolic' }, information_requirements: { requires_name: true }, discipline_specific_rules: {}, applies_to_disciplines: [], display_order: 2 },
