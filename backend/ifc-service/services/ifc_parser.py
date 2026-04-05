@@ -793,11 +793,19 @@ class IFCParserService:
         return types, errors
 
     def _count_type_instances(self, type_element) -> int:
-        """Count instances linked to an IfcTypeObject via ObjectTypeOf."""
+        """Count instances linked to an IfcTypeObject via inverse relationship.
+
+        IFC2X3 uses 'ObjectTypeOf', IFC4 uses 'Types' as the inverse attribute name.
+        """
         try:
-            if hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+            type_rels = None
+            if hasattr(type_element, 'Types') and type_element.Types:
+                type_rels = type_element.Types
+            elif hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+                type_rels = type_element.ObjectTypeOf
+            if type_rels:
                 count = 0
-                for rel in type_element.ObjectTypeOf:
+                for rel in type_rels:
                     if hasattr(rel, 'RelatedObjects') and rel.RelatedObjects:
                         count += len(rel.RelatedObjects)
                 return count
