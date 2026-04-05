@@ -29,6 +29,17 @@
       --glass-border: rgba(255, 255, 255, 0.3);
       --radius: 0.75rem;
       --sidebar-w: 256px;
+      /* ── Spacing system ── */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 40px;
+      /* Panel padding: consistent inner spacing for all panel/card content */
+      --panel-pad: 16px;
+      /* Card gap: space between cards in grids */
+      --card-gap: 16px;
 
       --tl-green-bg: #dcfce7;
       --tl-green-text: #166534;
@@ -74,8 +85,8 @@
     }
     .sidebar-brand { padding: 12px; border-bottom: 1px solid var(--glass-border); }
     .sidebar-brand button {
-      display: flex; align-items: center; gap: 8px; width: 100%;
-      padding: 6px 8px; border: none; background: transparent;
+      display: flex; align-items: center; gap: var(--space-sm); width: 100%;
+      padding: 6px var(--space-sm); border: none; background: transparent;
       border-radius: 6px; cursor: pointer; font: inherit;
       color: var(--text-primary); transition: background 0.15s;
     }
@@ -89,12 +100,12 @@
     .brand-home { color: var(--text-tertiary); flex-shrink: 0; }
 
     .sidebar-search {
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: var(--space-sm);
       padding: 12px; border-bottom: 1px solid var(--glass-border);
     }
     .search-btn {
-      flex: 1; display: flex; align-items: center; gap: 8px;
-      padding: 6px 8px; border: none; background: transparent;
+      flex: 1; display: flex; align-items: center; gap: var(--space-sm);
+      padding: 6px var(--space-sm); border: none; background: transparent;
       border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px;
       color: var(--text-secondary); transition: background 0.15s;
     }
@@ -108,10 +119,10 @@
     }
     .icon-btn:hover { background: rgba(255,255,255,0.6); }
 
-    .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px; }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: var(--space-sm); }
     .nav-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      padding: var(--space-sm) 12px; border-radius: 6px; font-size: 13px;
       color: var(--text-secondary); text-decoration: none;
       transition: all 0.15s; cursor: pointer;
     }
@@ -132,10 +143,10 @@
     .nav-section-items { margin-top: 4px; }
     .nav-section-items .nav-item { padding-left: 32px; }
 
-    .sidebar-footer { border-top: 1px solid var(--border); padding: 8px; }
+    .sidebar-footer { border-top: 1px solid var(--border); padding: var(--space-sm); }
     .user-row {
       display: flex; align-items: center; gap: 12px;
-      padding: 8px 12px; border-radius: 6px; cursor: pointer;
+      padding: var(--space-sm) 12px; border-radius: 6px; cursor: pointer;
       border: none; background: none; width: 100%; font: inherit;
       text-align: left; transition: background 0.15s;
     }
@@ -148,7 +159,7 @@
     .user-name { flex: 1; font-size: 13px; color: var(--text-primary); }
     .footer-actions { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
     .lang-btn {
-      padding: 4px 8px; border: none; background: transparent;
+      padding: var(--space-xs) var(--space-sm); border: none; background: transparent;
       border-radius: 4px; cursor: pointer; font: inherit;
       font-size: 11px; font-weight: 600; color: var(--text-tertiary); transition: all 0.15s;
     }
@@ -158,7 +169,7 @@
     /* ─── MAIN ─── */
     .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
     .top-accent { height: 3px; background: linear-gradient(to right, #D0D34D, #157954, #21263A); flex-shrink: 0; }
-    .content { flex: 1; overflow-y: auto; padding: 24px 32px; }
+    .content { flex: 1; overflow-y: auto; padding: var(--space-lg) var(--space-xl); }
 
     /* ═══════════════════════════════════════════
        PAGE: MIN SIDE
@@ -184,7 +195,7 @@
     }
     .card-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      padding: var(--space-md) 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
     }
     .card-title {
       font-size: 13px; font-weight: 600; color: var(--text-primary);
@@ -192,7 +203,7 @@
     .card-body { padding: 0; }
     .card-count {
       font-size: 11px; color: var(--text-tertiary);
-      background: var(--tl-gray-bg); padding: 2px 8px; border-radius: 999px;
+      background: var(--tl-gray-bg); padding: 2px var(--space-sm); border-radius: 999px;
     }
 
     /* ─── Project list ─── */
@@ -209,7 +220,7 @@
     .project-right { text-align: right; flex-shrink: 0; }
     .project-date { font-size: 11px; color: var(--text-tertiary); }
     .project-progress {
-      display: flex; align-items: center; gap: 8px; margin-top: 4px;
+      display: flex; align-items: center; gap: var(--space-sm); margin-top: 4px;
     }
     .progress-bar {
       width: 80px; height: 6px; background: #e5e7eb;
@@ -250,7 +261,7 @@
     .task-due.overdue { color: var(--tl-red-text); font-weight: 500; }
 
     /* ─── Activity feed ─── */
-    .activity-list { padding: 8px 0; }
+    .activity-list { padding: var(--space-sm) 0; }
     .activity-item {
       display: flex; gap: 12px; padding: 10px 20px;
       position: relative;
@@ -280,7 +291,7 @@
       gap: 0;
     }
     .stat-cell {
-      padding: 16px 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      padding: var(--space-md) 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
       border-right: 1px solid rgba(0,0,0,0.04);
     }
     .stat-cell:nth-child(even) { border-right: none; }

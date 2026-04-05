@@ -16,6 +16,17 @@
       --text-primary: #21263A; --text-secondary: #525d78; --text-tertiary: #717b94;
       --border: #d2d4d3; --glass-bg: rgba(255,255,255,0.6); --glass-border: rgba(255,255,255,0.3);
       --radius: 0.75rem; --sidebar-w: 256px;
+      /* ── Spacing system ── */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 40px;
+      /* Panel padding: consistent inner spacing for all panel/card content */
+      --panel-pad: 16px;
+      /* Card gap: space between cards in grids */
+      --card-gap: 16px;
     }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -32,27 +43,27 @@
     /* Sidebar (project) */
     .sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); display: flex; flex-direction: column; background: var(--glass-bg); backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); }
     .sidebar-brand { padding: 12px; border-bottom: 1px solid var(--glass-border); }
-    .sidebar-brand button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font: inherit; color: var(--text-primary); transition: background 0.15s; }
+    .sidebar-brand button { display: flex; align-items: center; gap: var(--space-sm); width: 100%; padding: 6px var(--space-sm); border: none; background: transparent; border-radius: 6px; cursor: pointer; font: inherit; color: var(--text-primary); transition: background 0.15s; }
     .sidebar-brand button:hover { background: rgba(255,255,255,0.6); }
     .brand-icon { width: 24px; height: 24px; background: var(--primary); color: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
     .brand-name { flex: 1; text-align: left; font-weight: 600; font-size: 13px; }
-    .sidebar-search { display: flex; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid var(--glass-border); }
-    .search-btn { flex: 1; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px; color: var(--text-secondary); }
+    .sidebar-search { display: flex; align-items: center; gap: var(--space-sm); padding: 12px; border-bottom: 1px solid var(--glass-border); }
+    .search-btn { flex: 1; display: flex; align-items: center; gap: var(--space-sm); padding: 6px var(--space-sm); border: none; background: transparent; border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px; color: var(--text-secondary); }
     .icon-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; border-radius: 6px; cursor: pointer; color: var(--text-secondary); }
-    .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px; }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: var(--space-sm); }
     .project-label { padding: 6px 12px; font-size: 11px; color: var(--text-tertiary); font-weight: 500; }
-    .nav-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 6px; font-size: 13px; color: var(--text-secondary); text-decoration: none; transition: all 0.15s; cursor: pointer; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: var(--space-sm) 12px; border-radius: 6px; font-size: 13px; color: var(--text-secondary); text-decoration: none; transition: all 0.15s; cursor: pointer; }
     .nav-item:hover { background: rgba(255,255,255,0.6); color: var(--text-primary); }
     .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 500; }
     .nav-section { margin-top: 16px; }
     .nav-section-label { padding: 6px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
     .nav-section-items { margin-top: 4px; }
-    .sidebar-footer { border-top: 1px solid var(--border); padding: 8px; }
-    .user-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 6px; cursor: pointer; border: none; background: none; width: 100%; font: inherit; text-align: left; }
+    .sidebar-footer { border-top: 1px solid var(--border); padding: var(--space-sm); }
+    .user-row { display: flex; align-items: center; gap: 12px; padding: var(--space-sm) 12px; border-radius: 6px; cursor: pointer; border: none; background: none; width: 100%; font: inherit; text-align: left; }
     .user-avatar { width: 24px; height: 24px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; }
     .user-name { flex: 1; font-size: 13px; color: var(--text-primary); }
     .footer-actions { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
-    .lang-btn { padding: 4px 8px; border: none; background: transparent; border-radius: 4px; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; color: var(--text-tertiary); }
+    .lang-btn { padding: var(--space-xs) var(--space-sm); border: none; background: transparent; border-radius: 4px; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; color: var(--text-tertiary); }
     .lang-btn.active { color: var(--primary); background: var(--primary-light); }
 
     /* Main */
@@ -74,13 +85,13 @@
       overflow: hidden;
     }
     .tree-header {
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: var(--space-sm);
       padding: 10px 12px;
       border-bottom: 1px solid var(--border);
       font-size: 13px; font-weight: 600;
     }
     .tree-toolbar {
-      display: flex; align-items: center; gap: 4px;
+      display: flex; align-items: center; gap: var(--space-xs);
       padding: 6px 12px;
       border-bottom: 1px solid rgba(0,0,0,0.04);
     }
@@ -92,15 +103,15 @@
     .tree-btn:hover { border-color: var(--primary); color: var(--primary); }
     .tree-btn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
     .tree-search {
-      flex: 1; padding: 4px 8px; border: 1px solid var(--border); border-radius: 5px;
+      flex: 1; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--border); border-radius: 5px;
       font: inherit; font-size: 11px; outline: none;
     }
-    .tree-content { flex: 1; overflow-y: auto; padding: 4px 0; }
+    .tree-content { flex: 1; overflow-y: auto; padding: var(--space-xs) 0; }
 
     .tree-node { user-select: none; }
     .tree-row {
-      display: flex; align-items: center; gap: 4px;
-      padding: 4px 8px; cursor: pointer;
+      display: flex; align-items: center; gap: var(--space-xs);
+      padding: var(--space-xs) var(--space-sm); cursor: pointer;
       font-size: 12px; transition: background 0.1s;
     }
     .tree-row:hover { background: rgba(0,0,0,0.03); }
@@ -226,7 +237,7 @@
       display: flex; border-bottom: 1px solid var(--border);
     }
     .props-tab {
-      flex: 1; padding: 8px; text-align: center;
+      flex: 1; padding: var(--space-sm); text-align: center;
       font-size: 11px; font-weight: 500; color: var(--text-tertiary);
       cursor: pointer; border: none; background: none;
       border-bottom: 2px solid transparent; transition: all 0.15s;
@@ -245,14 +256,14 @@
     .pset-group { border-bottom: 1px solid rgba(0,0,0,0.04); }
     .pset-header {
       display: flex; align-items: center; gap: 6px;
-      padding: 8px 14px; cursor: pointer;
+      padding: var(--space-sm) 14px; cursor: pointer;
       font-size: 11px; font-weight: 600; color: var(--text-secondary);
       transition: background 0.1s;
     }
     .pset-header:hover { background: rgba(0,0,0,0.02); }
     .pset-rows { }
     .pset-row {
-      display: flex; padding: 4px 14px 4px 28px;
+      display: flex; padding: var(--space-xs) 14px var(--space-xs) 28px;
       font-size: 11px;
     }
     .pset-key { flex: 1; color: var(--text-secondary); }
@@ -262,7 +273,7 @@
     .spatial-path {
       padding: 10px 14px;
       font-size: 11px; color: var(--text-tertiary);
-      display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+      display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap;
     }
     .spatial-path span { color: var(--text-primary); font-weight: 500; }
     .spatial-path svg { flex-shrink: 0; color: var(--text-tertiary); }
@@ -270,7 +281,7 @@
     .no-selection {
       display: flex; align-items: center; justify-content: center;
       height: 100%; color: var(--text-tertiary); font-size: 12px;
-      flex-direction: column; gap: 8px;
+      flex-direction: column; gap: var(--space-sm);
     }
   </style>
 </head>

@@ -33,6 +33,17 @@
       --lavender: #C7CEE8;
       --radius: 0.75rem;
       --sidebar-w: 256px;
+      /* ── Spacing system ── */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 40px;
+      /* Panel padding: consistent inner spacing for all panel/card content */
+      --panel-pad: 16px;
+      /* Card gap: space between cards in grids */
+      --card-gap: 16px;
 
       /* Gradients */
       --grad-04: linear-gradient(135deg, #D0D34D, #157954, #21263A);
@@ -84,9 +95,9 @@
     .sidebar-brand button {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-sm);
       width: 100%;
-      padding: 6px 8px;
+      padding: 6px var(--space-sm);
       border: none;
       background: transparent;
       border-radius: 6px;
@@ -114,7 +125,7 @@
     .sidebar-search {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-sm);
       padding: 12px;
       border-bottom: 1px solid var(--glass-border);
     }
@@ -122,8 +133,8 @@
       flex: 1;
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
+      gap: var(--space-sm);
+      padding: 6px var(--space-sm);
       border: none;
       background: transparent;
       border-radius: 6px;
@@ -148,14 +159,14 @@
     .sidebar-nav {
       flex: 1;
       overflow-y: auto;
-      padding: 8px;
+      padding: var(--space-sm);
     }
 
     .nav-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 8px 12px;
+      padding: var(--space-sm) 12px;
       border-radius: 6px;
       font-size: 13px;
       color: var(--text-secondary);
@@ -201,13 +212,13 @@
 
     .sidebar-footer {
       border-top: 1px solid var(--border);
-      padding: 8px;
+      padding: var(--space-sm);
     }
     .user-row {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 8px 12px;
+      padding: var(--space-sm) 12px;
       border-radius: 6px;
       cursor: pointer;
       border: none;
@@ -235,7 +246,7 @@
       margin-top: 4px;
     }
     .lang-btn {
-      padding: 4px 8px;
+      padding: var(--space-xs) var(--space-sm);
       border: none;
       background: transparent;
       border-radius: 4px;
@@ -261,7 +272,7 @@
     .content {
       flex: 1;
       overflow-y: auto;
-      padding: 32px 40px;
+      padding: var(--space-xl) var(--space-2xl);
     }
 
     /* ═══════════════════════════════════════════
@@ -288,7 +299,7 @@
     .btn-primary {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-sm);
       padding: 10px 20px;
       background: var(--primary);
       color: white;
@@ -309,9 +320,9 @@
     /* Stats bar */
     .stats-bar {
       display: flex;
-      gap: 24px;
+      gap: var(--space-lg);
       margin-bottom: 24px;
-      padding: 16px 20px;
+      padding: var(--space-md) 20px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -352,7 +363,7 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 24px;
+      padding: var(--space-lg);
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
@@ -391,7 +402,7 @@
     .card-badge {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: var(--space-xs);
       padding: 3px 10px;
       border: 1px solid var(--border);
       border-radius: 999px;
@@ -436,7 +447,7 @@
       margin-top: 12px;
     }
     .disc-tag {
-      padding: 2px 8px;
+      padding: 2px var(--space-sm);
       border-radius: 4px;
       font-size: 10px;
       font-weight: 600;
@@ -509,7 +520,7 @@
       transform: scale(1) translateY(0);
     }
     .dialog-header {
-      padding: 24px 24px 0;
+      padding: var(--space-lg) var(--space-lg) 0;
     }
     .dialog-header h2 {
       font-size: 18px;
@@ -522,7 +533,7 @@
       margin-top: 4px;
     }
     .dialog-body {
-      padding: 20px 24px;
+      padding: 20px var(--space-lg);
     }
     .form-group {
       margin-bottom: 16px;
@@ -553,14 +564,14 @@
     .form-input::placeholder { color: var(--text-tertiary); }
     textarea.form-input { min-height: 80px; resize: vertical; }
     .dialog-footer {
-      padding: 16px 24px;
+      padding: var(--space-md) var(--space-lg);
       display: flex;
       justify-content: flex-end;
-      gap: 8px;
+      gap: var(--space-sm);
       border-top: 1px solid rgba(0,0,0,0.05);
     }
     .btn-ghost {
-      padding: 8px 16px;
+      padding: var(--space-sm) var(--space-md);
       border: none;
       background: transparent;
       border-radius: 8px;
@@ -573,7 +584,7 @@
     }
     .btn-ghost:hover { background: rgba(0,0,0,0.04); }
     .btn-sm {
-      padding: 8px 16px;
+      padding: var(--space-sm) var(--space-md);
       font-size: 13px;
     }
 
@@ -585,7 +596,7 @@
     /* Empty state */
     .empty-state {
       text-align: center;
-      padding: 80px 40px;
+      padding: 80px var(--space-2xl);
       background: var(--card);
       border: 1px dashed var(--border);
       border-radius: var(--radius);
