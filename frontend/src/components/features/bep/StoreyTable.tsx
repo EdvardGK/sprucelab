@@ -43,7 +43,7 @@ export function StoreyTable({ projectId }: StoreyTableProps) {
     order: s.order,
   }));
 
-  const setLocal = (updated: LocalStorey[]) => {
+  const setLocal = (updated: LocalStorey[] | null) => {
     setLocalStoreys(updated);
   };
 
