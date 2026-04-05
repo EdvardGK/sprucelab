@@ -17,7 +17,7 @@ type FormData = {
   model_view_definition: string;
   coordinate_system_name: string;
   coordinate_system_description: string;
-  length_unit: string;
+  length_unit: 'METRE' | 'MILLIMETRE';
   area_unit: string;
   volume_unit: string;
   geometry_tolerance: number;
