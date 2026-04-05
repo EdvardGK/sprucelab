@@ -600,73 +600,241 @@
              TAB: OVERSIKT
              ═══════════════════════════════════ -->
         <div class="tab-panel active" id="tab-overview">
-          <!-- KPI cards -->
-          <div class="kpi-row fade-in">
-            <div class="kpi-card">
-              <div class="kpi-label">Typer</div>
-              <div class="kpi-value" style="color: var(--primary);">357</div>
-              <div class="kpi-sub">Unike typedefinisjoner</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-label">Elementer</div>
-              <div class="kpi-value">3 481</div>
-              <div class="kpi-sub">Totalt antall instanser</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-label">Etasjer</div>
-              <div class="kpi-value">6</div>
-              <div class="kpi-sub">IfcBuildingStorey</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-label">Filstorrelse</div>
-              <div class="kpi-value">48.2<span style="font-size: 16px; font-weight: 400; color: var(--text-tertiary);"> MB</span></div>
-              <div class="kpi-sub">IFC4 DesignTransferView</div>
-            </div>
-          </div>
+          <!-- ── Bento grid dashboard ── -->
+          <div class="bento fade-in">
 
-          <!-- Two-column: bar chart + version history -->
-          <div class="two-col fade-in">
-            <!-- Left: Type per IFC class bar chart -->
-            <div class="card">
+            <!-- ROW 1: KPI strip -->
+            <div class="kpi-strip">
+              <div class="kpi-chip">
+                <span class="kpi-val primary">357</span>
+                <span class="kpi-lbl">typer</span>
+              </div>
+              <div class="kpi-chip">
+                <span class="kpi-val">3 481</span>
+                <span class="kpi-lbl">elementer</span>
+              </div>
+              <div class="kpi-chip">
+                <span class="kpi-val">6</span>
+                <span class="kpi-lbl">etasjer</span>
+              </div>
+              <div class="kpi-chip">
+                <span class="kpi-val">48.2</span>
+                <span class="kpi-lbl">MB &middot; IFC4</span>
+              </div>
+              <div class="kpi-chip">
+                <span class="kpi-val" style="color: var(--tl-green-text);">74%</span>
+                <span class="kpi-lbl">klassifisert</span>
+              </div>
+            </div>
+
+            <!-- ROW 2: Identity (5) + Treemap (4) + Quality (3) -->
+
+            <!-- Model identity -->
+            <div class="card model-id">
               <div class="card-header">
-                <div class="card-title">Typer per IFC-klasse</div>
+                <div class="card-title">Modellidentitet</div>
               </div>
-              <div class="bar-chart">
-                <div class="bar-row">
-                  <span class="bar-label">IfcDoorType</span>
-                  <div class="bar-track"><div class="bar-fill" style="width: 100%;"></div></div>
-                  <span class="bar-count">56</span>
+              <div class="id-grid">
+                <div>
+                  <div class="id-section-title">Kontekst</div>
+                  <div class="id-row"><span class="id-key">Prosjekt</span><span class="id-val">Lillebekken</span></div>
+                  <div class="id-row"><span class="id-key">Disiplin</span><span class="id-val">ARK</span></div>
+                  <div class="id-row"><span class="id-key">Fase</span><span class="id-val">Forprosjekt</span></div>
+                  <div class="id-row"><span class="id-key">Verktøy</span><span class="id-val">Revit 2024</span></div>
                 </div>
-                <div class="bar-row">
-                  <span class="bar-label">IfcWallType</span>
-                  <div class="bar-track"><div class="bar-fill" style="width: 75%;"></div></div>
-                  <span class="bar-count">42</span>
+                <div>
+                  <div class="id-section-title">Enheter</div>
+                  <div class="id-row"><span class="id-key">Lengde</span><span class="id-val">mm</span></div>
+                  <div class="id-row"><span class="id-key">Areal</span><span class="id-val">m²</span></div>
+                  <div class="id-row"><span class="id-key">Volum</span><span class="id-val">m³</span></div>
+                  <div class="id-row"><span class="id-key">Vinkel</span><span class="id-val">grader</span></div>
                 </div>
-                <div class="bar-row">
-                  <span class="bar-label">IfcWindowType</span>
-                  <div class="bar-track"><div class="bar-fill" style="width: 68%;"></div></div>
-                  <span class="bar-count">38</span>
-                </div>
-                <div class="bar-row">
-                  <span class="bar-label">IfcSlabType</span>
-                  <div class="bar-track"><div class="bar-fill" style="width: 32%;"></div></div>
-                  <span class="bar-count">18</span>
-                </div>
-                <div class="bar-row">
-                  <span class="bar-label">IfcBeamType</span>
-                  <div class="bar-track"><div class="bar-fill" style="width: 25%;"></div></div>
-                  <span class="bar-count">14</span>
-                </div>
-                <div class="bar-row">
-                  <span class="bar-label">IfcColumnType</span>
-                  <div class="bar-track"><div class="bar-fill" style="width: 21%;"></div></div>
-                  <span class="bar-count">12</span>
+                <div>
+                  <div class="id-section-title">Koordinater</div>
+                  <div class="id-row"><span class="id-key">CRS</span><span class="id-val">EPSG:25832</span></div>
+                  <div class="id-row"><span class="id-key">Øst</span><span class="id-val">598 412</span></div>
+                  <div class="id-row"><span class="id-key">Nord</span><span class="id-val">6 642 108</span></div>
+                  <div class="id-row"><span class="id-key">Høyde</span><span class="id-val">NN2000</span></div>
                 </div>
               </div>
             </div>
 
-            <!-- Right: Version history timeline -->
-            <div class="card">
+            <!-- Treemap: elements by IFC class -->
+            <div class="card treemap-card">
+              <div class="card-header">
+                <div class="card-title">Elementer etter IFC-klasse</div>
+              </div>
+              <div class="treemap-grid">
+                <!-- IfcWall: 35% → cols 1-4, rows 1-4 -->
+                <div class="tm-cell" style="grid-column: 1/5; grid-row: 1/5; background: #157954;">
+                  IfcWall<br><span class="tm-count">1 218</span>
+                </div>
+                <!-- IfcDoor: 18% → cols 5-7, rows 1-4 -->
+                <div class="tm-cell" style="grid-column: 5/8; grid-row: 1/4; background: #1e9268;">
+                  IfcDoor<br><span class="tm-count">627</span>
+                </div>
+                <!-- IfcWindow: 15% → cols 8-10, rows 1-3 -->
+                <div class="tm-cell" style="grid-column: 8/11; grid-row: 1/4; background: #27ab7d;">
+                  IfcWindow<br><span class="tm-count">522</span>
+                </div>
+                <!-- IfcSlab: 12% → cols 5-7, rows 4-6 -->
+                <div class="tm-cell" style="grid-column: 5/8; grid-row: 4/7; background: #5dbf99;">
+                  IfcSlab<br><span class="tm-count">418</span>
+                </div>
+                <!-- IfcColumn: 8% → cols 1-4, rows 5-6 -->
+                <div class="tm-cell" style="grid-column: 1/5; grid-row: 5/7; background: #8dd4b8;">
+                  IfcColumn<br><span class="tm-count">279</span>
+                </div>
+                <!-- IfcBeam: 5% → cols 8-9, rows 4-6 -->
+                <div class="tm-cell" style="grid-column: 8/10; grid-row: 4/7; background: #b3e2ce;">
+                  Beam<br><span class="tm-count">174</span>
+                </div>
+                <!-- Other: 7% → col 10, rows 4-6 -->
+                <div class="tm-cell" style="grid-column: 10/11; grid-row: 4/7; background: #d4eee2; color: var(--text-secondary);">
+                  +<br><span class="tm-count">243</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quality checklist -->
+            <div class="card quality-card">
+              <div class="card-header">
+                <div class="card-title">Kvalitetssjekk</div>
+              </div>
+              <div class="q-row">
+                <span class="q-label">Koordinatsystem</span>
+                <span class="q-val q-ok">OK</span>
+              </div>
+              <div class="q-row">
+                <span class="q-label">GUID-unikhet</span>
+                <span class="q-val q-ok">OK</span>
+              </div>
+              <div class="q-row">
+                <span class="q-label">Etasjestruktur</span>
+                <span class="q-val q-ok">OK</span>
+              </div>
+              <div class="q-row">
+                <span class="q-label">Materialinfo</span>
+                <span class="q-val q-warn">24</span>
+              </div>
+              <div class="q-row">
+                <span class="q-label">Pset dekning</span>
+                <span class="q-val q-warn">12</span>
+              </div>
+              <div class="q-row">
+                <span class="q-label">Brannklasse</span>
+                <span class="q-val q-fail">8</span>
+              </div>
+              <div class="q-row">
+                <span class="q-label">Klassifisering</span>
+                <span class="q-val q-fail">143</span>
+              </div>
+            </div>
+
+            <!-- ROW 3: Storey (4) + Type progress (4) + Version (4) -->
+
+            <!-- Storey distribution -->
+            <div class="card storey-card">
+              <div class="card-header">
+                <div class="card-title">Elementer per etasje</div>
+              </div>
+              <div class="storey-row">
+                <span class="storey-name">5. etasje</span>
+                <span class="storey-elev">+15.6</span>
+                <div class="storey-bar"><div class="storey-bar-fill" style="width: 55%;"></div></div>
+                <span class="storey-count">482</span>
+              </div>
+              <div class="storey-row">
+                <span class="storey-name">4. etasje</span>
+                <span class="storey-elev">+12.4</span>
+                <div class="storey-bar"><div class="storey-bar-fill" style="width: 72%;"></div></div>
+                <span class="storey-count">631</span>
+              </div>
+              <div class="storey-row">
+                <span class="storey-name">3. etasje</span>
+                <span class="storey-elev">+9.2</span>
+                <div class="storey-bar"><div class="storey-bar-fill" style="width: 80%;"></div></div>
+                <span class="storey-count">698</span>
+              </div>
+              <div class="storey-row">
+                <span class="storey-name">2. etasje</span>
+                <span class="storey-elev">+6.0</span>
+                <div class="storey-bar"><div class="storey-bar-fill" style="width: 78%;"></div></div>
+                <span class="storey-count">682</span>
+              </div>
+              <div class="storey-row">
+                <span class="storey-name">1. etasje</span>
+                <span class="storey-elev">+2.8</span>
+                <div class="storey-bar"><div class="storey-bar-fill" style="width: 100%;"></div></div>
+                <span class="storey-count">874</span>
+              </div>
+              <div class="storey-row">
+                <span class="storey-name">U1</span>
+                <span class="storey-elev">-3.2</span>
+                <div class="storey-bar"><div class="storey-bar-fill" style="width: 13%;"></div></div>
+                <span class="storey-count">114</span>
+              </div>
+            </div>
+
+            <!-- Type classification progress -->
+            <div class="card type-progress-card">
+              <div class="card-header">
+                <div class="card-title">Typeklassifisering</div>
+              </div>
+              <div class="progress-stack">
+                <div class="progress-seg" style="width: 60%; background: var(--tl-green-dot);"></div>
+                <div class="progress-seg" style="width: 14%; background: var(--tl-yellow-dot);"></div>
+                <div class="progress-seg" style="width: 6%; background: var(--tl-red-dot);"></div>
+                <div class="progress-seg" style="width: 20%; background: #e5e7eb;"></div>
+              </div>
+              <div class="progress-legend">
+                <div class="legend-item">
+                  <div class="legend-dot" style="background: var(--tl-green-dot);"></div>
+                  <span class="legend-count">214</span>
+                  <span class="legend-label">kartlagt</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-dot" style="background: var(--tl-yellow-dot);"></div>
+                  <span class="legend-count">50</span>
+                  <span class="legend-label">delvis</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-dot" style="background: var(--tl-red-dot);"></div>
+                  <span class="legend-count">22</span>
+                  <span class="legend-label">ignorert</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-dot" style="background: #e5e7eb;"></div>
+                  <span class="legend-count">71</span>
+                  <span class="legend-label">ventende</span>
+                </div>
+              </div>
+              <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 4px;">
+                <div class="bar-row">
+                  <span class="bar-label" style="width: 80px;">IfcWallType</span>
+                  <div class="bar-track"><div class="bar-fill" style="width: 95%;"></div></div>
+                  <span class="bar-count" style="width: 30px;">40/42</span>
+                </div>
+                <div class="bar-row">
+                  <span class="bar-label" style="width: 80px;">IfcDoorType</span>
+                  <div class="bar-track"><div class="bar-fill" style="width: 82%;"></div></div>
+                  <span class="bar-count" style="width: 30px;">46/56</span>
+                </div>
+                <div class="bar-row">
+                  <span class="bar-label" style="width: 80px;">IfcWindowType</span>
+                  <div class="bar-track"><div class="bar-fill" style="width: 66%;"></div></div>
+                  <span class="bar-count" style="width: 30px;">25/38</span>
+                </div>
+                <div class="bar-row">
+                  <span class="bar-label" style="width: 80px;">IfcSlabType</span>
+                  <div class="bar-track"><div class="bar-fill" style="width: 44%;"></div></div>
+                  <span class="bar-count" style="width: 30px;">8/18</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Version timeline -->
+            <div class="card version-card">
               <div class="card-header">
                 <div class="card-title">Versjonshistorikk</div>
               </div>
@@ -711,12 +879,13 @@
                   <div class="timeline-content">
                     <div class="timeline-version">v3</div>
                     <div class="timeline-date">15. feb 2026</div>
-                    <div class="timeline-changes">Forste fullstendige leveranse</div>
+                    <div class="timeline-changes">Første fullstendige leveranse</div>
                   </div>
                 </li>
               </ul>
             </div>
-          </div>
+
+          </div><!-- /bento -->
         </div>
 
         <!-- ═══════════════════════════════════
