@@ -550,6 +550,185 @@
   </section>
 
 
+  <!-- ═══════════ SURFACES & BORDERS ═══════════ -->
+  <section id="surfaces">
+    <div class="section-title">Surfaces & Borders</div>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-md);">
+      Background surfaces for tables, forms, and interactive states. Separated from semantic colors for clarity.
+    </p>
+    <div class="swatches" style="margin-bottom: var(--space-lg);">
+      <div class="swatch swatch-sm">
+        <div class="swatch-color" style="background: var(--surface-muted);"></div>
+        <div class="swatch-label">surface-muted</div>
+        <div class="swatch-hex">#f1f5f9</div>
+      </div>
+      <div class="swatch swatch-sm">
+        <div class="swatch-color" style="background: var(--surface-hover);"></div>
+        <div class="swatch-label">surface-hover</div>
+        <div class="swatch-hex">#f8fafc</div>
+      </div>
+      <div class="swatch swatch-sm">
+        <div class="swatch-color" style="background: var(--input-bg);"></div>
+        <div class="swatch-label">input-bg</div>
+        <div class="swatch-hex">#f8f9fa</div>
+      </div>
+      <div class="swatch swatch-sm">
+        <div class="swatch-color" style="background: var(--track);"></div>
+        <div class="swatch-label">track</div>
+        <div class="swatch-hex">#e5e7eb</div>
+      </div>
+    </div>
+    <table class="token-table" style="max-width: 700px;">
+      <thead><tr><th>Token</th><th>Value</th><th>Use for</th></tr></thead>
+      <tbody>
+        <tr><td><code>--surface-muted</code></td><td>#f1f5f9</td><td>Table headers, subtle section backgrounds</td></tr>
+        <tr><td><code>--surface-hover</code></td><td>#f8fafc</td><td>Table row hover, interactive highlight</td></tr>
+        <tr><td><code>--input-bg</code></td><td>#f8f9fa</td><td>Form field backgrounds</td></tr>
+        <tr><td><code>--track</code></td><td>#e5e7eb</td><td>Progress bar tracks, dividers</td></tr>
+        <tr><td><code>--border-light</code></td><td>#e2e8f0</td><td>Table cell borders, subtle dividers</td></tr>
+        <tr><td><code>--border-strong</code></td><td>#cbd5e1</td><td>Table header borders, emphasized dividers</td></tr>
+        <tr><td><code>--text-muted</code></td><td>#475569</td><td>Dark muted text in tags, secondary labels</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top: var(--space-md);">
+      <div class="demo-label" style="margin-bottom: var(--space-sm);">Progress bar example</div>
+      <div style="max-width: 400px;">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: 65%; background: var(--forest);"></div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 4px;">
+          Track: <code>--track</code>, fill: any status/palette color
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ SHADOWS ═══════════ -->
+  <section id="shadows">
+    <div class="section-title">Shadows & Focus</div>
+    <div class="demo-grid">
+      <div class="demo-box">
+        <div class="demo-label">shadow-sm</div>
+        <div style="background: var(--card); padding: var(--panel-pad); border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+          <span style="font-size: 13px;">Subtle lift</span>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 4px;"><code>--shadow-sm</code></div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">shadow-md</div>
+        <div style="background: var(--card); padding: var(--panel-pad); border-radius: var(--radius); box-shadow: var(--shadow-md);">
+          <span style="font-size: 13px;">Card hover</span>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 4px;"><code>--shadow-md</code></div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">shadow-lg</div>
+        <div style="background: var(--card); padding: var(--panel-pad); border-radius: var(--radius); box-shadow: var(--shadow-lg);">
+          <span style="font-size: 13px;">Dialog / modal</span>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 4px;"><code>--shadow-lg</code></div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">shadow-primary</div>
+        <button class="btn btn-primary" style="pointer-events: none; box-shadow: var(--shadow-primary);">Primærknapp</button>
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 4px;"><code>--shadow-primary</code></div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">focus-ring</div>
+        <input class="form-input" type="text" value="Fokusert" style="width: 100%; border-color: var(--primary); box-shadow: var(--focus-ring);">
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 4px;"><code>--focus-ring</code></div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">primary-hover</div>
+        <div class="swatches">
+          <div class="swatch swatch-sm">
+            <div class="swatch-color" style="background: var(--primary);"></div>
+            <div class="swatch-label">primary</div>
+          </div>
+          <div class="swatch swatch-sm">
+            <div class="swatch-color" style="background: var(--primary-hover);"></div>
+            <div class="swatch-label">primary-hover</div>
+            <div class="swatch-hex">#126b4a</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ CHARTS & TAGS ═══════════ -->
+  <section id="charts">
+    <div class="section-title">Chart Colors & Tags</div>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-md);">
+      Categorical colors for charts, visualizations, and informational tags.
+    </p>
+    <div class="two-col">
+      <div class="demo-box">
+        <div class="demo-label">Chart categorical</div>
+        <div class="swatches">
+          <div class="swatch swatch-sm">
+            <div class="swatch-color" style="background: var(--chart-indigo);"></div>
+            <div class="swatch-label">chart-indigo</div>
+            <div class="swatch-hex">#6366f1</div>
+          </div>
+          <div class="swatch swatch-sm">
+            <div class="swatch-color" style="background: var(--chart-blue);"></div>
+            <div class="swatch-label">chart-blue</div>
+            <div class="swatch-hex">#3b82f6</div>
+          </div>
+          <div class="swatch swatch-sm">
+            <div class="swatch-color" style="background: var(--chart-green);"></div>
+            <div class="swatch-label">chart-green</div>
+            <div class="swatch-hex">#22c55e</div>
+          </div>
+          <div class="swatch swatch-sm">
+            <div class="swatch-color" style="background: var(--chart-red);"></div>
+            <div class="swatch-label">chart-red</div>
+            <div class="swatch-hex">#ef4444</div>
+          </div>
+          <div class="swatch swatch-sm">
+            <div class="swatch-color" style="background: var(--chart-muted);"></div>
+            <div class="swatch-label">chart-muted</div>
+            <div class="swatch-hex">#cbd5e1</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Info tag</div>
+        <div class="row">
+          <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--tag-blue-bg); color: var(--tag-blue-text);">IFC4</span>
+          <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--tag-blue-bg); color: var(--tag-blue-text);">ReferenceView</span>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 4px;">
+          <code>--tag-blue-bg</code> + <code>--tag-blue-text</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ VIEWER ═══════════ -->
+  <section id="viewer">
+    <div class="section-title">Viewer (Dark Context)</div>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-md);">
+      Dark background tokens for the 3D viewer canvas and panels. Used in wireframes 02, 02b, 03.
+    </p>
+    <div class="swatches">
+      <div class="swatch swatch-sm">
+        <div class="swatch-color" style="background: var(--viewer-bg); border-color: var(--border);"></div>
+        <div class="swatch-label">viewer-bg</div>
+        <div class="swatch-hex">#0f1321</div>
+      </div>
+      <div class="swatch swatch-sm">
+        <div class="swatch-color" style="background: var(--viewer-panel); border-color: var(--border);"></div>
+        <div class="swatch-label">viewer-panel</div>
+        <div class="swatch-hex">#1a1f35</div>
+      </div>
+    </div>
+  </section>
+
+
   <!-- ═══════════ TYPOGRAPHY ═══════════ -->
   <section id="typography">
     <div class="section-title">Typography &mdash; Inter</div>
