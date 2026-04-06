@@ -1142,8 +1142,59 @@
           </div>
         </div>
 
-        <!-- CENTER: Classification Form -->
+        <!-- CENTER: 3D Viewer -->
+        <div class="tb-viewer-center">
+          <div class="viewer-panel">
+            <div class="viewer-header">
+              <span>3D Forhåndsvisning</span>
+              <button onclick="openFullscreen()" title="Fullskjerm (Shift+F)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
+              </button>
+            </div>
+            <div class="viewer-canvas">
+              <div class="viewer-grid"></div>
+              <div class="viewer-object"></div>
+              <div class="viewer-shortcut"><kbd>Shift</kbd> + <kbd>F</kbd> fullskjerm</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Info + Classification Form -->
         <div class="tb-form">
+          <!-- Info panel (moved here from old right column) -->
+          <div class="info-panel">
+            <div class="info-type-name">Basisvegg:Yttervegg 200mm</div>
+            <div class="info-badges">
+              <span class="info-badge ifc">IfcWallType</span>
+              <span class="info-badge ns3451">231 Yttervegg</span>
+              <span class="info-badge disc">ARK</span>
+              <span class="info-badge unit">m2</span>
+              <span class="info-badge count">84 instanser</span>
+            </div>
+            <div class="info-props">
+              <div class="info-prop-row">
+                <span class="info-prop-label">Totaltykkelse</span>
+                <span class="info-prop-value">247.2 mm</span>
+              </div>
+              <div class="info-prop-row">
+                <span class="info-prop-label">U-verdi</span>
+                <span class="info-prop-value">0.18 W/m2K</span>
+              </div>
+              <div class="info-prop-row">
+                <span class="info-prop-label">Brannklasse</span>
+                <span class="info-prop-value">REI 60</span>
+              </div>
+              <div class="info-prop-row">
+                <span class="info-prop-label">Etasjer</span>
+                <span class="info-prop-value">U1, 01, 02, 03, 04</span>
+              </div>
+              <div class="info-prop-row">
+                <span class="info-prop-label">TypeBank</span>
+                <span class="info-prop-value" style="color: var(--primary)">Koblet (3 prosjekter)</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Identity -->
           <div class="form-identity">
             <div class="form-type-name">Basisvegg:Yttervegg 200mm</div>
