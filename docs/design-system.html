@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprucelab Design System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      /* ── Core palette (Mindful Palettes No. 160) ── */
+      --silver: #D6D9D8;
+      --lavender: #C7CEE8;
+      --lime: #D0D34D;
+      --forest: #157954;
+      --navy: #21263A;
+
+      /* ── Semantic colors ── */
+      --bg: #eeeeed;
+      --bg-gradient: linear-gradient(135deg, #eeeeed 0%, #e4e6f0 50%, #eeeeed 100%);
+      --card: #ffffff;
+      --primary: #157954;
+      --primary-light: rgba(21, 121, 84, 0.1);
+      --accent: #D0D34D;
+      --text-primary: #21263A;
+      --text-secondary: #525d78;
+      --text-tertiary: #717b94;
+      --border: #d2d4d3;
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --radius: 0.75rem;
+
+      /* ── Spacing (8px base) ── */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 40px;
+      --panel-pad: 16px;
+      --card-gap: 16px;
+
+      /* ── Traffic lights ── */
+      --tl-green-bg: #dcfce7;  --tl-green-text: #166534;  --tl-green-dot: #22c55e;
+      --tl-yellow-bg: #fef9c3; --tl-yellow-text: #854d0e; --tl-yellow-dot: #eab308;
+      --tl-red-bg: #fee2e2;    --tl-red-text: #991b1b;    --tl-red-dot: #ef4444;
+      --tl-gray-bg: #f1f5f9;   --tl-gray-text: #94a3b8;
+
+      /* ── Mapping status ── */
+      --st-mapped-bg: #dcfce7;   --st-mapped-text: #166534;  --st-mapped-dot: #22c55e;
+      --st-pending-bg: #f1f5f9;  --st-pending-text: #64748b; --st-pending-dot: #94a3b8;
+      --st-review-bg: #fef9c3;   --st-review-text: #854d0e;  --st-review-dot: #eab308;
+      --st-followup-bg: #fee2e2; --st-followup-text: #991b1b; --st-followup-dot: #ef4444;
+      --st-ignored-bg: #f1f5f9;  --st-ignored-text: #94a3b8; --st-ignored-dot: #cbd5e1;
+
+      /* ── Discipline colors ── */
+      --disc-ark-bg: #e8f0fe; --disc-ark-text: #1a56db;
+      --disc-rib-bg: #fef3c7; --disc-rib-text: #92400e;
+      --disc-riv-bg: #d1fae5; --disc-riv-text: #065f46;
+      --disc-rie-bg: #fce7f3; --disc-rie-text: #9d174d;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-feature-settings: 'rlig' 1, 'calt' 1;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(199, 206, 232, 0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(199, 206, 232, 0.25); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(199, 206, 232, 0.4); }
+
+    /* ═══ LAYOUT ═══ */
+    .accent-bar { height: 3px; background: linear-gradient(to right, var(--lime), var(--forest), var(--navy)); }
+    .page { max-width: 1200px; margin: 0 auto; padding: var(--space-xl) var(--space-2xl); }
+    .page-title { font-size: 28px; font-weight: 700; margin-bottom: var(--space-xs); }
+    .page-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: var(--space-2xl); }
+
+    section { margin-bottom: var(--space-2xl); }
+    .section-title {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-tertiary);
+      margin-bottom: var(--space-md); padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ═══ SWATCH GRIDS ═══ */
+    .swatches { display: flex; flex-wrap: wrap; gap: var(--space-md); }
+    .swatch {
+      display: flex; flex-direction: column; align-items: center; gap: var(--space-sm);
+    }
+    .swatch-color {
+      width: 72px; height: 72px; border-radius: var(--radius);
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .swatch-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .swatch-hex { font-size: 10px; color: var(--text-tertiary); font-family: 'Fira Code', monospace; }
+
+    .swatch-sm .swatch-color { width: 48px; height: 48px; border-radius: 8px; }
+    .swatch-sm .swatch-label { font-size: 10px; }
+    .swatch-sm .swatch-hex { font-size: 9px; }
+
+    /* ═══ TOKEN TABLE ═══ */
+    .token-table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+    }
+    .token-table th {
+      text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-tertiary); padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--border);
+    }
+    .token-table td {
+      padding: var(--space-sm) var(--space-md); border-bottom: 1px solid rgba(0,0,0,0.04);
+      vertical-align: middle;
+    }
+    .token-table code {
+      font-family: 'Fira Code', monospace; font-size: 11px;
+      background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 4px;
+    }
+
+    /* ═══ SPACING DEMO ═══ */
+    .spacing-row { display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-sm); }
+    .spacing-bar { height: 20px; background: var(--primary-light); border-radius: 4px; border: 1px solid rgba(21,121,84,0.15); }
+    .spacing-label { font-size: 11px; color: var(--text-tertiary); width: 100px; flex-shrink: 0; font-family: 'Fira Code', monospace; }
+    .spacing-value { font-size: 10px; color: var(--text-tertiary); width: 40px; flex-shrink: 0; text-align: right; }
+
+    /* ═══ TYPOGRAPHY DEMO ═══ */
+    .typo-row { display: flex; align-items: baseline; gap: var(--space-xl); margin-bottom: var(--space-lg); }
+    .typo-meta { width: 200px; flex-shrink: 0; }
+    .typo-meta-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .typo-meta-spec { font-size: 10px; color: var(--text-tertiary); font-family: 'Fira Code', monospace; margin-top: 2px; }
+    .typo-sample { flex: 1; }
+
+    /* ═══ COMPONENT DEMOS ═══ */
+    .demo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--card-gap); }
+    .demo-box {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: var(--panel-pad); display: flex; flex-direction: column; gap: var(--space-md);
+    }
+    .demo-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-tertiary);
+    }
+
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
+
+    /* ═══ COMPONENT STYLES ═══ */
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: none; border-radius: var(--radius); cursor: pointer;
+      font-family: inherit; font-weight: 600; transition: all 0.15s;
+    }
+    .btn-primary {
+      padding: 10px 20px; font-size: 13px;
+      background: var(--primary); color: white;
+    }
+    .btn-primary:hover { background: #126b4a; box-shadow: 0 4px 12px rgba(21,121,84,0.3); }
+    .btn-secondary {
+      padding: 10px 20px; font-size: 13px;
+      background: transparent; color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-ghost {
+      padding: 8px 16px; font-size: 13px; font-weight: 500;
+      background: transparent; color: var(--text-secondary);
+    }
+    .btn-ghost:hover { background: rgba(0,0,0,0.04); }
+    .btn-sm {
+      padding: 7px 14px; font-size: 12px; font-weight: 500;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: var(--panel-pad); transition: all 0.2s;
+    }
+    .card-hover:hover {
+      border-color: rgba(21, 121, 84, 0.3);
+      box-shadow: 0 8px 24px rgba(33, 38, 58, 0.08);
+      transform: translateY(-1px);
+    }
+    .card-title { font-size: 15px; font-weight: 600; }
+    .card-desc { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .card-accent-top { border-top: 2px solid var(--primary); }
+
+    /* Glass card (sidebar style) */
+    .card-glass {
+      background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border); border-radius: var(--radius);
+      padding: var(--panel-pad);
+    }
+
+    /* Traffic light pills */
+    .tl-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+    }
+    .tl-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    .tl-green { background: var(--tl-green-bg); color: var(--tl-green-text); }
+    .tl-green .tl-dot { background: var(--tl-green-dot); }
+    .tl-yellow { background: var(--tl-yellow-bg); color: var(--tl-yellow-text); }
+    .tl-yellow .tl-dot { background: var(--tl-yellow-dot); }
+    .tl-red { background: var(--tl-red-bg); color: var(--tl-red-text); }
+    .tl-red .tl-dot { background: var(--tl-red-dot); }
+    .tl-gray { background: var(--tl-gray-bg); color: var(--tl-gray-text); }
+
+    /* Status pills (mapping) */
+    .st-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+    }
+    .st-mapped { background: var(--st-mapped-bg); color: var(--st-mapped-text); }
+    .st-pending { background: var(--st-pending-bg); color: var(--st-pending-text); }
+    .st-review { background: var(--st-review-bg); color: var(--st-review-text); }
+    .st-followup { background: var(--st-followup-bg); color: var(--st-followup-text); }
+    .st-ignored { background: var(--st-ignored-bg); color: var(--st-ignored-text); }
+    .st-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Discipline tags */
+    .disc-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;
+    }
+    .disc-ark { background: var(--disc-ark-bg); color: var(--disc-ark-text); }
+    .disc-rib { background: var(--disc-rib-bg); color: var(--disc-rib-text); }
+    .disc-riv { background: var(--disc-riv-bg); color: var(--disc-riv-text); }
+    .disc-rie { background: var(--disc-rie-bg); color: var(--disc-rie-text); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 10px; border-radius: 9999px;
+      font-size: 11px; font-weight: 500;
+      border: 1px solid var(--border); color: var(--text-secondary);
+    }
+    .badge-primary { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+    /* Form inputs */
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .form-input {
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 13px; font-family: inherit; background: var(--bg);
+      transition: all 0.15s; outline: none; color: var(--text-primary);
+    }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,121,84,0.1); }
+    .form-input::placeholder { color: var(--text-tertiary); }
+
+    /* Progress bar */
+    .progress-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #e5e7eb; }
+    .progress-fill { height: 100%; transition: width 0.4s ease; }
+
+    /* Section label (sidebar/nav style) */
+    .section-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-tertiary);
+      padding: 6px 12px;
+    }
+
+    /* Nav item */
+    .nav-item {
+      display: flex; align-items: center; gap: var(--space-sm);
+      padding: 8px 12px; font-size: 13px; color: var(--text-secondary);
+      border-radius: 6px; transition: all 0.15s; cursor: pointer; border: none;
+      background: transparent; font-family: inherit; width: 100%; text-align: left;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.6); color: var(--text-primary); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 500; }
+
+    /* Focus ring */
+    .focus-demo:focus-visible {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(21,121,84,0.1);
+    }
+
+    /* Dialog/modal */
+    .dialog-demo {
+      max-width: 400px; background: var(--card); border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(33, 38, 58, 0.2); padding: var(--space-lg);
+    }
+
+    /* Kbd */
+    kbd {
+      display: inline-block; padding: 1px 6px; border: 1px solid var(--border);
+      border-radius: 4px; font-size: 10px; font-family: 'Fira Code', monospace;
+      background: var(--bg); color: var(--text-secondary); line-height: 1.6;
+    }
+
+    /* Two-col layout for some sections */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--card-gap); }
+    @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ═══ EFFECTS SECTION ═══ */
+    .effects-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--card-gap); }
+    @media (max-width: 900px) { .effects-grid { grid-template-columns: 1fr; } }
+
+    .toc { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-bottom: var(--space-xl); }
+    .toc a {
+      font-size: 12px; color: var(--text-secondary); text-decoration: none;
+      padding: 4px 12px; border: 1px solid var(--border); border-radius: 9999px;
+      transition: all 0.15s;
+    }
+    .toc a:hover { border-color: var(--primary); color: var(--primary); }
+  </style>
+</head>
+<body>
+
+<div class="accent-bar"></div>
+
+<div class="page">
+  <h1 class="page-title">Sprucelab Design System</h1>
+  <p class="page-subtitle">Canonical reference for colors, typography, spacing, and components. All values match wireframe CSS variables.</p>
+
+  <nav class="toc">
+    <a href="#palette">Palette</a>
+    <a href="#traffic-lights">Traffic Lights</a>
+    <a href="#status">Status</a>
+    <a href="#disciplines">Disciplines</a>
+    <a href="#typography">Typography</a>
+    <a href="#spacing">Spacing</a>
+    <a href="#buttons">Buttons</a>
+    <a href="#cards">Cards</a>
+    <a href="#pills">Pills & Tags</a>
+    <a href="#forms">Forms</a>
+    <a href="#nav">Navigation</a>
+    <a href="#effects">Effects</a>
+    <a href="#rules">Rules</a>
+  </nav>
+
+
+  <!-- ═══════════ PALETTE ═══════════ -->
+  <section id="palette">
+    <div class="section-title">Core Palette &mdash; Mindful Palettes No. 160</div>
+    <div class="swatches">
+      <div class="swatch">
+        <div class="swatch-color" style="background: var(--silver);"></div>
+        <div class="swatch-label">Silver</div>
+        <div class="swatch-hex">#D6D9D8</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: var(--lavender);"></div>
+        <div class="swatch-label">Lavender</div>
+        <div class="swatch-hex">#C7CEE8</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: var(--lime);"></div>
+        <div class="swatch-label">Lime</div>
+        <div class="swatch-hex">#D0D34D</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: var(--forest);"></div>
+        <div class="swatch-label">Forest</div>
+        <div class="swatch-hex">#157954</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: var(--navy);"></div>
+        <div class="swatch-label">Navy</div>
+        <div class="swatch-hex">#21263A</div>
+      </div>
+    </div>
+
+    <div style="margin-top: var(--space-lg);">
+      <div class="demo-label" style="margin-bottom: var(--space-sm);">Semantic colors</div>
+      <div class="swatches">
+        <div class="swatch swatch-sm">
+          <div class="swatch-color" style="background: var(--bg);"></div>
+          <div class="swatch-label">bg</div>
+          <div class="swatch-hex">#eeeeed</div>
+        </div>
+        <div class="swatch swatch-sm">
+          <div class="swatch-color" style="background: var(--card);"></div>
+          <div class="swatch-label">card</div>
+          <div class="swatch-hex">#ffffff</div>
+        </div>
+        <div class="swatch swatch-sm">
+          <div class="swatch-color" style="background: var(--text-primary);"></div>
+          <div class="swatch-label">text-primary</div>
+          <div class="swatch-hex">#21263A</div>
+        </div>
+        <div class="swatch swatch-sm">
+          <div class="swatch-color" style="background: var(--text-secondary);"></div>
+          <div class="swatch-label">text-secondary</div>
+          <div class="swatch-hex">#525d78</div>
+        </div>
+        <div class="swatch swatch-sm">
+          <div class="swatch-color" style="background: var(--text-tertiary);"></div>
+          <div class="swatch-label">text-tertiary</div>
+          <div class="swatch-hex">#717b94</div>
+        </div>
+        <div class="swatch swatch-sm">
+          <div class="swatch-color" style="background: var(--border);"></div>
+          <div class="swatch-label">border</div>
+          <div class="swatch-hex">#d2d4d3</div>
+        </div>
+        <div class="swatch swatch-sm">
+          <div class="swatch-color" style="background: var(--primary-light);"></div>
+          <div class="swatch-label">primary-light</div>
+          <div class="swatch-hex">forest @ 10%</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: var(--space-lg);">
+      <div class="demo-label" style="margin-bottom: var(--space-sm);">Gradients</div>
+      <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+        <div style="width: 200px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, #D6D9D8, #C7CEE8);" title="Silver → Lavender"></div>
+        <div style="width: 200px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, #C7CEE8, #D0D34D);" title="Lavender → Lime"></div>
+        <div style="width: 200px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, #D0D34D, #157954, #21263A);" title="Lime → Forest → Navy (header accent)"></div>
+        <div style="width: 200px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, #157954, #21263A);" title="Forest → Navy"></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ TRAFFIC LIGHTS ═══════════ -->
+  <section id="traffic-lights">
+    <div class="section-title">Traffic Light System</div>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-md);">
+      Used for validation results, quality indicators, compliance status. Each level has <code>bg</code>, <code>text</code>, and <code>dot</code> tokens.
+    </p>
+    <table class="token-table">
+      <thead>
+        <tr><th>Level</th><th>Background</th><th>Text</th><th>Dot</th><th>Preview</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Green</strong> &mdash; OK / Compliant</td>
+          <td><code>--tl-green-bg</code></td>
+          <td><code>--tl-green-text</code></td>
+          <td><code>--tl-green-dot</code></td>
+          <td><span class="tl-pill tl-green"><span class="tl-dot"></span> OK</span></td>
+        </tr>
+        <tr>
+          <td><strong>Yellow</strong> &mdash; Warning / Partial</td>
+          <td><code>--tl-yellow-bg</code></td>
+          <td><code>--tl-yellow-text</code></td>
+          <td><code>--tl-yellow-dot</code></td>
+          <td><span class="tl-pill tl-yellow"><span class="tl-dot"></span> Delvis</span></td>
+        </tr>
+        <tr>
+          <td><strong>Red</strong> &mdash; Error / Non-compliant</td>
+          <td><code>--tl-red-bg</code></td>
+          <td><code>--tl-red-text</code></td>
+          <td><code>--tl-red-dot</code></td>
+          <td><span class="tl-pill tl-red"><span class="tl-dot"></span> Avvik</span></td>
+        </tr>
+        <tr>
+          <td><strong>Gray</strong> &mdash; N/A / Not checked</td>
+          <td><code>--tl-gray-bg</code></td>
+          <td><code>--tl-gray-text</code></td>
+          <td>&mdash;</td>
+          <td><span class="tl-pill tl-gray">Ikke sjekket</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+
+  <!-- ═══════════ STATUS ═══════════ -->
+  <section id="status">
+    <div class="section-title">Mapping Status Tokens</div>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-md);">
+      Used in the Type Browser for classification workflow status. Built on top of traffic light tokens.
+    </p>
+    <div class="row" style="gap: var(--space-md);">
+      <span class="st-pill st-mapped"><span class="st-dot" style="background: var(--st-mapped-dot);"></span> Kartlagt</span>
+      <span class="st-pill st-pending"><span class="st-dot" style="background: var(--st-pending-dot);"></span> Ventende</span>
+      <span class="st-pill st-review"><span class="st-dot" style="background: var(--st-review-dot);"></span> Gjennomgang</span>
+      <span class="st-pill st-followup"><span class="st-dot" style="background: var(--st-followup-dot);"></span> Oppfølging</span>
+      <span class="st-pill st-ignored"><span class="st-dot" style="background: var(--st-ignored-dot);"></span> Ignorert</span>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ DISCIPLINES ═══════════ -->
+  <section id="disciplines">
+    <div class="section-title">Discipline Tags</div>
+    <div class="row" style="gap: var(--space-md);">
+      <span class="disc-tag disc-ark">ARK</span>
+      <span class="disc-tag disc-rib">RIB</span>
+      <span class="disc-tag disc-riv">RIV</span>
+      <span class="disc-tag disc-rie">RIE</span>
+    </div>
+    <table class="token-table" style="margin-top: var(--space-md); max-width: 600px;">
+      <thead><tr><th>Discipline</th><th>Background</th><th>Text</th></tr></thead>
+      <tbody>
+        <tr><td>ARK (Arkitekt)</td><td><code>#e8f0fe</code></td><td><code>#1a56db</code></td></tr>
+        <tr><td>RIB (Konstruksjon)</td><td><code>#fef3c7</code></td><td><code>#92400e</code></td></tr>
+        <tr><td>RIV (VVS)</td><td><code>#d1fae5</code></td><td><code>#065f46</code></td></tr>
+        <tr><td>RIE (Elektro)</td><td><code>#fce7f3</code></td><td><code>#9d174d</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+
+  <!-- ═══════════ TYPOGRAPHY ═══════════ -->
+  <section id="typography">
+    <div class="section-title">Typography &mdash; Inter</div>
+
+    <div class="typo-row">
+      <div class="typo-meta">
+        <div class="typo-meta-name">Page Title</div>
+        <div class="typo-meta-spec">28px / 700 / navy</div>
+      </div>
+      <div class="typo-sample" style="font-size: 28px; font-weight: 700;">Prosjektoversikt</div>
+    </div>
+
+    <div class="typo-row">
+      <div class="typo-meta">
+        <div class="typo-meta-name">Card Title</div>
+        <div class="typo-meta-spec">15px / 600 / navy</div>
+      </div>
+      <div class="typo-sample" style="font-size: 15px; font-weight: 600;">Modellstatus</div>
+    </div>
+
+    <div class="typo-row">
+      <div class="typo-meta">
+        <div class="typo-meta-name">Section Label</div>
+        <div class="typo-meta-spec">10-11px / 600 / uppercase<br>tracking: 0.06em / tertiary</div>
+      </div>
+      <div class="typo-sample" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary);">Etasjer og soner</div>
+    </div>
+
+    <div class="typo-row">
+      <div class="typo-meta">
+        <div class="typo-meta-name">Body</div>
+        <div class="typo-meta-spec">13px / 400 / secondary</div>
+      </div>
+      <div class="typo-sample" style="font-size: 13px; color: var(--text-secondary);">Modellen inneholder 357 unike typer fordelt på 12 IFC-klasser. 214 er kartlagt med NS3451-kode.</div>
+    </div>
+
+    <div class="typo-row">
+      <div class="typo-meta">
+        <div class="typo-meta-name">Label (Form)</div>
+        <div class="typo-meta-spec">12px / 600 / primary</div>
+      </div>
+      <div class="typo-sample" style="font-size: 12px; font-weight: 600;">NS3451-kode</div>
+    </div>
+
+    <div class="typo-row">
+      <div class="typo-meta">
+        <div class="typo-meta-name">Small / Meta</div>
+        <div class="typo-meta-spec">10-11px / 500 / tertiary</div>
+      </div>
+      <div class="typo-sample" style="font-size: 11px; font-weight: 500; color: var(--text-tertiary);">Sist oppdatert 2026-04-01 &middot; versjon 3</div>
+    </div>
+
+    <div class="typo-row">
+      <div class="typo-meta">
+        <div class="typo-meta-name">Metric / KPI</div>
+        <div class="typo-meta-spec">28-32px / 700 / primary<br>tabular-nums</div>
+      </div>
+      <div class="typo-sample" style="font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums;">357</div>
+    </div>
+
+    <div style="margin-top: var(--space-md);">
+      <div class="demo-label" style="margin-bottom: var(--space-sm);">Font weights</div>
+      <div class="row" style="gap: var(--space-xl); font-size: 14px;">
+        <span style="font-weight: 400;">400 Regular</span>
+        <span style="font-weight: 500;">500 Medium</span>
+        <span style="font-weight: 600;">600 Semibold</span>
+        <span style="font-weight: 700;">700 Bold</span>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ SPACING ═══════════ -->
+  <section id="spacing">
+    <div class="section-title">Spacing &mdash; 8px base grid</div>
+
+    <div class="spacing-row">
+      <div class="spacing-label">--space-xs</div>
+      <div class="spacing-bar" style="width: 4px;"></div>
+      <div class="spacing-value">4px</div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-label">--space-sm</div>
+      <div class="spacing-bar" style="width: 8px;"></div>
+      <div class="spacing-value">8px</div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-label">--space-md</div>
+      <div class="spacing-bar" style="width: 16px;"></div>
+      <div class="spacing-value">16px</div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-label">--space-lg</div>
+      <div class="spacing-bar" style="width: 24px;"></div>
+      <div class="spacing-value">24px</div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-label">--space-xl</div>
+      <div class="spacing-bar" style="width: 32px;"></div>
+      <div class="spacing-value">32px</div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-label">--space-2xl</div>
+      <div class="spacing-bar" style="width: 40px;"></div>
+      <div class="spacing-value">40px</div>
+    </div>
+
+    <div style="margin-top: var(--space-lg);">
+      <div class="demo-label" style="margin-bottom: var(--space-sm);">Tailwind mapping</div>
+      <table class="token-table" style="max-width: 500px;">
+        <thead><tr><th>Token</th><th>Tailwind</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>--space-xs</code></td><td><code>p-1</code> / <code>gap-1</code></td><td>4px</td></tr>
+          <tr><td><code>--space-sm</code></td><td><code>p-2</code> / <code>gap-2</code></td><td>8px</td></tr>
+          <tr><td><code>--space-md</code></td><td><code>p-4</code> / <code>gap-4</code></td><td>16px</td></tr>
+          <tr><td><code>--space-lg</code></td><td><code>p-6</code> / <code>gap-6</code></td><td>24px</td></tr>
+          <tr><td><code>--space-xl</code></td><td><code>p-8</code> / <code>gap-8</code></td><td>32px</td></tr>
+          <tr><td><code>--space-2xl</code></td><td><code>p-10</code> / <code>gap-10</code></td><td>40px</td></tr>
+          <tr><td><code>--panel-pad</code></td><td><code>p-4</code></td><td>16px</td></tr>
+          <tr><td><code>--card-gap</code></td><td><code>gap-4</code></td><td>16px</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: var(--space-lg);">
+      <div class="demo-label" style="margin-bottom: var(--space-sm);">Other constants</div>
+      <table class="token-table" style="max-width: 400px;">
+        <thead><tr><th>Token</th><th>Value</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>--radius</code></td><td>12px</td><td>Card / button corners</td></tr>
+          <tr><td><code>--sidebar-w</code></td><td>256px</td><td>Sidebar width</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ BUTTONS ═══════════ -->
+  <section id="buttons">
+    <div class="section-title">Buttons</div>
+    <div class="demo-grid">
+      <div class="demo-box">
+        <div class="demo-label">Primary</div>
+        <div class="row">
+          <button class="btn btn-primary">Lagre</button>
+          <button class="btn btn-primary btn-sm">Eksporter</button>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          bg: forest, text: white, radius: 0.75rem<br>
+          hover: darker + shadow
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Secondary (outline)</div>
+        <div class="row">
+          <button class="btn btn-secondary">Avbryt</button>
+          <button class="btn btn-secondary btn-sm">Filtrer</button>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          bg: transparent, border: --border<br>
+          hover: border-color + text → forest
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Ghost</div>
+        <div class="row">
+          <button class="btn btn-ghost">Tilbake</button>
+          <button class="btn btn-ghost btn-sm">Vis alle <kbd>A</kbd></button>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          bg: transparent, no border<br>
+          hover: bg rgba(0,0,0,0.04)
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ CARDS ═══════════ -->
+  <section id="cards">
+    <div class="section-title">Cards</div>
+    <div class="demo-grid">
+      <div class="demo-box">
+        <div class="demo-label">Standard card</div>
+        <div class="card">
+          <div class="card-title">Veggtyper</div>
+          <div class="card-desc">43 typer, 12 kartlagt</div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          bg: white, border: --border, radius: 0.75rem<br>
+          padding: --panel-pad (16px)
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Card with hover</div>
+        <div class="card card-hover" style="cursor: pointer;">
+          <div class="card-title">Grønland 55</div>
+          <div class="card-desc">Sist oppdatert i dag</div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          hover: translateY(-1px), border → forest@30%<br>
+          shadow: 0 8px 24px navy@8%
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Card with accent top</div>
+        <div class="card card-accent-top">
+          <div class="card-title">Typestatus</div>
+          <div class="card-desc">2px solid forest top border</div>
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Glass card (sidebar panels)</div>
+        <div class="card-glass">
+          <div class="card-title">Navigasjon</div>
+          <div class="card-desc">backdrop-filter: blur(20px)</div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          bg: white@60%, blur 20px<br>
+          Used for sidebar and overlay panels only
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ PILLS & TAGS ═══════════ -->
+  <section id="pills">
+    <div class="section-title">Pills, Badges & Tags</div>
+    <div class="two-col">
+      <div class="demo-box">
+        <div class="demo-label">Traffic light pills</div>
+        <div class="row">
+          <span class="tl-pill tl-green"><span class="tl-dot"></span> OK</span>
+          <span class="tl-pill tl-yellow"><span class="tl-dot"></span> Delvis</span>
+          <span class="tl-pill tl-red"><span class="tl-dot"></span> Avvik</span>
+          <span class="tl-pill tl-gray">N/A</span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          11px / 600, 6px dot, 2px 8px padding, radius: 4px
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Mapping status</div>
+        <div class="row">
+          <span class="st-pill st-mapped"><span class="st-dot" style="background: var(--st-mapped-dot);"></span> Kartlagt</span>
+          <span class="st-pill st-pending"><span class="st-dot" style="background: var(--st-pending-dot);"></span> Ventende</span>
+          <span class="st-pill st-review"><span class="st-dot" style="background: var(--st-review-dot);"></span> Gjennomgang</span>
+          <span class="st-pill st-followup"><span class="st-dot" style="background: var(--st-followup-dot);"></span> Oppfølging</span>
+          <span class="st-pill st-ignored"><span class="st-dot" style="background: var(--st-ignored-dot);"></span> Ignorert</span>
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Discipline tags</div>
+        <div class="row">
+          <span class="disc-tag disc-ark">ARK</span>
+          <span class="disc-tag disc-rib">RIB</span>
+          <span class="disc-tag disc-riv">RIV</span>
+          <span class="disc-tag disc-rie">RIE</span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          10px / 600, uppercase, tracking 0.03em, radius: 4px
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Badges</div>
+        <div class="row">
+          <span class="badge">IFC4</span>
+          <span class="badge badge-primary">3 modeller</span>
+          <span class="badge" style="gap: 6px;">v2.1 <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--tl-green-dot);"></span></span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          11px / 500, pill shape (radius: full), 1px border
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ FORMS ═══════════ -->
+  <section id="forms">
+    <div class="section-title">Form Elements</div>
+    <div class="two-col">
+      <div class="demo-box">
+        <div class="demo-label">Input field</div>
+        <div class="form-group">
+          <label class="form-label">NS3451-kode</label>
+          <input class="form-input focus-demo" type="text" placeholder="f.eks. 234">
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">
+          13px, bg: --bg, radius: 8px, padding: 10px 12px<br>
+          focus: border → forest, ring 3px forest@10%
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Select / dropdown</div>
+        <div class="form-group">
+          <label class="form-label">Disiplin</label>
+          <select class="form-input focus-demo">
+            <option>Velg disiplin...</option>
+            <option>ARK - Arkitekt</option>
+            <option>RIB - Konstruksjon</option>
+            <option>RIV - VVS</option>
+            <option>RIE - Elektro</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ PROGRESS ═══════════ -->
+  <section>
+    <div class="section-title">Progress Bars</div>
+    <div style="max-width: 500px; display: flex; flex-direction: column; gap: var(--space-md);">
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px;">
+          <span>Kartleggingsstatus</span>
+          <span>60%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: 42%; background: var(--st-mapped-dot);"></div>
+          <div class="progress-fill" style="width: 12%; background: var(--st-review-dot);"></div>
+          <div class="progress-fill" style="width: 6%; background: var(--st-followup-dot);"></div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-tertiary); margin-top: 4px;">
+          Height: 6px, radius: 3px, segmented fills for multi-status
+        </div>
+      </div>
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px;">
+          <span>Verifisering</span>
+          <span>85%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: 85%; background: var(--forest);"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ NAVIGATION ═══════════ -->
+  <section id="nav">
+    <div class="section-title">Navigation</div>
+    <div class="two-col">
+      <div class="demo-box" style="background: var(--glass-bg); backdrop-filter: blur(12px);">
+        <div class="demo-label">Sidebar nav items</div>
+        <div class="section-label">Prosjekt</div>
+        <button class="nav-item active">
+          <span style="width: 16px; text-align: center;">&#9632;</span>
+          Dashboard
+        </button>
+        <button class="nav-item">
+          <span style="width: 16px; text-align: center;">&#9633;</span>
+          Modeller
+        </button>
+        <button class="nav-item">
+          <span style="width: 16px; text-align: center;">&#9633;</span>
+          Typer
+        </button>
+        <div class="section-label" style="margin-top: var(--space-sm);">Verktøy</div>
+        <button class="nav-item">
+          <span style="width: 16px; text-align: center;">&#9633;</span>
+          3D-visning
+        </button>
+        <div style="font-size: 11px; color: var(--text-tertiary); margin-top: var(--space-sm);">
+          13px, padding: 8px 12px, radius: 6px<br>
+          active: bg primary-light, text forest, weight 500<br>
+          section label: 10px / 600 / uppercase / 0.08em tracking
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Keyboard shortcuts</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Lagre og neste</span>
+            <kbd>A</kbd>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Flagg for oppfølging</span>
+            <kbd>F</kbd>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Ignorer</span>
+            <kbd>I</kbd>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Navigere</span>
+            <span><kbd>&uarr;</kbd> <kbd>&darr;</kbd></span>
+          </div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary); margin-top: var(--space-sm);">
+          kbd: 10px mono, bg: --bg, border: --border, radius: 4px
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ EFFECTS ═══════════ -->
+  <section id="effects">
+    <div class="section-title">Effects</div>
+    <div class="effects-grid">
+      <div class="demo-box">
+        <div class="demo-label">Top accent bar</div>
+        <div style="height: 3px; background: linear-gradient(to right, var(--lime), var(--forest), var(--navy)); border-radius: 2px;"></div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          3px, gradient: lime → forest → navy<br>
+          Present at top of every main content area
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Glassmorphism</div>
+        <div style="background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: var(--panel-pad);">
+          <span style="font-size: 13px;">Glass panel</span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          bg: white@60%, blur(20px)<br>
+          border: white@30%<br>
+          Use for: sidebar, floating panels
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Card hover shadow</div>
+        <div class="card card-hover" style="cursor: pointer;">
+          <span style="font-size: 13px;">Hover me</span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          translateY(-1px)<br>
+          border → forest@30%<br>
+          shadow: 0 8px 24px navy@8%<br>
+          transition: all 0.2s
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Focus ring</div>
+        <input class="form-input focus-demo" type="text" value="Tab to me" style="width: 100%;">
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          border → forest<br>
+          ring: 0 0 0 3px forest@10%
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Card accent variants</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="card" style="border-top: 2px solid var(--forest); padding: 8px 12px; font-size: 12px;">Forest accent</div>
+          <div class="card" style="border-top: 2px solid var(--lime); padding: 8px 12px; font-size: 12px;">Lime accent</div>
+          <div class="card" style="border-top: 2px solid var(--lavender); padding: 8px 12px; font-size: 12px;">Lavender accent</div>
+        </div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Scrollbar</div>
+        <div style="height: 80px; overflow-y: auto; font-size: 12px; color: var(--text-secondary); line-height: 2;">
+          <div>Etasje 1 &mdash; Kjeller</div>
+          <div>Etasje 2 &mdash; Plan 1</div>
+          <div>Etasje 3 &mdash; Plan 2</div>
+          <div>Etasje 4 &mdash; Plan 3</div>
+          <div>Etasje 5 &mdash; Plan 4</div>
+          <div>Etasje 6 &mdash; Loft</div>
+          <div>Etasje 7 &mdash; Tak</div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-tertiary);">
+          6px wide, lavender-tinted, radius: 3px
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ RULES ═══════════ -->
+  <section id="rules">
+    <div class="section-title">Rules & Decisions</div>
+    <div class="demo-grid">
+      <div class="demo-box">
+        <div class="demo-label">Do</div>
+        <ul style="font-size: 12px; color: var(--text-secondary); padding-left: 16px; display: flex; flex-direction: column; gap: 4px;">
+          <li>Use CSS variable tokens for all status colors</li>
+          <li>Use 8px grid for spacing (multiples of 4px)</li>
+          <li>Use <code>clamp()</code> for dashboard text/icons</li>
+          <li>Use <code>--radius</code> (12px) for cards and buttons</li>
+          <li>Glassmorphism for sidebar and floating panels only</li>
+          <li>Cards are opaque white with subtle border</li>
+          <li>Top accent bar on every main content area</li>
+          <li>Use traffic light tokens, not raw Tailwind colors</li>
+        </ul>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Don't</div>
+        <ul style="font-size: 12px; color: var(--text-secondary); padding-left: 16px; display: flex; flex-direction: column; gap: 4px;">
+          <li>Don't use <code>bg-emerald-50</code> / <code>text-amber-600</code> for status</li>
+          <li>Don't apply glassmorphism to regular content cards</li>
+          <li>Don't use Tremor components in new code</li>
+          <li>Don't hardcode Norwegian strings (use i18n)</li>
+          <li>Don't use shadows heavier than the card hover shadow</li>
+          <li>Don't mix font sizes outside the 6-role hierarchy</li>
+          <li>Don't use border-radius smaller than 4px or larger than 12px (except pills)</li>
+        </ul>
+      </div>
+      <div class="demo-box">
+        <div class="demo-label">Transition defaults</div>
+        <table class="token-table" style="font-size: 11px;">
+          <tbody>
+            <tr><td>Color / border</td><td><code>0.15s ease</code></td></tr>
+            <tr><td>Transform / shadow</td><td><code>0.2s ease</code></td></tr>
+            <tr><td>Progress bars</td><td><code>0.4s ease</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+  <footer style="padding: var(--space-xl) 0; border-top: 1px solid var(--border); margin-top: var(--space-xl); font-size: 11px; color: var(--text-tertiary);">
+    Sprucelab Design System &mdash; Last updated 2026-04-06 &mdash; Based on wireframes v1 (docs/wireframes/)
+  </footer>
+</div>
+
+</body>
+</html>
