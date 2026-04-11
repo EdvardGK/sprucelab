@@ -380,6 +380,86 @@
     }
     .panel-left-footer strong { color: var(--text-secondary); font-weight: 600; }
 
+    /* ── Left panel tabs ── */
+    .panel-left-tabs {
+      display: flex; background: var(--card);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .plt-tab {
+      flex: 1; padding: 7px 2px 5px;
+      font-size: 8px; font-weight: 600; text-align: center;
+      color: var(--text-tertiary); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.12s; user-select: none;
+      white-space: nowrap; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .plt-tab:hover { color: var(--text-secondary); background: rgba(0,0,0,0.015); }
+    .plt-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-pane { display: none; flex-direction: column; gap: 8px; }
+    .tab-pane.active { display: flex; }
+
+    /* Model cards (Modeller tab) */
+    .model-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px; cursor: pointer; transition: all 0.1s;
+    }
+    .model-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+    .mc-header { display: flex; align-items: center; gap: 5px; }
+    .mc-disc {
+      font-size: 7.5px; font-weight: 700; text-transform: uppercase;
+      padding: 1px 5px; border-radius: 3px; line-height: 13px; flex-shrink: 0;
+    }
+    .mc-disc.ark { background: var(--disc-ark-bg); color: var(--disc-ark-text); }
+    .mc-disc.rib { background: var(--disc-rib-bg); color: var(--disc-rib-text); }
+    .mc-disc.riv { background: var(--disc-riv-bg); color: var(--disc-riv-text); }
+    .mc-disc.rie { background: var(--disc-rie-bg); color: var(--disc-rie-text); }
+    .mc-name { flex: 1; font-size: 10.5px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mc-ver { font-size: 8.5px; font-weight: 600; color: var(--primary); background: var(--primary-light); padding: 1px 4px; border-radius: 3px; }
+    .mc-row { display: flex; gap: 8px; margin-top: 4px; font-size: 9px; color: var(--text-tertiary); align-items: center; }
+    .mc-v { font-size: 9px; font-weight: 600; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 2px; }
+    .mc-v.ok { color: var(--tl-green-text); }
+    .mc-v.warn { color: var(--tl-yellow-text); }
+    .mc-v.fail { color: var(--tl-red-text); }
+    .mc-v::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+    .mc-v.ok::before { background: var(--tl-green-dot); }
+    .mc-v.warn::before { background: var(--tl-yellow-dot); }
+    .mc-v.fail::before { background: var(--tl-red-dot); }
+
+    /* System items (System tab) */
+    .sys-group { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .sys-header {
+      font-size: 9px; font-weight: 600; color: var(--text-secondary);
+      padding: 6px 8px; display: flex; align-items: center; gap: 4px;
+      cursor: pointer; transition: background 0.08s;
+    }
+    .sys-header:hover { background: rgba(0,0,0,0.015); }
+    .sys-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 3px 8px 3px 22px; font-size: 9.5px; color: var(--text-secondary);
+      cursor: pointer; transition: background 0.08s; border-top: 1px solid var(--border-light);
+    }
+    .sys-item:hover { background: rgba(0,0,0,0.015); }
+    .sys-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .sys-name { flex: 1; font-weight: 500; }
+    .sys-count { font-size: 8.5px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+
+    /* Material summary (Material tab) */
+    .mat-summary-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 8px; background: var(--card); border-radius: 4px;
+      font-size: 10px; border: 1px solid var(--border); transition: all 0.1s;
+    }
+    .mat-summary-item:hover { border-color: var(--border-strong); }
+    .mat-s-bar { width: 3px; border-radius: 2px; align-self: stretch; min-height: 14px; }
+    .mat-s-name { flex: 1; font-weight: 500; color: var(--text-primary); }
+    .mat-s-count { font-size: 9px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+    .mat-stat-card {
+      flex: 1; min-width: 100px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px; text-align: center;
+    }
+    .mat-stat-val { font-size: 16px; font-weight: 800; }
+    .mat-stat-label { font-size: 8px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 1px; }
+
 
     /* ─────────────────────────────────────────────
        CENTER — 3D CANVAS + HUD
