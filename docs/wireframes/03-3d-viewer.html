@@ -751,83 +751,148 @@
         </div>
       </div>
 
-      <!-- ── Model cards ── -->
-      <div class="section-label">Modeller</div>
+      <!-- ═══ MODEL TREE ═══ -->
+      <div class="section-label">Modelltre</div>
+      <div class="model-tree">
 
-      <!-- ARK model (expanded with storeys) -->
-      <div class="model-card">
-        <div class="model-card-top">
+        <!-- ARK model (expanded → storeys → classes) -->
+        <div class="mt-model expanded">
           <div class="disc-band ark"></div>
-          <div class="model-info">
-            <div class="model-name">LBK_ARK_F-KJ.ifc</div>
-            <div class="model-meta">
-              <span class="model-disc-tag ark">ARK</span>
-              <span class="model-ver">v6</span>
-              <span class="model-count">3 481 elem.</span>
+          <div class="mt-expand"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="mt-info">
+            <div class="mt-name">LBK_ARK_F-KJ.ifc</div>
+            <div class="mt-meta">
+              <span class="mt-disc-tag ark">ARK</span>
+              <span class="mt-ver">v6</span>
+              <span class="mt-count">3 481</span>
             </div>
           </div>
-          <div class="model-eye"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <div class="mt-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
         </div>
-        <div class="storey-chips">
-          <span class="storey-chip selected">U1 <span class="chip-count">342</span></span>
-          <span class="storey-chip">01 <span class="chip-count">891</span></span>
-          <span class="storey-chip">02 <span class="chip-count">756</span></span>
-          <span class="storey-chip">03 <span class="chip-count">756</span></span>
-          <span class="storey-chip">04 <span class="chip-count">612</span></span>
-          <span class="storey-chip">Tak <span class="chip-count">124</span></span>
-        </div>
-      </div>
 
-      <!-- RIB model -->
-      <div class="model-card">
-        <div class="model-card-top">
+        <!-- ARK storeys -->
+        <div class="mt-storeys">
+          <div class="mt-storey selected expanded">
+            <div class="mt-storey-expand"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div>
+            <span class="mt-storey-name">U1 — Kjeller</span>
+            <span class="mt-storey-count">342</span>
+            <div class="mt-storey-bar" style="width:42px; background:var(--disc-ark-text)"></div>
+          </div>
+
+          <!-- IFC classes under U1 -->
+          <div class="mt-classes">
+            <div class="mt-class">
+              <div class="mt-class-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="1"/></svg></div>
+              <span class="mt-class-name">IfcWall</span>
+              <span class="mt-class-count">124</span>
+              <div class="mt-class-bar"><div class="mt-class-bar-fill" style="width:72%; background:var(--disc-ark-text)"></div></div>
+            </div>
+            <div class="mt-class">
+              <div class="mt-class-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="9" width="20" height="6" rx="1"/></svg></div>
+              <span class="mt-class-name">IfcSlab</span>
+              <span class="mt-class-count">42</span>
+              <div class="mt-class-bar"><div class="mt-class-bar-fill" style="width:24%; background:var(--disc-ark-text)"></div></div>
+            </div>
+            <div class="mt-class">
+              <div class="mt-class-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="1"/><circle cx="15" cy="12" r="1.5"/></svg></div>
+              <span class="mt-class-name">IfcDoor</span>
+              <span class="mt-class-count">38</span>
+              <div class="mt-class-bar"><div class="mt-class-bar-fill" style="width:22%; background:var(--disc-ark-text)"></div></div>
+            </div>
+            <div class="mt-class">
+              <div class="mt-class-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="1"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg></div>
+              <span class="mt-class-name">IfcWindow</span>
+              <span class="mt-class-count">86</span>
+              <div class="mt-class-bar"><div class="mt-class-bar-fill" style="width:50%; background:var(--disc-ark-text)"></div></div>
+            </div>
+            <div class="mt-class">
+              <div class="mt-class-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="20" rx="1"/></svg></div>
+              <span class="mt-class-name">IfcColumn</span>
+              <span class="mt-class-count">52</span>
+              <div class="mt-class-bar"><div class="mt-class-bar-fill" style="width:30%; background:var(--disc-ark-text)"></div></div>
+            </div>
+          </div>
+
+          <div class="mt-storey">
+            <div class="mt-storey-expand"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <span class="mt-storey-name">01 — 1. etasje</span>
+            <span class="mt-storey-count">891</span>
+            <div class="mt-storey-bar" style="width:109px; background:var(--disc-ark-text)"></div>
+          </div>
+          <div class="mt-storey">
+            <div class="mt-storey-expand"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <span class="mt-storey-name">02 — 2. etasje</span>
+            <span class="mt-storey-count">756</span>
+            <div class="mt-storey-bar" style="width:92px; background:var(--disc-ark-text)"></div>
+          </div>
+          <div class="mt-storey">
+            <div class="mt-storey-expand"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <span class="mt-storey-name">03 — 3. etasje</span>
+            <span class="mt-storey-count">756</span>
+            <div class="mt-storey-bar" style="width:92px; background:var(--disc-ark-text)"></div>
+          </div>
+          <div class="mt-storey">
+            <div class="mt-storey-expand"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <span class="mt-storey-name">04 — 4. etasje</span>
+            <span class="mt-storey-count">612</span>
+            <div class="mt-storey-bar" style="width:75px; background:var(--disc-ark-text)"></div>
+          </div>
+          <div class="mt-storey">
+            <div class="mt-storey-expand"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <span class="mt-storey-name">Tak</span>
+            <span class="mt-storey-count">124</span>
+            <div class="mt-storey-bar" style="width:15px; background:var(--disc-ark-text)"></div>
+          </div>
+        </div>
+
+        <!-- RIB model (collapsed) -->
+        <div class="mt-model">
           <div class="disc-band rib"></div>
-          <div class="model-info">
-            <div class="model-name">LBK_RIB_F-KJ.ifc</div>
-            <div class="model-meta">
-              <span class="model-disc-tag rib">RIB</span>
-              <span class="model-ver">v3</span>
-              <span class="model-count">1 204 elem.</span>
+          <div class="mt-expand"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="mt-info">
+            <div class="mt-name">LBK_RIB_F-KJ.ifc</div>
+            <div class="mt-meta">
+              <span class="mt-disc-tag rib">RIB</span>
+              <span class="mt-ver">v3</span>
+              <span class="mt-count">1 204</span>
             </div>
           </div>
-          <div class="model-eye"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <div class="mt-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
         </div>
-      </div>
 
-      <!-- RIV model (hidden) -->
-      <div class="model-card hidden-model">
-        <div class="model-card-top">
+        <!-- RIV model (hidden) -->
+        <div class="mt-model hidden-model">
           <div class="disc-band riv"></div>
-          <div class="model-info">
-            <div class="model-name">LBK_RIV.ifc</div>
-            <div class="model-meta">
-              <span class="model-disc-tag riv">RIV</span>
-              <span class="model-ver">v1</span>
-              <span class="model-count">486 elem.</span>
+          <div class="mt-expand"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="mt-info">
+            <div class="mt-name">LBK_RIV.ifc</div>
+            <div class="mt-meta">
+              <span class="mt-disc-tag riv">RIV</span>
+              <span class="mt-ver">v1</span>
+              <span class="mt-count">486</span>
             </div>
           </div>
-          <div class="model-eye"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><line x1="2" x2="22" y1="2" y2="22"/></svg></div>
+          <div class="mt-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><line x1="2" x2="22" y1="2" y2="22"/></svg></div>
         </div>
-      </div>
 
-      <!-- RIE model -->
-      <div class="model-card">
-        <div class="model-card-top">
+        <!-- RIE model (collapsed) -->
+        <div class="mt-model">
           <div class="disc-band rie"></div>
-          <div class="model-info">
-            <div class="model-name">LBK_RIE.ifc</div>
-            <div class="model-meta">
-              <span class="model-disc-tag rie">RIE</span>
-              <span class="model-ver">v2</span>
-              <span class="model-count">312 elem.</span>
+          <div class="mt-expand"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="mt-info">
+            <div class="mt-name">LBK_RIE.ifc</div>
+            <div class="mt-meta">
+              <span class="mt-disc-tag rie">RIE</span>
+              <span class="mt-ver">v2</span>
+              <span class="mt-count">312</span>
             </div>
           </div>
-          <div class="model-eye"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <div class="mt-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
         </div>
       </div>
 
-      <!-- ── Top types needing attention ── -->
-      <div class="section-label">Typer som trenger handling</div>
+      <!-- ── Types needing attention ── -->
+      <div class="section-label">Trenger handling</div>
       <div class="type-cards">
         <div class="type-card">
           <span class="type-dot-lg" style="background:var(--st-review-dot)"></span>
