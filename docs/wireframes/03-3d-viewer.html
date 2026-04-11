@@ -398,6 +398,36 @@
     .tab-pane { display: none; flex-direction: column; gap: 8px; }
     .tab-pane.active { display: flex; }
 
+    /* Split panel: navigator top, tabs bottom */
+    .spatial-navigator {
+      flex: 0 1 auto; max-height: 50%; overflow-y: auto;
+      min-height: 120px; padding: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .context-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 10px; flex-shrink: 0;
+      background: var(--primary-light);
+    }
+    .context-scope {
+      font-size: 10px; font-weight: 600; color: var(--primary);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .context-scope::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--primary); flex-shrink: 0;
+    }
+    .context-all { opacity: 0.5; }
+    .context-all .context-scope::before { background: var(--text-tertiary); }
+    .context-all .context-scope { color: var(--text-tertiary); }
+    .context-count {
+      font-size: 9px; color: var(--text-tertiary); font-variant-numeric: tabular-nums;
+    }
+    .tab-content {
+      flex: 1; overflow-y: auto; min-height: 0; padding: 8px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
     /* Model cards (Modeller tab) */
     .model-card {
       background: var(--card); border: 1px solid var(--border);
