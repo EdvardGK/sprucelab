@@ -879,100 +879,77 @@
 
     <!-- Spatial navigator (persistent, top half) -->
     <div class="spatial-navigator">
-      <div class="model-tree">
 
-        <!-- ARK model (expanded → storeys → classes) -->
-        <div class="mt-model expanded">
-          <div class="disc-band ark"></div>
-          <div class="mt-expand"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div>
-          <div class="mt-info">
-            <div class="mt-name">LBK_ARK_F-KJ.ifc</div>
-            <div class="mt-meta">
-              <span class="mt-disc-tag ark">ARK</span>
-              <span class="mt-ver">v6</span>
-              <span class="mt-count">3 481</span>
-            </div>
-          </div>
-          <div class="mt-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+      <!-- Model selector: horizontal pills instead of stacked trees -->
+      <div class="model-selector">
+        <div class="ms-pill" title="Vis alle modeller sammensl&aring;tt">Alle</div>
+        <div class="ms-pill active">
+          <span class="ms-dot" style="background:var(--disc-ark-text)"></span>
+          ARK
+          <span class="ms-ver">v6</span>
+          <span class="ms-count">3 481</span>
+          <span class="ms-eye"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
         </div>
-
-        <!-- ARK storeys -->
-        <div class="mt-storeys">
-          <div class="mt-storey selected">
-            <span class="mt-storey-name">U1 — Kjeller</span>
-            <span class="mt-storey-count">342</span>
-            <div class="mt-storey-bar" style="width:42px; background:var(--disc-ark-text)"></div>
-          </div>
-          <div class="mt-storey">
-            <span class="mt-storey-name">01 — 1. etasje</span>
-            <span class="mt-storey-count">891</span>
-            <div class="mt-storey-bar" style="width:109px; background:var(--disc-ark-text)"></div>
-          </div>
-          <div class="mt-storey">
-            <span class="mt-storey-name">02 — 2. etasje</span>
-            <span class="mt-storey-count">756</span>
-            <div class="mt-storey-bar" style="width:92px; background:var(--disc-ark-text)"></div>
-          </div>
-          <div class="mt-storey">
-            <span class="mt-storey-name">03 — 3. etasje</span>
-            <span class="mt-storey-count">756</span>
-            <div class="mt-storey-bar" style="width:92px; background:var(--disc-ark-text)"></div>
-          </div>
-          <div class="mt-storey">
-            <span class="mt-storey-name">04 — 4. etasje</span>
-            <span class="mt-storey-count">612</span>
-            <div class="mt-storey-bar" style="width:75px; background:var(--disc-ark-text)"></div>
-          </div>
-          <div class="mt-storey">
-            <span class="mt-storey-name">Tak</span>
-            <span class="mt-storey-count">124</span>
-            <div class="mt-storey-bar" style="width:15px; background:var(--disc-ark-text)"></div>
-          </div>
+        <div class="ms-pill">
+          <span class="ms-dot" style="background:var(--disc-rib-text)"></span>
+          RIB
+          <span class="ms-ver">v3</span>
+          <span class="ms-count">1 204</span>
+          <span class="ms-eye"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
         </div>
-
-        <!-- RIB model (collapsed) -->
-        <div class="mt-model">
-          <div class="disc-band rib"></div>
-          <div class="mt-expand"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
-          <div class="mt-info">
-            <div class="mt-name">LBK_RIB_F-KJ.ifc</div>
-            <div class="mt-meta">
-              <span class="mt-disc-tag rib">RIB</span>
-              <span class="mt-ver">v3</span>
-              <span class="mt-count">1 204</span>
-            </div>
-          </div>
-          <div class="mt-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="ms-pill hidden-model">
+          <span class="ms-dot" style="background:var(--disc-riv-text)"></span>
+          RIV
+          <span class="ms-ver">v1</span>
+          <span class="ms-count">486</span>
+          <span class="ms-eye"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><line x1="2" x2="22" y1="2" y2="22"/></svg></span>
         </div>
-
-        <!-- RIV model (hidden) -->
-        <div class="mt-model hidden-model">
-          <div class="disc-band riv"></div>
-          <div class="mt-expand"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
-          <div class="mt-info">
-            <div class="mt-name">LBK_RIV.ifc</div>
-            <div class="mt-meta">
-              <span class="mt-disc-tag riv">RIV</span>
-              <span class="mt-ver">v1</span>
-              <span class="mt-count">486</span>
-            </div>
-          </div>
-          <div class="mt-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><line x1="2" x2="22" y1="2" y2="22"/></svg></div>
+        <div class="ms-pill">
+          <span class="ms-dot" style="background:var(--disc-rie-text)"></span>
+          RIE
+          <span class="ms-ver">v2</span>
+          <span class="ms-count">312</span>
+          <span class="ms-eye"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
         </div>
+      </div>
 
-        <!-- RIE model (collapsed) -->
-        <div class="mt-model">
-          <div class="disc-band rie"></div>
-          <div class="mt-expand"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
-          <div class="mt-info">
-            <div class="mt-name">LBK_RIE.ifc</div>
-            <div class="mt-meta">
-              <span class="mt-disc-tag rie">RIE</span>
-              <span class="mt-ver">v2</span>
-              <span class="mt-count">312</span>
-            </div>
-          </div>
-          <div class="mt-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+      <!-- Model info line (shown when single model selected) -->
+      <div class="ms-model-info">
+        <span class="ms-filename">LBK_ARK_F-KJ.ifc</span>
+        <span>3 481 elem.</span>
+      </div>
+
+      <!-- Storey list for selected model (ARK) -->
+      <div class="model-tree" style="padding: 4px 0;">
+        <div class="mt-storey selected">
+          <span class="mt-storey-name">U1 — Kjeller</span>
+          <span class="mt-storey-count">342</span>
+          <div class="mt-storey-bar" style="width:42px; background:var(--disc-ark-text)"></div>
+        </div>
+        <div class="mt-storey">
+          <span class="mt-storey-name">01 — 1. etasje</span>
+          <span class="mt-storey-count">891</span>
+          <div class="mt-storey-bar" style="width:109px; background:var(--disc-ark-text)"></div>
+        </div>
+        <div class="mt-storey">
+          <span class="mt-storey-name">02 — 2. etasje</span>
+          <span class="mt-storey-count">756</span>
+          <div class="mt-storey-bar" style="width:92px; background:var(--disc-ark-text)"></div>
+        </div>
+        <div class="mt-storey">
+          <span class="mt-storey-name">03 — 3. etasje</span>
+          <span class="mt-storey-count">756</span>
+          <div class="mt-storey-bar" style="width:92px; background:var(--disc-ark-text)"></div>
+        </div>
+        <div class="mt-storey">
+          <span class="mt-storey-name">04 — 4. etasje</span>
+          <span class="mt-storey-count">612</span>
+          <div class="mt-storey-bar" style="width:75px; background:var(--disc-ark-text)"></div>
+        </div>
+        <div class="mt-storey">
+          <span class="mt-storey-name">Tak</span>
+          <span class="mt-storey-count">124</span>
+          <div class="mt-storey-bar" style="width:15px; background:var(--disc-ark-text)"></div>
         </div>
       </div>
 
