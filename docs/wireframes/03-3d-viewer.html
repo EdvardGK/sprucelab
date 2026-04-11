@@ -913,11 +913,28 @@
         </div>
       </div>
 
-      <!-- Model info line (shown when single model selected) -->
+      <!-- Model info line (shown when single model selected, hidden in "Alle" mode) -->
       <div class="ms-model-info">
         <span class="ms-filename">LBK_ARK_F-KJ.ifc</span>
         <span>3 481 elem.</span>
       </div>
+
+      <!--
+        FEDERATED VIEW (when "Alle" is active):
+        - ms-model-info is hidden
+        - Storeys are merged across all visible models
+        - Each storey row shows discipline dots + combined count:
+
+        <div class="mt-storey">
+          <span class="mt-storey-discs">
+            <span class="disc-dot" style="background:var(--disc-ark-text)"></span>
+            <span class="disc-dot" style="background:var(--disc-rib-text)"></span>
+            <span class="disc-dot" style="background:var(--disc-rie-text)"></span>
+          </span>
+          <span class="mt-storey-name">01 - 1. etasje</span>
+          <span class="mt-storey-count">1 243</span>
+        </div>
+      -->
 
       <!-- Storey list for selected model (ARK) -->
       <div class="model-tree" style="padding: 4px 0;">
