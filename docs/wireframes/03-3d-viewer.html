@@ -939,32 +939,153 @@
         </div>
       </div>
 
-      <!-- ── Types needing attention ── -->
-      <div class="section-label">Trenger handling</div>
-      <div class="type-cards">
-        <div class="type-card">
-          <span class="type-dot-lg" style="background:var(--st-review-dot)"></span>
-          <div class="type-card-info">
-            <div class="type-card-name">Dekke 250mm</div>
-            <div class="type-card-meta">36 instanser &middot; IfcSlab</div>
+      </div><!-- /tab-pane romlig -->
+
+      <!-- ══ TAB 2: MODELLER (Model Overview) ══ -->
+      <div class="tab-pane">
+        <div class="verif-banner">
+          <div class="verif-banner-title">Verifikasjon</div>
+          <div class="verif-bar">
+            <div class="verif-bar-seg ok" style="width:83%"></div>
+            <div class="verif-bar-seg warn" style="width:13%"></div>
+            <div class="verif-bar-seg fail" style="width:4%"></div>
           </div>
-          <span class="type-status review">Gjennomgang</span>
+          <div class="verif-legend">
+            <div class="verif-leg-item"><span class="verif-leg-dot" style="background:var(--tl-green-dot)"></span><span class="verif-leg-val ok">247</span><span class="verif-leg-label">Godkjent</span></div>
+            <div class="verif-leg-item"><span class="verif-leg-dot" style="background:var(--tl-yellow-dot)"></span><span class="verif-leg-val warn">38</span><span class="verif-leg-label">Advarsel</span></div>
+            <div class="verif-leg-item"><span class="verif-leg-dot" style="background:var(--tl-red-dot)"></span><span class="verif-leg-val fail">12</span><span class="verif-leg-label">Feil</span></div>
+          </div>
         </div>
-        <div class="type-card">
-          <span class="type-dot-lg" style="background:var(--st-pending-dot)"></span>
-          <div class="type-card-info">
-            <div class="type-card-name">Betongs&oslash;yle 300&times;300</div>
-            <div class="type-card-meta">64 instanser &middot; IfcColumn</div>
+        <div class="section-label">Lastede modeller</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div class="model-card">
+            <div class="mc-header"><span class="mc-disc ark">ARK</span><span class="mc-name">LBK_ARK_F-KJ.ifc</span><span class="mc-ver">v6</span></div>
+            <div class="mc-row"><span>3 481 elementer</span><span>&middot;</span><span>42.3 MB</span></div>
+            <div class="mc-row"><span class="mc-v ok">186</span><span class="mc-v warn">24</span><span class="mc-v fail">8</span></div>
+            <div class="mc-row"><span style="font-size:8.5px">Oppdatert 8. apr 2026</span></div>
           </div>
-          <span class="type-status pending">Venter</span>
+          <div class="model-card">
+            <div class="mc-header"><span class="mc-disc rib">RIB</span><span class="mc-name">LBK_RIB_F-KJ.ifc</span><span class="mc-ver">v3</span></div>
+            <div class="mc-row"><span>1 204 elementer</span><span>&middot;</span><span>18.7 MB</span></div>
+            <div class="mc-row"><span class="mc-v ok">41</span><span class="mc-v warn">10</span><span class="mc-v fail">3</span></div>
+            <div class="mc-row"><span style="font-size:8.5px">Oppdatert 5. apr 2026</span></div>
+          </div>
+          <div class="model-card" style="opacity:0.5">
+            <div class="mc-header"><span class="mc-disc riv">RIV</span><span class="mc-name">LBK_RIV.ifc</span><span class="mc-ver">v1</span></div>
+            <div class="mc-row"><span>486 elementer</span><span>&middot;</span><span>8.1 MB</span><span style="margin-left:auto;font-size:8px;color:var(--chart-red)">Skjult</span></div>
+            <div class="mc-row"><span class="mc-v ok">12</span><span class="mc-v warn">4</span><span class="mc-v fail">1</span></div>
+            <div class="mc-row"><span style="font-size:8.5px">Oppdatert 1. apr 2026</span></div>
+          </div>
+          <div class="model-card">
+            <div class="mc-header"><span class="mc-disc rie">RIE</span><span class="mc-name">LBK_RIE.ifc</span><span class="mc-ver">v2</span></div>
+            <div class="mc-row"><span>312 elementer</span><span>&middot;</span><span>5.2 MB</span></div>
+            <div class="mc-row"><span class="mc-v ok">8</span><span class="mc-v warn">0</span><span class="mc-v fail">0</span></div>
+            <div class="mc-row"><span style="font-size:8.5px">Oppdatert 3. apr 2026</span></div>
+          </div>
         </div>
-        <div class="type-card">
-          <span class="type-dot-lg" style="background:var(--st-pending-dot)"></span>
-          <div class="type-card-info">
-            <div class="type-card-name">St&aring;ld&oslash;r 900mm</div>
-            <div class="type-card-meta">88 instanser &middot; IfcDoor</div>
+      </div>
+
+      <!-- ══ TAB 3: TYPER (Type Classification) ══ -->
+      <div class="tab-pane">
+        <div class="class-progress">
+          <div class="class-progress-header"><span class="class-progress-title">Typeklarering</span><span class="class-progress-pct">68%</span></div>
+          <div class="class-bar"><div class="class-bar-fill" style="width:68%"></div></div>
+          <div class="class-stats">
+            <span class="class-stat"><strong>201</strong> klassifisert</span>
+            <span class="class-stat"><strong>64</strong> venter</span>
+            <span class="class-stat"><strong>32</strong> gjennomgang</span>
           </div>
-          <span class="type-status pending">Venter</span>
+        </div>
+        <div class="section-label">Trenger handling</div>
+        <div class="type-cards">
+          <div class="type-card">
+            <span class="type-dot-lg" style="background:var(--st-review-dot)"></span>
+            <div class="type-card-info"><div class="type-card-name">Dekke 250mm</div><div class="type-card-meta">36 instanser &middot; IfcSlab</div></div>
+            <span class="type-status review">Gjennomgang</span>
+          </div>
+          <div class="type-card">
+            <span class="type-dot-lg" style="background:var(--st-pending-dot)"></span>
+            <div class="type-card-info"><div class="type-card-name">Betongs&oslash;yle 300&times;300</div><div class="type-card-meta">64 instanser &middot; IfcColumn</div></div>
+            <span class="type-status pending">Venter</span>
+          </div>
+          <div class="type-card">
+            <span class="type-dot-lg" style="background:var(--st-pending-dot)"></span>
+            <div class="type-card-info"><div class="type-card-name">St&aring;ld&oslash;r 900mm</div><div class="type-card-meta">88 instanser &middot; IfcDoor</div></div>
+            <span class="type-status pending">Venter</span>
+          </div>
+        </div>
+        <div class="section-label">Nylig klassifisert</div>
+        <div class="type-cards">
+          <div class="type-card">
+            <span class="type-dot-lg" style="background:var(--st-mapped-dot)"></span>
+            <div class="type-card-info"><div class="type-card-name">Yttervegg 200mm</div><div class="type-card-meta">124 instanser &middot; IfcWall</div></div>
+            <span class="type-status mapped">Klassifisert</span>
+          </div>
+          <div class="type-card">
+            <span class="type-dot-lg" style="background:var(--st-mapped-dot)"></span>
+            <div class="type-card-info"><div class="type-card-name">Innervegg 100mm</div><div class="type-card-meta">86 instanser &middot; IfcWall</div></div>
+            <span class="type-status mapped">Klassifisert</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB 4: SYSTEM ══ -->
+      <div class="tab-pane">
+        <div class="section-label">IFC-systemer</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div class="sys-group">
+            <div class="sys-header">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+              Ventilasjon
+              <span style="margin-left:auto;font-size:8px;color:var(--text-tertiary);background:var(--surface-muted);padding:0 4px;border-radius:3px;line-height:15px">3</span>
+            </div>
+            <div class="sys-item"><span class="sys-dot" style="background:var(--disc-riv-text)"></span><span class="sys-name">Tilluft A1</span><span class="sys-count">48 elem.</span></div>
+            <div class="sys-item"><span class="sys-dot" style="background:var(--disc-riv-text)"></span><span class="sys-name">Avtrekk A1</span><span class="sys-count">32 elem.</span></div>
+            <div class="sys-item"><span class="sys-dot" style="background:var(--disc-riv-text)"></span><span class="sys-name">Avtrekk A2</span><span class="sys-count">18 elem.</span></div>
+          </div>
+          <div class="sys-group">
+            <div class="sys-header">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+              Sanit&aelig;r
+              <span style="margin-left:auto;font-size:8px;color:var(--text-tertiary);background:var(--surface-muted);padding:0 4px;border-radius:3px;line-height:15px">2</span>
+            </div>
+            <div class="sys-item"><span class="sys-dot" style="background:var(--chart-blue)"></span><span class="sys-name">Kaldt vann</span><span class="sys-count">64 elem.</span></div>
+            <div class="sys-item"><span class="sys-dot" style="background:var(--chart-red)"></span><span class="sys-name">Varmt vann</span><span class="sys-count">52 elem.</span></div>
+          </div>
+          <div class="sys-group">
+            <div class="sys-header">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
+              Elektro
+              <span style="margin-left:auto;font-size:8px;color:var(--text-tertiary);background:var(--surface-muted);padding:0 4px;border-radius:3px;line-height:15px">5</span>
+            </div>
+          </div>
+          <div class="sys-group">
+            <div class="sys-header">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
+              Sprinkler
+              <span style="margin-left:auto;font-size:8px;color:var(--text-tertiary);background:var(--surface-muted);padding:0 4px;border-radius:3px;line-height:15px">1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB 5: MATERIAL ══ -->
+      <div class="tab-pane">
+        <div class="section-label">Materialer i prosjekt</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="mat-summary-item"><div class="mat-s-bar" style="background:#a1887f"></div><span class="mat-s-name">Betong C30/37</span><span class="mat-s-count">482 m&sup3;</span></div>
+          <div class="mat-summary-item"><div class="mat-s-bar" style="background:#fff176"></div><span class="mat-s-name">Mineralull</span><span class="mat-s-count">1 240 m&sup2;</span></div>
+          <div class="mat-summary-item"><div class="mat-s-bar" style="background:#90caf9"></div><span class="mat-s-name">St&aring;l S355</span><span class="mat-s-count">38.2 t</span></div>
+          <div class="mat-summary-item"><div class="mat-s-bar" style="background:#e0e0e0"></div><span class="mat-s-name">Gips</span><span class="mat-s-count">3 680 m&sup2;</span></div>
+          <div class="mat-summary-item"><div class="mat-s-bar" style="background:#a1887f;opacity:0.6"></div><span class="mat-s-name">Teglforblending</span><span class="mat-s-count">860 m&sup2;</span></div>
+          <div class="mat-summary-item"><div class="mat-s-bar" style="background:#ce93d8"></div><span class="mat-s-name">Vindsperre</span><span class="mat-s-count">860 m&sup2;</span></div>
+          <div class="mat-summary-item"><div class="mat-s-bar" style="background:#ef9a9a"></div><span class="mat-s-name">Dampsperre</span><span class="mat-s-count">860 m&sup2;</span></div>
+          <div class="mat-summary-item"><div class="mat-s-bar" style="background:#80cbc4"></div><span class="mat-s-name">Trelast C24</span><span class="mat-s-count">12.4 m&sup3;</span></div>
+        </div>
+        <div class="section-label" style="margin-top:4px">Etter disiplin</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <div class="mat-stat-card"><div class="mat-stat-val" style="color:var(--disc-ark-text)">482</div><div class="mat-stat-label">m&sup3; ARK</div></div>
+          <div class="mat-stat-card"><div class="mat-stat-val" style="color:var(--disc-rib-text)">38.2</div><div class="mat-stat-label">t RIB</div></div>
         </div>
       </div>
 
