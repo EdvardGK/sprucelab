@@ -12,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft,
   ChevronDown,
-  ChevronRight,
   Eye,
   EyeOff,
 } from 'lucide-react';
