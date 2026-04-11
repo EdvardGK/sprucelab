@@ -112,13 +112,14 @@
       color: var(--text-primary); min-height: 100vh; overflow: hidden;
       -webkit-font-smoothing: antialiased;
     }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: rgba(199,206,232,0.1); }
-    ::-webkit-scrollbar-thumb { background: rgba(199,206,232,0.25); border-radius: 3px; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(199,206,232,0.3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(199,206,232,0.5); }
 
     .shell { display: flex; height: 100vh; width: 100vw; }
 
-    /* Sidebar (project) */
+    /* ═══ SIDEBAR (project nav — shared across wireframes) ═══ */
     .sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); display: flex; flex-direction: column; background: var(--glass-bg); backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); }
     .sidebar-brand { padding: 12px; border-bottom: 1px solid var(--glass-border); }
     .sidebar-brand button { display: flex; align-items: center; gap: var(--space-sm); width: 100%; padding: 6px var(--space-sm); border: none; background: transparent; border-radius: var(--radius-sm); cursor: pointer; font: inherit; color: var(--text-primary); transition: background 0.15s; }
@@ -144,161 +145,300 @@
     .lang-btn { padding: var(--space-xs) var(--space-sm); border: none; background: transparent; border-radius: 4px; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; color: var(--text-tertiary); }
     .lang-btn.active { color: var(--primary); background: var(--primary-light); }
 
-    /* Main */
+    /* ═══ MAIN AREA ═══ */
     .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
     .top-accent { height: 3px; background: var(--grad-accent); flex-shrink: 0; }
 
-    /* ═══ 3D VIEWER LAYOUT ═══ */
+    /* ═══ 3D VIEWER — THREE COLUMN LAYOUT ═══ */
     .viewer-layout {
       flex: 1; display: grid;
-      grid-template-columns: 260px 1fr 300px;
+      grid-template-columns: 280px 1fr 300px;
       min-height: 0;
     }
 
-    /* Left: Model tree */
-    .model-tree {
+    /* ─── LEFT: MODEL BROWSER ─── */
+    .model-browser {
       border-right: 1px solid var(--border);
       display: flex; flex-direction: column;
       background: var(--card);
       overflow: hidden;
     }
-    .tree-header {
-      display: flex; align-items: center; gap: var(--space-sm);
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px; font-weight: 600;
+
+    /* Browser header — tab strip for switching tree modes */
+    .browser-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      background: var(--surface-muted);
     }
-    .tree-toolbar {
-      display: flex; align-items: center; gap: var(--space-xs);
-      padding: 6px 12px;
+    .browser-tab {
+      flex: 1; padding: 7px 0; text-align: center;
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-tertiary); cursor: pointer;
+      border: none; background: none;
+      border-bottom: 2px solid transparent;
+      transition: all 0.12s;
+    }
+    .browser-tab:hover { color: var(--text-secondary); background: rgba(255,255,255,0.5); }
+    .browser-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--card); }
+
+    /* Filter bar */
+    .browser-filter {
+      display: flex; align-items: center; gap: 3px;
+      padding: 5px 8px;
       border-bottom: 1px solid rgba(0,0,0,0.04);
     }
-    .tree-btn {
-      width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-      border: 1px solid var(--border); border-radius: 5px;
-      background: white; cursor: pointer; color: var(--text-secondary); transition: all 0.15s;
+    .filter-search {
+      flex: 1; padding: 4px 7px; border: 1px solid var(--border); border-radius: 4px;
+      font: inherit; font-size: 10.5px; outline: none; background: var(--input-bg);
+      color: var(--text-primary);
     }
-    .tree-btn:hover { border-color: var(--primary); color: var(--primary); }
-    .tree-btn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
-    .tree-search {
-      flex: 1; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--border); border-radius: 5px;
-      font: inherit; font-size: 11px; outline: none;
+    .filter-search::placeholder { color: var(--text-tertiary); }
+    .filter-search:focus { border-color: var(--primary); box-shadow: var(--focus-ring); }
+    .filter-btn {
+      width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border); border-radius: 4px;
+      background: white; cursor: pointer; color: var(--text-tertiary); transition: all 0.12s;
+      flex-shrink: 0;
     }
-    .tree-content { flex: 1; overflow-y: auto; padding: var(--space-xs) 0; }
+    .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .filter-btn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+    /* Tree content */
+    .browser-tree { flex: 1; overflow-y: auto; padding: 2px 0; }
 
     .tree-node { user-select: none; }
     .tree-row {
-      display: flex; align-items: center; gap: var(--space-xs);
-      padding: var(--space-xs) var(--space-sm); cursor: pointer;
-      font-size: 12px; transition: background 0.1s;
+      display: flex; align-items: center; gap: 3px;
+      padding: 3px 8px; cursor: pointer;
+      font-size: 11px; transition: background 0.08s;
+      position: relative;
     }
-    .tree-row:hover { background: rgba(0,0,0,0.03); }
+    .tree-row:hover { background: rgba(0,0,0,0.025); }
     .tree-row.selected { background: var(--primary-light); }
-    .tree-toggle { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); flex-shrink: 0; }
-    .tree-icon { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-tertiary); }
-    .tree-icon.model { color: var(--primary); }
-    .tree-icon.storey { color: var(--chart-indigo); }
-    .tree-icon.element { color: var(--text-tertiary); }
-    .tree-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .tree-count { font-size: 10px; color: var(--text-tertiary); }
-    .tree-eye { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); cursor: pointer; flex-shrink: 0; opacity: 0; transition: opacity 0.1s; }
-    .tree-row:hover .tree-eye { opacity: 1; }
-    .tree-children { padding-left: 16px; }
+    .tree-row.hidden-node { opacity: 0.4; }
+    .tree-toggle {
+      width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-tertiary); flex-shrink: 0;
+    }
+    .tree-toggle svg { transition: transform 0.12s; }
 
-    /* Center: 3D Canvas */
+    /* Discipline dot — small colored indicator for model rows */
+    .disc-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .disc-dot.ark { background: var(--disc-ark-text); }
+    .disc-dot.rib { background: var(--disc-rib-text); }
+    .disc-dot.riv { background: var(--disc-riv-text); }
+    .disc-dot.rie { background: var(--disc-rie-text); }
+
+    .tree-icon {
+      width: 13px; height: 13px; flex-shrink: 0; color: var(--text-tertiary);
+    }
+    .tree-icon.storey { color: var(--chart-indigo); }
+
+    .tree-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-label.model-name { font-weight: 600; color: var(--text-primary); }
+
+    .tree-meta {
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .tree-badge {
+      padding: 0 4px; border-radius: 3px; font-size: 9px; font-weight: 600; line-height: 16px;
+      background: var(--surface-muted); color: var(--text-tertiary);
+    }
+    .tree-badge.version { background: var(--primary-light); color: var(--primary); }
+    .tree-count { font-size: 9.5px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+
+    .tree-eye {
+      width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-tertiary); cursor: pointer; flex-shrink: 0;
+      opacity: 0; transition: opacity 0.1s;
+    }
+    .tree-row:hover .tree-eye { opacity: 0.6; }
+    .tree-eye:hover { opacity: 1 !important; color: var(--primary); }
+    .tree-eye.off { opacity: 0.4; color: var(--chart-red); }
+    .tree-row:hover .tree-eye.off { opacity: 0.7; }
+
+    .tree-children { padding-left: 14px; }
+
+    /* Element class rows — denser, monospace-styled */
+    .elem-class-row {
+      display: flex; align-items: center; gap: 3px;
+      padding: 2px 8px 2px 0; font-size: 10.5px;
+    }
+    .elem-class-icon {
+      width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;
+      border: 1.5px solid var(--text-tertiary); opacity: 0.5;
+    }
+    .elem-class-name { flex: 1; color: var(--text-secondary); font-family: 'Inter', monospace; }
+    .elem-class-count { color: var(--text-tertiary); font-size: 9.5px; font-variant-numeric: tabular-nums; }
+
+    /* Browser footer — summary stats */
+    .browser-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 8px;
+      border-top: 1px solid var(--border);
+      font-size: 9.5px; color: var(--text-tertiary);
+      background: var(--surface-muted);
+    }
+    .browser-footer strong { color: var(--text-secondary); font-weight: 600; }
+
+    /* ─── CENTER: 3D CANVAS ─── */
     .viewer-3d {
       display: flex; flex-direction: column;
       background: var(--viewer-bg);
       position: relative; min-height: 0;
     }
+
+    /* Toolbar above canvas */
     .viewer-toolbar {
-      display: flex; align-items: center; gap: 6px;
-      padding: 6px 12px;
-      background: rgba(255,255,255,0.05);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      flex-shrink: 0;
-      z-index: 2;
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 8px;
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0; z-index: 2;
     }
     .v-btn {
-      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 5px;
-      background: rgba(255,255,255,0.05); cursor: pointer;
-      color: rgba(255,255,255,0.5); transition: all 0.15s;
+      width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
+      background: rgba(255,255,255,0.04); cursor: pointer;
+      color: rgba(255,255,255,0.45); transition: all 0.12s;
+      position: relative;
     }
-    .v-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.2); }
-    .v-btn.active { background: rgba(21,121,84,0.3); color: var(--accent); border-color: rgba(21,121,84,0.5); }
-    .v-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.08); }
-    .v-label { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+    .v-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75); border-color: rgba(255,255,255,0.18); }
+    .v-btn.active { background: rgba(21,121,84,0.25); color: var(--accent); border-color: rgba(21,121,84,0.5); }
+    .v-btn .badge {
+      position: absolute; top: -4px; right: -4px;
+      min-width: 14px; height: 14px; padding: 0 3px;
+      border-radius: 7px; font-size: 8px; font-weight: 700; line-height: 14px; text-align: center;
+      background: var(--accent); color: var(--navy);
+    }
+    .v-sep { width: 1px; height: 18px; background: rgba(255,255,255,0.06); margin: 0 2px; }
+    .v-label { font-size: 9px; color: rgba(255,255,255,0.28); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-right: 2px; }
 
-    .viewer-canvas-3d {
-      flex: 1; min-height: 0;
-      position: relative; overflow: hidden;
+    /* Color mode pill (inline in toolbar) */
+    .v-color-mode {
+      display: flex; align-items: center; gap: 4px;
+      padding: 3px 8px 3px 6px; border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      cursor: pointer; color: rgba(255,255,255,0.45);
+      font-size: 9.5px; font-weight: 500;
+      transition: all 0.12s;
+      margin-left: auto;
     }
-    /* Fake 3D scene */
+    .v-color-mode:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+    .v-color-mode svg { flex-shrink: 0; }
+    .v-color-swatch {
+      width: 8px; height: 8px; border-radius: 2px;
+    }
+
+    /* Canvas area */
+    .viewer-canvas {
+      flex: 1; min-height: 0; position: relative; overflow: hidden;
+    }
+
+    /* Fake 3D scene elements */
     .scene-grid {
       position: absolute; inset: 0;
       background:
-        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
       background-size: 50px 50px;
       transform: perspective(800px) rotateX(50deg);
       transform-origin: center 70%;
     }
     .scene-building {
-      position: absolute;
-      left: 50%; top: 50%;
+      position: absolute; left: 50%; top: 50%;
       transform: translate(-50%, -50%);
     }
     .building-box {
-      width: 200px; height: 140px;
-      border: 1.5px solid rgba(21,121,84,0.4);
-      background: rgba(21,121,84,0.06);
+      width: 220px; height: 150px;
+      border: 1.5px solid rgba(21,121,84,0.35);
+      background: rgba(21,121,84,0.05);
       position: relative;
       transform: perspective(400px) rotateY(-20deg) rotateX(10deg);
     }
     .floor-line {
       position: absolute; left: 0; right: 0;
-      border-top: 1px solid rgba(21,121,84,0.2);
+      border-top: 1px solid rgba(21,121,84,0.15);
     }
     .building-label {
-      position: absolute; right: -80px; font-size: 10px;
-      color: rgba(255,255,255,0.3); white-space: nowrap;
+      position: absolute; right: -80px; font-size: 9px;
+      color: rgba(255,255,255,0.25); white-space: nowrap;
     }
-    /* Selected element highlight */
     .selected-element {
       position: absolute; left: 10%; top: 20%; width: 30px; height: 80%;
       border: 2px solid var(--accent);
-      background: rgba(208,211,77,0.15);
-      box-shadow: 0 0 12px rgba(208,211,77,0.2);
+      background: rgba(208,211,77,0.12);
+      box-shadow: 0 0 12px rgba(208,211,77,0.15);
     }
 
-    /* Axes indicator */
+    /* Canvas overlays */
     .axes {
-      position: absolute; bottom: 16px; left: 16px;
-      width: 48px; height: 48px;
+      position: absolute; bottom: 12px; left: 12px;
+      width: 44px; height: 44px;
     }
     .axes line { stroke-width: 2; }
-    .axes text { font-size: 9px; font-weight: 700; }
+    .axes text { font-size: 8px; font-weight: 700; }
 
-    /* Camera info */
     .camera-info {
-      position: absolute; bottom: 12px; right: 12px;
-      font-size: 10px; color: rgba(255,255,255,0.25);
-      text-align: right; line-height: 1.6;
+      position: absolute; bottom: 8px; right: 10px;
+      font-size: 9.5px; color: rgba(255,255,255,0.2);
+      text-align: right; line-height: 1.5;
+      font-variant-numeric: tabular-nums;
     }
-    .model-count-badge {
-      position: absolute; top: 12px; left: 12px;
-      display: flex; gap: 6px;
-    }
-    .mcb {
-      padding: 3px 10px; border-radius: 4px;
-      font-size: 10px; font-weight: 600;
-      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    .mcb.loaded { border-color: rgba(21,121,84,0.4); color: rgba(21,121,84,0.8); background: rgba(21,121,84,0.1); }
 
-    /* Right: Properties panel */
+    /* Model discipline badges on canvas */
+    .model-badges {
+      position: absolute; top: 10px; left: 10px;
+      display: flex; gap: 4px;
+    }
+    .mbadge {
+      display: flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 3px;
+      font-size: 9.5px; font-weight: 600;
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.15s;
+    }
+    .mbadge .mdot { width: 6px; height: 6px; border-radius: 50%; opacity: 0.7; }
+    .mbadge.loaded {
+      border-color: rgba(21,121,84,0.35); color: rgba(255,255,255,0.7);
+      background: rgba(21,121,84,0.12);
+    }
+
+    /* Section planes floating panel */
+    .section-float {
+      position: absolute; top: 10px; right: 10px;
+      display: flex; flex-direction: column; gap: 3px;
+      background: rgba(15,19,33,0.85); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 5px;
+      padding: 6px;
+      min-width: 140px;
+    }
+    .section-float-title {
+      font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.35); padding: 0 2px 3px;
+    }
+    .section-plane-row {
+      display: flex; align-items: center; gap: 5px;
+      padding: 3px 4px; border-radius: 3px;
+      font-size: 10px; color: rgba(255,255,255,0.6);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .section-plane-row:hover { background: rgba(255,255,255,0.06); }
+    .section-plane-row.active { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+    .sp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .sp-label { flex: 1; }
+    .sp-close {
+      width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+      border-radius: 2px; opacity: 0; transition: opacity 0.1s;
+      cursor: pointer; color: rgba(255,255,255,0.4);
+    }
+    .sp-close:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.08); }
+    .section-plane-row:hover .sp-close { opacity: 1; }
+
+    /* ─── RIGHT: PROPERTIES INSPECTOR ─── */
     .props-panel {
       border-left: 1px solid var(--border);
       display: flex; flex-direction: column;
@@ -307,65 +447,139 @@
     }
     .props-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 14px;
+      padding: 7px 10px;
       border-bottom: 1px solid var(--border);
     }
-    .props-header h3 { font-size: 13px; font-weight: 600; }
+    .props-header h3 { font-size: 12px; font-weight: 600; }
     .props-tabs {
       display: flex; border-bottom: 1px solid var(--border);
     }
     .props-tab {
-      flex: 1; padding: var(--space-sm); text-align: center;
-      font-size: 11px; font-weight: 500; color: var(--text-tertiary);
+      flex: 1; padding: 6px; text-align: center;
+      font-size: 10px; font-weight: 600; color: var(--text-tertiary);
       cursor: pointer; border: none; background: none;
-      border-bottom: 2px solid transparent; transition: all 0.15s;
+      border-bottom: 2px solid transparent; transition: all 0.12s;
     }
     .props-tab:hover { color: var(--text-primary); }
     .props-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
     .props-content { flex: 1; overflow-y: auto; }
 
-    /* Element info */
-    .elem-info { padding: 14px; border-bottom: 1px solid rgba(0,0,0,0.04); }
-    .elem-name { font-size: 14px; font-weight: 600; }
-    .elem-class { display: inline-flex; padding: 1px 6px; background: var(--surface-muted); border-radius: 4px; font-size: 10px; font-weight: 500; color: var(--text-secondary); font-family: monospace; margin-top: 4px; }
-    .elem-guid { font-size: 10px; color: var(--text-tertiary); margin-top: 4px; font-family: monospace; }
-
-    /* Pset table */
-    .pset-group { border-bottom: 1px solid rgba(0,0,0,0.04); }
-    .pset-header {
-      display: flex; align-items: center; gap: 6px;
-      padding: var(--space-sm) 14px; cursor: pointer;
-      font-size: 11px; font-weight: 600; color: var(--text-secondary);
-      transition: background 0.1s;
-    }
-    .pset-header:hover { background: rgba(0,0,0,0.02); }
-    .pset-rows { }
-    .pset-row {
-      display: flex; padding: var(--space-xs) 14px var(--space-xs) 28px;
-      font-size: 11px;
-    }
-    .pset-key { flex: 1; color: var(--text-secondary); }
-    .pset-val { flex: 1; color: var(--text-primary); font-weight: 500; text-align: right; }
-
-    /* Spatial info */
+    /* Spatial breadcrumb */
     .spatial-path {
-      padding: 10px 14px;
-      font-size: 11px; color: var(--text-tertiary);
-      display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap;
+      padding: 7px 10px;
+      font-size: 10px; color: var(--text-tertiary);
+      display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
+      border-bottom: 1px solid rgba(0,0,0,0.03);
+      background: var(--surface-muted);
     }
     .spatial-path span { color: var(--text-primary); font-weight: 500; }
     .spatial-path svg { flex-shrink: 0; color: var(--text-tertiary); }
 
+    /* Element identity */
+    .elem-identity { padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.04); }
+    .elem-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
+    .elem-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+    .elem-class {
+      display: inline-flex; padding: 1px 5px; background: var(--surface-muted);
+      border-radius: 3px; font-size: 9.5px; font-weight: 500;
+      color: var(--text-secondary); font-family: 'Inter', monospace;
+    }
+    .elem-guid-row {
+      display: flex; align-items: center; gap: 4px;
+      margin-top: 3px;
+    }
+    .elem-guid {
+      font-size: 9.5px; color: var(--text-tertiary); font-family: monospace;
+      letter-spacing: -0.02em;
+    }
+    .copy-btn {
+      width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+      border: none; background: none; cursor: pointer; color: var(--text-tertiary);
+      border-radius: 3px; transition: all 0.12s;
+    }
+    .copy-btn:hover { color: var(--primary); background: var(--primary-light); }
+
+    /* Quick quantities strip */
+    .qty-strip {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1px; background: rgba(0,0,0,0.03);
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .qty-item {
+      padding: 5px 8px; background: var(--card);
+      text-align: center;
+    }
+    .qty-val { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .qty-label { font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 1px; }
+
+    /* Pset groups */
+    .pset-group { border-bottom: 1px solid rgba(0,0,0,0.04); }
+    .pset-header {
+      display: flex; align-items: center; gap: 4px;
+      padding: 5px 10px; cursor: pointer;
+      font-size: 10.5px; font-weight: 600; color: var(--text-secondary);
+      transition: background 0.08s;
+    }
+    .pset-header:hover { background: rgba(0,0,0,0.015); }
+    .pset-count {
+      margin-left: auto; font-size: 9px; font-weight: 500;
+      color: var(--text-tertiary); background: var(--surface-muted);
+      padding: 0 4px; border-radius: 3px; line-height: 16px;
+    }
+    .pset-rows { }
+    .pset-row {
+      display: flex; padding: 2.5px 10px 2.5px 22px;
+      font-size: 10.5px;
+    }
+    .pset-key { flex: 1; color: var(--text-tertiary); }
+    .pset-val {
+      flex: 1; color: var(--text-primary); font-weight: 500;
+      text-align: right; font-variant-numeric: tabular-nums;
+    }
+    .pset-val.bool-true { color: var(--tl-green-text); }
+    .pset-val.bool-false { color: var(--tl-red-text); }
+
+    /* Material layers (Materialer tab) */
+    .mat-section { padding: 8px 10px; }
+    .mat-section-title {
+      font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-tertiary); margin-bottom: 6px;
+    }
+    .mat-sandwich {
+      display: flex; flex-direction: column; gap: 1px;
+      border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+    }
+    .mat-layer {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 8px; background: var(--card);
+      font-size: 10.5px;
+    }
+    .mat-layer:nth-child(even) { background: var(--surface-muted); }
+    .mat-layer-bar {
+      width: 4px; border-radius: 2px; align-self: stretch;
+    }
+    .mat-layer-name { flex: 1; color: var(--text-primary); font-weight: 500; }
+    .mat-layer-thick { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+    .mat-total {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 8px; font-size: 10.5px; font-weight: 600;
+      background: var(--surface-muted); border-radius: 0 0 4px 4px;
+      border: 1px solid var(--border); border-top: none;
+      color: var(--text-primary);
+    }
+
+    /* Empty state */
     .no-selection {
       display: flex; align-items: center; justify-content: center;
-      height: 100%; color: var(--text-tertiary); font-size: 12px;
+      height: 100%; color: var(--text-tertiary); font-size: 11px;
       flex-direction: column; gap: var(--space-sm);
     }
+    .no-selection svg { opacity: 0.3; }
   </style>
 </head>
 <body>
   <div class="shell">
-    <!-- SIDEBAR -->
+    <!-- ═══ SIDEBAR ═══ -->
     <aside class="sidebar">
       <div class="sidebar-brand"><button onclick="window.location='00-projects-gallery.html'"><span class="brand-icon">SF</span><span class="brand-name">Spruce Forge</span></button></div>
       <div class="sidebar-search"><button class="search-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Sok...</span></button><button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></div>
@@ -389,7 +603,6 @@
         </div></div>
         <div class="nav-section"><div class="nav-section-label">Arbeidsbenk</div><div class="nav-section-items">
           <a class="nav-item" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>Verifikasjon</a>
-          <a class="nav-item" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>IFC-redigering</a>
           <a class="nav-item" href="06-bep-eir.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>BEP</a>
         </div></div>
         <div class="nav-section"><div class="nav-section-label">Felt</div><div class="nav-section-items">
@@ -402,120 +615,216 @@
       </div>
     </aside>
 
-    <!-- MAIN -->
+    <!-- ═══ MAIN ═══ -->
     <div class="main">
       <div class="top-accent"></div>
 
       <div class="viewer-layout">
-        <!-- LEFT: Model Tree -->
-        <div class="model-tree">
-          <div class="tree-header">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-            Modelltre
+        <!-- ─── LEFT: MODEL BROWSER ─── -->
+        <div class="model-browser">
+          <!-- Tab strip: switch between Spatial / Type / System views -->
+          <div class="browser-tabs">
+            <button class="browser-tab active">Spatial</button>
+            <button class="browser-tab">Typer</button>
+            <button class="browser-tab">System</button>
           </div>
-          <div class="tree-toolbar">
-            <input class="tree-search" type="text" placeholder="Sok i modelltre...">
-            <button class="tree-btn" title="Vis alle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
-            <button class="tree-btn" title="Skjul alle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg></button>
+
+          <!-- Filter bar -->
+          <div class="browser-filter">
+            <input class="filter-search" type="text" placeholder="Filtrer...">
+            <button class="filter-btn" title="Vis alle"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button class="filter-btn" title="Skjul alle"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg></button>
+            <button class="filter-btn" title="Collapse all"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button>
           </div>
-          <div class="tree-content">
-            <!-- ARK model -->
+
+          <!-- Spatial tree -->
+          <div class="browser-tree">
+            <!-- ── ARK model (expanded) ── -->
             <div class="tree-node">
               <div class="tree-row">
-                <div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div>
-                <svg class="tree-icon model" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
-                <span class="tree-label" style="font-weight: 600; color: var(--primary)">LBK_ARK_F-KJ.ifc</span>
-                <span class="tree-count">v6</span>
-                <div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div>
+                <span class="disc-dot ark"></span>
+                <span class="tree-label model-name">LBK_ARK_F-KJ.ifc</span>
+                <div class="tree-meta">
+                  <span class="tree-badge version">v6</span>
+                  <span class="tree-count">3 481</span>
+                </div>
+                <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
               </div>
               <div class="tree-children">
-                <!-- Storeys -->
+                <!-- U1 Kjeller -->
                 <div class="tree-node">
-                  <div class="tree-row"><div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div><svg class="tree-icon storey" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg><span class="tree-label">U1 — Kjeller</span><span class="tree-count">342</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
-                </div>
-                <div class="tree-node">
-                  <div class="tree-row selected"><div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div><svg class="tree-icon storey" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg><span class="tree-label">01 — 1. etasje</span><span class="tree-count">891</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
-                  <div class="tree-children">
-                    <div class="tree-row"><div class="tree-toggle" style="visibility:hidden"></div><svg class="tree-icon element" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="0"/></svg><span class="tree-label">IfcWall (48)</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
-                    <div class="tree-row"><div class="tree-toggle" style="visibility:hidden"></div><svg class="tree-icon element" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="0"/></svg><span class="tree-label">IfcSlab (12)</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
-                    <div class="tree-row"><div class="tree-toggle" style="visibility:hidden"></div><svg class="tree-icon element" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="0"/></svg><span class="tree-label">IfcDoor (34)</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
-                    <div class="tree-row"><div class="tree-toggle" style="visibility:hidden"></div><svg class="tree-icon element" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="0"/></svg><span class="tree-label">IfcWindow (28)</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                  <div class="tree-row">
+                    <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+                    <svg class="tree-icon storey" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                    <span class="tree-label">U1 — Kjeller</span>
+                    <span class="tree-count">342</span>
+                    <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
                   </div>
                 </div>
+                <!-- 01 1. etasje (expanded, selected) -->
                 <div class="tree-node">
-                  <div class="tree-row"><div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div><svg class="tree-icon storey" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg><span class="tree-label">02 — 2. etasje</span><span class="tree-count">756</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                  <div class="tree-row selected">
+                    <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div>
+                    <svg class="tree-icon storey" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                    <span class="tree-label" style="font-weight:500">01 — 1. etasje</span>
+                    <span class="tree-count">891</span>
+                    <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                  </div>
+                  <div class="tree-children">
+                    <div class="elem-class-row"><div style="width:14px"></div><span class="elem-class-icon" style="border-color:#6366f1"></span><span class="elem-class-name">IfcWall</span><span class="elem-class-count">48</span><div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                    <div class="elem-class-row"><div style="width:14px"></div><span class="elem-class-icon" style="border-color:#8b5cf6"></span><span class="elem-class-name">IfcSlab</span><span class="elem-class-count">12</span><div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                    <div class="elem-class-row"><div style="width:14px"></div><span class="elem-class-icon" style="border-color:#f59e0b"></span><span class="elem-class-name">IfcDoor</span><span class="elem-class-count">34</span><div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                    <div class="elem-class-row"><div style="width:14px"></div><span class="elem-class-icon" style="border-color:#06b6d4"></span><span class="elem-class-name">IfcWindow</span><span class="elem-class-count">28</span><div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                    <div class="elem-class-row"><div style="width:14px"></div><span class="elem-class-icon" style="border-color:#10b981"></span><span class="elem-class-name">IfcColumn</span><span class="elem-class-count">16</span><div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                    <div class="elem-class-row"><div style="width:14px"></div><span class="elem-class-icon" style="border-color:#94a3b8"></span><span class="elem-class-name">IfcBeam</span><span class="elem-class-count">8</span><div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                  </div>
                 </div>
+                <!-- 02 -->
                 <div class="tree-node">
-                  <div class="tree-row"><div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div><svg class="tree-icon storey" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg><span class="tree-label">03 — 3. etasje</span><span class="tree-count">756</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                  <div class="tree-row">
+                    <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+                    <svg class="tree-icon storey" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                    <span class="tree-label">02 — 2. etasje</span>
+                    <span class="tree-count">756</span>
+                    <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                  </div>
                 </div>
+                <!-- 03 -->
                 <div class="tree-node">
-                  <div class="tree-row"><div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div><svg class="tree-icon storey" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg><span class="tree-label">04 — 4. etasje</span><span class="tree-count">612</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                  <div class="tree-row">
+                    <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+                    <svg class="tree-icon storey" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                    <span class="tree-label">03 — 3. etasje</span>
+                    <span class="tree-count">756</span>
+                    <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                  </div>
                 </div>
+                <!-- 04 -->
                 <div class="tree-node">
-                  <div class="tree-row"><div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></div><svg class="tree-icon storey" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg><span class="tree-label">Tak</span><span class="tree-count">124</span><div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+                  <div class="tree-row">
+                    <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+                    <svg class="tree-icon storey" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                    <span class="tree-label">04 — 4. etasje</span>
+                    <span class="tree-count">612</span>
+                    <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                  </div>
+                </div>
+                <!-- Tak -->
+                <div class="tree-node">
+                  <div class="tree-row">
+                    <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+                    <svg class="tree-icon storey" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                    <span class="tree-label">Tak</span>
+                    <span class="tree-count">124</span>
+                    <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- RIB model (collapsed) -->
+            <!-- ── RIB model (collapsed) ── -->
             <div class="tree-node">
               <div class="tree-row">
-                <div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform: rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
-                <svg class="tree-icon model" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
-                <span class="tree-label" style="font-weight: 600; color: var(--primary)">LBK_RIB_F-KJ.ifc</span>
-                <span class="tree-count">v3</span>
-                <div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+                <span class="disc-dot rib"></span>
+                <span class="tree-label model-name">LBK_RIB_F-KJ.ifc</span>
+                <div class="tree-meta">
+                  <span class="tree-badge version">v3</span>
+                  <span class="tree-count">1 204</span>
+                </div>
+                <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
               </div>
             </div>
 
-            <!-- RIV model -->
+            <!-- ── RIV model (collapsed, hidden) ── -->
             <div class="tree-node">
-              <div class="tree-row">
-                <div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform: rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
-                <svg class="tree-icon model" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
-                <span class="tree-label" style="font-weight: 600; color: var(--primary)">LBK_RIV.ifc</span>
-                <span class="tree-count">v1</span>
-                <div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <div class="tree-row hidden-node">
+                <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+                <span class="disc-dot riv"></span>
+                <span class="tree-label model-name">LBK_RIV.ifc</span>
+                <div class="tree-meta">
+                  <span class="tree-badge version">v1</span>
+                  <span class="tree-count">486</span>
+                </div>
+                <div class="tree-eye off"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg></div>
               </div>
             </div>
 
-            <!-- RIE model -->
+            <!-- ── RIE model (collapsed) ── -->
             <div class="tree-node">
               <div class="tree-row">
-                <div class="tree-toggle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform: rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
-                <svg class="tree-icon model" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m6.08 9.5-3.5 1.6a1 1 0 0 0 0 1.81l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9a1 1 0 0 0 0-1.83l-3.5-1.59"/></svg>
-                <span class="tree-label" style="font-weight: 600; color: var(--primary)">LBK_RIE.ifc</span>
-                <span class="tree-count">v2</span>
-                <div class="tree-eye"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                <div class="tree-toggle"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg></div>
+                <span class="disc-dot rie"></span>
+                <span class="tree-label model-name">LBK_RIE.ifc</span>
+                <div class="tree-meta">
+                  <span class="tree-badge version">v2</span>
+                  <span class="tree-count">312</span>
+                </div>
+                <div class="tree-eye"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></div>
               </div>
             </div>
+          </div>
+
+          <!-- Footer stats -->
+          <div class="browser-footer">
+            <span><strong>4</strong> modeller &middot; <strong>5 483</strong> elementer</span>
+            <span>3 synlige</span>
           </div>
         </div>
 
-        <!-- CENTER: 3D Canvas -->
+        <!-- ─── CENTER: 3D CANVAS ─── -->
         <div class="viewer-3d">
+          <!-- Toolbar -->
           <div class="viewer-toolbar">
             <span class="v-label">Verktoy</span>
-            <button class="v-btn" title="Velg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg></button>
-            <button class="v-btn" title="Snittplan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="3" x2="21" y1="12" y2="12"/></svg></button>
-            <button class="v-btn" title="Mal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2 8V2h6l13.3 13.3z"/></svg></button>
+            <button class="v-btn active" title="Velg (V)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg></button>
+            <button class="v-btn" title="Snittplan (S)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="3" x2="21" y1="12" y2="12"/></svg><span class="badge">2</span></button>
+            <button class="v-btn" title="Mal (M)" style="opacity:0.35;cursor:default"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2 8V2h6l13.3 13.3z"/></svg></button>
             <div class="v-sep"></div>
             <span class="v-label">Visning</span>
-            <button class="v-btn active" title="Perspektiv"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></button>
-            <button class="v-btn" title="Wireframe"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="3.3" x2="12" y1="7" y2="12"/><line x1="20.7" x2="12" y1="7" y2="12"/><line x1="12" x2="12" y1="22" y2="12"/></svg></button>
-            <button class="v-btn" title="Rontgen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button class="v-btn active" title="Perspektiv (P)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></button>
+            <button class="v-btn" title="Wireframe (W)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="3.3" x2="12" y1="7" y2="12"/><line x1="20.7" x2="12" y1="7" y2="12"/><line x1="12" x2="12" y1="22" y2="12"/></svg></button>
+            <button class="v-btn" title="Rontgen (X)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
             <div class="v-sep"></div>
-            <button class="v-btn" title="Tilpass visning"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/></svg></button>
+            <button class="v-btn" title="Tilpass visning (F)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/></svg></button>
+
+            <!-- Color mode control (pushed right) -->
+            <div class="v-color-mode" title="Fargelegging">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5" fill="rgba(255,255,255,0.3)"/><circle cx="17.5" cy="15.5" r="2.5" fill="rgba(255,255,255,0.3)"/><circle cx="8.5" cy="13.5" r="2.5" fill="rgba(255,255,255,0.3)"/></svg>
+              Per modell
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
           </div>
 
-          <div class="viewer-canvas-3d">
+          <!-- Canvas -->
+          <div class="viewer-canvas">
             <div class="scene-grid"></div>
-            <div class="model-count-badge">
-              <span class="mcb loaded">ARK</span>
-              <span class="mcb loaded">RIB</span>
-              <span class="mcb">RIV</span>
-              <span class="mcb">RIE</span>
+
+            <!-- Model discipline badges -->
+            <div class="model-badges">
+              <span class="mbadge loaded"><span class="mdot" style="background:var(--disc-ark-text)"></span>ARK</span>
+              <span class="mbadge loaded"><span class="mdot" style="background:var(--disc-rib-text)"></span>RIB</span>
+              <span class="mbadge"><span class="mdot" style="background:var(--disc-riv-text)"></span>RIV</span>
+              <span class="mbadge loaded"><span class="mdot" style="background:var(--disc-rie-text)"></span>RIE</span>
             </div>
+
+            <!-- Section planes floating panel -->
+            <div class="section-float">
+              <div class="section-float-title">Snittplan</div>
+              <div class="section-plane-row active">
+                <span class="sp-dot" style="background:#ef4444"></span>
+                <span class="sp-label">Horisontalt — 01</span>
+                <span class="sp-close"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+              </div>
+              <div class="section-plane-row">
+                <span class="sp-dot" style="background:#22c55e"></span>
+                <span class="sp-label">Vertikalt — X</span>
+                <span class="sp-close"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+              </div>
+            </div>
+
+            <!-- Fake 3D building -->
             <div class="scene-building">
               <div class="building-box">
                 <div class="selected-element"></div>
@@ -526,20 +835,24 @@
                 <div class="floor-line" style="top: 85%"><span class="building-label">01</span></div>
               </div>
             </div>
+
+            <!-- Axes gizmo -->
             <svg class="axes" viewBox="0 0 48 48">
               <line x1="8" y1="40" x2="40" y2="40" stroke="#ef4444" opacity="0.6"/><text x="42" y="42" fill="#ef4444" opacity="0.6">X</text>
               <line x1="8" y1="40" x2="8" y2="8" stroke="#22c55e" opacity="0.6"/><text x="4" y="6" fill="#22c55e" opacity="0.6">Y</text>
               <line x1="8" y1="40" x2="24" y2="28" stroke="#3b82f6" opacity="0.6"/><text x="26" y="26" fill="#3b82f6" opacity="0.6">Z</text>
             </svg>
+
+            <!-- Camera info -->
             <div class="camera-info">
-              4 modeller lastet<br>
-              3 481 elementer<br>
+              3 modeller synlige<br>
+              4 997 elementer<br>
               Perspektiv
             </div>
           </div>
         </div>
 
-        <!-- RIGHT: Properties -->
+        <!-- ─── RIGHT: PROPERTIES INSPECTOR ─── -->
         <div class="props-panel">
           <div class="props-header">
             <h3>Egenskaper</h3>
@@ -550,60 +863,134 @@
             <button class="props-tab">Materialer</button>
           </div>
           <div class="props-content">
-            <!-- Spatial path -->
+            <!-- Spatial breadcrumb -->
             <div class="spatial-path">
               <span>Lillebekken</span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
               <span>Bygg A</span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
               <span>01 — 1. etasje</span>
             </div>
 
-            <!-- Element info -->
-            <div class="elem-info">
+            <!-- Element identity -->
+            <div class="elem-identity">
               <div class="elem-name">Basisvegg:Yttervegg 200mm</div>
-              <div class="elem-class">IfcWall</div>
-              <div class="elem-guid">3kR8nHJOv0CQXZw$djYmbc</div>
+              <div class="elem-meta">
+                <span class="elem-class">IfcWall</span>
+                <span style="font-size:9px;color:var(--text-tertiary)">Basisvegg</span>
+              </div>
+              <div class="elem-guid-row">
+                <span class="elem-guid">3kR8nHJOv0CQXZw$djYmbc</span>
+                <button class="copy-btn" title="Kopier GUID"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+              </div>
             </div>
 
-            <!-- Pset groups -->
+            <!-- Quick quantities -->
+            <div class="qty-strip">
+              <div class="qty-item">
+                <div class="qty-val">4.82 m</div>
+                <div class="qty-label">Lengde</div>
+              </div>
+              <div class="qty-item">
+                <div class="qty-val">2.80 m</div>
+                <div class="qty-label">Hoyde</div>
+              </div>
+              <div class="qty-item">
+                <div class="qty-val">200 mm</div>
+                <div class="qty-label">Bredde</div>
+              </div>
+            </div>
+
+            <!-- Pset: WallCommon -->
             <div class="pset-group">
               <div class="pset-header">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
                 Pset_WallCommon
+                <span class="pset-count">5</span>
               </div>
               <div class="pset-rows">
                 <div class="pset-row"><span class="pset-key">Reference</span><span class="pset-val">Yttervegg 200mm</span></div>
-                <div class="pset-row"><span class="pset-key">IsExternal</span><span class="pset-val">True</span></div>
-                <div class="pset-row"><span class="pset-key">LoadBearing</span><span class="pset-val">True</span></div>
+                <div class="pset-row"><span class="pset-key">IsExternal</span><span class="pset-val bool-true">True</span></div>
+                <div class="pset-row"><span class="pset-key">LoadBearing</span><span class="pset-val bool-true">True</span></div>
                 <div class="pset-row"><span class="pset-key">FireRating</span><span class="pset-val">REI 60</span></div>
                 <div class="pset-row"><span class="pset-key">ThermalTransmittance</span><span class="pset-val">0.18</span></div>
               </div>
             </div>
+
+            <!-- Pset: BaseQuantities -->
             <div class="pset-group">
               <div class="pset-header">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
                 BaseQuantities
+                <span class="pset-count">6</span>
               </div>
               <div class="pset-rows">
                 <div class="pset-row"><span class="pset-key">Length</span><span class="pset-val">4 820 mm</span></div>
                 <div class="pset-row"><span class="pset-key">Height</span><span class="pset-val">2 800 mm</span></div>
                 <div class="pset-row"><span class="pset-key">Width</span><span class="pset-val">200 mm</span></div>
-                <div class="pset-row"><span class="pset-key">GrossArea</span><span class="pset-val">13.50 m2</span></div>
-                <div class="pset-row"><span class="pset-key">NetArea</span><span class="pset-val">11.22 m2</span></div>
-                <div class="pset-row"><span class="pset-key">GrossVolume</span><span class="pset-val">2.70 m3</span></div>
+                <div class="pset-row"><span class="pset-key">GrossArea</span><span class="pset-val">13.50 m&sup2;</span></div>
+                <div class="pset-row"><span class="pset-key">NetArea</span><span class="pset-val">11.22 m&sup2;</span></div>
+                <div class="pset-row"><span class="pset-key">GrossVolume</span><span class="pset-val">2.70 m&sup3;</span></div>
               </div>
             </div>
+
+            <!-- Pset: Custom (collapsed) -->
             <div class="pset-group">
               <div class="pset-header">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform: rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
                 Custom_BIMinfo
+                <span class="pset-count">8</span>
               </div>
             </div>
+
+            <!-- Pset: NO (collapsed) -->
             <div class="pset-group">
               <div class="pset-header">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform: rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
                 Pset_WallCommon_NO
+                <span class="pset-count">3</span>
+              </div>
+            </div>
+
+            <!-- === MATERIALS TAB CONTENT (visible when Materialer tab active) === -->
+            <!-- Shown here for wireframe completeness, in real app only one tab visible at a time -->
+            <div class="mat-section" style="border-top: 1px solid var(--border); margin-top: 4px; padding-top: 10px;">
+              <div class="mat-section-title">Materiallag (utvendig → innvendig)</div>
+              <div class="mat-sandwich">
+                <div class="mat-layer">
+                  <div class="mat-layer-bar" style="background:#a1887f"></div>
+                  <span class="mat-layer-name">Teglforblending</span>
+                  <span class="mat-layer-thick">108 mm</span>
+                </div>
+                <div class="mat-layer">
+                  <div class="mat-layer-bar" style="background:#90caf9"></div>
+                  <span class="mat-layer-name">Luftspalte</span>
+                  <span class="mat-layer-thick">25 mm</span>
+                </div>
+                <div class="mat-layer">
+                  <div class="mat-layer-bar" style="background:#ce93d8"></div>
+                  <span class="mat-layer-name">Vindsperre</span>
+                  <span class="mat-layer-thick">12 mm</span>
+                </div>
+                <div class="mat-layer">
+                  <div class="mat-layer-bar" style="background:#fff176"></div>
+                  <span class="mat-layer-name">Mineralull</span>
+                  <span class="mat-layer-thick">200 mm</span>
+                </div>
+                <div class="mat-layer">
+                  <div class="mat-layer-bar" style="background:#ef9a9a"></div>
+                  <span class="mat-layer-name">Dampsperre</span>
+                  <span class="mat-layer-thick">0.2 mm</span>
+                </div>
+                <div class="mat-layer">
+                  <div class="mat-layer-bar" style="background:#e0e0e0"></div>
+                  <span class="mat-layer-name">Gips</span>
+                  <span class="mat-layer-thick">13 mm</span>
+                </div>
+              </div>
+              <div class="mat-total">
+                <span>Totaltykkelse</span>
+                <span>358 mm</span>
               </div>
             </div>
           </div>
