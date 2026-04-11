@@ -200,7 +200,81 @@
     "instancePreview": "Forhåndsvisning av instans",
     "selectType": "Velg en type for å forhåndsvise instanser",
     "noInstances": "Ingen instanser",
-    "loading": "Laster visning..."
+    "loading": "Laster visning...",
+    "groupNotFound": "Gruppe ikke funnet",
+    "backToGroups": "Tilbake til grupper",
+    "noModels": "Ingen modeller i denne visningsgruppen",
+    "addModels": "Legg til modeller",
+    "modelsCount": "{{count}} modeller",
+    "elementsCount": "{{count}} elementer",
+    "visibleModels": "{{count}} synlige",
+    "platform": {
+      "models": "Modeller",
+      "verification": "Verifikasjon",
+      "typeClassification": "Typeklarering",
+      "approved": "Godkjent",
+      "warning": "Advarsel",
+      "error": "Feil",
+      "classified": "Klassifisert",
+      "review": "Gjennomgang",
+      "pending": "Venter",
+      "visible": "synlige",
+      "elements": "elementer"
+    },
+    "toolbar": {
+      "select": "Velg",
+      "sectionPlane": "Snittplan",
+      "measure": "Mål",
+      "perspective": "Perspektiv",
+      "wireframe": "Wireframe",
+      "xray": "Røntgen",
+      "fitView": "Tilpass visning"
+    },
+    "types": {
+      "wall": "Vegg",
+      "slab": "Dekke",
+      "door": "Dør",
+      "window": "Vindu",
+      "column": "Søyle",
+      "beam": "Bjelke",
+      "roof": "Tak",
+      "stair": "Trapp",
+      "railing": "Rekkverk",
+      "curtainWall": "Fasade",
+      "plate": "Plate",
+      "member": "Profil",
+      "footing": "Fundament",
+      "covering": "Kledning",
+      "furniture": "Inventar",
+      "proxy": "Proxy",
+      "allVisible": "Alle"
+    },
+    "sections": {
+      "title": "Snittplan",
+      "horizontal": "Horisontalt",
+      "verticalX": "Vertikalt — X",
+      "verticalZ": "Vertikalt — Z",
+      "parallel": "Parallelt"
+    },
+    "filters": {
+      "reset": "Nullstill"
+    },
+    "measure": {
+      "distance": "Avstand",
+      "height": "Høyde"
+    },
+    "properties": {
+      "title": "IFC-egenskaper",
+      "materialLayers": "Materiallag",
+      "total": "Total",
+      "expressId": "Express ID",
+      "copyGuid": "Kopier"
+    },
+    "camera": {
+      "modelsVisible": "{{count}} modeller synlige",
+      "perspective": "Perspektiv",
+      "orthographic": "Ortografisk"
+    }
   },
   "status": {
     "pending": "Venter",
