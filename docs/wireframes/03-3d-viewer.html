@@ -401,8 +401,67 @@
     /* Split panel: navigator top, tabs bottom */
     .spatial-navigator {
       flex: 0 1 auto; max-height: 50%; overflow-y: auto;
-      min-height: 120px; padding: 8px;
+      min-height: 120px;
       border-bottom: 1px solid var(--border);
+    }
+
+    /* Model selector pills */
+    .model-selector {
+      display: flex; gap: 3px; padding: 6px 8px;
+      border-bottom: 1px solid var(--border-light);
+      flex-shrink: 0; overflow-x: auto;
+    }
+    .ms-pill {
+      display: flex; align-items: center; gap: 3px;
+      padding: 3px 7px; border-radius: 4px;
+      font-size: 9px; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border); background: var(--card);
+      color: var(--text-secondary); transition: all 0.1s;
+      white-space: nowrap; flex-shrink: 0; position: relative;
+    }
+    .ms-pill:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+    .ms-pill.active {
+      border-color: var(--primary); background: var(--primary-light);
+      color: var(--primary);
+    }
+    .ms-pill .ms-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+    }
+    .ms-pill .ms-ver {
+      font-size: 8px; font-weight: 600; opacity: 0.6;
+    }
+    .ms-pill .ms-eye {
+      width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-tertiary); border-radius: 2px; margin-left: 1px;
+      opacity: 0; transition: opacity 0.1s; flex-shrink: 0;
+    }
+    .ms-pill:hover .ms-eye { opacity: 0.5; }
+    .ms-pill .ms-eye:hover { opacity: 1 !important; color: var(--primary); }
+    .ms-pill.hidden-model { opacity: 0.45; }
+    .ms-pill.hidden-model .ms-eye { opacity: 0.7; color: var(--tl-red-text); }
+    .ms-pill .ms-count {
+      font-size: 8px; color: var(--text-tertiary); font-variant-numeric: tabular-nums;
+    }
+    .ms-pill.active .ms-count { color: var(--primary); opacity: 0.7; }
+
+    /* Model info line (shown when single model selected) */
+    .ms-model-info {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 8px; font-size: 9px; color: var(--text-tertiary);
+      border-bottom: 1px solid var(--border-light);
+      background: var(--surface-hover);
+    }
+    .ms-model-info .ms-filename {
+      font-weight: 500; color: var(--text-secondary);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+    }
+
+    /* Discipline dots on federated storey rows */
+    .mt-storey-discs {
+      display: flex; gap: 2px; flex-shrink: 0; align-items: center;
+    }
+    .mt-storey-discs .disc-dot {
+      width: 5px; height: 5px; border-radius: 50%;
     }
     .context-bar {
       display: flex; align-items: center; justify-content: space-between;
