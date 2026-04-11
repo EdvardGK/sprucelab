@@ -132,11 +132,12 @@
 
     /* ─────────────────────────────────────────────
        LEFT PANEL — PLATFORM LAYER
-       What Sprucelab knows: models, types,
-       classification, verification
+       Control panel, not file browser.
+       Models as bold cards, verification as visual bar,
+       types as actionable items.
        ───────────────────────────────────────────── */
     .panel-left {
-      background: var(--card);
+      background: var(--bg);
       border-right: 1px solid var(--border);
       display: flex; flex-direction: column;
       overflow: hidden;
@@ -144,128 +145,178 @@
 
     /* Back row + project name */
     .panel-left-header {
-      display: flex; align-items: center; gap: 6px;
-      padding: 7px 10px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
       border-bottom: 1px solid var(--border);
-      background: var(--surface-muted);
+      background: var(--card);
     }
     .back-btn {
-      width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
-      border: 1px solid var(--border); border-radius: 4px;
+      width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border); border-radius: 6px;
       background: white; cursor: pointer; color: var(--text-secondary);
       transition: all 0.12s; flex-shrink: 0;
     }
-    .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .back-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
     .project-name {
+      font-size: 12px; font-weight: 700; color: var(--text-primary);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .project-sub { font-size: 9.5px; color: var(--text-tertiary); margin-top: 1px; }
+
+    /* Left panel scrollable area */
+    .panel-left-scroll { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Verification health bar (top, always visible) ── */
+    .verif-banner {
+      background: var(--card); border-radius: 8px; padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+    .verif-banner-title {
+      font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-tertiary); margin-bottom: 8px;
+    }
+    .verif-bar {
+      display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px;
+    }
+    .verif-bar-seg { border-radius: 3px; transition: width 0.3s; }
+    .verif-bar-seg.ok { background: var(--tl-green-dot); }
+    .verif-bar-seg.warn { background: var(--tl-yellow-dot); }
+    .verif-bar-seg.fail { background: var(--tl-red-dot); }
+    .verif-legend {
+      display: flex; gap: 12px; margin-top: 8px;
+    }
+    .verif-leg-item { display: flex; align-items: center; gap: 4px; }
+    .verif-leg-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .verif-leg-val { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .verif-leg-val.ok { color: var(--tl-green-text); }
+    .verif-leg-val.warn { color: var(--tl-yellow-text); }
+    .verif-leg-val.fail { color: var(--tl-red-text); }
+    .verif-leg-label { font-size: 9px; color: var(--text-tertiary); }
+
+    /* ── Model cards ── */
+    .model-card {
+      background: var(--card); border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .model-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+    .model-card.hidden-model { opacity: 0.45; }
+    .model-card-top {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px;
+    }
+    .disc-band {
+      width: 4px; align-self: stretch; border-radius: 2px; flex-shrink: 0;
+    }
+    .disc-band.ark { background: var(--disc-ark-text); }
+    .disc-band.rib { background: var(--disc-rib-text); }
+    .disc-band.riv { background: var(--disc-riv-text); }
+    .disc-band.rie { background: var(--disc-rie-text); }
+    .model-info { flex: 1; min-width: 0; }
+    .model-name {
       font-size: 11px; font-weight: 600; color: var(--text-primary);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .project-sub { font-size: 9.5px; color: var(--text-tertiary); }
-
-    /* Model list section */
-    .section-header {
-      display: flex; align-items: center; gap: 4px;
-      padding: 6px 10px;
-      font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--text-tertiary);
-      border-bottom: 1px solid rgba(0,0,0,0.04);
-      cursor: pointer;
+    .model-meta {
+      display: flex; align-items: center; gap: 6px; margin-top: 2px;
     }
-    .section-header svg { color: var(--text-tertiary); }
-    .section-header .s-count {
-      margin-left: auto; font-size: 9px; font-weight: 600;
-      background: var(--surface-muted); color: var(--text-tertiary);
-      padding: 0 5px; border-radius: 3px; line-height: 16px;
+    .model-disc-tag {
+      font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      padding: 1px 5px; border-radius: 3px; line-height: 14px;
     }
-
-    .section-body { }
-
-    /* Model rows */
-    .model-row {
-      display: flex; align-items: center; gap: 5px;
-      padding: 4px 10px; cursor: pointer;
-      font-size: 10.5px; transition: background 0.08s;
-    }
-    .model-row:hover { background: rgba(0,0,0,0.02); }
-    .disc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .disc-dot.ark { background: var(--disc-ark-text); }
-    .disc-dot.rib { background: var(--disc-rib-text); }
-    .disc-dot.riv { background: var(--disc-riv-text); }
-    .disc-dot.rie { background: var(--disc-rie-text); }
-    .model-name { flex: 1; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .model-ver { font-size: 9px; font-weight: 600; color: var(--primary); background: var(--primary-light); padding: 0 4px; border-radius: 3px; line-height: 15px; }
-    .model-count { font-size: 9px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+    .model-disc-tag.ark { background: var(--disc-ark-bg); color: var(--disc-ark-text); }
+    .model-disc-tag.rib { background: var(--disc-rib-bg); color: var(--disc-rib-text); }
+    .model-disc-tag.riv { background: var(--disc-riv-bg); color: var(--disc-riv-text); }
+    .model-disc-tag.rie { background: var(--disc-rie-bg); color: var(--disc-rie-text); }
+    .model-ver { font-size: 9px; font-weight: 600; color: var(--primary); background: var(--primary-light); padding: 1px 5px; border-radius: 3px; line-height: 14px; }
+    .model-count { font-size: 9.5px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
     .model-eye {
-      width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
       color: var(--text-tertiary); cursor: pointer; flex-shrink: 0;
-      opacity: 0; transition: opacity 0.1s;
+      border-radius: 4px; transition: all 0.1s;
     }
-    .model-row:hover .model-eye { opacity: 0.6; }
-    .model-eye:hover { opacity: 1 !important; color: var(--primary); }
-    .model-row.hidden-model { opacity: 0.4; }
-    .model-row.hidden-model .model-eye { opacity: 0.5; color: var(--chart-red); }
+    .model-eye:hover { background: rgba(0,0,0,0.04); color: var(--primary); }
+    .model-card.hidden-model .model-eye { color: var(--chart-red); }
 
-    /* Spatial tree (collapsible under models) */
-    .spatial-tree { padding: 0 0 4px; }
-    .storey-row {
+    /* Storey chips inside model card */
+    .storey-chips {
+      display: flex; flex-wrap: wrap; gap: 3px;
+      padding: 0 10px 8px;
+    }
+    .storey-chip {
       display: flex; align-items: center; gap: 3px;
-      padding: 2.5px 10px 2.5px 22px; font-size: 10px;
-      cursor: pointer; transition: background 0.08s;
-      color: var(--text-secondary);
+      padding: 2px 7px; border-radius: 4px;
+      font-size: 9px; font-weight: 500;
+      background: var(--surface-muted); color: var(--text-secondary);
+      cursor: pointer; transition: all 0.1s;
+      border: 1px solid transparent;
     }
-    .storey-row:hover { background: rgba(0,0,0,0.02); }
-    .storey-row.selected { background: var(--primary-light); color: var(--primary); font-weight: 500; }
-    .storey-icon { width: 11px; height: 11px; flex-shrink: 0; color: var(--chart-indigo); }
-    .storey-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .storey-count { font-size: 9px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+    .storey-chip:hover { background: var(--surface-hover); border-color: var(--border); }
+    .storey-chip.selected { background: var(--primary-light); color: var(--primary); font-weight: 600; border-color: rgba(21,121,84,0.2); }
+    .storey-chip .chip-count { font-size: 8px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+    .storey-chip.selected .chip-count { color: var(--primary); opacity: 0.7; }
 
-    /* Divider */
-    .panel-divider { height: 1px; background: var(--border); margin: 2px 0; }
+    /* ── Section label ── */
+    .section-label {
+      font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-tertiary); padding: 0 4px; margin-bottom: 4px;
+    }
 
-    /* Type classification section */
-    .type-row {
-      display: flex; align-items: center; gap: 5px;
-      padding: 3px 10px; font-size: 10.5px;
-      cursor: pointer; transition: background 0.08s;
+    /* ── Type classification cards ── */
+    .type-cards { display: flex; flex-direction: column; gap: 2px; }
+    .type-card {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px;
+      background: var(--card); border-radius: 6px;
+      border: 1px solid var(--border);
+      cursor: pointer; transition: all 0.1s;
     }
-    .type-row:hover { background: rgba(0,0,0,0.02); }
-    .type-dot {
-      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+    .type-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+    .type-dot-lg {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
     }
-    .type-name { flex: 1; color: var(--text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .type-card-info { flex: 1; min-width: 0; }
+    .type-card-name { font-size: 10.5px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .type-card-meta { font-size: 9px; color: var(--text-tertiary); margin-top: 1px; }
     .type-status {
-      font-size: 8.5px; font-weight: 600; padding: 0 4px; border-radius: 3px; line-height: 15px;
+      font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 4px; line-height: 1;
+      text-transform: uppercase; letter-spacing: 0.03em;
     }
     .type-status.mapped { background: var(--st-mapped-bg); color: var(--st-mapped-text); }
     .type-status.pending { background: var(--st-pending-bg); color: var(--st-pending-text); }
     .type-status.review { background: var(--st-review-bg); color: var(--st-review-text); }
-    .type-instances { font-size: 9px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 
-    /* Verification summary */
-    .verif-summary {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 1px; background: rgba(0,0,0,0.03);
-      margin: 0 10px 8px; border-radius: 4px; overflow: hidden;
+    /* ── Classification progress bar ── */
+    .class-progress {
+      background: var(--card); border-radius: 8px; padding: 10px 12px;
+      border: 1px solid var(--border);
     }
-    .verif-item {
-      padding: 5px; text-align: center; background: var(--card);
+    .class-progress-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 6px;
     }
-    .verif-val { font-size: 14px; font-weight: 700; }
-    .verif-val.ok { color: var(--tl-green-text); }
-    .verif-val.warn { color: var(--tl-yellow-text); }
-    .verif-val.fail { color: var(--tl-red-text); }
-    .verif-label { font-size: 8px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 1px; }
-
-    /* Left panel scrollable area */
-    .panel-left-scroll { flex: 1; overflow-y: auto; }
+    .class-progress-title {
+      font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-tertiary);
+    }
+    .class-progress-pct { font-size: 14px; font-weight: 800; color: var(--primary); }
+    .class-bar {
+      height: 6px; border-radius: 3px; background: var(--track); overflow: hidden;
+    }
+    .class-bar-fill { height: 100%; border-radius: 3px; background: var(--primary); transition: width 0.3s; }
+    .class-stats {
+      display: flex; gap: 8px; margin-top: 6px; font-size: 9px;
+    }
+    .class-stat { color: var(--text-tertiary); }
+    .class-stat strong { font-weight: 600; color: var(--text-secondary); }
 
     /* Left panel footer */
     .panel-left-footer {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 5px 10px;
+      padding: 6px 12px;
       border-top: 1px solid var(--border);
       font-size: 9px; color: var(--text-tertiary);
-      background: var(--surface-muted);
+      background: var(--card);
     }
     .panel-left-footer strong { color: var(--text-secondary); font-weight: 600; }
 
