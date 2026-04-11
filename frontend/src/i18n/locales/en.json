@@ -200,7 +200,81 @@
     "instancePreview": "Instance Preview",
     "selectType": "Select a type to preview instances",
     "noInstances": "No instances",
-    "loading": "Loading viewer..."
+    "loading": "Loading viewer...",
+    "groupNotFound": "Group not found",
+    "backToGroups": "Back to Groups",
+    "noModels": "No models in this viewer group",
+    "addModels": "Add Models",
+    "modelsCount": "{{count}} models",
+    "elementsCount": "{{count}} elements",
+    "visibleModels": "{{count}} visible",
+    "platform": {
+      "models": "Models",
+      "verification": "Verification",
+      "typeClassification": "Type Classification",
+      "approved": "Approved",
+      "warning": "Warning",
+      "error": "Error",
+      "classified": "Classified",
+      "review": "Review",
+      "pending": "Pending",
+      "visible": "visible",
+      "elements": "elements"
+    },
+    "toolbar": {
+      "select": "Select",
+      "sectionPlane": "Section Plane",
+      "measure": "Measure",
+      "perspective": "Perspective",
+      "wireframe": "Wireframe",
+      "xray": "X-ray",
+      "fitView": "Fit to View"
+    },
+    "types": {
+      "wall": "Wall",
+      "slab": "Slab",
+      "door": "Door",
+      "window": "Window",
+      "column": "Column",
+      "beam": "Beam",
+      "roof": "Roof",
+      "stair": "Stair",
+      "railing": "Railing",
+      "curtainWall": "Curtain",
+      "plate": "Plate",
+      "member": "Member",
+      "footing": "Footing",
+      "covering": "Cover",
+      "furniture": "Furniture",
+      "proxy": "Proxy",
+      "allVisible": "All"
+    },
+    "sections": {
+      "title": "Section Planes",
+      "horizontal": "Horizontal",
+      "verticalX": "Vertical — X",
+      "verticalZ": "Vertical — Z",
+      "parallel": "Parallel"
+    },
+    "filters": {
+      "reset": "Reset"
+    },
+    "measure": {
+      "distance": "Distance",
+      "height": "Height"
+    },
+    "properties": {
+      "title": "IFC Properties",
+      "materialLayers": "Material Layers",
+      "total": "Total",
+      "expressId": "Express ID",
+      "copyGuid": "Copy"
+    },
+    "camera": {
+      "modelsVisible": "{{count}} models visible",
+      "perspective": "Perspective",
+      "orthographic": "Orthographic"
+    }
   },
   "status": {
     "pending": "Pending",
