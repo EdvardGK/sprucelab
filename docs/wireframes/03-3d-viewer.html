@@ -665,61 +665,35 @@
     .tt-label { font-size: 7px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1; }
     .tt-sep { height: 1px; background: rgba(255,255,255,0.06); margin: 2px 4px; }
 
-    /* ── SECTION PLANES FLOAT (top right of canvas) ── */
-    .section-float {
-      position: absolute; top: 8px; right: 8px; z-index: 5;
-      display: flex; flex-direction: column; gap: 2px;
-      background: rgba(15,19,33,0.8); backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 5px;
-      padding: 5px;
-      min-width: 130px;
+    /* ── BOTTOM HUD BAR (unified status bar at canvas bottom) ── */
+    .canvas-hud {
+      display: flex; align-items: center; gap: 0;
+      background: rgba(15,19,33,0.88); backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 0; height: 32px; flex-shrink: 0; z-index: 5;
+      font-size: 9px; color: rgba(255,255,255,0.45);
     }
-    .sf-title {
-      font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-      color: rgba(255,255,255,0.3); padding: 0 3px 2px;
+    .hud-sep {
+      width: 1px; height: 16px; background: rgba(255,255,255,0.06); flex-shrink: 0;
     }
-    .sf-row {
-      display: flex; align-items: center; gap: 5px;
-      padding: 3px 4px; border-radius: 3px;
-      font-size: 9.5px; color: rgba(255,255,255,0.5);
-      cursor: pointer; transition: background 0.08s;
-    }
-    .sf-row:hover { background: rgba(255,255,255,0.05); }
-    .sf-row.active { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8); }
-    .sf-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .sf-label { flex: 1; }
-    .sf-x {
-      width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
-      border-radius: 2px; opacity: 0; cursor: pointer; color: rgba(255,255,255,0.35);
-      transition: opacity 0.1s;
-    }
-    .sf-x:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.08); }
-    .sf-row:hover .sf-x { opacity: 1; }
 
-    /* ── MEASUREMENT HUD (bottom center) ── */
-    .measure-hud {
-      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 5;
-      display: flex; align-items: center; gap: 6px;
-      background: rgba(15,19,33,0.85); backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 5px;
-      padding: 5px 10px;
-      font-size: 10px; color: rgba(255,255,255,0.5);
+    /* HUD: Axes gizmo */
+    .hud-axes {
+      width: 38px; height: 100%; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.06);
     }
-    .mh-val { color: var(--accent); font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
-    .mh-unit { font-size: 9px; color: rgba(255,255,255,0.35); }
-    .mh-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.08); }
-    .mh-label { font-size: 9px; color: rgba(255,255,255,0.3); }
+    .hud-axes line { stroke-width: 2; }
+    .hud-axes text { font-size: 7px; font-weight: 700; }
 
-    /* ── FILTER PILLS HUD (below toolbar, horizontal) ── */
-    .filter-hud {
-      position: absolute; top: 44px; left: 60px; z-index: 4;
+    /* HUD: Filter pills */
+    .hud-filters {
       display: flex; align-items: center; gap: 3px;
-      flex-wrap: wrap;
+      padding: 0 8px; flex-shrink: 0;
     }
     .fh-pill {
       display: flex; align-items: center; gap: 3px;
       padding: 2px 7px; border-radius: 3px;
-      font-size: 9px; font-weight: 600;
+      font-size: 8.5px; font-weight: 600;
       background: rgba(21,121,84,0.15); color: rgba(208,211,77,0.85);
       border: 1px solid rgba(21,121,84,0.25);
       cursor: pointer; transition: all 0.1s;
@@ -731,20 +705,63 @@
     }
     .fh-pill .fh-x:hover { opacity: 1; }
     .fh-clear {
-      font-size: 8.5px; color: rgba(255,255,255,0.3); cursor: pointer;
+      font-size: 8px; color: rgba(255,255,255,0.25); cursor: pointer;
       padding: 2px 4px; border-radius: 3px; transition: all 0.1s;
     }
     .fh-clear:hover { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.06); }
 
-    /* Axes + camera info */
-    .axes { position: absolute; bottom: 12px; left: 12px; width: 42px; height: 42px; z-index: 2; }
-    .axes line { stroke-width: 2; }
-    .axes text { font-size: 8px; font-weight: 700; }
-    .camera-info {
-      position: absolute; bottom: 44px; right: 10px; z-index: 2;
-      font-size: 9px; color: rgba(255,255,255,0.18);
-      text-align: right; line-height: 1.5;
+    /* HUD: Section planes (inline) */
+    .hud-sections {
+      display: flex; align-items: center; gap: 4px;
+      padding: 0 8px;
+    }
+    .hud-section-label {
+      font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.2); margin-right: 2px;
+    }
+    .sf-row {
+      display: flex; align-items: center; gap: 3px;
+      padding: 2px 5px; border-radius: 3px;
+      font-size: 9px; color: rgba(255,255,255,0.45);
+      cursor: pointer; transition: all 0.08s;
+    }
+    .sf-row:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); }
+    .sf-row.active { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8); }
+    .sf-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .sf-label { white-space: nowrap; }
+    .sf-x {
+      width: 12px; height: 12px; display: flex; align-items: center; justify-content: center;
+      border-radius: 2px; opacity: 0; cursor: pointer; color: rgba(255,255,255,0.3);
+      transition: opacity 0.1s;
+    }
+    .sf-x:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.08); }
+    .sf-row:hover .sf-x { opacity: 1; }
+
+    /* HUD: Measurement readout */
+    .hud-measure {
+      display: flex; align-items: center; gap: 5px;
+      padding: 0 8px;
+    }
+    .mh-label { font-size: 8px; color: rgba(255,255,255,0.25); }
+    .mh-val { color: var(--accent); font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .mh-unit { font-size: 8px; color: rgba(255,255,255,0.25); }
+    .mh-sep { width: 1px; height: 12px; background: rgba(255,255,255,0.06); }
+
+    /* HUD: Spacer */
+    .hud-spacer { flex: 1; }
+
+    /* HUD: View mode + camera info (right side) */
+    .hud-status {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 10px;
+      font-size: 8.5px; color: rgba(255,255,255,0.2);
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .hud-status span { display: flex; align-items: center; gap: 3px; }
+    .hud-view-mode {
+      font-weight: 600; color: rgba(255,255,255,0.35);
+      text-transform: uppercase; letter-spacing: 0.03em;
     }
 
 
