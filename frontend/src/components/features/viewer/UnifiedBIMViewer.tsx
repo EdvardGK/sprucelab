@@ -166,6 +166,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
 
+  // View mode: store original materials so we can restore them
+  const originalMaterialsRef = useRef<Map<number, THREE.Material | THREE.Material[]>>(new Map());
+  const currentViewModeRef = useRef<ViewerViewMode>('perspective');
+
   // Use controlled or internal type visibility
   const typeVisibility = typeVisibilityProp ?? internalTypeVisibility;
   const setTypeVisibility = typeVisibilityProp ? undefined : setInternalTypeVisibility;
