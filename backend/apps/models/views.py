@@ -191,6 +191,15 @@ class ModelViewSet(viewsets.ModelViewSet):
             if file_url.startswith('/'):
                 file_url = f"{settings.DJANGO_URL}{file_url}"
             print(f"✅ File saved to: {file_url}")
+
+            # Guard: reject localhost URLs in production
+            _is_local_url = 'localhost' in file_url or '127.0.0.1' in file_url
+            if _is_local_url and not settings.DEBUG:
+                return Response(
+                    {'error': 'Storage misconfigured: SUPABASE_S3_ACCESS_KEY required in production. '
+                              'Local file storage cannot be used in deployed environments.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
         except Exception as storage_error:
             print(f"❌ Storage upload failed: {storage_error}")
             import traceback
