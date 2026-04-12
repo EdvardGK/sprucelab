@@ -611,6 +611,7 @@
     "noTypes": "No types found",
     "complete": "complete",
     "error": "Failed to load dashboard metrics",
+    "statsError": "Could not load project statistics",
     "tabs": {
       "overview": "Overview",
       "project": "Project",
