@@ -248,7 +248,7 @@ export function ViewerHUD({
       </div>
 
       {/* Tool + view mode buttons */}
-      <div className="flex items-center gap-0.5 px-1.5">
+      <div className="flex items-center gap-1 px-2">
         {/* Section plane */}
         <HUDButton
           active={activeTool === 'section'}
