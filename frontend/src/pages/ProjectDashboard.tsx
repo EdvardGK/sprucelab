@@ -153,15 +153,27 @@ function OverviewTab({
   projectId,
   stats,
   statsLoading,
+  statsError,
 }: {
   projectId: string;
   stats: ReturnType<typeof useProjectStatistics>['data'];
   statsLoading: boolean;
+  statsError: Error | null;
 }) {
   const { t } = useTranslation();
 
   return (
     <div className="h-full flex flex-col gap-4 pt-2">
+      {/* Stats error banner */}
+      {statsError && !statsLoading && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex-shrink-0">
+          <div className="flex items-center gap-2 text-sm text-amber-600">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{t('dashboard.statsError')}</span>
+          </div>
+        </div>
+      )}
+
       {/* Quick Stats Row */}
       <div className="grid grid-cols-4 gap-4 flex-shrink-0">
         <Card decoration="top" decorationColor="blue" className="!p-4">
