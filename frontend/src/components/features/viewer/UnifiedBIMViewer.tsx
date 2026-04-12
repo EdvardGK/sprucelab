@@ -200,7 +200,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     deleteSectionPlane: sectionPlanes.deletePlane,
     clearAllSectionPlanes: sectionPlanes.clearAllPlanes,
     setActiveSectionPlane: sectionPlanes.setActivePlane,
-  }), [sectionPlanes.deletePlane, sectionPlanes.clearAllPlanes, sectionPlanes.setActivePlane]);
+    fitToView: fitAllModelsToView,
+    setViewMode: applyViewMode,
+  }), [sectionPlanes.deletePlane, sectionPlanes.clearAllPlanes, sectionPlanes.setActivePlane, fitAllModelsToView, applyViewMode]);
 
   // Notify parent of section plane changes
   useEffect(() => {
