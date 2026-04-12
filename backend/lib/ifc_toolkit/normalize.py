@@ -245,9 +245,9 @@ def detect_type_bloat(ifc: ifcopenshell.file) -> dict[str, Any]:
         key=lambda x: -x["variant_count"],
     )
 
-    # Orphaned types (defined but not referenced)
+    # Unused types (defined in model but no instances reference them)
     all_types = list(ifc.by_type("IfcTypeObject"))
-    orphaned = [
+    unused = [
         {"id": t.id(), "name": t.Name or "(unnamed)", "class": t.is_a()}
         for t in all_types
         if t.id() not in used_type_ids
@@ -259,8 +259,8 @@ def detect_type_bloat(ifc: ifcopenshell.file) -> dict[str, Any]:
         "direct_shape": direct_shape,
         "direct_shape_count": len(direct_shape),
         "sequential": sequential_bloat,
-        "orphaned": orphaned,
-        "orphaned_count": len(orphaned),
+        "unused": unused,
+        "unused_count": len(unused),
         "total_types": len(all_types),
     }
 
