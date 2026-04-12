@@ -892,9 +892,9 @@
     <!-- Spatial navigator (persistent, top half) -->
     <div class="spatial-navigator">
 
-      <!-- Model dropdown: scales to 10-30 models -->
-      <div class="model-dropdown">
-        <div class="model-dropdown-trigger">
+      <!-- Model dropdown + view mode toggle -->
+      <div class="model-dropdown" style="display:flex; gap:4px; align-items:start;">
+        <div class="model-dropdown-trigger" style="flex:1; min-width:0;">
           <span class="mdt-disc" style="background:var(--disc-ark-text)"></span>
           <div class="mdt-label">
             <div class="mdt-name">LBK_ARK_F-KJ.ifc</div>
@@ -903,6 +903,18 @@
           <span class="mdt-ver">v6</span>
           <span class="mdt-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg></span>
         </div>
+        <!-- Toggle: opinionated spatial view vs classic model tree -->
+        <div class="view-mode-toggle" title="Bytt visning">
+          <!-- Spatial (active) -->
+          <button class="vmt-btn active" title="Romlig visning">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <!-- Classic tree -->
+          <button class="vmt-btn" title="Klassisk modelltre">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
         <!--
           Dropdown menu (shown on click):
           ┌─────────────────────────────────────┐
