@@ -1119,10 +1119,12 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         cleanupSelection = () => {
           container.removeEventListener('mousedown', handleMouseDown);
           container.removeEventListener('mouseup', handleMouseUp);
+          container.removeEventListener('mousedown', handleRightMouseDown);
+          container.removeEventListener('mouseup', handleRightMouseUp);
           container.removeEventListener('dblclick', handleDoubleClickSelect);
           container.removeEventListener('dblclick', handleDoubleClick);
           container.removeEventListener('auxclick', handleAuxClick);
-          container.removeEventListener('contextmenu', handleContextMenu);
+          container.removeEventListener('contextmenu', handleNativeContextMenu);
           container.removeEventListener('wheel', handleWheel, { capture: true });
           window.removeEventListener('keydown', handleKeyDown);
           highlighter.events.select.onHighlight.reset();
