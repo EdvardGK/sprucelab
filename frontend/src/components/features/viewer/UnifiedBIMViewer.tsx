@@ -775,9 +775,34 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         container.addEventListener('dblclick', handleDoubleClick);
         container.addEventListener('auxclick', handleAuxClick);
 
-        // Setup right-click handler for context menu (section planes)
-        const handleContextMenu = async (event: MouseEvent) => {
+        // Right-click drag-vs-click tracking. The native `contextmenu` event fires
+        // on right-button mousedown — which is also where right-drag pan starts —
+        // so using it directly makes the menu pop on every pan. Instead we track
+        // right mousedown/mouseup ourselves and only open on a clean click
+        // (same thresholds as the left-click selection handler above).
+        let rightDownPos = { x: 0, y: 0 };
+        let rightDownTime = 0;
+        const handleRightMouseDown = (event: MouseEvent) => {
+          if (event.button !== 2) return;
+          rightDownPos = { x: event.clientX, y: event.clientY };
+          rightDownTime = Date.now();
+        };
+
+        // Suppress the native browser context menu unconditionally.
+        const handleNativeContextMenu = (event: MouseEvent) => {
           event.preventDefault();
+        };
+
+        const handleRightMouseUp = async (event: MouseEvent) => {
+          if (event.button !== 2) return;
+
+          const dx = Math.abs(event.clientX - rightDownPos.x);
+          const dy = Math.abs(event.clientY - rightDownPos.y);
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const elapsed = Date.now() - rightDownTime;
+          if (distance > CLICK_THRESHOLD_PX || elapsed > CLICK_THRESHOLD_MS) {
+            return; // drag, not a click — don't open menu
+          }
 
           try {
             // Use Three.js raycasting directly for reliability
