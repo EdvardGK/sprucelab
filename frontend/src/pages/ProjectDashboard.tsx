@@ -129,7 +129,7 @@ export default function ProjectDashboard() {
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="flex-1 min-h-0 overflow-hidden">
-              <OverviewTab projectId={id!} stats={stats} statsLoading={statsLoading} />
+              <OverviewTab projectId={id!} stats={stats} statsLoading={statsLoading} statsError={statsError} />
             </TabsContent>
 
             {/* Project Tab */}
