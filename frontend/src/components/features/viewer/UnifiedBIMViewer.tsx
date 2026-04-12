@@ -283,6 +283,68 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
   }, []);
 
+  // Apply view mode (perspective/wireframe/xray) to all scene meshes
+  const applyViewMode = useCallback((mode: ViewerViewMode) => {
+    const scene = viewerState.scene;
+    if (!scene) return;
+
+    const prevMode = currentViewModeRef.current;
+    currentViewModeRef.current = mode;
+
+    // Restore original materials if leaving wireframe/xray
+    if (prevMode !== 'perspective' && mode === 'perspective') {
+      scene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          const original = originalMaterialsRef.current.get(obj.id);
+          if (original) {
+            obj.material = original;
+          }
+        }
+      });
+      originalMaterialsRef.current.clear();
+      return;
+    }
+
+    // Save originals if coming from perspective
+    if (prevMode === 'perspective') {
+      originalMaterialsRef.current.clear();
+      scene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          originalMaterialsRef.current.set(obj.id, obj.material);
+        }
+      });
+    }
+
+    scene.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+
+      if (mode === 'wireframe') {
+        const original = originalMaterialsRef.current.get(obj.id);
+        const color = Array.isArray(original)
+          ? (original[0] as THREE.MeshStandardMaterial)?.color?.clone() ?? new THREE.Color(0x888888)
+          : (original as THREE.MeshStandardMaterial)?.color?.clone() ?? new THREE.Color(0x888888);
+        obj.material = new THREE.MeshBasicMaterial({
+          color,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.6,
+        });
+      } else if (mode === 'xray') {
+        const original = originalMaterialsRef.current.get(obj.id);
+        const color = Array.isArray(original)
+          ? (original[0] as THREE.MeshStandardMaterial)?.color?.clone() ?? new THREE.Color(0x6688cc)
+          : (original as THREE.MeshStandardMaterial)?.color?.clone() ?? new THREE.Color(0x6688cc);
+        obj.material = new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.15,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+      }
+    });
+  }, [viewerState.scene]);
+
   // Initialize viewer on mount
   useEffect(() => {
     if (!containerRef.current) return;
