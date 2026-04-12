@@ -837,14 +837,14 @@
     }
     .copy-btn:hover { color: var(--primary); background: var(--primary-light); }
 
-    /* Quick quantities grid */
+    /* Primary quantities (1-2 values, class-dependent defaults) */
     .qty-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 1px; background: rgba(0,0,0,0.03);
+      display: flex; gap: 1px; background: rgba(0,0,0,0.03);
       border-bottom: 1px solid rgba(0,0,0,0.04);
     }
-    .qty-cell { padding: 5px 6px; background: var(--card); text-align: center; }
-    .qty-val { font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .qty-cell { flex: 1; padding: 6px 8px; background: var(--card); text-align: center; }
+    .qty-cell.primary { }
+    .qty-val { font-size: 14px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
     .qty-unit { font-size: 8px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 1px; }
 
     /* Key properties grid (same visual weight as qty-grid) */
