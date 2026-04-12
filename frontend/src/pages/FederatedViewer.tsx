@@ -50,6 +50,7 @@ export default function FederatedViewer() {
   const { t } = useTranslation();
   const { data: project } = useProject(projectId!);
   const { data: group, isLoading } = useViewerGroup(groupId!);
+  const { data: models } = useModels(projectId);
 
   // Viewer ref
   const viewerRef = useRef<UnifiedBIMViewerHandle>(null);
