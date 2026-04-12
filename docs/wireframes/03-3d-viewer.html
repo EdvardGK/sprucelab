@@ -1652,25 +1652,87 @@ document.querySelectorAll('.tt-btn').forEach(btn => {
   };
 });
 
-// ── Pset expand/collapse ──
-document.querySelectorAll('.pset-header').forEach(header => {
-  header.onclick = () => {
-    const group = header.parentElement;
-    const rows = group.querySelector('.pset-rows');
-    const chevron = header.querySelector('svg');
-    if (rows) {
-      const isVisible = rows.style.display !== 'none';
-      rows.style.display = isVisible ? 'none' : '';
-      chevron.style.transform = isVisible ? 'rotate(-90deg)' : '';
-    } else {
-      // Collapsed group — create placeholder rows
-      const placeholder = document.createElement('div');
-      placeholder.className = 'pset-rows';
-      placeholder.innerHTML = '<div class="pset-row"><span class="pset-key" style="color:var(--text-tertiary);font-style:italic;">Laster egenskaper...</span><span class="pset-val"></span></div>';
-      group.appendChild(placeholder);
-      chevron.style.transform = '';
-    }
-  };
+// ── Pset dropdown ──
+const PSETS = {
+  'Pset_WallCommon': [
+    { key: 'Reference', val: 'Yttervegg 200mm' },
+    { key: 'IsExternal', val: 'True', cls: 'yes' },
+    { key: 'LoadBearing', val: 'True', cls: 'yes' },
+    { key: 'FireRating', val: 'REI 60' },
+    { key: 'ThermalTransmittance', val: '0.18' },
+  ],
+  'Custom_BIMinfo': [
+    { key: 'Prosjektnr', val: '2024-042' },
+    { key: 'Byggnr', val: 'A' },
+    { key: 'Etasje', val: '01' },
+    { key: 'Brannklasse', val: 'BKL 3' },
+    { key: 'Brannmotstand', val: 'REI 60' },
+    { key: 'AkustikkKrav', val: 'R\'w 55 dB' },
+    { key: 'Fasade', val: 'Sor' },
+    { key: 'Revisjon', val: 'C' },
+  ],
+  'Pset_WallCommon_NO': [
+    { key: 'Brannklasse', val: 'A2-s1,d0' },
+    { key: 'Lydkrav', val: 'R\'w 55 dB' },
+    { key: 'U-verdi', val: '0.18 W/m\u00b2K' },
+  ],
+  'Qto_WallBaseQuantities': [
+    { key: 'Length', val: '4 820 mm' },
+    { key: 'Height', val: '2 800 mm' },
+    { key: 'Width', val: '200 mm' },
+    { key: 'GrossArea', val: '13.50 m\u00b2' },
+    { key: 'NetArea', val: '11.22 m\u00b2' },
+    { key: 'Volume', val: '2.70 m\u00b3' },
+  ],
+};
+let activePset = 'Pset_WallCommon';
+
+function renderPsetRows() {
+  const rows = document.getElementById('psetRows');
+  if (!rows) return;
+  const data = PSETS[activePset] || [];
+  rows.innerHTML = data.map(r =>
+    '<div class="pset-row"><span class="pset-key">' + r.key + '</span><span class="pset-val' + (r.cls ? ' ' + r.cls : '') + '">' + r.val + '</span></div>'
+  ).join('');
+}
+
+document.getElementById('psetDropdown')?.addEventListener('click', function(e) {
+  // Remove existing menu
+  const existing = document.querySelector('.pset-dd-menu');
+  if (existing) { existing.remove(); return; }
+
+  const menu = document.createElement('div');
+  menu.className = 'pset-dd-menu';
+  menu.style.cssText = 'position:absolute; left:10px; right:10px; z-index:20; background:var(--card); border:1px solid var(--border-strong); border-radius:5px; box-shadow:var(--shadow-md); overflow:hidden;';
+
+  Object.keys(PSETS).forEach(name => {
+    const count = PSETS[name].length;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; align-items:center; gap:4px; padding:5px 10px; font-size:10px; cursor:pointer; transition:background 0.08s;' + (name === activePset ? 'font-weight:600; color:var(--primary); background:var(--primary-light);' : 'color:var(--text-secondary);');
+    row.innerHTML = '<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + name + '</span><span style="font-size:8.5px; color:var(--text-tertiary); background:var(--surface-muted); padding:0 4px; border-radius:3px; line-height:15px;">' + count + '</span>';
+    row.onmouseenter = () => { if (name !== activePset) row.style.background = 'rgba(0,0,0,0.02)'; };
+    row.onmouseleave = () => { if (name !== activePset) row.style.background = ''; };
+    row.onclick = (ev) => {
+      ev.stopPropagation();
+      activePset = name;
+      document.querySelector('.pset-dd-name').textContent = name;
+      document.querySelector('.pset-dropdown .pset-badge').textContent = count;
+      renderPsetRows();
+      menu.remove();
+    };
+    menu.appendChild(row);
+  });
+
+  // Position relative to selector
+  const selector = this.closest('.pset-selector');
+  selector.style.position = 'relative';
+  selector.appendChild(menu);
+
+  // Close on outside click
+  setTimeout(() => {
+    const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', close); } };
+    document.addEventListener('click', close);
+  }, 0);
 });
 
 // ── Section plane rows (in HUD bar) ──
