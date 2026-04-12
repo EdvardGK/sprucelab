@@ -379,12 +379,8 @@ export function CanvasStatusPanel({
 }: CanvasStatusPanelProps) {
   const { t } = useTranslation();
 
-  // Only show if there's something to display
   const hasFilters = filters.length > 0;
   const hasPlanes = planes.length > 0;
-  const hasContent = hasFilters || hasPlanes;
-
-  // Always show camera info; conditionally show filters + planes
   return (
     <div className={cn(
       'absolute bottom-2.5 right-2.5 z-10',
