@@ -12,7 +12,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Layers } from 'lucide-react';
+import { Plus, Layers, AlertTriangle } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { useViewerGroup } from '@/hooks/use-viewer-groups';
 import { useModels } from '@/hooks/use-models';
