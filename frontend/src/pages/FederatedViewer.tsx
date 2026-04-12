@@ -273,7 +273,10 @@ export default function FederatedViewer() {
                 viewMode={viewMode}
                 sectionPlaneCount={sectionPlanes.length}
                 onToolChange={setActiveTool}
-                onViewModeChange={setViewMode}
+                onViewModeChange={(mode) => {
+                  setViewMode(mode);
+                  viewerRef.current?.setViewMode(mode);
+                }}
                 onFitView={handleFitView}
               />
 
