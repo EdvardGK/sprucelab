@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2, CheckCircle2, MoreVertical, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2, CheckCircle2, MoreVertical, RefreshCw, Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useProject } from '@/hooks/use-projects';
 import { useModels } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
