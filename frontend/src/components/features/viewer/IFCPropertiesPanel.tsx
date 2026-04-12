@@ -411,7 +411,6 @@ function KeyPropertiesGrid({ element }: { element: ElementProperties }) {
 // ── Pset Dropdown ──
 
 function PsetDropdown({ element }: { element: ElementProperties }) {
-  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [selectedPset, setSelectedPset] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
