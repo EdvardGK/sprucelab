@@ -682,7 +682,7 @@ class IFCParserService:
 
         This approach ensures:
         - No empty types (only created when ObjectType exists)
-        - No orphan types (instance count from actual elements)
+        - No unused types (instance count from actual elements)
         - Better coverage (elements without IfcRelDefinesByType included)
         """
         types = []
