@@ -928,31 +928,51 @@
           Each row has eye toggle on hover.
           "Alle" merges storeys with discipline dots per row.
 
-          VIEW MODES (toggle buttons, top-right):
+          VIEW MODES (toggle buttons, top-right of dropdown):
 
-          ┌ SPATIAL (default, opinionated) ─────┐
-          │ Dropdown → model selector             │
-          │ Vis bar → model visibility             │
-          │ Storey list → spatial navigation       │
-          │ Context bar + tabs (Typer/System/Mat)  │
-          └────────────────────────────────────────┘
-
-          ┌ CLASSIC TREE (power user) ─────────────┐
-          │ Full expand/collapse model tree:        │
-          │ ▸ ARK — LBK_ARK_F-KJ.ifc               │
-          │   ▸ U1 — Kjeller                        │
-          │     IfcWall (124)                        │
-          │     IfcWindow (86)                       │
-          │     IfcColumn (52)                       │
-          │   ▸ 01 — 1. etasje                      │
-          │ ▸ RIB — LBK_RIB_F-KJ.ifc               │
-          │ ▸ RIV — LBK_RIV.ifc                     │
-          │ ▸ RIE — LBK_RIE.ifc                     │
+          ┌ SPATIAL (default) ─────────────────────┐
+          │ Layout: 280px | 1fr | 300px             │
           │                                         │
-          │ All models listed, expand/collapse,      │
-          │ eye toggles, 3 levels deep:              │
-          │ Model → Storey → IFC Classes             │
-          │ No tabs, no context filtering — raw tree │
+          │ Dropdown → model selector               │
+          │ Vis bar → model visibility               │
+          │ Storey list → spatial navigation         │
+          │ Context bar + tabs (Typer/System/Mat)    │
+          │                                         │
+          │ Navigate first, data follows.            │
+          └─────────────────────────────────────────┘
+
+          ┌ INSPECT IFC (power user) ──────────────┐
+          │ Layout: 400px | 1fr | 300px             │
+          │                  ↕ resizable             │
+          │              bottom panel                │
+          │                                         │
+          │ ┌──────────┬───────────────┬──────────┐ │
+          │ │MODEL TREE│  3D CANVAS    │IFC PROPS │ │
+          │ │ 400px    │  (smaller)    │ 300px    │ │
+          │ │          │               │          │ │
+          │ │ Full 3-  │               │          │ │
+          │ │ level    ├───────────────┤          │ │
+          │ │ tree     │ BOTTOM PANEL  │          │ │
+          │ │ +search  │ (tabbed)      │          │ │
+          │ │ +filters │               │          │ │
+          │ └──────────┴───────────────┴──────────┘ │
+          │                                         │
+          │ Left panel:                              │
+          │  - Full model tree (Model→Storey→Class) │
+          │  - Search box + filters                  │
+          │  - All models listed, expand/collapse    │
+          │  - Eye toggles inline                    │
+          │  - No tabs, no context abstraction       │
+          │                                         │
+          │ Bottom panel (tabs):                     │
+          │  - Elementer: spreadsheet of elements    │
+          │    in current scope (sort, filter, cols) │
+          │  - Validering: issues/warnings list      │
+          │    with severity, rule ID, message       │
+          │  - Klassifisering: types needing work,   │
+          │    quick-classify from table              │
+          │                                         │
+          │ Data first, canvas confirms.             │
           └─────────────────────────────────────────┘
         -->
       </div>
