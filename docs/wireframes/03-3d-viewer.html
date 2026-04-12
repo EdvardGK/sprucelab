@@ -847,21 +847,19 @@
     .qty-val { font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
     .qty-unit { font-size: 8px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 1px; }
 
-    /* Key properties strip */
+    /* Key properties grid (same visual weight as qty-grid) */
     .key-props {
-      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
-      padding: 5px 10px;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1px; background: rgba(0,0,0,0.03);
       border-bottom: 1px solid rgba(0,0,0,0.04);
     }
-    .kp-tag {
-      display: flex; align-items: center; gap: 3px;
-      padding: 2px 7px; border-radius: 3px;
-      font-size: 9px; font-weight: 600;
-    }
-    .kp-tag.positive { background: var(--tl-green-bg); color: var(--tl-green-text); }
-    .kp-tag.neutral { background: var(--surface-muted); color: var(--text-secondary); }
-    .kp-tag.warning { background: var(--tl-yellow-bg); color: var(--tl-yellow-text); }
-    .kp-label { font-size: 8px; font-weight: 500; color: var(--text-tertiary); }
+    .kp-cell { padding: 5px 6px; background: var(--card); text-align: center; }
+    .kp-val { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kp-val.yes { color: var(--tl-green-text); }
+    .kp-val.no { color: var(--tl-red-text); }
+    .kp-val.rating { color: var(--text-primary); }
+    .kp-val.value { color: var(--text-primary); }
+    .kp-label { font-size: 8px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 1px; }
 
     /* Pset dropdown selector */
     .pset-selector {
