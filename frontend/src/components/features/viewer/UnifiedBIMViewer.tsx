@@ -195,15 +195,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // Keep ref in sync for keyboard handler access (avoids stale closure)
   sectionPlanesRef.current = sectionPlanes;
 
-  // Expose section plane controls to parent via ref
-  useImperativeHandle(ref, () => ({
-    deleteSectionPlane: sectionPlanes.deletePlane,
-    clearAllSectionPlanes: sectionPlanes.clearAllPlanes,
-    setActiveSectionPlane: sectionPlanes.setActivePlane,
-    fitToView: fitAllModelsToView,
-    setViewMode: applyViewMode,
-  }), [sectionPlanes.deletePlane, sectionPlanes.clearAllPlanes, sectionPlanes.setActivePlane, fitAllModelsToView, applyViewMode]);
-
   // Notify parent of section plane changes
   useEffect(() => {
     onSectionPlanesChange?.(sectionPlanes.planes);
