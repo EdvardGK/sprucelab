@@ -1299,7 +1299,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
           // Freeze static matrices — fragments never move after load so Three.js
           // can skip per-frame matrix recompute. Kill switch: `?static-matrix=off`.
-          if (!staticMatrixDisabled) {
+          const skipStaticMatrix = typeof window !== 'undefined'
+            && new URLSearchParams(window.location.search).get('static-matrix') === 'off';
+          if (!skipStaticMatrix) {
             group.updateMatrixWorld(true);
             group.traverse(obj => {
               if ((obj as THREE.Mesh).isMesh || (obj as THREE.InstancedMesh).isInstancedMesh) {
