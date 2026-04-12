@@ -123,7 +123,7 @@ export default function FederatedViewer() {
   }, []);
 
   const handleFitView = useCallback(() => {
-    // TODO: Call viewer's fitToView when implemented
+    viewerRef.current?.fitToView();
   }, []);
 
   const handleRemoveFilter = useCallback((id: string) => {
