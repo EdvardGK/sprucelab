@@ -1,12 +1,12 @@
 /**
  * FederatedViewer — Full-screen BIM model viewer
  *
- * Layout: Left panel (Platform) | Center (Canvas + HUD) | Right panel (IFC Properties)
+ * Layout: Left panel (Platform) | Center (Canvas + HUD + Status) | Right panel (IFC Properties)
  * No global sidebar — viewer owns the entire screen.
  *
  * Left:   What Sprucelab knows (models, verification, type classification)
- * Center: 3D canvas with toolbar, type toolbar, section float, filter HUD
- * Right:  What the IFC file says (raw psets, quantities, materials)
+ * Center: 3D canvas with floating HUD toolbar (bottom-center) and status panel (bottom-right)
+ * Right:  What the IFC file says (quantities, key props, psets, materials)
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -20,8 +20,16 @@ import { UnifiedBIMViewer, type SectionPlane, type UnifiedBIMViewerHandle } from
 import { type TypeInfo } from '@/components/features/viewer/ViewerFilterHUD';
 import { type ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { PlatformPanel, type ModelInfo, type VerificationSummary, type TypeClassificationItem } from '@/components/features/viewer/PlatformPanel';
-import { ViewerToolbar, type ViewerTool, type ViewMode } from '@/components/features/viewer/ViewerToolbar';
-import { TypeToolbar, SectionFloat, FilterHUD, CameraInfo, type ActiveFilter, type TypeFilterInfo } from '@/components/features/viewer/CanvasOverlays';
+import {
+  TypeToolbar,
+  SectionFloat,
+  ViewerHUD,
+  CanvasStatusPanel,
+  type ActiveFilter,
+  type TypeFilterInfo,
+  type ViewerTool,
+  type ViewMode,
+} from '@/components/features/viewer/CanvasOverlays';
 import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPanel';
 import { AddModelsDialog } from '@/components/features/viewers/AddModelsDialog';
 
@@ -51,7 +59,7 @@ export default function FederatedViewer() {
   // Model visibility
   const [modelVisibility, setModelVisibility] = useState<Record<string, boolean>>({});
 
-  // Toolbar state
+  // Toolbar state (now owned here, passed to HUD)
   const [activeTool, setActiveTool] = useState<ViewerTool>('select');
   const [viewMode, setViewMode] = useState<ViewMode>('perspective');
 
@@ -68,7 +76,7 @@ export default function FederatedViewer() {
   // Storey selection
   const [selectedStoreyId, setSelectedStoreyId] = useState<string | null>(null);
 
-  // Active filters for HUD
+  // Active filters for status panel
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
   // Initialize model visibility when group loads
@@ -162,17 +170,12 @@ export default function FederatedViewer() {
   // Placeholder type classification (will come from API)
   const typeClassification: TypeClassificationItem[] | undefined = undefined;
 
-  // Visible model/element counts for camera info
+  // Visible model/element counts for status panel
   const visibleModelCount = platformModels.filter(m => m.visible).length;
   const visibleElementCount = typeFilters.reduce((sum, f) => sum + (f.visible ? f.count : 0), 0);
 
-  // Breadcrumb
-  const breadcrumb: string[] = [];
-  if (selectedElement) {
-    if (selectedElement.storey) breadcrumb.push(selectedElement.storey);
-    const elemName = selectedElement.name || selectedElement.objectType || selectedElement.type;
-    if (elemName) breadcrumb.push(elemName);
-  }
+  // View mode label for status panel
+  const viewModeLabel = t(`viewer.toolbar.${viewMode}`);
 
   // ── Loading / Error states ──
 
@@ -220,20 +223,9 @@ export default function FederatedViewer() {
         onSelectStorey={handleSelectStorey}
       />
 
-      {/* CENTER: Canvas + Toolbar */}
+      {/* CENTER: Canvas + Floating Overlays */}
       <div className="relative flex flex-col bg-[var(--viewer-bg)] min-h-0 min-w-0">
-        {/* Toolbar */}
-        <ViewerToolbar
-          activeTool={activeTool}
-          viewMode={viewMode}
-          sectionPlaneCount={sectionPlanes.length}
-          breadcrumb={breadcrumb.length > 0 ? breadcrumb : undefined}
-          onToolChange={setActiveTool}
-          onViewModeChange={setViewMode}
-          onFitView={handleFitView}
-        />
-
-        {/* Canvas area */}
+        {/* Canvas area (no toolbar — tools are in the HUD) */}
         <div className="flex-1 relative min-h-0 overflow-hidden">
           {group.models && group.models.length > 0 ? (
             <>
@@ -251,7 +243,7 @@ export default function FederatedViewer() {
                 typeVisibility={Object.fromEntries(typeFilters.map(f => [f.type, f.visible]))}
               />
 
-              {/* Canvas overlays */}
+              {/* Type filter toolbar (left edge) */}
               {typeFilterInfos.length > 0 && (
                 <TypeToolbar
                   types={typeFilterInfos}
@@ -260,6 +252,7 @@ export default function FederatedViewer() {
                 />
               )}
 
+              {/* Section planes float (top-right) */}
               <SectionFloat
                 planes={sectionPlanes}
                 activePlaneId={activePlaneId}
@@ -267,18 +260,28 @@ export default function FederatedViewer() {
                 onDeletePlane={handleDeletePlane}
               />
 
-              {computedFilters.length > 0 && (
-                <FilterHUD
-                  filters={computedFilters}
-                  onRemoveFilter={handleRemoveFilter}
-                  onClearAll={handleClearFilters}
-                />
-              )}
+              {/* HUD toolbar (bottom-center, tools only) */}
+              <ViewerHUD
+                activeTool={activeTool}
+                viewMode={viewMode}
+                sectionPlaneCount={sectionPlanes.length}
+                onToolChange={setActiveTool}
+                onViewModeChange={setViewMode}
+                onFitView={handleFitView}
+              />
 
-              <CameraInfo
+              {/* Status panel (bottom-right, single frame) */}
+              <CanvasStatusPanel
+                filters={computedFilters}
+                planes={sectionPlanes}
+                activePlaneId={activePlaneId}
                 visibleModelCount={visibleModelCount}
                 visibleElementCount={visibleElementCount}
-                viewMode={t(`viewer.toolbar.${viewMode}`)}
+                viewMode={viewModeLabel}
+                onRemoveFilter={handleRemoveFilter}
+                onClearFilters={handleClearFilters}
+                onSelectPlane={handleSelectPlane}
+                onDeletePlane={handleDeletePlane}
               />
             </>
           ) : (
