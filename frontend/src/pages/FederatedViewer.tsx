@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Layers } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { useViewerGroup } from '@/hooks/use-viewer-groups';
+import { useModels } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
 import { UnifiedBIMViewer, type SectionPlane, type UnifiedBIMViewerHandle } from '@/components/features/viewer/UnifiedBIMViewer';
 import { type TypeInfo } from '@/components/features/viewer/ViewerFilterHUD';
