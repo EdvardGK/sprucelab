@@ -256,7 +256,7 @@ export function ViewerHUD({
           title={`${t('viewer.toolbar.sectionPlane')} (S)`}
           badge={sectionPlaneCount > 0 ? sectionPlaneCount : undefined}
         >
-          <Scissors className="w-3 h-3" />
+          <Scissors className="w-4 h-4" />
         </HUDButton>
 
         {/* Measure */}
@@ -265,10 +265,10 @@ export function ViewerHUD({
           title={`${t('viewer.toolbar.measure')} (M)`}
           disabled
         >
-          <Ruler className="w-3 h-3" />
+          <Ruler className="w-4 h-4" />
         </HUDButton>
 
-        <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
+        <div className="w-px h-5 bg-white/[0.06] mx-0.5" />
 
         {/* Perspective */}
         <HUDButton
@@ -276,7 +276,7 @@ export function ViewerHUD({
           onClick={() => onViewModeChange('perspective')}
           title={`${t('viewer.toolbar.perspective')} (P)`}
         >
-          <Box className="w-3 h-3" />
+          <Box className="w-4 h-4" />
         </HUDButton>
 
         {/* Wireframe */}
@@ -294,17 +294,17 @@ export function ViewerHUD({
           onClick={() => onViewModeChange('xray')}
           title={`${t('viewer.toolbar.xray')} (X)`}
         >
-          <Eye className="w-3 h-3" />
+          <Eye className="w-4 h-4" />
         </HUDButton>
 
-        <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
+        <div className="w-px h-5 bg-white/[0.06] mx-0.5" />
 
         {/* Fit to view */}
         <HUDButton
           onClick={onFitView}
           title={`${t('viewer.toolbar.fitView')} (F)`}
         >
-          <Maximize className="w-3 h-3" />
+          <Maximize className="w-4 h-4" />
         </HUDButton>
       </div>
     </div>
