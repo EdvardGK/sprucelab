@@ -480,11 +480,16 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         // 10c. Setup MeshCullerRenderer — off-main-thread visibility checks.
         // Fragments outside the camera frustum are not drawn.
         //
-        // Kill switch: append `?culler=off` to the URL to disable the culler entirely
-        // for diagnostics. Lets us A/B test whether a reported visual bug (e.g.
-        // "model looks ghosted") is caused by the culler without rebuilding.
-        const cullerDisabled = typeof window !== 'undefined'
-          && new URLSearchParams(window.location.search).get('culler') === 'off';
+        // Diagnostic kill switches via URL query params — useful for isolating
+        // which Phase A optimization is causing a visual regression:
+        //   ?culler=off         — disable MeshCullerRenderer entirely
+        //   ?static-matrix=off  — skip matrixAutoUpdate=false on fragments
+        const params = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search)
+          : null;
+        const cullerDisabled = params?.get('culler') === 'off';
+        const staticMatrixDisabled = params?.get('static-matrix') === 'off';
+
         if (!cullerDisabled) {
           const cullers = components.get(OBC.Cullers);
           const culler = cullers.create(world);
@@ -492,6 +497,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           cullerRef.current = culler;
         } else {
           console.warn('[Viewer] Culler disabled via ?culler=off query param');
+        }
+        if (staticMatrixDisabled) {
+          console.warn('[Viewer] Static matrix optimization disabled via ?static-matrix=off');
         }
 
         // Configure highlighter - DISABLE all automatic camera movement
