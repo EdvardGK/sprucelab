@@ -709,6 +709,10 @@
       "review": "Review"
     }
   },
+  "modelStatus": {
+    "noTypesAnalyzed": "Types not analyzed",
+    "processingFailed": "Processing failed"
+  },
   "modelUpload": {
     "title": "Upload IFC Model",
     "description": "Upload a new IFC model to this project for processing and visualization",
