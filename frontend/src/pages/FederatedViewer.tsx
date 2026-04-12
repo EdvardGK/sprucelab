@@ -254,6 +254,23 @@ export default function FederatedViewer() {
                 onError={(err) => setLoadErrors(prev => [...prev, err])}
               />
 
+              {/* Model load error banner */}
+              {loadErrors.length > 0 && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 max-w-md">
+                  <div className="bg-red-900/90 backdrop-blur-sm border border-red-700/50 rounded-lg px-4 py-3 text-white text-sm">
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-300" />
+                      <div>
+                        <p className="font-medium text-red-100">{t('viewer.loadErrors.title')}</p>
+                        {loadErrors.map((err, i) => (
+                          <p key={i} className="text-red-300 text-xs mt-1">{err}</p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Type filter toolbar (left edge) */}
               {typeFilterInfos.length > 0 && (
                 <TypeToolbar
