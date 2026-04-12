@@ -9,7 +9,7 @@
  * Right:  What the IFC file says (quantities, key props, psets, materials)
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Layers, AlertTriangle } from 'lucide-react';
