@@ -24,7 +24,7 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import * as OBC from '@thatopen/components';
 import * as OBCF from '@thatopen/components-front';
 import * as THREE from 'three';
-import type { FragmentsGroup } from '@thatopen/fragments';
+import type { FragmentsGroup, FragmentIdMap } from '@thatopen/fragments';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, Box, Layers } from 'lucide-react';
@@ -49,6 +49,27 @@ const toAbsoluteUrl = (url: string): string => {
   }
   return `${DJANGO_BASE}${url}`;
 };
+
+/**
+ * Union several ThatOpen FragmentIdMaps into one. Used by the delta-based
+ * type-visibility effect to combine flipped-on or flipped-off type maps into
+ * a single hider.set() call per direction.
+ */
+function unionFragmentIdMaps(maps: FragmentIdMap[]): FragmentIdMap {
+  const result: FragmentIdMap = {};
+  for (const map of maps) {
+    for (const fragId in map) {
+      const ids = map[fragId];
+      if (!result[fragId]) {
+        result[fragId] = new Set(ids);
+      } else {
+        const target = result[fragId];
+        for (const id of ids) target.add(id);
+      }
+    }
+  }
+  return result;
+}
 
 /**
  * Safely access world.camera which throws in ThatOpen if not initialized.
@@ -161,10 +182,16 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [loadingProgress, setLoadingProgress] = useState<Record<string, boolean>>({});
 
-  // Type filtering state - auto-discovered from loaded models
-  const [typeInfo, setTypeInfo] = useState<Map<string, { guids: string[]; count: number }>>(new Map());
+  // Type filtering state - auto-discovered from loaded models.
+  // Stores each type's FragmentIdMap directly so the Hider can be driven without
+  // converting back through GUID arrays every toggle.
+  const [typeInfo, setTypeInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
+  const cullerRef = useRef<OBC.MeshCullerRenderer | null>(null);
+  // Previous applied visibility state, so the effect below can do delta updates
+  // instead of rebuilding and re-applying the full scene visibility every toggle.
+  const prevTypeVisibilityRef = useRef<Record<string, boolean>>({});
 
   // View mode: store original materials so we can restore them
   const originalMaterialsRef = useRef<Map<number, THREE.Material | THREE.Material[]>>(new Map());
@@ -353,6 +380,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
     let cleanupSelection: (() => void) | null = null;
     let cleanupResize: (() => void) | null = null;
+    let cleanupTelemetry: (() => void) | null = null;
 
     const initViewer = async () => {
       try {
@@ -448,6 +476,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         // 10b. Setup Hider for type filtering
         const hider = components.get(OBC.Hider);
         hiderRef.current = hider;
+
+        // 10c. Setup MeshCullerRenderer — off-main-thread visibility checks.
+        // Fragments outside the camera frustum (or too small to see at threshold px)
+        // are not drawn. Canonical ThatOpen BIM perf pattern. Registered fragments in
+        // finalizeLoadedGroup() below.
+        const cullers = components.get(OBC.Cullers);
+        const culler = cullers.create(world);
+        culler.config.threshold = 80;
+        cullerRef.current = culler;
 
         // Configure highlighter - DISABLE all automatic camera movement
         highlighter.zoomToSelection = false; // Don't zoom on selection
@@ -1071,6 +1108,54 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         window.addEventListener('resize', handleResize);
         cleanupResize = () => window.removeEventListener('resize', handleResize);
 
+        // Dev-only perf telemetry: draw calls + longtask observer.
+        // Used as baseline for Phase A optimizations. Not shipped to production.
+        if (import.meta.env.DEV) {
+          let lastLog = 0;
+          let rafId = 0;
+          let cancelled = false;
+          const logPerf = () => {
+            if (cancelled) return;
+            const now = performance.now();
+            if (now - lastLog > 1000) {
+              try {
+                const info = (world.renderer as OBC.SimpleRenderer | null)?.three?.info;
+                if (info) {
+                  // eslint-disable-next-line no-console
+                  console.debug('[viewer.perf]', {
+                    calls: info.render.calls,
+                    tris: info.render.triangles,
+                    geoms: info.memory.geometries,
+                    textures: info.memory.textures,
+                  });
+                }
+              } catch { /* renderer not ready */ }
+              lastLog = now;
+            }
+            rafId = requestAnimationFrame(logPerf);
+          };
+          rafId = requestAnimationFrame(logPerf);
+
+          let longtaskObs: PerformanceObserver | null = null;
+          try {
+            longtaskObs = new PerformanceObserver(list => {
+              for (const entry of list.getEntries()) {
+                if (entry.duration > 50) {
+                  // eslint-disable-next-line no-console
+                  console.warn('[viewer.longtask]', entry.duration.toFixed(0), 'ms', entry.name);
+                }
+              }
+            });
+            longtaskObs.observe({ entryTypes: ['longtask'] });
+          } catch { /* longtask entry type unsupported */ }
+
+          cleanupTelemetry = () => {
+            cancelled = true;
+            if (rafId) cancelAnimationFrame(rafId);
+            longtaskObs?.disconnect();
+          };
+        }
+
         // Set viewer state for hooks that need components/world/Three.js objects
         // Use try-catch for scene/renderer access as ThatOpen getters can throw
         let threeScene = null;
@@ -1107,6 +1192,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     return () => {
       cleanupSelection?.();
       cleanupResize?.();
+      cleanupTelemetry?.();
 
       // Dispose of components properly
       if (componentsRef.current) {
@@ -1151,6 +1237,96 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const fragments = components.get(OBC.FragmentsManager);
         const ifcLoader = components.get(OBC.IfcLoader);
 
+        // Single place for everything that must happen to a loaded FragmentsGroup:
+        // attach to scene, freeze static matrices, register with the culler, map
+        // fragment IDs to backend model IDs, extract types via Classifier, fire-and-forget
+        // the FastAPI open, push into the loaded-models ref, report progress.
+        //
+        // Both the fragments and IFC load paths call this — keeps behavior identical and
+        // means future perf work only has to change one place.
+        const finalizeLoadedGroup = (
+          group: FragmentsGroup,
+          modelData: { name: string; file_url: string },
+          modelId: string,
+          loadMethod: 'fragments' | 'ifc',
+        ): LoadedModel => {
+          worldRef.current!.scene!.three.add(group);
+
+          // Fragments never move after load. Freeze their matrices so Three.js
+          // stops recomputing matrix / matrixWorld every frame. One updateMatrixWorld
+          // after adding to the scene, then per-mesh auto-update off.
+          group.updateMatrixWorld(true);
+          group.traverse(obj => {
+            if ((obj as THREE.Mesh).isMesh || (obj as THREE.InstancedMesh).isInstancedMesh) {
+              obj.matrixAutoUpdate = false;
+              obj.matrixWorldAutoUpdate = false;
+            }
+          });
+
+          // Count elements + map every fragment UUID to its backend model ID, and
+          // register each fragment mesh with the MeshCullerRenderer so off-screen
+          // geometry stops drawing.
+          let totalElements = 0;
+          for (const fragment of group.items) {
+            totalElements += fragment.capacity;
+            modelIdMapRef.current.set(fragment.id, modelId);
+            if (cullerRef.current && fragment.mesh) {
+              cullerRef.current.add(fragment.mesh);
+            }
+          }
+          modelIdMapRef.current.set(group.uuid, modelId);
+
+          const loadedModel: LoadedModel = {
+            modelId,
+            fragmentModelId: group.uuid,
+            group,
+            elementCount: totalElements,
+            loadMethod,
+            name: modelData.name,
+            fileUrl: modelData.file_url,
+          };
+
+          // Derive IFC types locally from the loaded FragmentsGroup via Classifier.byEntity.
+          // In-memory pass, zero network, zero main-thread blocking. The Classifier
+          // accumulates state across all classified groups, so we just read its
+          // list.entities after each byEntity call and snapshot the current state.
+          try {
+            const classifier = components.get(OBC.Classifier);
+            classifier.byEntity(group);
+            const newTypeMap = new Map<string, { map: FragmentIdMap; count: number }>();
+            const entities = classifier.list.entities || {};
+            for (const [entityName, entity] of Object.entries(entities)) {
+              let count = 0;
+              for (const ids of Object.values(entity.map)) count += ids.size;
+              newTypeMap.set(entityName, { map: entity.map, count });
+            }
+            setTypeInfo(newTypeMap);
+            setTypeVisibility?.(prev => {
+              const updated = { ...prev };
+              for (const type of newTypeMap.keys()) {
+                if (!(type in updated)) updated[type] = true;
+              }
+              return updated;
+            });
+          } catch (err) {
+            console.warn('[Viewer] Local type extraction failed:', err);
+          }
+
+          // Fire-and-forget FastAPI open so click-to-inspect can resolve element props later.
+          if (modelData.file_url) {
+            const absoluteUrl = toAbsoluteUrl(modelData.file_url);
+            ifcService.openFromUrl(absoluteUrl)
+              .then(result => { loadedModel.ifcServiceFileId = result.file_id; })
+              .catch(() => { /* property fetch will fail gracefully on click */ });
+          }
+
+          loadedModelsRef.current.push(loadedModel);
+          setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
+          onModelLoaded?.(modelId, totalElements);
+
+          return loadedModel;
+        };
+
         // Load all models in parallel
         const loadPromises = modelIds.map(async (modelId) => {
           setLoadingProgress(prev => ({ ...prev, [modelId]: true }));
@@ -1163,180 +1339,33 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             }
             const modelData = await modelResponse.json();
 
-            // Try to load Fragments first (fast path)
+            // Fast path: prebuilt fragments
             try {
               const fragmentsResponse = await fetch(`${API_BASE}/models/${modelId}/fragments/`);
-
               if (fragmentsResponse.ok) {
                 const { fragments_url } = await fragmentsResponse.json();
-
                 const response = await fetch(fragments_url);
-                const data = await response.arrayBuffer();
-                const buffer = new Uint8Array(data);
-
-                // Load fragments (returns FragmentsGroup)
+                const buffer = new Uint8Array(await response.arrayBuffer());
                 const group = fragments.load(buffer);
-
-                // Add to scene
-                worldRef.current!.scene!.three.add(group);
-
-                // Count total elements and map all fragments to backend model
-                let totalElements = 0;
-                for (const fragment of group.items) {
-                  totalElements += fragment.capacity;
-
-                  // Map each individual fragment UUID to backend model ID
-                  // ThatOpen uses individual fragment UUIDs in selection events, not group UUID
-                  modelIdMapRef.current.set(fragment.id, modelId);
-                }
-
-                // Also map the group UUID for compatibility
-                modelIdMapRef.current.set(group.uuid, modelId);
-
-                const loadedModel: LoadedModel = {
-                  modelId,
-                  fragmentModelId: group.uuid,
-                  group,
-                  elementCount: totalElements,
-                  loadMethod: 'fragments',
-                  name: modelData.name,
-                  fileUrl: modelData.file_url,
-                };
-
-                // Derive IFC types locally from the loaded FragmentsGroup.
-                // Previously we called FastAPI getElements(limit:10000) per model, fetching
-                // up to 40k element JSON objects across federated loads. Classifier.byEntity
-                // reads data already in memory — zero network, zero main-thread blocking.
-                try {
-                  const classifier = components.get(OBC.Classifier);
-                  classifier.byEntity(group);
-                  const newTypeMap = new Map<string, { guids: string[]; count: number }>();
-                  const entities = classifier.list.entities || {};
-                  for (const [entityName, entity] of Object.entries(entities)) {
-                    const guids = fragments.fragmentIdMapToGuids(entity.map);
-                    const existing = newTypeMap.get(entityName);
-                    if (existing) {
-                      existing.guids.push(...guids);
-                      existing.count += guids.length;
-                    } else {
-                      newTypeMap.set(entityName, { guids, count: guids.length });
-                    }
-                  }
-                  setTypeInfo(newTypeMap);
-                  setTypeVisibility?.(prev => {
-                    const updated = { ...prev };
-                    for (const type of newTypeMap.keys()) {
-                      if (!(type in updated)) updated[type] = true;
-                    }
-                    return updated;
-                  });
-                } catch (err) {
-                  console.warn('[Viewer] Local type extraction failed:', err);
-                }
-
-                // Fire-and-forget FastAPI open so click-to-inspect works later.
-                // No chained getElements — that was the bottleneck.
-                if (modelData.file_url) {
-                  const absoluteUrl = toAbsoluteUrl(modelData.file_url);
-                  ifcService.openFromUrl(absoluteUrl)
-                    .then(result => { loadedModel.ifcServiceFileId = result.file_id; })
-                    .catch(() => { /* property fetch will fail gracefully on click */ });
-                }
-
-                loadedModelsRef.current.push(loadedModel);
-                setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
-                onModelLoaded?.(modelId, totalElements);
-
-                return loadedModel;
+                return finalizeLoadedGroup(group, modelData, modelId, 'fragments');
               }
             } catch {
               // Fragments not available, fall back to IFC
             }
 
-            // Fallback: Load IFC file
+            // Fallback: parse raw IFC in-browser
             if (!modelData.file_url) {
               throw new Error(`No IFC file available for model ${modelId}`);
             }
-
             const response = await fetch(modelData.file_url);
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-
-            // Load IFC (returns FragmentsGroup)
+            const buffer = new Uint8Array(await response.arrayBuffer());
             const group = await ifcLoader.load(buffer, true, modelData.name);
+            const loadedModel = finalizeLoadedGroup(group, modelData, modelId, 'ifc');
 
-            // Add to scene
-            worldRef.current!.scene!.three.add(group);
-
-            // Count total elements and map all fragments to backend model
-            let totalElements = 0;
-            for (const fragment of group.items) {
-              totalElements += fragment.capacity;
-
-              // Map each individual fragment UUID to backend model ID
-              // ThatOpen uses individual fragment UUIDs in selection events, not group UUID
-              modelIdMapRef.current.set(fragment.id, modelId);
-            }
-
-            // Also map the group UUID for compatibility
-            modelIdMapRef.current.set(group.uuid, modelId);
-
-            const loadedModel: LoadedModel = {
-              modelId,
-              fragmentModelId: group.uuid,
-              group,
-              elementCount: totalElements,
-              loadMethod: 'ifc',
-              name: modelData.name,
-              fileUrl: modelData.file_url,
-            };
-
-            // Derive IFC types locally from the loaded FragmentsGroup (see fragments path above).
-            try {
-              const classifier = components.get(OBC.Classifier);
-              classifier.byEntity(group);
-              const newTypeMap = new Map<string, { guids: string[]; count: number }>();
-              const entities = classifier.list.entities || {};
-              for (const [entityName, entity] of Object.entries(entities)) {
-                const guids = fragments.fragmentIdMapToGuids(entity.map);
-                const existing = newTypeMap.get(entityName);
-                if (existing) {
-                  existing.guids.push(...guids);
-                  existing.count += guids.length;
-                } else {
-                  newTypeMap.set(entityName, { guids, count: guids.length });
-                }
-              }
-              setTypeInfo(newTypeMap);
-              setTypeVisibility?.(prev => {
-                const updated = { ...prev };
-                for (const type of newTypeMap.keys()) {
-                  if (!(type in updated)) updated[type] = true;
-                }
-                return updated;
-              });
-            } catch (err) {
-              console.warn('[Viewer] Local type extraction failed:', err);
-            }
-
-            // Fire-and-forget FastAPI open so click-to-inspect works later.
-            if (modelData.file_url) {
-              const absoluteUrl = toAbsoluteUrl(modelData.file_url);
-              ifcService.openFromUrl(absoluteUrl)
-                .then(result => { loadedModel.ifcServiceFileId = result.file_id; })
-                .catch(() => { /* property fetch will fail gracefully on click */ });
-            }
-
-            loadedModelsRef.current.push(loadedModel);
-            setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
-            onModelLoaded?.(modelId, totalElements);
-
-            // Optionally trigger Fragment generation for next time
+            // Kick off async fragment generation so the next load uses the fast path.
             fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, {
               method: 'POST',
-            }).catch(() => {
-              // Silent fail - fragments are optional optimization
-            });
+            }).catch(() => { /* silent — fragments are an optimization */ });
 
             return loadedModel;
           } catch (err) {
@@ -1374,39 +1403,68 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     loadModels();
   }, [isInitialized, modelIds.join(','), autoFitToView, fitAllModelsToView, onModelLoaded, onError, viewerState.components]);
 
-  // Apply type visibility filtering using Hider
+  // Apply type visibility filtering using Hider — delta-based.
+  //
+  // The previous implementation rebuilt the full visible-GUIDs array for every toggle
+  // (tens of thousands of strings), converted them back into a FragmentIdMap, then
+  // called hider.set(false) followed by hider.set(true, map) — two full scene
+  // traversals on every single click. Delta version only touches types that flipped
+  // state since the last applied visibility, and calls hider.set at most once per
+  // direction.
+  //
+  // Single-frame debounce via requestAnimationFrame coalesces rapid Show/Hide-All
+  // clicks into one Hider operation.
   useEffect(() => {
-    if (!hiderRef.current || !viewerState.components || typeInfo.size === 0) return;
+    if (!hiderRef.current || typeInfo.size === 0) return;
 
-    const fragmentsManager = viewerState.components.get(OBC.FragmentsManager);
-    if (!fragmentsManager) return;
+    const rafId = requestAnimationFrame(() => {
+      const hider = hiderRef.current;
+      if (!hider) return;
 
-    // Collect all GUIDs for visible types
-    const visibleGuids: string[] = [];
-    for (const [type, data] of typeInfo) {
-      if (typeVisibility[type] !== false) {
-        visibleGuids.push(...data.guids);
+      const prev = prevTypeVisibilityRef.current;
+      const flippedOn: FragmentIdMap[] = [];
+      const flippedOff: FragmentIdMap[] = [];
+
+      for (const [type, data] of typeInfo) {
+        const now = typeVisibility[type] !== false; // default: visible
+        const before = type in prev ? prev[type] : now; // first-sync: no change
+        if (now === before) continue;
+        (now ? flippedOn : flippedOff).push(data.map);
       }
-    }
 
-    try {
-      if (visibleGuids.length === 0) {
-        // Hide all elements
-        hiderRef.current.set(false);
-      } else {
-        // Show only visible types
-        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(visibleGuids);
-        hiderRef.current.set(false); // Hide all first
-        hiderRef.current.set(true, fragmentIdMap); // Show filtered
+      try {
+        if (flippedOff.length > 0) hider.set(false, unionFragmentIdMaps(flippedOff));
+        if (flippedOn.length > 0) hider.set(true, unionFragmentIdMaps(flippedOn));
+      } catch (err) {
+        console.error('Type visibility filtering failed:', err);
+        hider.set(true);
       }
-    } catch (err) {
-      console.error('Type visibility filtering failed:', err);
-      // Filtering failed, show all elements
-      hiderRef.current.set(true);
-    }
-  }, [typeVisibility, typeInfo, viewerState.components]);
 
-  // Apply class-based coloring when classColorMap is provided
+      // Capture the applied visibility for next delta computation.
+      const snapshot: Record<string, boolean> = {};
+      for (const type of typeInfo.keys()) {
+        snapshot[type] = typeVisibility[type] !== false;
+      }
+      prevTypeVisibilityRef.current = snapshot;
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [typeVisibility, typeInfo]);
+
+  // Reset delta tracking when the set of loaded types changes out from under us
+  // (e.g. new model loaded). The next visibility effect run will re-sync from
+  // scratch for any type it hasn't seen yet.
+  useEffect(() => {
+    // Drop entries for types that no longer exist in typeInfo.
+    const next: Record<string, boolean> = {};
+    for (const [type, applied] of Object.entries(prevTypeVisibilityRef.current)) {
+      if (typeInfo.has(type)) next[type] = applied;
+    }
+    prevTypeVisibilityRef.current = next;
+  }, [typeInfo]);
+
+  // Apply class-based coloring when classColorMap is provided.
+  // Uses the FragmentIdMap stored directly in typeInfo — no GUID round-trip.
   useEffect(() => {
     if (!classColorMap || !viewerState.components || typeInfo.size === 0) return;
 
@@ -1420,28 +1478,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
       const color = new THREE.Color(hexColor);
 
-      try {
-        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(data.guids);
+      for (const [fragId, expressIds] of Object.entries(data.map)) {
+        const fragment = fragmentsManager.list.get(fragId);
+        if (!fragment) continue;
 
-        for (const [fragId, expressIds] of Object.entries(fragmentIdMap)) {
-          const fragment = fragmentsManager.list.get(fragId);
-          if (!fragment) continue;
-
-          // ThatOpen Fragment.setColor(color, itemIDs) colors specific instances
-          try {
-            fragment.setColor(color, [...expressIds]);
-          } catch {
-            // Fallback: color entire fragment mesh material
-            const mesh = fragment.mesh;
-            if (mesh && mesh.material && !Array.isArray(mesh.material)) {
-              const cloned = (mesh.material as THREE.MeshLambertMaterial).clone();
-              cloned.color.copy(color);
-              (mesh as unknown as { material: THREE.Material }).material = cloned;
-            }
+        try {
+          fragment.setColor(color, [...expressIds]);
+        } catch {
+          // Fallback: color entire fragment mesh material
+          const mesh = fragment.mesh;
+          if (mesh && mesh.material && !Array.isArray(mesh.material)) {
+            const cloned = (mesh.material as THREE.MeshLambertMaterial).clone();
+            cloned.color.copy(color);
+            (mesh as unknown as { material: THREE.Material }).material = cloned;
           }
         }
-      } catch {
-        // Fragment mapping failed for this class, skip
       }
     }
   }, [classColorMap, typeInfo, viewerState.components]);
