@@ -478,16 +478,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         hiderRef.current = hider;
 
         // 10c. Setup MeshCullerRenderer — off-main-thread visibility checks.
-        // Fragments outside the camera frustum are not drawn — this is the big win.
-        // The pixel-size threshold is set very low (5px) so that only truly tiny,
-        // visually imperceptible geometry is culled by size. BIM models have legitimate
-        // small elements (fasteners, fixtures, small pipes); aggressive size culling
-        // makes the model look "ghosted and incomplete" even though the frustum
-        // optimization is the one doing the perf work.
-        const cullers = components.get(OBC.Cullers);
-        const culler = cullers.create(world);
-        culler.config.threshold = 5;
-        cullerRef.current = culler;
+        // Fragments outside the camera frustum are not drawn.
+        //
+        // Kill switch: append `?culler=off` to the URL to disable the culler entirely
+        // for diagnostics. Lets us A/B test whether a reported visual bug (e.g.
+        // "model looks ghosted") is caused by the culler without rebuilding.
+        const cullerDisabled = typeof window !== 'undefined'
+          && new URLSearchParams(window.location.search).get('culler') === 'off';
+        if (!cullerDisabled) {
+          const cullers = components.get(OBC.Cullers);
+          const culler = cullers.create(world);
+          culler.config.threshold = 5;
+          cullerRef.current = culler;
+        } else {
+          console.warn('[Viewer] Culler disabled via ?culler=off query param');
+        }
 
         // Configure highlighter - DISABLE all automatic camera movement
         highlighter.zoomToSelection = false; // Don't zoom on selection
