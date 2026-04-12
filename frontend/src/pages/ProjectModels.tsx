@@ -249,23 +249,30 @@ export default function ProjectModels() {
                       )}
 
                       {/* Type Mapping Progress */}
-                      {model.status === 'ready' && model.type_count > 0 && (
-                        <div className="flex items-center gap-2 pt-2">
-                          <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary rounded-full transition-all duration-300"
-                              style={{
-                                width: `${Math.round((model.mapped_type_count / model.type_count) * 100)}%`
-                              }}
-                            />
+                      {model.status === 'ready' && (
+                        model.type_count > 0 ? (
+                          <div className="flex items-center gap-2 pt-2">
+                            <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.round((model.mapped_type_count / model.type_count) * 100)}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs text-text-secondary whitespace-nowrap">
+                              {model.mapped_type_count}/{model.type_count} types
+                            </span>
+                            {model.mapped_type_count === model.type_count && (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
+                            )}
                           </div>
-                          <span className="text-xs text-text-secondary whitespace-nowrap">
-                            {model.mapped_type_count}/{model.type_count} types
-                          </span>
-                          {model.mapped_type_count === model.type_count && (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
-                          )}
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 pt-2 text-xs text-text-tertiary">
+                            <Info className="h-3.5 w-3.5 shrink-0" />
+                            <span>{t('modelStatus.noTypesAnalyzed')}</span>
+                          </div>
+                        )
                       )}
                     </div>
 
