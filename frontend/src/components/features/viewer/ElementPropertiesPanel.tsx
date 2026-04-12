@@ -45,12 +45,36 @@ export interface ElementProperties {
   width?: number;
   perimeter?: number;
 
-  // Materials
+  // Key properties (extracted from Pset_*Common)
+  isExternal?: boolean;
+  loadBearing?: boolean;
+  fireRating?: string;
+  thermalTransmittance?: number; // U-value
+
+  // Representative unit (from TypeMapping or IFC class default)
+  representativeUnit?: 'area' | 'length' | 'volume' | 'count';
+
+  // Materials (enhanced with EPD + qty-per-unit)
   materials?: Array<{
     name: string;
     category?: string;
     thickness?: number;
+    qtyPerUnit?: number;
+    materialUnit?: string;
+    hasEpd?: boolean;
   }>;
+
+  // Discrete product info (sinks, toilets, etc.)
+  productInfo?: {
+    manufacturer?: string;
+    product?: string;
+    articleNumber?: string;
+    count?: number;
+    epdUrl?: string;
+    datasheetUrl?: string;
+    fdvUrl?: string;
+    hasEpd?: boolean;
+  };
 
   // Classification
   ns3451Code?: string;
