@@ -1872,6 +1872,31 @@ document.querySelector('.copy-btn')?.addEventListener('click', () => {
   }
 });
 
+// ── Toggle continuous/discrete demo (double-click right panel header) ──
+let isDiscrete = false;
+document.querySelector('.panel-right-header')?.addEventListener('dblclick', () => {
+  isDiscrete = !isDiscrete;
+  const contParts = ['.qty-grid', '.key-props', '.pset-selector', '#psetRows', '#continuousPanel'];
+  const discParts = ['#discretePanel'];
+  if (isDiscrete) {
+    // Switch to discrete (toilet/sink)
+    contParts.forEach(s => { const el = document.querySelector(s); if (el) el.style.display = 'none'; });
+    discParts.forEach(s => { const el = document.querySelector(s); if (el) el.style.display = ''; });
+    document.querySelector('.ifc-elem-name').textContent = 'Nautic 1510:Toalett WC-01';
+    document.querySelector('.ifc-class').textContent = 'IfcSanitaryTerminal';
+    document.querySelector('.ifc-predefined').textContent = 'TOILETPAN';
+    document.querySelector('.panel-right-header h3').textContent = 'IFC Egenskaper (Diskret)';
+  } else {
+    // Switch back to continuous (wall)
+    contParts.forEach(s => { const el = document.querySelector(s); if (el) el.style.display = ''; });
+    discParts.forEach(s => { const el = document.querySelector(s); if (el) el.style.display = 'none'; });
+    document.querySelector('.ifc-elem-name').textContent = 'Basisvegg:Yttervegg 200mm';
+    document.querySelector('.ifc-class').textContent = 'IfcWall';
+    document.querySelector('.ifc-predefined').textContent = 'STANDARD';
+    document.querySelector('.panel-right-header h3').textContent = 'IFC Egenskaper';
+  }
+});
+
 // ── Init ──
 bindStoreyClicks();
 </script>
