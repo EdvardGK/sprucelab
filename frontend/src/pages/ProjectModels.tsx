@@ -26,6 +26,7 @@ type ViewMode = 'gallery' | 'table';
 export default function ProjectModels() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
   const [modelToDelete, setModelToDelete] = useState<{ id: string; name: string } | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
