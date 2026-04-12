@@ -665,13 +665,17 @@
     .tt-label { font-size: 7px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1; }
     .tt-sep { height: 1px; background: rgba(255,255,255,0.06); margin: 2px 4px; }
 
-    /* ── BOTTOM HUD BAR (unified status bar at canvas bottom) ── */
+    /* ── FLOATING HUD TOOLBAR (overlays bottom of canvas) ── */
     .canvas-hud {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      z-index: 10;
       display: flex; align-items: center; gap: 0;
-      background: rgba(15,19,33,0.88); backdrop-filter: blur(12px);
-      border-top: 1px solid rgba(255,255,255,0.06);
-      padding: 0; height: 32px; flex-shrink: 0; z-index: 5;
+      background: rgba(15,19,33,0.85); backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 0; height: 34px;
       font-size: 9px; color: rgba(255,255,255,0.45);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
     .hud-sep {
       width: 1px; height: 16px; background: rgba(255,255,255,0.06); flex-shrink: 0;
