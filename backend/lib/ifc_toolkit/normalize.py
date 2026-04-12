@@ -191,13 +191,13 @@ def detect_type_bloat(ifc: ifcopenshell.file) -> dict[str, Any]:
     - Single-use types (1:1 type-instance ratio)
     - Direct Shape artifacts (Revit)
     - Sequential naming patterns (copy-paste indicator)
-    - Orphaned types (defined but unused)
+    - Unused types (defined in model but no instances reference them)
 
     Args:
         ifc: Parsed IFC file.
 
     Returns:
-        Dict with keys: single_use, direct_shape, sequential, orphaned.
+        Dict with keys: single_use, direct_shape, sequential, unused.
     """
     # Count instances per type
     type_instance_counts: dict[int, int] = defaultdict(int)
