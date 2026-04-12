@@ -318,6 +318,12 @@ class ModelViewSet(viewsets.ModelViewSet):
         if version_warning:
             response_data['version_warning'] = version_warning
 
+        # Warn about local storage in dev mode
+        if settings.DEBUG and ('localhost' in file_url or '127.0.0.1' in file_url):
+            response_data['storage_warning'] = (
+                'File stored locally. It will not be accessible from production or other services.'
+            )
+
         # Include quick stats if available
         if quick_stats and quick_stats.get('success'):
             response_data['quick_stats'] = {
