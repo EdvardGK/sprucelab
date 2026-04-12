@@ -251,6 +251,7 @@ export default function FederatedViewer() {
                 onSelectionChange={setSelectedElement}
                 onTypesDiscovered={handleTypesDiscovered}
                 typeVisibility={Object.fromEntries(typeFilters.map(f => [f.type, f.visible]))}
+                onError={(err) => setLoadErrors(prev => [...prev, err])}
               />
 
               {/* Type filter toolbar (left edge) */}
