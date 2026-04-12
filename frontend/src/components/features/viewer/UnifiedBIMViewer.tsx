@@ -1289,16 +1289,17 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         ): LoadedModel => {
           worldRef.current!.scene!.three.add(group);
 
-          // Fragments never move after load. Freeze their matrices so Three.js
-          // stops recomputing matrix / matrixWorld every frame. One updateMatrixWorld
-          // after adding to the scene, then per-mesh auto-update off.
-          group.updateMatrixWorld(true);
-          group.traverse(obj => {
-            if ((obj as THREE.Mesh).isMesh || (obj as THREE.InstancedMesh).isInstancedMesh) {
-              obj.matrixAutoUpdate = false;
-              obj.matrixWorldAutoUpdate = false;
-            }
-          });
+          // Freeze static matrices — fragments never move after load so Three.js
+          // can skip per-frame matrix recompute. Kill switch: `?static-matrix=off`.
+          if (!staticMatrixDisabled) {
+            group.updateMatrixWorld(true);
+            group.traverse(obj => {
+              if ((obj as THREE.Mesh).isMesh || (obj as THREE.InstancedMesh).isInstancedMesh) {
+                obj.matrixAutoUpdate = false;
+                obj.matrixWorldAutoUpdate = false;
+              }
+            });
+          }
 
           // Count elements + map every fragment UUID to its backend model ID, and
           // register each fragment mesh with the MeshCullerRenderer so off-screen
