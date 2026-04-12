@@ -1357,20 +1357,22 @@
         </div>
       </div>
 
-      <!-- Primary quantities (IfcWall default: area + width) -->
+      <!-- Primary quantities (IfcWall: area, length, height, thickness) -->
       <div class="qty-grid">
-        <div class="qty-cell primary"><div class="qty-val">11.22</div><div class="qty-unit">m&sup2; netto areal</div></div>
-        <div class="qty-cell"><div class="qty-val">200</div><div class="qty-unit">mm bredde</div></div>
+        <div class="qty-cell primary"><div class="qty-val">11.22</div><div class="qty-unit">m&sup2; areal</div></div>
+        <div class="qty-cell"><div class="qty-val">4.82</div><div class="qty-unit">m lengde</div></div>
+        <div class="qty-cell"><div class="qty-val">2.80</div><div class="qty-unit">m h&oslash;yde</div></div>
+        <div class="qty-cell"><div class="qty-val">200</div><div class="qty-unit">mm tykkelse</div></div>
       </div>
       <!--
         Quantity defaults per IFC class (configurable in BEP Visningsregler):
-        IfcWall          → netto areal (m²) + bredde (mm)
+        IfcWall          → areal (m²), lengde (m), høyde (m), tykkelse (mm)
         IfcSlab          → volum (m³) + tykkelse (mm)
         IfcBeam          → lengde (m) + profilareal (cm²)
         IfcColumn        → lengde (m) + profilareal (cm²)
-        IfcDoor/Window   → BBox H×B (mm × mm)
-        IfcSanitaryTerminal, IfcFlowTerminal → BBox L×B×H (mm)
-        IfcPipe/Duct     → lengde (m) + diameter/dim (mm)
+        IfcDoor/Window   → H×B (mm × mm)
+        IfcSanitaryTerminal → BBox L×B×H (mm)
+        IfcPipe/Duct     → lengde (m) + diameter (mm)
       -->
 
       <!-- Key properties (configured via BEP Visningsregler) -->
