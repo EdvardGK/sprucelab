@@ -56,7 +56,7 @@ export default function ProjectDashboard() {
   const navigate = useNavigate();
 
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
-  const { data: stats, isLoading: statsLoading, error: _statsError } = useProjectStatistics(id!);
+  const { data: stats, isLoading: statsLoading, error: statsError } = useProjectStatistics(id!);
 
   if (projectLoading) {
     return (
