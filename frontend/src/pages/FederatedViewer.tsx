@@ -84,6 +84,19 @@ export default function FederatedViewer() {
   // Model load errors
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
 
+  // Memoize props passed to UnifiedBIMViewer. Without these, every FederatedViewer
+  // re-render produces new object/array references, which makes UnifiedBIMViewer's
+  // useEffect dependencies fire and re-run expensive hider operations across
+  // tens of thousands of GUIDs — blowing the rAF budget on every interaction.
+  const modelIdList = useMemo(
+    () => group?.models?.map(m => m.model) ?? [],
+    [group?.models]
+  );
+  const typeVisibilityMap = useMemo(
+    () => Object.fromEntries(typeFilters.map(f => [f.type, f.visible])),
+    [typeFilters]
+  );
+
   // Initialize model visibility when group loads
   useEffect(() => {
     if (group?.models && Object.keys(modelVisibility).length === 0) {
