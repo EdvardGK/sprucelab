@@ -331,7 +331,7 @@ function HUDButton({
       onClick={disabled ? undefined : onClick}
       title={title}
       className={cn(
-        'w-6 h-6 flex items-center justify-center rounded relative transition-all',
+        'w-8 h-8 flex items-center justify-center rounded relative transition-all',
         disabled && 'opacity-25 cursor-default pointer-events-none',
         !disabled && !active && 'text-white/45 hover:bg-white/[0.06] hover:text-white/70 cursor-pointer',
         active && 'bg-[rgba(21,121,84,0.2)] text-[var(--accent)]',
