@@ -3,7 +3,7 @@
 Solves real problems:
 - Material name chaos: Norwegian/English variants mapped to canonical forms
 - Revit Direct Shape bloat: 1:1 type-instance ratio, use ObjectType instead
-- Type bloat patterns: sequential naming, orphaned types
+- Type bloat patterns: sequential naming, unused types
 - Vendor pset detection: find MagiCAD and other vendor-specific property sets
 """
 
