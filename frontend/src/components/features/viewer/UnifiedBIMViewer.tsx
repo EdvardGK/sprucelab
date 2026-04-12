@@ -1297,19 +1297,11 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         ): LoadedModel => {
           worldRef.current!.scene!.three.add(group);
 
-          // Freeze static matrices — fragments never move after load so Three.js
-          // can skip per-frame matrix recompute. Kill switch: `?static-matrix=off`.
-          const skipStaticMatrix = typeof window !== 'undefined'
-            && new URLSearchParams(window.location.search).get('static-matrix') === 'off';
-          if (!skipStaticMatrix) {
-            group.updateMatrixWorld(true);
-            group.traverse(obj => {
-              if ((obj as THREE.Mesh).isMesh || (obj as THREE.InstancedMesh).isInstancedMesh) {
-                obj.matrixAutoUpdate = false;
-                obj.matrixWorldAutoUpdate = false;
-              }
-            });
-          }
+          // Note: Phase A originally set matrixAutoUpdate=false on fragment meshes
+          // to skip per-frame matrix recompute. That change broke the
+          // MeshCullerRenderer's internal visibility probe — opaque fragments
+          // disappeared on first load, leaving only transparent geometry (windows,
+          // curtain walls). The Culler is a much bigger perf win, so A2 is dropped.
 
           // Count elements + map every fragment UUID to its backend model ID, and
           // register each fragment mesh with the MeshCullerRenderer so off-screen
