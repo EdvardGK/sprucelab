@@ -229,7 +229,7 @@ export function ViewerHUD({
   return (
     <div className={cn(
       'absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10',
-      'flex items-center h-[34px]',
+      'flex items-center h-[44px]',
       'bg-[rgba(15,19,33,0.85)] backdrop-blur-[14px]',
       'border border-white/[0.08] rounded-lg',
       'shadow-[0_4px_20px_rgba(0,0,0,0.3)]',
