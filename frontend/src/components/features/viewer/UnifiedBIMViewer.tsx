@@ -957,7 +957,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           }
         };
 
-        container.addEventListener('contextmenu', handleContextMenu);
+        container.addEventListener('mousedown', handleRightMouseDown);
+        container.addEventListener('mouseup', handleRightMouseUp);
+        container.addEventListener('contextmenu', handleNativeContextMenu);
 
         // Setup Shift+Scroll for section plane manipulation (uses ref to avoid stale closure)
         const handleWheel = (event: WheelEvent) => {
