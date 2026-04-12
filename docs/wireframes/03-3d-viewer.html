@@ -1457,19 +1457,48 @@
         <div class="pset-row"><span class="pset-key">ThermalTransmittance</span><span class="pset-val">0.18</span></div>
       </div>
 
-      <!-- Materials -->
-      <div class="mat-block">
-        <div class="mat-title">Materiallag</div>
+      <!-- Materials (continuous element — material recipe per rep unit) -->
+      <div class="mat-block" id="continuousPanel">
+        <div class="mat-title">Materiallag &mdash; oppskrift per m&sup2;</div>
         <div class="mat-stack">
-          <div class="mat-layer"><div class="mat-bar" style="background:#a1887f"></div><span class="mat-name">Teglforblending</span><span class="mat-thick">108 mm</span></div>
-          <div class="mat-layer"><div class="mat-bar" style="background:#90caf9"></div><span class="mat-name">Luftspalte</span><span class="mat-thick">25 mm</span></div>
-          <div class="mat-layer"><div class="mat-bar" style="background:#ce93d8"></div><span class="mat-name">Vindsperre</span><span class="mat-thick">12 mm</span></div>
-          <div class="mat-layer"><div class="mat-bar" style="background:#fff176"></div><span class="mat-name">Mineralull</span><span class="mat-thick">200 mm</span></div>
-          <div class="mat-layer"><div class="mat-bar" style="background:#ef9a9a"></div><span class="mat-name">Dampsperre</span><span class="mat-thick">0.2 mm</span></div>
-          <div class="mat-layer"><div class="mat-bar" style="background:#e0e0e0"></div><span class="mat-name">Gips</span><span class="mat-thick">13 mm</span></div>
+          <div class="mat-layer"><div class="mat-bar" style="background:#a1887f"></div><span class="mat-name">Teglforblending</span><span class="mat-qty">108 kg/m&sup2;</span><span class="mat-thick">108 mm</span><span class="mat-epd has" title="EPD koblet"></span></div>
+          <div class="mat-layer"><div class="mat-bar" style="background:#90caf9"></div><span class="mat-name">Luftspalte</span><span class="mat-qty">&mdash;</span><span class="mat-thick">25 mm</span><span class="mat-epd missing" title="Ingen EPD"></span></div>
+          <div class="mat-layer"><div class="mat-bar" style="background:#ce93d8"></div><span class="mat-name">Vindsperre</span><span class="mat-qty">0.22 kg/m&sup2;</span><span class="mat-thick">12 mm</span><span class="mat-epd has" title="EPD koblet"></span></div>
+          <div class="mat-layer"><div class="mat-bar" style="background:#fff176"></div><span class="mat-name">Mineralull</span><span class="mat-qty">0.20 m&sup3;/m&sup2;</span><span class="mat-thick">200 mm</span><span class="mat-epd has" title="EPD koblet"></span></div>
+          <div class="mat-layer"><div class="mat-bar" style="background:#ef9a9a"></div><span class="mat-name">Dampsperre</span><span class="mat-qty">0.01 kg/m&sup2;</span><span class="mat-thick">0.2 mm</span><span class="mat-epd missing" title="Ingen EPD"></span></div>
+          <div class="mat-layer"><div class="mat-bar" style="background:#e0e0e0"></div><span class="mat-name">Gips &times;2</span><span class="mat-qty">18 kg/m&sup2;</span><span class="mat-thick">2&times;13 mm</span><span class="mat-epd has" title="EPD koblet"></span></div>
         </div>
         <div class="mat-total"><span>Total</span><span>358 mm</span></div>
+        <div class="mat-legend">
+          <span class="mat-legend-item"><span class="mat-epd has"></span> EPD koblet</span>
+          <span class="mat-legend-item"><span class="mat-epd missing"></span> Mangler EPD</span>
+          <span style="margin-left:auto;">4/6 lag har EPD</span>
+        </div>
       </div>
+
+      <!-- Discrete element (product — no recipe, just count + datasheet) -->
+      <div class="product-block" id="discretePanel" style="display:none;">
+        <div class="product-title">Produktinformasjon</div>
+        <div class="product-card">
+          <div class="product-row"><span class="product-key">Produsent</span><span class="product-val">Gustavsberg</span></div>
+          <div class="product-row"><span class="product-key">Produkt</span><span class="product-val">Nautic 1510 Hygienic Flush</span></div>
+          <div class="product-row"><span class="product-key">Art.nr</span><span class="product-val">GB1155XXXX1231</span></div>
+          <div class="product-row"><span class="product-key">Antall</span><span class="product-val" style="font-size:13px; font-weight:700;">5 stk</span></div>
+          <div class="product-links">
+            <a class="product-link"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> EPD</a>
+            <a class="product-link"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg> Datablad</a>
+            <a class="product-link"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> FDV</a>
+          </div>
+        </div>
+      </div>
+      <!--
+        DISPLAY TEMPLATE LOGIC:
+        If representative_unit is stk (discrete):
+          - Hide qty-grid, key-props, mat-block
+          - Show: count (headline), BBox dims, product info, EPD/datasheet links
+        If representative_unit is m²/m/m³ (continuous):
+          - Show: rep unit value (headline), supporting dims, key props, material recipe with qty/unit + EPD dots
+      -->
     </div>
 
     <div class="panel-right-footer">
