@@ -440,7 +440,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         // 10. Setup element selection with ThatOpen Highlighter
         const highlighter = components.get(OBCF.Highlighter);
-        highlighter.setup({ world });
+        // hoverEnabled:false — hover raycasts every mouse move against all fragments.
+        // With 4 federated models this blows the 16ms frame budget (rAF violations).
+        // We only need click-to-select anyway.
+        highlighter.setup({ world, hoverEnabled: false });
 
         // 10b. Setup Hider for type filtering
         const hider = components.get(OBC.Hider);
