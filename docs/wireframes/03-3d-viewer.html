@@ -1366,5 +1366,315 @@
   </div>
 </div>
 
+<script>
+// ── Mock data for model switching ──
+const MODELS = {
+  ark: {
+    name: 'LBK_ARK_F-KJ.ifc', disc: 'ark', ver: 'v6', count: '3 481',
+    color: 'var(--disc-ark-text)',
+    storeys: [
+      { name: 'U1 — Kjeller', count: 342, bar: 42 },
+      { name: '01 — 1. etasje', count: 891, bar: 109 },
+      { name: '02 — 2. etasje', count: 756, bar: 92 },
+      { name: '03 — 3. etasje', count: 756, bar: 92 },
+      { name: '04 — 4. etasje', count: 612, bar: 75 },
+      { name: 'Tak', count: 124, bar: 15 },
+    ]
+  },
+  rib: {
+    name: 'LBK_RIB_F-KJ.ifc', disc: 'rib', ver: 'v3', count: '1 204',
+    color: 'var(--disc-rib-text)',
+    storeys: [
+      { name: 'U1 — Kjeller', count: 89, bar: 28 },
+      { name: '01 — 1. etasje', count: 352, bar: 110 },
+      { name: '02 — 2. etasje', count: 298, bar: 93 },
+      { name: '03 — 3. etasje', count: 298, bar: 93 },
+      { name: '04 — 4. etasje', count: 167, bar: 52 },
+    ]
+  },
+  riv: {
+    name: 'LBK_RIV.ifc', disc: 'riv', ver: 'v1', count: '486',
+    color: 'var(--disc-riv-text)',
+    storeys: [
+      { name: 'U1 — Kjeller', count: 124, bar: 96 },
+      { name: '01 — 1. etasje', count: 186, bar: 144 },
+      { name: '02 — 2. etasje', count: 176, bar: 136 },
+    ]
+  },
+  rie: {
+    name: 'LBK_RIE.ifc', disc: 'rie', ver: 'v2', count: '312',
+    color: 'var(--disc-rie-text)',
+    storeys: [
+      { name: 'U1 — Kjeller', count: 48, bar: 58 },
+      { name: '01 — 1. etasje', count: 112, bar: 136 },
+      { name: '02 — 2. etasje', count: 98, bar: 118 },
+      { name: '03 — 3. etasje', count: 54, bar: 65 },
+    ]
+  },
+  alle: {
+    name: 'Alle modeller', disc: null, ver: null, count: '5 483',
+    color: 'var(--primary)',
+    storeys: [
+      { name: 'U1 — Kjeller', count: 603, bar: 55, discs: ['ark','rib','riv','rie'] },
+      { name: '01 — 1. etasje', count: 1541, bar: 140, discs: ['ark','rib','riv','rie'] },
+      { name: '02 — 2. etasje', count: 1328, bar: 121, discs: ['ark','rib','riv'] },
+      { name: '03 — 3. etasje', count: 1108, bar: 101, discs: ['ark','rib','rie'] },
+      { name: '04 — 4. etasje', count: 779, bar: 71, discs: ['ark','rib'] },
+      { name: 'Tak', count: 124, bar: 11, discs: ['ark'] },
+    ]
+  }
+};
+
+const DISC_COLORS = {
+  ark: 'var(--disc-ark-text)', rib: 'var(--disc-rib-text)',
+  riv: 'var(--disc-riv-text)', rie: 'var(--disc-rie-text)',
+};
+
+let activeModel = 'ark';
+let selectedStorey = 0;
+let visibility = { ark: true, rib: true, riv: false, rie: true };
+
+// ── Storey selection ──
+function bindStoreyClicks() {
+  document.querySelectorAll('.spatial-navigator .mt-storey').forEach((el, i) => {
+    el.onclick = () => {
+      document.querySelectorAll('.spatial-navigator .mt-storey').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedStorey = i;
+      updateContextBar();
+    };
+  });
+}
+
+function updateContextBar() {
+  const model = MODELS[activeModel];
+  const storey = model.storeys[selectedStorey] || model.storeys[0];
+  const scope = document.querySelector('.context-scope');
+  const count = document.querySelector('.context-count');
+  if (scope) scope.textContent = storey.name;
+  if (count) {
+    const disc = activeModel === 'alle' ? '' : ' \u00b7 ' + activeModel.toUpperCase();
+    count.textContent = storey.count.toLocaleString('nb-NO') + ' elementer' + disc;
+  }
+}
+
+// ── Tab switching ──
+document.querySelectorAll('.plt-tab').forEach((tab, i) => {
+  tab.onclick = () => {
+    document.querySelectorAll('.plt-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.tab-content .tab-pane').forEach((p, j) => {
+      p.classList.toggle('active', i === j);
+    });
+  };
+});
+
+// ── Visibility bar ──
+document.querySelectorAll('.mv-item').forEach(el => {
+  el.onclick = () => {
+    const disc = el.querySelector('span:last-child').textContent.toLowerCase();
+    visibility[disc] = !visibility[disc];
+    el.classList.toggle('off', !visibility[disc]);
+    if (visibility[disc]) {
+      el.querySelector('.mv-dot').style.background = DISC_COLORS[disc];
+      el.querySelector('span:last-child').style.color = DISC_COLORS[disc];
+    } else {
+      el.querySelector('.mv-dot').style.background = '';
+      el.querySelector('span:last-child').style.color = '';
+    }
+    const visCount = Object.values(visibility).filter(Boolean).length;
+    document.querySelector('.mv-count').textContent = visCount + ' synlige';
+  };
+});
+
+// ── Model dropdown (click to cycle / open menu) ──
+function renderStoreys() {
+  const model = MODELS[activeModel];
+  const tree = document.querySelector('.spatial-navigator .model-tree');
+  if (!tree) return;
+
+  tree.innerHTML = model.storeys.map((s, i) => {
+    const discsHtml = s.discs
+      ? '<span class="mt-storey-discs">' +
+        s.discs.map(d => '<span class="disc-dot" style="background:' + DISC_COLORS[d] + '"></span>').join('') +
+        '</span>'
+      : '';
+    return '<div class="mt-storey' + (i === 0 ? ' selected' : '') + '">' +
+      discsHtml +
+      '<span class="mt-storey-name">' + s.name + '</span>' +
+      '<span class="mt-storey-count">' + s.count.toLocaleString('nb-NO') + '</span>' +
+      '<div class="mt-storey-bar" style="width:' + s.bar + 'px; background:' + model.color + '"></div>' +
+    '</div>';
+  }).join('');
+
+  selectedStorey = 0;
+  bindStoreyClicks();
+  updateContextBar();
+}
+
+function switchModel(disc) {
+  activeModel = disc;
+  const model = MODELS[disc];
+  const trigger = document.querySelector('.model-dropdown-trigger');
+  const dot = trigger.querySelector('.mdt-disc');
+  const name = trigger.querySelector('.mdt-name');
+  const sub = trigger.querySelector('.mdt-sub');
+  const ver = trigger.querySelector('.mdt-ver');
+
+  if (disc === 'alle') {
+    dot.style.background = 'var(--primary)';
+    name.textContent = 'Alle modeller (federert)';
+    sub.textContent = '5 483 elementer';
+    ver.textContent = '';
+    ver.style.display = 'none';
+  } else {
+    dot.style.background = model.color;
+    name.textContent = model.name;
+    sub.textContent = model.count + ' elementer';
+    ver.textContent = model.ver;
+    ver.style.display = '';
+  }
+  renderStoreys();
+
+  // Close dropdown if open
+  const menu = document.querySelector('.dropdown-menu');
+  if (menu) menu.remove();
+}
+
+// Build actual dropdown menu
+document.querySelector('.model-dropdown-trigger').onclick = () => {
+  let menu = document.querySelector('.dropdown-menu');
+  if (menu) { menu.remove(); return; }
+
+  menu = document.createElement('div');
+  menu.className = 'dropdown-menu';
+  menu.style.cssText = 'position:absolute;top:100%;left:0;right:0;z-index:20;margin-top:2px;' +
+    'background:var(--card);border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow-md);overflow:hidden;';
+
+  const items = ['alle', 'ark', 'rib', 'riv', 'rie'];
+  items.forEach(disc => {
+    const m = MODELS[disc];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:5px;padding:7px 10px;cursor:pointer;' +
+      'font-size:10px;transition:background 0.08s;border-top:1px solid var(--border-light);';
+    if (disc === items[0]) row.style.borderTop = 'none';
+    if (disc === activeModel) row.style.background = 'var(--primary-light)';
+    row.onmouseenter = () => { if (disc !== activeModel) row.style.background = 'var(--surface-hover)'; };
+    row.onmouseleave = () => { if (disc !== activeModel) row.style.background = ''; };
+
+    const dot = disc !== 'alle'
+      ? '<span style="width:7px;height:7px;border-radius:50%;background:' + DISC_COLORS[disc] + ';flex-shrink:0;' +
+        (visibility[disc] ? '' : 'opacity:0.3;') + '"></span>'
+      : '<span style="width:7px;height:7px;border-radius:50%;border:1.5px solid var(--text-tertiary);flex-shrink:0;"></span>';
+
+    const label = disc === 'alle' ? 'Alle modeller (federert)' : m.name;
+    const meta = disc !== 'alle'
+      ? '<span style="font-size:8px;font-weight:600;color:var(--primary);background:var(--primary-light);padding:1px 4px;border-radius:3px;">' + m.ver + '</span>'
+      : '';
+
+    row.innerHTML = dot +
+      '<span style="flex:1;font-weight:500;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + label + '</span>' +
+      meta +
+      '<span style="font-size:8.5px;color:var(--text-tertiary);font-variant-numeric:tabular-nums;">' + m.count + '</span>';
+
+    row.onclick = (e) => { e.stopPropagation(); switchModel(disc); };
+    menu.appendChild(row);
+  });
+
+  const container = document.querySelector('.model-dropdown');
+  container.style.position = 'relative';
+  container.appendChild(menu);
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function close(e) {
+      if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close); }
+    });
+  }, 0);
+};
+
+// ── View mode toggle ──
+document.querySelectorAll('.vmt-btn').forEach((btn, i) => {
+  btn.onclick = () => {
+    document.querySelectorAll('.vmt-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+});
+
+// ── Toolbar buttons ──
+document.querySelectorAll('.v-btn').forEach(btn => {
+  if (btn.classList.contains('disabled')) return;
+  btn.onclick = () => btn.classList.toggle('active');
+});
+
+// ── Type toolbar (canvas left edge) ──
+document.querySelectorAll('.tt-btn').forEach(btn => {
+  btn.onclick = () => {
+    if (btn.querySelector('.tt-label')?.textContent === 'Alle') return;
+    btn.classList.toggle('off');
+    btn.classList.toggle('active');
+  };
+});
+
+// ── Pset expand/collapse ──
+document.querySelectorAll('.pset-header').forEach(header => {
+  header.onclick = () => {
+    const group = header.parentElement;
+    const rows = group.querySelector('.pset-rows');
+    const chevron = header.querySelector('svg');
+    if (rows) {
+      const isVisible = rows.style.display !== 'none';
+      rows.style.display = isVisible ? 'none' : '';
+      chevron.style.transform = isVisible ? 'rotate(-90deg)' : '';
+    } else {
+      // Collapsed group — create placeholder rows
+      const placeholder = document.createElement('div');
+      placeholder.className = 'pset-rows';
+      placeholder.innerHTML = '<div class="pset-row"><span class="pset-key" style="color:var(--text-tertiary);font-style:italic;">Laster egenskaper...</span><span class="pset-val"></span></div>';
+      group.appendChild(placeholder);
+      chevron.style.transform = '';
+    }
+  };
+});
+
+// ── Section plane rows ──
+document.querySelectorAll('.sf-row').forEach(row => {
+  row.onclick = () => {
+    document.querySelectorAll('.sf-row').forEach(r => r.classList.remove('active'));
+    row.classList.add('active');
+  };
+});
+document.querySelectorAll('.sf-x').forEach(btn => {
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    btn.closest('.sf-row').remove();
+    // Update section badge count
+    const badge = document.querySelector('.v-btn .badge');
+    const remaining = document.querySelectorAll('.sf-row').length;
+    if (badge) badge.textContent = remaining;
+    if (remaining === 0) {
+      document.querySelector('.section-float')?.remove();
+      if (badge) badge.remove();
+    }
+  };
+});
+
+// ── Copy GUID button ──
+document.querySelector('.copy-btn')?.addEventListener('click', () => {
+  const guid = document.querySelector('.ifc-guid')?.textContent;
+  if (guid) {
+    navigator.clipboard.writeText(guid).catch(() => {});
+    const btn = document.querySelector('.copy-btn');
+    btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>';
+    setTimeout(() => {
+      btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+    }, 1500);
+  }
+});
+
+// ── Init ──
+bindStoreyClicks();
+</script>
+
 </body>
 </html>
