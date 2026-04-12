@@ -157,14 +157,19 @@ export default function FederatedViewer() {
   }));
 
   // Build model info for platform panel
-  const platformModels: ModelInfo[] = (group?.models || []).map(m => ({
-    id: m.id,
-    name: m.model.slice(0, 20), // Will be replaced with actual model name from API
-    discipline: detectDiscipline(m.model),
-    visible: modelVisibility[m.id] ?? true,
-    elementCount: undefined, // TODO: get from viewer after model load
-    storeys: [], // TODO: get from OBC.Classifier after fragment load
-  }));
+  const modelLookup = new Map((models || []).map(m => [m.id, m]));
+  const platformModels: ModelInfo[] = (group?.models || []).map(m => {
+    const modelData = modelLookup.get(m.model);
+    const displayName = modelData?.name || modelData?.original_filename || m.model;
+    return {
+      id: m.id,
+      name: displayName,
+      discipline: detectDiscipline(displayName),
+      visible: modelVisibility[m.id] ?? true,
+      elementCount: modelData?.element_count,
+      storeys: [], // TODO: get from OBC.Classifier after fragment load
+    };
+  });
 
   // Placeholder verification (will come from API)
   const verification: VerificationSummary | undefined = undefined;
