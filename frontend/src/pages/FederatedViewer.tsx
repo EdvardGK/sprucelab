@@ -81,6 +81,9 @@ export default function FederatedViewer() {
   // Active filters for status panel
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
+  // Model load errors
+  const [loadErrors, setLoadErrors] = useState<string[]>([]);
+
   // Initialize model visibility when group loads
   useEffect(() => {
     if (group?.models && Object.keys(modelVisibility).length === 0) {
