@@ -790,6 +790,70 @@
             </div>
           </div>
 
+          <!-- Quantity display defaults -->
+          <div class="card fade-in" style="animation-delay: 0.03s;">
+            <div class="card-header">
+              <div class="card-title">Mengdevisning</div>
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5;">
+              Hvilke mengder vises i viewerens h&oslash;yre panel per elementklasse. Standardverdier kan overstyres.
+            </p>
+            <table class="dr-rules-table">
+              <thead>
+                <tr>
+                  <th>IFC-klasse</th>
+                  <th>Prim&aelig;r mengde</th>
+                  <th>Sekund&aelig;r mengde</th>
+                  <th style="width: 80px;">Standard</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight:500;">IfcWall</td>
+                  <td><span class="dr-source">NetArea</span> (m&sup2;)</td>
+                  <td><span class="dr-source">Length</span> (m), <span class="dr-source">Height</span> (m), <span class="dr-source">Width</span> (mm)</td>
+                  <td><span class="tag tag-green" style="font-size:10px;">Standard</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:500;">IfcSlab</td>
+                  <td><span class="dr-source">Volume</span> (m&sup3;)</td>
+                  <td><span class="dr-source">Width</span> (mm)</td>
+                  <td><span class="tag tag-green" style="font-size:10px;">Standard</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:500;">IfcBeam</td>
+                  <td><span class="dr-source">Length</span> (m)</td>
+                  <td><span class="dr-source">CrossSectionArea</span> (cm&sup2;)</td>
+                  <td><span class="tag tag-green" style="font-size:10px;">Standard</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:500;">IfcColumn</td>
+                  <td><span class="dr-source">Length</span> (m)</td>
+                  <td><span class="dr-source">CrossSectionArea</span> (cm&sup2;)</td>
+                  <td><span class="tag tag-green" style="font-size:10px;">Standard</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:500;">IfcDoor, IfcWindow</td>
+                  <td><span class="dr-source">Height</span> &times; <span class="dr-source">Width</span> (mm)</td>
+                  <td>&mdash;</td>
+                  <td><span class="tag tag-green" style="font-size:10px;">Standard</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:500;">IfcSanitaryTerminal</td>
+                  <td>BBox L&times;B&times;H (mm)</td>
+                  <td>&mdash;</td>
+                  <td><span class="tag tag-green" style="font-size:10px;">Standard</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight:500;">IfcPipeSegment</td>
+                  <td><span class="dr-source">Length</span> (m)</td>
+                  <td><span class="dr-source">Diameter</span> (mm)</td>
+                  <td><span class="tag tag-green" style="font-size:10px;">Standard</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
           <!-- IfcWall rules -->
           <div class="dr-class-card fade-in" style="animation-delay: 0.05s;">
             <div class="dr-class-header">
