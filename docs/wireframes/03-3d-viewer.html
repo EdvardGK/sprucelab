@@ -1353,47 +1353,31 @@
         <div class="qty-cell"><div class="qty-val">2.70</div><div class="qty-unit">m&sup3; volum</div></div>
       </div>
 
-      <!-- Pset_WallCommon -->
-      <div class="pset-group">
-        <div class="pset-header">
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-          Pset_WallCommon
+      <!-- Pset dropdown selector -->
+      <div class="pset-selector">
+        <div class="pset-dropdown" id="psetDropdown">
+          <span class="pset-dd-name">Pset_WallCommon</span>
           <span class="pset-badge">5</span>
-        </div>
-        <div class="pset-rows">
-          <div class="pset-row"><span class="pset-key">Reference</span><span class="pset-val">Yttervegg 200mm</span></div>
-          <div class="pset-row"><span class="pset-key">IsExternal</span><span class="pset-val yes">True</span></div>
-          <div class="pset-row"><span class="pset-key">LoadBearing</span><span class="pset-val yes">True</span></div>
-          <div class="pset-row"><span class="pset-key">FireRating</span><span class="pset-val">REI 60</span></div>
-          <div class="pset-row"><span class="pset-key">ThermalTransmittance</span><span class="pset-val">0.18</span></div>
+          <span class="pset-dd-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg></span>
         </div>
       </div>
+      <!--
+        Pset dropdown menu (shown on click):
+        ┌──────────────────────────────────┐
+        │ Pset_WallCommon              5   │ ← active
+        │ Custom_BIMinfo               8   │
+        │ Pset_WallCommon_NO           3   │
+        │ Qto_WallBaseQuantities       6   │
+        └──────────────────────────────────┘
+      -->
 
-      <!-- Custom_BIMinfo (collapsed) -->
-      <div class="pset-group">
-        <div class="pset-header">
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
-          Custom_BIMinfo
-          <span class="pset-badge">8</span>
-        </div>
-      </div>
-
-      <!-- Pset_WallCommon_NO (collapsed) -->
-      <div class="pset-group">
-        <div class="pset-header">
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
-          Pset_WallCommon_NO
-          <span class="pset-badge">3</span>
-        </div>
-      </div>
-
-      <!-- BaseQuantities (collapsed) -->
-      <div class="pset-group">
-        <div class="pset-header">
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(-90deg)"><path d="m6 9 6 6 6-6"/></svg>
-          Qto_WallBaseQuantities
-          <span class="pset-badge">6</span>
-        </div>
+      <!-- Active pset rows -->
+      <div class="pset-rows" id="psetRows">
+        <div class="pset-row"><span class="pset-key">Reference</span><span class="pset-val">Yttervegg 200mm</span></div>
+        <div class="pset-row"><span class="pset-key">IsExternal</span><span class="pset-val yes">True</span></div>
+        <div class="pset-row"><span class="pset-key">LoadBearing</span><span class="pset-val yes">True</span></div>
+        <div class="pset-row"><span class="pset-key">FireRating</span><span class="pset-val">REI 60</span></div>
+        <div class="pset-row"><span class="pset-key">ThermalTransmittance</span><span class="pset-val">0.18</span></div>
       </div>
 
       <!-- Materials -->
