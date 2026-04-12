@@ -1666,7 +1666,7 @@ document.querySelectorAll('.pset-header').forEach(header => {
   };
 });
 
-// ── Section plane rows ──
+// ── Section plane rows (in HUD bar) ──
 document.querySelectorAll('.sf-row').forEach(row => {
   row.onclick = () => {
     document.querySelectorAll('.sf-row').forEach(r => r.classList.remove('active'));
@@ -1677,14 +1677,10 @@ document.querySelectorAll('.sf-x').forEach(btn => {
   btn.onclick = (e) => {
     e.stopPropagation();
     btn.closest('.sf-row').remove();
-    // Update section badge count
     const badge = document.querySelector('.v-btn .badge');
     const remaining = document.querySelectorAll('.sf-row').length;
     if (badge) badge.textContent = remaining;
-    if (remaining === 0) {
-      document.querySelector('.section-float')?.remove();
-      if (badge) badge.remove();
-    }
+    if (remaining === 0 && badge) badge.remove();
   };
 });
 
