@@ -2586,7 +2586,7 @@ class GlobalTypeLibraryViewSet(viewsets.ModelViewSet):
         Get types with instance_count=0 (empty types).
 
         These are IfcTypeObjects that exist in the model but have no entities
-        referencing them. Often indicates orphaned or unused types.
+        referencing them — unused type definitions loaded into the model.
 
         GET /api/type-library/empty-types/
         GET /api/type-library/empty-types/?project_id={id}
