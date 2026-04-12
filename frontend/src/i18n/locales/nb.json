@@ -709,6 +709,10 @@
       "review": "Gjennomgang"
     }
   },
+  "modelStatus": {
+    "noTypesAnalyzed": "Typer ikke analysert",
+    "processingFailed": "Prosessering feilet"
+  },
   "modelUpload": {
     "title": "Last opp IFC-modell",
     "description": "Last opp en ny IFC-modell til dette prosjektet for prosessering og visualisering",
