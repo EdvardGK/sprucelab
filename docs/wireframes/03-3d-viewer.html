@@ -847,6 +847,22 @@
     .qty-val { font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
     .qty-unit { font-size: 8px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 1px; }
 
+    /* Key properties strip */
+    .key-props {
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+      padding: 5px 10px;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .kp-tag {
+      display: flex; align-items: center; gap: 3px;
+      padding: 2px 7px; border-radius: 3px;
+      font-size: 9px; font-weight: 600;
+    }
+    .kp-tag.positive { background: var(--tl-green-bg); color: var(--tl-green-text); }
+    .kp-tag.neutral { background: var(--surface-muted); color: var(--text-secondary); }
+    .kp-tag.warning { background: var(--tl-yellow-bg); color: var(--tl-yellow-text); }
+    .kp-label { font-size: 8px; font-weight: 500; color: var(--text-tertiary); }
+
     /* Pset dropdown selector */
     .pset-selector {
       padding: 4px 10px;
