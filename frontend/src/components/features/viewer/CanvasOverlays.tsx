@@ -236,8 +236,8 @@ export function ViewerHUD({
       className,
     )}>
       {/* Axes gizmo */}
-      <div className="w-[38px] h-full flex items-center justify-center flex-shrink-0 border-r border-white/[0.06]">
-        <svg width="28" height="28" viewBox="0 0 48 48">
+      <div className="w-[44px] h-full flex items-center justify-center flex-shrink-0 border-r border-white/[0.06]">
+        <svg width="32" height="32" viewBox="0 0 48 48">
           <line x1="10" y1="38" x2="38" y2="38" stroke="#ef4444" opacity="0.5" strokeWidth="2" />
           <text x="40" y="40" fill="#ef4444" opacity="0.5" fontSize="7" fontWeight="700">X</text>
           <line x1="10" y1="38" x2="10" y2="10" stroke="#22c55e" opacity="0.5" strokeWidth="2" />
