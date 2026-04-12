@@ -1218,39 +1218,6 @@
         </button>
       </div>
 
-      <!-- Active filter pills -->
-      <div class="filter-hud">
-        <span class="fh-pill">01 — 1. etasje <span class="fh-x"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span></span>
-        <span class="fh-pill">-Vindu <span class="fh-x"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span></span>
-        <span class="fh-clear">Nullstill</span>
-      </div>
-
-      <!-- Section planes float -->
-      <div class="section-float">
-        <div class="sf-title">Snittplan</div>
-        <div class="sf-row active">
-          <span class="sf-dot" style="background:#ef4444"></span>
-          <span class="sf-label">Horisontalt — 01</span>
-          <span class="sf-x"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
-        </div>
-        <div class="sf-row">
-          <span class="sf-dot" style="background:#22c55e"></span>
-          <span class="sf-label">Vertikalt — X</span>
-          <span class="sf-x"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
-        </div>
-      </div>
-
-      <!-- Measurement HUD (shown when measure tool active) -->
-      <div class="measure-hud">
-        <span class="mh-label">Avstand</span>
-        <span class="mh-val">4 820</span>
-        <span class="mh-unit">mm</span>
-        <span class="mh-sep"></span>
-        <span class="mh-label">Hoyde</span>
-        <span class="mh-val">2 800</span>
-        <span class="mh-unit">mm</span>
-      </div>
-
       <!-- Fake building -->
       <div class="scene-building">
         <div class="building-box">
@@ -1262,18 +1229,63 @@
           <div class="floor-line" style="top:85%"><span class="building-label">01</span></div>
         </div>
       </div>
+    </div>
 
-      <!-- Axes -->
-      <svg class="axes" viewBox="0 0 48 48">
-        <line x1="8" y1="40" x2="40" y2="40" stroke="#ef4444" opacity="0.5"/><text x="42" y="42" fill="#ef4444" opacity="0.5">X</text>
-        <line x1="8" y1="40" x2="8" y2="8" stroke="#22c55e" opacity="0.5"/><text x="4" y="6" fill="#22c55e" opacity="0.5">Y</text>
-        <line x1="8" y1="40" x2="24" y2="28" stroke="#3b82f6" opacity="0.5"/><text x="26" y="26" fill="#3b82f6" opacity="0.5">Z</text>
-      </svg>
+    <!-- ── BOTTOM HUD BAR ── -->
+    <div class="canvas-hud">
+      <!-- Axes gizmo -->
+      <div class="hud-axes">
+        <svg width="28" height="28" viewBox="0 0 48 48">
+          <line x1="10" y1="38" x2="38" y2="38" stroke="#ef4444" opacity="0.5"/><text x="40" y="40" fill="#ef4444" opacity="0.5">X</text>
+          <line x1="10" y1="38" x2="10" y2="10" stroke="#22c55e" opacity="0.5"/><text x="6" y="8" fill="#22c55e" opacity="0.5">Y</text>
+          <line x1="10" y1="38" x2="26" y2="26" stroke="#3b82f6" opacity="0.5"/><text x="28" y="24" fill="#3b82f6" opacity="0.5">Z</text>
+        </svg>
+      </div>
 
-      <div class="camera-info">
-        3 modeller synlige<br>
-        4 997 elementer<br>
-        Perspektiv
+      <!-- Active filters -->
+      <div class="hud-filters">
+        <span class="fh-pill">01 — 1. etasje <span class="fh-x"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span></span>
+        <span class="fh-pill">-Vindu <span class="fh-x"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span></span>
+        <span class="fh-clear">Nullstill</span>
+      </div>
+
+      <div class="hud-sep"></div>
+
+      <!-- Section planes -->
+      <div class="hud-sections">
+        <span class="hud-section-label">Snitt</span>
+        <div class="sf-row active">
+          <span class="sf-dot" style="background:#ef4444"></span>
+          <span class="sf-label">H — 01</span>
+          <span class="sf-x"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+        </div>
+        <div class="sf-row">
+          <span class="sf-dot" style="background:#22c55e"></span>
+          <span class="sf-label">V — X</span>
+          <span class="sf-x"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+        </div>
+      </div>
+
+      <div class="hud-sep"></div>
+
+      <!-- Measurement readout -->
+      <div class="hud-measure">
+        <span class="mh-label">Avstand</span>
+        <span class="mh-val">4 820</span>
+        <span class="mh-unit">mm</span>
+        <span class="mh-sep"></span>
+        <span class="mh-label">H&oslash;yde</span>
+        <span class="mh-val">2 800</span>
+        <span class="mh-unit">mm</span>
+      </div>
+
+      <div class="hud-spacer"></div>
+
+      <!-- Right: view mode + stats -->
+      <div class="hud-status">
+        <span>3 mod.</span>
+        <span>4 997 elem.</span>
+        <span class="hud-view-mode">Perspektiv</span>
       </div>
     </div>
   </div>
