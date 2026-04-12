@@ -478,12 +478,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         hiderRef.current = hider;
 
         // 10c. Setup MeshCullerRenderer — off-main-thread visibility checks.
-        // Fragments outside the camera frustum (or too small to see at threshold px)
-        // are not drawn. Canonical ThatOpen BIM perf pattern. Registered fragments in
-        // finalizeLoadedGroup() below.
+        // Fragments outside the camera frustum are not drawn — this is the big win.
+        // The pixel-size threshold is set very low (5px) so that only truly tiny,
+        // visually imperceptible geometry is culled by size. BIM models have legitimate
+        // small elements (fasteners, fixtures, small pipes); aggressive size culling
+        // makes the model look "ghosted and incomplete" even though the frustum
+        // optimization is the one doing the perf work.
         const cullers = components.get(OBC.Cullers);
         const culler = cullers.create(world);
-        culler.config.threshold = 80;
+        culler.config.threshold = 5;
         cullerRef.current = culler;
 
         // Configure highlighter - DISABLE all automatic camera movement
