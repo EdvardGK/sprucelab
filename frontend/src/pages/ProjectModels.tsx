@@ -278,12 +278,12 @@ export default function ProjectModels() {
 
                     {/* Bottom section: Error or upload date + user */}
                     <div className="mt-auto w-full">
-                      {model.status === 'error' && model.processing_error ? (
+                      {model.status === 'error' ? (
                         <div className="bg-error/10 border border-error/20 rounded-md p-3 pb-4">
                           <div className="flex items-start gap-2">
                             <AlertCircle className="h-3.5 w-3.5 text-error mt-0.5 shrink-0" />
                             <p className="text-xs text-error line-clamp-2">
-                              {model.processing_error}
+                              {model.processing_error || t('modelStatus.processingFailed')}
                             </p>
                           </div>
                         </div>
