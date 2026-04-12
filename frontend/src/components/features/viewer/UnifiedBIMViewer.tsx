@@ -63,11 +63,16 @@ function getCamera(world: OBC.SimpleWorld<any, any, any> | null): OBC.OrthoPersp
   }
 }
 
+// View mode types
+export type ViewerViewMode = 'perspective' | 'wireframe' | 'xray';
+
 // Imperative handle interface for parent components
 export interface UnifiedBIMViewerHandle {
   deleteSectionPlane: (planeId: string) => void;
   clearAllSectionPlanes: () => void;
   setActiveSectionPlane: (planeId: string | null) => void;
+  fitToView: () => void;
+  setViewMode: (mode: ViewerViewMode) => void;
 }
 
 interface UnifiedBIMViewerProps {
