@@ -686,22 +686,27 @@
     .hud-axes line { stroke-width: 2; }
     .hud-axes text { font-size: 7px; font-weight: 700; }
 
-    /* ── CANVAS STATUS PANEL (floating bottom-right, active state/data) ── */
+    /* ── CANVAS STATUS PANEL (single frame, floating bottom-right) ── */
     .canvas-status {
       position: absolute; bottom: 10px; right: 10px;
       z-index: 10;
-      display: flex; flex-direction: column; gap: 6px;
-      align-items: flex-end;
+      display: flex; flex-direction: column;
+      min-width: 180px;
+      background: rgba(15,19,33,0.85); backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
       font-size: 9px; color: rgba(255,255,255,0.45);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .cs-divider {
+      height: 1px; background: rgba(255,255,255,0.06); margin: 0;
     }
 
-    /* Status: Filter pills row */
+    /* Status: Filter pills */
     .cs-filters {
-      display: flex; align-items: center; gap: 3px;
-      padding: 3px 6px;
-      background: rgba(15,19,33,0.75); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 6px;
+      display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
+      padding: 5px 8px;
     }
     .fh-pill {
       display: flex; align-items: center; gap: 3px;
@@ -723,13 +728,10 @@
     }
     .fh-clear:hover { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.06); }
 
-    /* Status: Section planes row */
+    /* Status: Section planes */
     .cs-sections {
       display: flex; align-items: center; gap: 4px;
-      padding: 3px 6px;
-      background: rgba(15,19,33,0.75); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 6px;
+      padding: 4px 8px;
     }
     .cs-section-label {
       font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
@@ -753,26 +755,24 @@
     .sf-x:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.08); }
     .sf-row:hover .sf-x { opacity: 1; }
 
-    /* Status: Measurement readout row */
+    /* Status: Measurement readout */
     .cs-measure {
       display: flex; align-items: center; gap: 5px;
-      padding: 3px 8px;
-      background: rgba(15,19,33,0.75); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 6px;
+      padding: 4px 8px;
     }
     .mh-label { font-size: 8px; color: rgba(255,255,255,0.25); }
     .mh-val { color: var(--accent); font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; }
     .mh-unit { font-size: 8px; color: rgba(255,255,255,0.25); }
     .mh-sep { width: 1px; height: 12px; background: rgba(255,255,255,0.06); }
 
-    /* Status: Camera info row */
+    /* Status: Camera info (footer row) */
     .cs-info {
       display: flex; align-items: center; gap: 8px;
-      padding: 2px 8px;
+      padding: 3px 8px;
       font-size: 8px; color: rgba(255,255,255,0.2);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
+      background: rgba(255,255,255,0.02);
     }
     .cs-info span { display: flex; align-items: center; gap: 3px; }
     .cs-view-mode {
