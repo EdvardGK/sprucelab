@@ -254,7 +254,7 @@ export default function FederatedViewer() {
             <>
               <UnifiedBIMViewer
                 ref={viewerRef}
-                modelIds={group.models.map(m => m.model)}
+                modelIds={modelIdList}
                 modelVisibility={modelVisibility}
                 showPropertiesPanel={false}
                 showModelInfo={false}
@@ -263,7 +263,7 @@ export default function FederatedViewer() {
                 onSectionPlanesChange={setSectionPlanes}
                 onSelectionChange={setSelectedElement}
                 onTypesDiscovered={handleTypesDiscovered}
-                typeVisibility={Object.fromEntries(typeFilters.map(f => [f.type, f.visible]))}
+                typeVisibility={typeVisibilityMap}
                 onError={(err) => setLoadErrors(prev => [...prev, err])}
               />
 
