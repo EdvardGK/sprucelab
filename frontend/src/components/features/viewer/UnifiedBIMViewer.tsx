@@ -386,6 +386,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         // 4. Setup Renderer
         world.renderer = new OBC.SimpleRenderer(components, container);
+        // Cap pixel ratio: HiDPI/4K displays otherwise render 2-4x the fragments,
+        // tanking framerate on federated loads. 1.5 keeps edges acceptable.
+        world.renderer.three.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
         // 5. Setup Camera
         world.camera = new OBC.OrthoPerspectiveCamera(components);
@@ -1197,55 +1200,44 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                   fileUrl: modelData.file_url,
                 };
 
-                // Pre-load IFC in FastAPI for property queries and type discovery
+                // Derive IFC types locally from the loaded FragmentsGroup.
+                // Previously we called FastAPI getElements(limit:10000) per model, fetching
+                // up to 40k element JSON objects across federated loads. Classifier.byEntity
+                // reads data already in memory — zero network, zero main-thread blocking.
+                try {
+                  const classifier = components.get(OBC.Classifier);
+                  classifier.byEntity(group);
+                  const newTypeMap = new Map<string, { guids: string[]; count: number }>();
+                  const entities = classifier.list.entities || {};
+                  for (const [entityName, entity] of Object.entries(entities)) {
+                    const guids = fragments.fragmentIdMapToGuids(entity.map);
+                    const existing = newTypeMap.get(entityName);
+                    if (existing) {
+                      existing.guids.push(...guids);
+                      existing.count += guids.length;
+                    } else {
+                      newTypeMap.set(entityName, { guids, count: guids.length });
+                    }
+                  }
+                  setTypeInfo(newTypeMap);
+                  setTypeVisibility?.(prev => {
+                    const updated = { ...prev };
+                    for (const type of newTypeMap.keys()) {
+                      if (!(type in updated)) updated[type] = true;
+                    }
+                    return updated;
+                  });
+                } catch (err) {
+                  console.warn('[Viewer] Local type extraction failed:', err);
+                }
+
+                // Fire-and-forget FastAPI open so click-to-inspect works later.
+                // No chained getElements — that was the bottleneck.
                 if (modelData.file_url) {
                   const absoluteUrl = toAbsoluteUrl(modelData.file_url);
                   ifcService.openFromUrl(absoluteUrl)
-                    .then(async (result) => {
-                      loadedModel.ifcServiceFileId = result.file_id;
-
-                      // Discover IFC types from the model
-                      try {
-                        const elementsResponse = await ifcService.getElements(result.file_id, { limit: 10000 });
-                        const newTypeMap = new Map<string, { guids: string[]; count: number }>();
-
-                        for (const elem of elementsResponse.elements) {
-                          const existing = newTypeMap.get(elem.ifc_type) || { guids: [], count: 0 };
-                          existing.guids.push(elem.guid);
-                          existing.count++;
-                          newTypeMap.set(elem.ifc_type, existing);
-                        }
-
-                        // Merge with existing types and update state
-                        setTypeInfo(prev => {
-                          const merged = new Map(prev);
-                          for (const [type, data] of newTypeMap) {
-                            const existing = merged.get(type) || { guids: [], count: 0 };
-                            existing.guids.push(...data.guids);
-                            existing.count += data.count;
-                            merged.set(type, existing);
-                          }
-                          return merged;
-                        });
-
-                        // Initialize visibility for new types (all visible by default)
-                        // Only in uncontrolled mode
-                        setTypeVisibility?.(prev => {
-                          const updated = { ...prev };
-                          for (const type of newTypeMap.keys()) {
-                            if (!(type in updated)) {
-                              updated[type] = true;
-                            }
-                          }
-                          return updated;
-                        });
-                      } catch {
-                        // Type discovery failed, continue without it
-                      }
-                    })
-                    .catch(() => {
-                      // FastAPI not available, will fall back to Django
-                    });
+                    .then(result => { loadedModel.ifcServiceFileId = result.file_id; })
+                    .catch(() => { /* property fetch will fail gracefully on click */ });
                 }
 
                 loadedModelsRef.current.push(loadedModel);
@@ -1296,54 +1288,40 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               fileUrl: modelData.file_url,
             };
 
-            // Pre-load IFC in FastAPI for property queries and type discovery
+            // Derive IFC types locally from the loaded FragmentsGroup (see fragments path above).
+            try {
+              const classifier = components.get(OBC.Classifier);
+              classifier.byEntity(group);
+              const newTypeMap = new Map<string, { guids: string[]; count: number }>();
+              const entities = classifier.list.entities || {};
+              for (const [entityName, entity] of Object.entries(entities)) {
+                const guids = fragments.fragmentIdMapToGuids(entity.map);
+                const existing = newTypeMap.get(entityName);
+                if (existing) {
+                  existing.guids.push(...guids);
+                  existing.count += guids.length;
+                } else {
+                  newTypeMap.set(entityName, { guids, count: guids.length });
+                }
+              }
+              setTypeInfo(newTypeMap);
+              setTypeVisibility?.(prev => {
+                const updated = { ...prev };
+                for (const type of newTypeMap.keys()) {
+                  if (!(type in updated)) updated[type] = true;
+                }
+                return updated;
+              });
+            } catch (err) {
+              console.warn('[Viewer] Local type extraction failed:', err);
+            }
+
+            // Fire-and-forget FastAPI open so click-to-inspect works later.
             if (modelData.file_url) {
               const absoluteUrl = toAbsoluteUrl(modelData.file_url);
               ifcService.openFromUrl(absoluteUrl)
-                .then(async (result) => {
-                  loadedModel.ifcServiceFileId = result.file_id;
-
-                  // Discover IFC types from the model
-                  try {
-                    const elementsResponse = await ifcService.getElements(result.file_id, { limit: 10000 });
-                    const newTypeMap = new Map<string, { guids: string[]; count: number }>();
-
-                    for (const elem of elementsResponse.elements) {
-                      const existing = newTypeMap.get(elem.ifc_type) || { guids: [], count: 0 };
-                      existing.guids.push(elem.guid);
-                      existing.count++;
-                      newTypeMap.set(elem.ifc_type, existing);
-                    }
-
-                    // Merge with existing types
-                    setTypeInfo(prev => {
-                      const merged = new Map(prev);
-                      for (const [type, data] of newTypeMap) {
-                        const existing = merged.get(type) || { guids: [], count: 0 };
-                        existing.guids.push(...data.guids);
-                        existing.count += data.count;
-                        merged.set(type, existing);
-                      }
-                      return merged;
-                    });
-
-                    // Initialize visibility for new types (only in uncontrolled mode)
-                    setTypeVisibility?.(prev => {
-                      const updated = { ...prev };
-                      for (const type of newTypeMap.keys()) {
-                        if (!(type in updated)) {
-                          updated[type] = true;
-                        }
-                      }
-                      return updated;
-                    });
-                  } catch {
-                    // Type discovery failed
-                  }
-                })
-                .catch(() => {
-                  // FastAPI not available, will fall back to Django
-                });
+                .then(result => { loadedModel.ifcServiceFileId = result.file_id; })
+                .catch(() => { /* property fetch will fail gracefully on click */ });
             }
 
             loadedModelsRef.current.push(loadedModel);
