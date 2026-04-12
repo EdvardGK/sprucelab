@@ -422,6 +422,8 @@ export default function ProjectModels() {
                               <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                             )}
                           </div>
+                        ) : model.status === 'ready' ? (
+                          <span className="text-xs text-text-tertiary">{t('modelStatus.noTypesAnalyzed')}</span>
                         ) : (
                           <span className="text-sm text-text-secondary">—</span>
                         )}
