@@ -200,29 +200,78 @@ export function initBlueprintCity(container: HTMLElement): () => void {
   }
   scene.add(streetGroup);
 
-  // Water feature — one quadrant replaced with a muted blue plane.
-  // Sits slightly below street level so streets appear to bridge it.
-  const waterGeometry = new THREE.PlaneGeometry(spacing * 2.2, spacing * 2.2);
-  const waterMaterial = new THREE.MeshBasicMaterial({
+  // Park with a pond — a big green rectangle replaces two blocks in one
+  // quadrant. Inside: a darker grass ring around a small blue pond, crossed
+  // by a central path. The stave church landmark sits just inside this park.
+  const parkGroup = new THREE.Group();
+  const parkCenter = new THREE.Vector3(-spacing * 1.9, 0, -spacing * 1.9);
+  const parkW = spacing * 2.6;
+  const parkD = spacing * 2.6;
+
+  const parkGeometry = new THREE.PlaneGeometry(parkW, parkD);
+  const parkMaterial = new THREE.MeshBasicMaterial({
+    color: PARK_GRASS,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const park = new THREE.Mesh(parkGeometry, parkMaterial);
+  park.rotation.x = -Math.PI / 2;
+  park.position.copy(parkCenter);
+  park.position.y = 0.004;
+  parkGroup.add(park);
+
+  // Darker grass ring (a slightly smaller plane in a darker tone)
+  const parkInnerGeom = new THREE.PlaneGeometry(parkW * 0.72, parkD * 0.72);
+  const parkInnerMaterial = new THREE.MeshBasicMaterial({
+    color: PARK_GRASS_DARK,
+    transparent: true,
+    opacity: 0.65,
+  });
+  const parkInner = new THREE.Mesh(parkInnerGeom, parkInnerMaterial);
+  parkInner.rotation.x = -Math.PI / 2;
+  parkInner.position.copy(parkCenter);
+  parkInner.position.y = 0.006;
+  parkGroup.add(parkInner);
+
+  // Park outline — ink edge
+  const parkEdgeGeom = new THREE.EdgesGeometry(parkGeometry);
+  const parkEdges = new THREE.LineSegments(
+    parkEdgeGeom,
+    new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.55 })
+  );
+  parkEdges.rotation.x = -Math.PI / 2;
+  parkEdges.position.copy(parkCenter);
+  parkEdges.position.y = 0.007;
+  parkGroup.add(parkEdges);
+
+  // Central pond — small, in the NE corner of the park so the stave church
+  // can sit in the SW corner without overlapping it.
+  const pondOffset = new THREE.Vector3(parkW * 0.18, 0, -parkD * 0.18);
+  const pondW = parkW * 0.34;
+  const pondD = parkD * 0.34;
+  const pondGeometry = new THREE.PlaneGeometry(pondW, pondD);
+  const pondMaterial = new THREE.MeshBasicMaterial({
     color: WATER_BLUE,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.75,
   });
-  const water = new THREE.Mesh(waterGeometry, waterMaterial);
-  water.rotation.x = -Math.PI / 2;
-  water.position.set(-halfAxis * spacing + spacing * 0.8, 0.003, halfAxis * spacing - spacing * 0.4);
-  scene.add(water);
+  const pond = new THREE.Mesh(pondGeometry, pondMaterial);
+  pond.rotation.x = -Math.PI / 2;
+  pond.position.copy(parkCenter).add(pondOffset);
+  pond.position.y = 0.008;
+  parkGroup.add(pond);
 
-  // Water outline
-  const waterEdgeGeom = new THREE.EdgesGeometry(waterGeometry);
-  const waterEdges = new THREE.LineSegments(
-    waterEdgeGeom,
-    new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.45 })
+  const pondEdgeGeom = new THREE.EdgesGeometry(pondGeometry);
+  const pondEdges = new THREE.LineSegments(
+    pondEdgeGeom,
+    new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.75 })
   );
-  waterEdges.rotation.x = -Math.PI / 2;
-  waterEdges.position.copy(water.position);
-  waterEdges.position.y = 0.004;
-  scene.add(waterEdges);
+  pondEdges.rotation.x = -Math.PI / 2;
+  pondEdges.position.copy(pond.position);
+  pondEdges.position.y = 0.009;
+  parkGroup.add(pondEdges);
+
+  scene.add(parkGroup);
 
   // Windows texture — reused across every building material
   const windowTexture = makeWindowTexture();
