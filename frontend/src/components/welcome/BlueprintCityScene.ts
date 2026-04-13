@@ -719,7 +719,7 @@ export function initBlueprintCity(container: HTMLElement): () => void {
         mesh.scale.y = 0.001;
       }
 
-      occupied.push({ x: cx, z: cz, w: w + 1.5, d: d + 1.5 });
+      occupied.push({ x: cx, z: cz, w, d });
 
       // Dynamic buildings: very long cycle, widely spread births so only one
       // or two are ever visibly transitioning at a time.
