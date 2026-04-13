@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'storages',  # Cloud storage (Supabase/S3)
 
     # Local apps
+    'apps.accounts',
     'apps.projects',
     'apps.models',
     'apps.entities',
@@ -223,7 +224,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',  # Keep for Django admin
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # TODO: Change to IsAuthenticated when ready
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,

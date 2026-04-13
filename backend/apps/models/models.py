@@ -1,6 +1,7 @@
 """
 IFC Model and related models for BIM Coordinator Platform.
 """
+from django.conf import settings
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 import uuid
@@ -163,6 +164,15 @@ class Model(models.Model):
     version_number = models.IntegerField(default=1)
     parent_model = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='versions')
     is_published = models.BooleanField(default=False, help_text="Whether this version is the active/published version")
+
+    # Phase 1: identity attribution. Versioning audit log (ModelEvent) arrives in Phase 2.
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='uploaded_models',
+    )
 
     # === Forking (scenarios, analysis, design alternatives) ===
     FORK_TYPE_CHOICES = [

@@ -1,8 +1,13 @@
+import { type ReactNode } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { queryClient } from './lib/query-client';
 import { Toaster } from './components/ui/toaster';
 import { UploadProvider } from './contexts/UploadContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { RequireAuth } from './components/RequireAuth';
+import Login from './pages/Login';
+import AuthCallback from './pages/AuthCallback';
 import MyPage from './pages/MyPage';
 import ProjectsGallery from './pages/ProjectsGallery';
 import ProjectDashboard from './pages/ProjectDashboard';
@@ -28,42 +33,48 @@ import ProjectField from './pages/ProjectField';
 import ProcessingReports from './pages/dev/ProcessingReports';
 import ProcessingReportDetail from './pages/dev/ProcessingReportDetail';
 
+const guard = (element: ReactNode) => <RequireAuth>{element}</RequireAuth>;
+
 const router = createBrowserRouter([
-  { path: "/", element: <ProjectsGallery /> },
-  { path: "/my-page", element: <MyPage /> },
-  { path: "/projects", element: <ProjectsGallery /> },
-  { path: "/projects/:id", element: <ProjectModels /> },  // Models is now the landing page
-  { path: "/projects/:id/dashboard", element: <ProjectDashboard /> },  // Dashboard moved here
-  { path: "/projects/:id/models", element: <ProjectModels /> },  // Keep for backwards compat
-  { path: "/projects/:id/my-page", element: <ProjectMyPage /> },
-  { path: "/projects/:id/viewer-groups", element: <ViewerGroups /> },
-  { path: "/projects/:id/viewer/:groupId", element: <FederatedViewer /> },
-  { path: "/projects/:id/documents", element: <ProjectDocuments /> },
-  { path: "/projects/:id/drawings", element: <ProjectDrawings /> },
-  { path: "/projects/:id/types", element: <ProjectTypesPage /> },
-  { path: "/projects/:id/type-library", element: <ProjectTypeLibrary /> },
-  { path: "/projects/:id/material-library", element: <ProjectMaterialLibrary /> },
-  { path: "/projects/:id/bep", element: <ProjectBEP /> },
-  { path: "/projects/:id/field", element: <ProjectField /> },
-  { path: "/projects/:id/workbench", element: <BIMWorkbench /> },
-  { path: "/projects/:id/models/:modelId", element: <ModelWorkspace /> },
-  { path: "/my-issues", element: <MyIssues /> },
-  { path: "/my-rfis", element: <MyRFIs /> },
-  { path: "/scripts", element: <ScriptsLibrary /> },
-  { path: "/stats", element: <QuickStats /> },
-  { path: "/settings", element: <Settings /> },
-  { path: "/type-library", element: <TypeLibraryPage /> },
-  { path: "/dev/processing-reports", element: <ProcessingReports /> },
-  { path: "/dev/processing-reports/:id", element: <ProcessingReportDetail /> },
+  { path: "/login", element: <Login /> },
+  { path: "/auth/callback", element: <AuthCallback /> },
+  { path: "/", element: guard(<ProjectsGallery />) },
+  { path: "/my-page", element: guard(<MyPage />) },
+  { path: "/projects", element: guard(<ProjectsGallery />) },
+  { path: "/projects/:id", element: guard(<ProjectModels />) },
+  { path: "/projects/:id/dashboard", element: guard(<ProjectDashboard />) },
+  { path: "/projects/:id/models", element: guard(<ProjectModels />) },
+  { path: "/projects/:id/my-page", element: guard(<ProjectMyPage />) },
+  { path: "/projects/:id/viewer-groups", element: guard(<ViewerGroups />) },
+  { path: "/projects/:id/viewer/:groupId", element: guard(<FederatedViewer />) },
+  { path: "/projects/:id/documents", element: guard(<ProjectDocuments />) },
+  { path: "/projects/:id/drawings", element: guard(<ProjectDrawings />) },
+  { path: "/projects/:id/types", element: guard(<ProjectTypesPage />) },
+  { path: "/projects/:id/type-library", element: guard(<ProjectTypeLibrary />) },
+  { path: "/projects/:id/material-library", element: guard(<ProjectMaterialLibrary />) },
+  { path: "/projects/:id/bep", element: guard(<ProjectBEP />) },
+  { path: "/projects/:id/field", element: guard(<ProjectField />) },
+  { path: "/projects/:id/workbench", element: guard(<BIMWorkbench />) },
+  { path: "/projects/:id/models/:modelId", element: guard(<ModelWorkspace />) },
+  { path: "/my-issues", element: guard(<MyIssues />) },
+  { path: "/my-rfis", element: guard(<MyRFIs />) },
+  { path: "/scripts", element: guard(<ScriptsLibrary />) },
+  { path: "/stats", element: guard(<QuickStats />) },
+  { path: "/settings", element: guard(<Settings />) },
+  { path: "/type-library", element: guard(<TypeLibraryPage />) },
+  { path: "/dev/processing-reports", element: guard(<ProcessingReports />) },
+  { path: "/dev/processing-reports/:id", element: guard(<ProcessingReportDetail />) },
 ]);
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <UploadProvider>
-        <Toaster />
-        <RouterProvider router={router} />
-      </UploadProvider>
+      <AuthProvider>
+        <UploadProvider>
+          <Toaster />
+          <RouterProvider router={router} />
+        </UploadProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
