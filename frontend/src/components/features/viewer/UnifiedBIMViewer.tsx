@@ -495,6 +495,19 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           const culler = cullers.create(world);
           culler.config.threshold = 5;
           cullerRef.current = culler;
+
+          // Force the culler to re-probe visibility whenever the camera stops
+          // moving. Without this, the first probe runs at the default camera
+          // position (before fit-to-view), captures "nothing visible," and
+          // hides all opaque geometry until the user pans/zooms the camera.
+          const ctrls = (world.camera as OBC.OrthoPerspectiveCamera | undefined)?.controls;
+          if (ctrls && 'addEventListener' in ctrls) {
+            ctrls.addEventListener('rest', () => {
+              if (cullerRef.current) {
+                (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
+              }
+            });
+          }
         } else {
           console.warn('[Viewer] Culler disabled via ?culler=off query param');
         }
