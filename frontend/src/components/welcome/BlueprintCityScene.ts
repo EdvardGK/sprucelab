@@ -852,6 +852,8 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     streetMaterialMinor.dispose();
     streetMaterialMajor.dispose();
 
+    for (const d of landmarkDisposables) d.dispose();
+
     parkGeometry.dispose();
     parkMaterial.dispose();
     parkInnerGeom.dispose();
