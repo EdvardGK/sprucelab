@@ -602,8 +602,8 @@ export function initBlueprintCity(container: HTMLElement): () => void {
   occupied.push({
     x: parkCenter.x,
     z: parkCenter.z,
-    w: parkW + 1.5,
-    d: parkD + 1.5,
+    w: parkW,
+    d: parkD,
   });
 
   for (let ix = 0; ix < axisCount; ix++) {
