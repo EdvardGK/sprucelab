@@ -281,12 +281,12 @@ export function initBlueprintCity(container: HTMLElement): () => void {
   const buildings: Building[] = [];
   const occupied: Array<{ x: number; z: number; w: number; d: number }> = [];
 
-  // Reserve the water footprint so we don't drop a building on top of it
+  // Reserve the park footprint so we don't drop a building on top of it
   occupied.push({
-    x: water.position.x,
-    z: water.position.z,
-    w: spacing * 2.4,
-    d: spacing * 2.4,
+    x: parkCenter.x,
+    z: parkCenter.z,
+    w: parkW + 1.5,
+    d: parkD + 1.5,
   });
 
   for (let ix = 0; ix < axisCount; ix++) {
