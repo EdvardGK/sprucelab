@@ -316,6 +316,222 @@ export function initBlueprintCity(container: HTMLElement): () => void {
   // Windows texture — reused across every building material
   const windowTexture = makeWindowTexture();
 
+  // ------------------------------------------------------------------
+  // Landmarks — three hand-crafted Norwegian buildings as scene anchors.
+  // All are static (no construction animation), placed in curated spots,
+  // and their footprints are reserved so generic buildings go around them.
+  // ------------------------------------------------------------------
+  const landmarkGroup = new THREE.Group();
+  scene.add(landmarkGroup);
+  const landmarkDisposables: Array<{ dispose: () => void }> = [];
+
+  const trackMat = (m: THREE.Material) => {
+    landmarkDisposables.push({ dispose: () => m.dispose() });
+    return m;
+  };
+  const trackGeom = (g: THREE.BufferGeometry) => {
+    landmarkDisposables.push({ dispose: () => g.dispose() });
+    return g;
+  };
+
+  /** Add an ink-line edge overlay on a mesh. */
+  function addEdges(mesh: THREE.Mesh, opacity = 0.95) {
+    const eg = trackGeom(new THREE.EdgesGeometry(mesh.geometry));
+    const em = trackMat(new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity }));
+    const edges = new THREE.LineSegments(eg, em);
+    mesh.add(edges);
+  }
+
+  // --- 1. Oslo Opera House (Snøhetta) ----------------------------------
+  // Low wide sloped ramp in white marble. Two trapezoidal wedges meeting
+  // at a ridge, with a short vertical box above for the fly tower.
+  {
+    const cx = spacing * 1.8;
+    const cz = spacing * 1.2;
+    const footprintW = 9;
+    const footprintD = 6.5;
+    const peakH = 3.2;
+
+    const operaBase = new THREE.Group();
+    operaBase.position.set(cx, 0, cz);
+
+    const marbleMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        color: STONE_WHITE,
+        metalness: 0.05,
+        roughness: 0.72,
+      })
+    );
+
+    // Build a wedge via ExtrudeGeometry: profile is a trapezoid rising to
+    // a point on one edge (the signature Opera House ramp).
+    const profile = new THREE.Shape();
+    profile.moveTo(-footprintW / 2, 0);
+    profile.lineTo(footprintW / 2, 0);
+    profile.lineTo(footprintW / 2, 0.35);
+    profile.lineTo(footprintW / 2 - 2.2, 0.35);
+    profile.lineTo(-footprintW / 2 + 1.2, peakH);
+    profile.lineTo(-footprintW / 2, peakH * 0.55);
+    profile.lineTo(-footprintW / 2, 0);
+
+    const wedgeGeom = trackGeom(
+      new THREE.ExtrudeGeometry(profile, {
+        depth: footprintD,
+        bevelEnabled: false,
+        curveSegments: 1,
+      })
+    );
+    wedgeGeom.translate(0, 0, -footprintD / 2);
+    const wedge = new THREE.Mesh(wedgeGeom, marbleMat);
+    addEdges(wedge);
+    operaBase.add(wedge);
+
+    // Fly tower — vertical glass box above the ridge
+    const towerGeom = trackGeom(new THREE.BoxGeometry(3.8, 2.2, footprintD * 0.55));
+    towerGeom.translate(-0.8, peakH + 1.1, 0);
+    const towerMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        color: 0xaec3cd,
+        metalness: 0.15,
+        roughness: 0.5,
+        map: windowTexture.clone(),
+        transparent: true,
+        opacity: 0.92,
+      })
+    );
+    const tower = new THREE.Mesh(towerGeom, towerMat);
+    addEdges(tower);
+    operaBase.add(tower);
+
+    landmarkGroup.add(operaBase);
+
+    // Reserve footprint so generic buildings don't overlap
+    occupied.push({ x: cx, z: cz, w: footprintW + 1.5, d: footprintD + 1.5 });
+  }
+
+  // --- 2. Barcode Project (Oslo) ---------------------------------------
+  // Tight row of 12 narrow slabs with varied heights. Placed perpendicular
+  // to the main orbit so the "barcode" silhouette reads cleanly from the
+  // side. Alternating dark/cream facades.
+  {
+    const cx = spacing * 1.8;
+    const cz = -spacing * 1.6;
+    const slabCount = 12;
+    const slabW = 0.85;
+    const slabD = 4.2;
+    const slabGap = 0.35;
+    const rowLength = slabCount * (slabW + slabGap) - slabGap;
+
+    const darkMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        color: 0x3a4160,
+        metalness: 0.1,
+        roughness: 0.62,
+        map: windowTexture.clone(),
+        transparent: true,
+        opacity: 0.94,
+      })
+    );
+    const creamMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        color: CREAM,
+        metalness: 0.05,
+        roughness: 0.8,
+        map: windowTexture.clone(),
+        transparent: true,
+        opacity: 0.94,
+      })
+    );
+
+    // Heights form a pleasing mini-skyline, not monotonic
+    const heightPattern = [7, 9, 12, 10, 14, 11, 13, 15, 12, 10, 8, 6];
+
+    for (let i = 0; i < slabCount; i++) {
+      const h = heightPattern[i];
+      const geom = trackGeom(new THREE.BoxGeometry(slabW, h, slabD));
+      geom.translate(0, h / 2, 0);
+      const mat = i % 2 === 0 ? darkMat : creamMat;
+      const slab = new THREE.Mesh(geom, mat);
+      const offsetX = -rowLength / 2 + i * (slabW + slabGap) + slabW / 2;
+      slab.position.set(cx + offsetX, 0, cz);
+      addEdges(slab, 0.9);
+      landmarkGroup.add(slab);
+    }
+
+    occupied.push({ x: cx, z: cz, w: rowLength + 1.5, d: slabD + 1.5 });
+  }
+
+  // --- 3. Stavkirke (stave church) -------------------------------------
+  // Traditional Norwegian wooden church — stacked gabled roofs shrinking
+  // upward, dark-stained pine. Sits in the SW corner of the park so the
+  // green frame reads as "churchyard".
+  {
+    const sx = parkCenter.x - parkW * 0.24;
+    const sz = parkCenter.z + parkD * 0.24;
+
+    const stavkirke = new THREE.Group();
+    stavkirke.position.set(sx, 0, sz);
+
+    const woodMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        color: WOOD_DARK,
+        metalness: 0.0,
+        roughness: 0.95,
+      })
+    );
+    const roofMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        color: 0x2a1e12,
+        metalness: 0.0,
+        roughness: 0.98,
+      })
+    );
+
+    // Builds one tier: a square wooden box with a pyramidal roof on top.
+    // Returns the total height used so the next tier stacks on top.
+    function addTier(widthXY: number, wallH: number, roofH: number, yBase: number) {
+      const wallGeom = trackGeom(new THREE.BoxGeometry(widthXY, wallH, widthXY));
+      wallGeom.translate(0, wallH / 2, 0);
+      const wall = new THREE.Mesh(wallGeom, woodMat);
+      wall.position.y = yBase;
+      addEdges(wall, 0.85);
+      stavkirke.add(wall);
+
+      // 4-sided pyramid roof (cone with 4 sides)
+      const roofGeom = trackGeom(new THREE.ConeGeometry(widthXY * 0.78, roofH, 4));
+      roofGeom.rotateY(Math.PI / 4);
+      const roof = new THREE.Mesh(roofGeom, roofMat);
+      roof.position.y = yBase + wallH + roofH / 2;
+      addEdges(roof, 0.9);
+      stavkirke.add(roof);
+
+      return wallH + roofH;
+    }
+
+    // Three tiers, shrinking
+    let y = 0;
+    y += addTier(3.2, 2.4, 1.8, y);
+    y += addTier(2.2, 1.6, 1.4, y) - 0.4; // slight overlap for the tiered look
+    y += addTier(1.4, 1.2, 1.1, y) - 0.3;
+
+    // Spire / cross on top
+    const spireGeom = trackGeom(new THREE.CylinderGeometry(0.05, 0.08, 0.9, 4));
+    const spire = new THREE.Mesh(spireGeom, roofMat);
+    spire.position.y = y + 0.45;
+    stavkirke.add(spire);
+
+    // Cross bar
+    const crossBarGeom = trackGeom(new THREE.BoxGeometry(0.3, 0.06, 0.06));
+    const crossBar = new THREE.Mesh(crossBarGeom, roofMat);
+    crossBar.position.y = y + 0.7;
+    stavkirke.add(crossBar);
+
+    landmarkGroup.add(stavkirke);
+
+    // Reserve a modest footprint inside the park
+    occupied.push({ x: sx, z: sz, w: 4.2, d: 4.2 });
+  }
+
   // Buildings
   const buildingGroup = new THREE.Group();
   const buildings: Building[] = [];
