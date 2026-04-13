@@ -1,17 +1,27 @@
 """
 Supabase JWT Authentication for Django REST Framework.
 
-Validates JWTs issued by Supabase and maps them to a local Django user via
-the UserProfile shadow row keyed by supabase_id.
+Verification strategy: delegate to Supabase. We do NOT try to verify the JWT
+signature locally. Modern Supabase projects use rotating signing keys (with
+opaque `kid` values) that aren't exposed via the classic "JWT Secret" field
+in the dashboard, and the JWKS endpoint only advertises an unrelated ES256
+public key. Rather than fight the key-rotation mess, we call
+`/auth/v1/user` with the bearer token and trust Supabase's answer. A short-
+lived Django cache keeps the overhead to ~1 Supabase call per minute per
+active session.
 """
 
+import hashlib
+import json
 import logging
+import urllib.error
+import urllib.request
 import uuid
 
 import jwt
-from jwt import PyJWKClient
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import authentication, exceptions
@@ -21,39 +31,69 @@ from apps.accounts.models import UserProfile
 User = get_user_model()
 logger = logging.getLogger('apps.accounts.auth')
 
-# Shared JWKS client: caches keys in-memory across requests. Supabase serves
-# its signing keys at /auth/v1/.well-known/jwks.json and rotates them rarely.
-_JWKS_CLIENT: PyJWKClient | None = None
+# How long to cache a successful /auth/v1/user response. Short enough that a
+# revoked/signed-out token stops working quickly, long enough to absorb
+# request bursts from the same session.
+USER_INFO_CACHE_TTL = 60  # seconds
+
+# Network timeout for the Supabase user-info call.
+USER_INFO_TIMEOUT = 5  # seconds
 
 
-def _get_jwks_client() -> PyJWKClient:
-    global _JWKS_CLIENT
-    if _JWKS_CLIENT is None:
-        supabase_url = (settings.SUPABASE_URL or '').rstrip('/')
-        if not supabase_url:
-            raise exceptions.AuthenticationFailed('SUPABASE_URL not configured')
-        _JWKS_CLIENT = PyJWKClient(
-            f'{supabase_url}/auth/v1/.well-known/jwks.json',
-            cache_keys=True,
-            lifespan=3600,
+def _cache_key(token: str) -> str:
+    return f'supabase:userinfo:{hashlib.sha256(token.encode()).hexdigest()}'
+
+
+def _fetch_userinfo(token: str) -> dict:
+    """
+    Call Supabase's /auth/v1/user with the bearer token. Returns the user
+    payload on success. Raises AuthenticationFailed on failure.
+    """
+    supabase_url = (settings.SUPABASE_URL or '').rstrip('/')
+    anon_key = settings.SUPABASE_KEY
+    if not supabase_url or not anon_key:
+        raise exceptions.AuthenticationFailed(
+            'SUPABASE_URL or SUPABASE_KEY not configured'
         )
-    return _JWKS_CLIENT
+
+    req = urllib.request.Request(
+        f'{supabase_url}/auth/v1/user',
+        headers={
+            'apikey': anon_key,
+            'Authorization': f'Bearer {token}',
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=USER_INFO_TIMEOUT) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors='replace')[:200] if e.fp else ''
+        if e.code == 401:
+            raise exceptions.AuthenticationFailed('Token rejected by Supabase')
+        raise exceptions.AuthenticationFailed(
+            f'Supabase userinfo failed ({e.code}): {body}'
+        )
+    except urllib.error.URLError as e:
+        raise exceptions.AuthenticationFailed(f'Supabase unreachable: {e}')
+    except Exception as e:
+        logger.exception('supabase-auth: unexpected userinfo error: %s', e)
+        raise exceptions.AuthenticationFailed(f'Supabase userinfo error: {e}')
 
 
 class SupabaseAuthentication(authentication.BaseAuthentication):
     """
-    Authenticate requests using Supabase JWT tokens.
+    Authenticate requests using Supabase session tokens.
 
     Flow:
-    - Frontend obtains a session via Supabase (OAuth, magic link, etc.)
-    - Frontend sends the access token in `Authorization: Bearer <token>`
-    - This class verifies the JWT with SUPABASE_JWT_SECRET and looks up (or
-      creates) a Django User linked by UserProfile.supabase_id.
+    1. Extract Bearer token from Authorization header
+    2. Check local cache for a recent /auth/v1/user response for this token
+    3. If cache miss, ask Supabase to validate the token
+    4. On success, lazily create/update a Django User + UserProfile keyed by
+       the Supabase user's UUID
     """
 
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization')
-
         if not auth_header or not auth_header.startswith('Bearer '):
             return None
 
@@ -61,90 +101,45 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         if not token:
             return None
 
+        # Quick sanity: reject malformed JWTs before hitting Supabase.
         try:
-            payload = self._decode_token(token)
-        except jwt.ExpiredSignatureError:
-            logger.warning('supabase-auth: token expired')
-            raise exceptions.AuthenticationFailed('Token has expired')
+            jwt.get_unverified_header(token)
         except jwt.InvalidTokenError as e:
-            logger.warning('supabase-auth: invalid token — %s', e)
-            raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
-        except exceptions.AuthenticationFailed:
-            raise
-        except Exception as e:
-            # Catch-all so we see unexpected failures in Railway logs.
-            logger.exception('supabase-auth: unexpected decode error: %s', e)
-            raise exceptions.AuthenticationFailed(f'Token verification failed: {e}')
+            logger.warning('supabase-auth: malformed token — %s', e)
+            raise exceptions.AuthenticationFailed(f'Malformed token: {e}')
+
+        # Cached path: if we validated this exact token recently, skip the
+        # network round-trip.
+        cache_key = _cache_key(token)
+        userinfo = cache.get(cache_key)
+        if userinfo is None:
+            userinfo = _fetch_userinfo(token)
+            cache.set(cache_key, userinfo, USER_INFO_CACHE_TTL)
 
         try:
-            user = self._get_or_create_user(payload)
+            user = self._get_or_create_user(userinfo)
         except exceptions.AuthenticationFailed:
             raise
         except Exception as e:
             logger.exception('supabase-auth: user resolution failed: %s', e)
             raise exceptions.AuthenticationFailed(f'User resolution failed: {e}')
 
-        return (user, payload)
-
-    def _decode_token(self, token):
-        """
-        Verify a Supabase access token.
-
-        Modern Supabase projects (Pro tier, new projects) sign session JWTs
-        asymmetrically with ES256/RS256 and publish the public key at
-        /auth/v1/.well-known/jwks.json. Legacy projects used HS256 with a
-        shared secret. We auto-detect from the JWT header.
-        """
-        try:
-            header = jwt.get_unverified_header(token)
-        except jwt.InvalidTokenError as e:
-            raise exceptions.AuthenticationFailed(f'Malformed token: {e}')
-
-        alg = header.get('alg', 'HS256')
-
-        if alg in ('ES256', 'RS256', 'ES384', 'RS384', 'ES512', 'RS512'):
-            # Asymmetric: verify with the public key from JWKS.
-            jwks_client = _get_jwks_client()
-            try:
-                signing_key = jwks_client.get_signing_key_from_jwt(token).key
-            except Exception as e:
-                raise exceptions.AuthenticationFailed(
-                    f'Could not resolve signing key from JWKS: {e}'
-                )
-            return jwt.decode(
-                token,
-                signing_key,
-                algorithms=[alg],
-                audience='authenticated',
-            )
-
-        # HS256 fallback (legacy Supabase projects).
-        jwt_secret = settings.SUPABASE_JWT_SECRET
-        if not jwt_secret:
-            raise exceptions.AuthenticationFailed(
-                'Token is HS256 but SUPABASE_JWT_SECRET is not configured'
-            )
-        return jwt.decode(
-            token,
-            jwt_secret,
-            algorithms=['HS256'],
-            audience='authenticated',
-        )
+        return (user, userinfo)
 
     @transaction.atomic
-    def _get_or_create_user(self, payload):
-        sub = payload.get('sub')
-        email = payload.get('email')
+    def _get_or_create_user(self, userinfo: dict):
+        sub = userinfo.get('id')  # /auth/v1/user uses `id`, not `sub`
+        email = userinfo.get('email')
 
         if not sub:
-            raise exceptions.AuthenticationFailed('Token missing subject (sub)')
+            raise exceptions.AuthenticationFailed('Userinfo missing id')
 
         try:
             supabase_id = uuid.UUID(sub)
         except (ValueError, TypeError):
-            raise exceptions.AuthenticationFailed('Token subject is not a valid UUID')
+            raise exceptions.AuthenticationFailed('Userinfo id is not a valid UUID')
 
-        metadata = payload.get('user_metadata', {}) or {}
+        metadata = userinfo.get('user_metadata') or {}
         first_name = (metadata.get('first_name') or '').strip()[:30]
         last_name = (metadata.get('last_name') or '').strip()[:150]
         display_name = (
@@ -177,8 +172,8 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
             self._refresh_profile(profile, email, display_name, avatar_url, signup_metadata)
             return profile.user
 
-        # 2. Bootstrap: link to an existing Django user by email (e.g. the
-        #    pre-seeded superuser), otherwise create a fresh user.
+        # 2. Bootstrap: link to an existing Django user by email, otherwise
+        #    create a fresh one.
         user = None
         if email:
             user = User.objects.filter(email__iexact=email).first()
@@ -193,7 +188,6 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
             user.set_unusable_password()
             user.save(update_fields=['password'])
         else:
-            # Sync first/last name from metadata if missing on the linked user.
             user_changed = []
             if first_name and not user.first_name:
                 user.first_name = first_name
@@ -204,8 +198,8 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
             if user_changed:
                 user.save(update_fields=user_changed)
 
-        # Superusers (e.g. the first bootstrap admin) are auto-approved so
-        # they can reach the Django admin from day one.
+        # Superusers (e.g. promoted via management command) auto-approve so
+        # they can reach the Django admin without going through the waitlist.
         initial_status = (
             UserProfile.APPROVAL_APPROVED
             if user.is_superuser
