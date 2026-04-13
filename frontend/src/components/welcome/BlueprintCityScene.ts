@@ -40,58 +40,115 @@ const easeInCubic = (t: number) => t * t * t;
 
 /**
  * Build a reusable canvas texture that reads as "windows" when mapped onto a
- * building facade. We render a grid of small ink-dark rectangles on a cream
- * background; the facade material multiplies its color with this, so accent
- * buildings still tint correctly.
+ * building facade. Symmetric grid, no per-window randomness — the variation
+ * comes from architectural features: a stone base band at the bottom, a
+ * cornice band at the top, vertical pilasters at regular intervals, and a
+ * central double-width window bay. The facade material multiplies its color
+ * with this, so accent buildings still tint correctly.
  */
 function makeWindowTexture(): THREE.Texture {
-  const size = 256;
+  const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (!ctx) return new THREE.CanvasTexture(canvas);
 
+  // Base facade tone
   ctx.fillStyle = '#f7f3e4';
   ctx.fillRect(0, 0, size, size);
 
-  // Window grid: 8 columns, 10 rows
+  // Grid geometry — symmetric, no randomness per window
   const cols = 8;
   const rows = 10;
-  const marginX = 14;
-  const marginY = 10;
-  const cellW = (size - marginX * 2) / cols;
-  const cellH = (size - marginY * 2) / rows;
-  const winW = cellW * 0.55;
-  const winH = cellH * 0.62;
+  const baseBandH = size * 0.09; // stone base band at bottom
+  const cornineBandH = size * 0.06; // cornice band at top
+  const innerY0 = baseBandH;
+  const innerY1 = size - cornineBandH;
+  const innerH = innerY1 - innerY0;
+  const cellW = size / cols;
+  const cellH = innerH / rows;
+  const winW = cellW * 0.48;
+  const winH = cellH * 0.58;
 
+  // Draw the regular window grid
   ctx.fillStyle = '#21263a';
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      // Slight randomness: a few windows are "lit" (lighter) or missing
-      const x = marginX + c * cellW + (cellW - winW) / 2;
-      const y = marginY + r * cellH + (cellH - winH) / 2;
-      const roll = Math.random();
-      if (roll < 0.08) continue; // missing window
-      ctx.fillStyle = roll < 0.18 ? '#c5c97f' : '#21263a'; // occasional lit window
-      ctx.fillRect(x, y, winW, winH);
+      const cellCx = c * cellW + cellW / 2;
+      const cellCy = innerY0 + r * cellH + cellH / 2;
+
+      // Central bay (cols 3 and 4) gets a taller double-height window
+      // every other floor — architectural rhythm trick
+      const isCentralBay = c === 3 || c === 4;
+      const rhythmRow = r % 3 === 0;
+      if (isCentralBay && rhythmRow) {
+        const tallH = winH * 1.3;
+        ctx.fillRect(cellCx - winW / 2, cellCy - tallH / 2, winW, tallH);
+        continue;
+      }
+
+      ctx.fillRect(cellCx - winW / 2, cellCy - winH / 2, winW, winH);
     }
   }
 
-  // Faint horizontal banding (floor lines) for extra texture
-  ctx.strokeStyle = 'rgba(33, 38, 58, 0.18)';
-  ctx.lineWidth = 0.8;
-  for (let r = 1; r < rows; r++) {
-    const y = marginY + r * cellH;
+  // Vertical pilasters — faint lighter stripes between every other column,
+  // giving the facade a regular rhythm
+  ctx.fillStyle = 'rgba(184, 170, 140, 0.18)';
+  for (let c = 1; c < cols; c += 2) {
+    const x = c * cellW - 2;
+    ctx.fillRect(x, innerY0, 4, innerH);
+  }
+
+  // Floor lines every 2 rows — faint horizontal ruling
+  ctx.strokeStyle = 'rgba(33, 38, 58, 0.22)';
+  ctx.lineWidth = 1;
+  for (let r = 2; r < rows; r += 2) {
+    const y = innerY0 + r * cellH;
     ctx.beginPath();
-    ctx.moveTo(marginX - 2, y);
-    ctx.lineTo(size - marginX + 2, y);
+    ctx.moveTo(0, y);
+    ctx.lineTo(size, y);
     ctx.stroke();
   }
 
+  // Stone base band — darker strip at the bottom with a shadow line on top
+  ctx.fillStyle = 'rgba(184, 170, 140, 0.35)';
+  ctx.fillRect(0, 0, size, baseBandH);
+  ctx.strokeStyle = 'rgba(33, 38, 58, 0.35)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, baseBandH);
+  ctx.lineTo(size, baseBandH);
+  ctx.stroke();
+
+  // Ground-floor "storefront" windows — wider, shorter, in the base band
+  const gfWinH = baseBandH * 0.55;
+  const gfWinY = baseBandH / 2 - gfWinH / 2;
+  const gfCols = 6;
+  const gfCellW = size / gfCols;
+  const gfWinW = gfCellW * 0.68;
+  ctx.fillStyle = '#21263a';
+  for (let c = 0; c < gfCols; c++) {
+    const cellCx = c * gfCellW + gfCellW / 2;
+    ctx.fillRect(cellCx - gfWinW / 2, gfWinY, gfWinW, gfWinH);
+  }
+
+  // Cornice band at the top — darker strip framed by two lines
+  ctx.fillStyle = 'rgba(184, 170, 140, 0.28)';
+  ctx.fillRect(0, innerY1, size, cornineBandH);
+  ctx.strokeStyle = 'rgba(33, 38, 58, 0.35)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, innerY1);
+  ctx.lineTo(size, innerY1);
+  ctx.stroke();
+
   const texture = new THREE.CanvasTexture(canvas);
+  // ClampToEdge so the base band stays at the bottom and cornice at the top
+  // regardless of how many times we tile vertically. Horizontal tiling still
+  // repeats the window grid cleanly.
   texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.anisotropy = 4;
   return texture;
 }
