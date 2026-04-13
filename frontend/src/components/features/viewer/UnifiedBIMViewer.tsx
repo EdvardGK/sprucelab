@@ -1429,6 +1429,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           fitAllModelsToView();
         }
 
+        // Force the Culler to re-probe visibility AFTER the camera is framed on
+        // the models. Without this, the culler's first probe runs at the default
+        // camera position (50,50,50 looking at origin) which may be inside or
+        // outside the federation entirely — it captures "nothing visible" and
+        // hides all opaque fragments, leaving only transparent geometry
+        // (windows, curtain walls) drawn.
+        if (cullerRef.current) {
+          // needsUpdate on the culler renderer triggers a re-probe on the next tick.
+          try {
+            (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
+          } catch (err) {
+            console.warn('[Viewer] Could not force culler re-probe:', err);
+          }
+        }
+
         setIsLoading(false);
       } catch (err) {
         console.error('Failed to load models:', err);
