@@ -64,11 +64,26 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         try:
             payload = self._decode_token(token)
         except jwt.ExpiredSignatureError:
+            logger.warning('supabase-auth: token expired')
             raise exceptions.AuthenticationFailed('Token has expired')
         except jwt.InvalidTokenError as e:
+            logger.warning('supabase-auth: invalid token — %s', e)
             raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
+        except exceptions.AuthenticationFailed:
+            raise
+        except Exception as e:
+            # Catch-all so we see unexpected failures in Railway logs.
+            logger.exception('supabase-auth: unexpected decode error: %s', e)
+            raise exceptions.AuthenticationFailed(f'Token verification failed: {e}')
 
-        user = self._get_or_create_user(payload)
+        try:
+            user = self._get_or_create_user(payload)
+        except exceptions.AuthenticationFailed:
+            raise
+        except Exception as e:
+            logger.exception('supabase-auth: user resolution failed: %s', e)
+            raise exceptions.AuthenticationFailed(f'User resolution failed: {e}')
+
         return (user, payload)
 
     def _decode_token(self, token):
