@@ -227,6 +227,9 @@ public
 *~
 .DS_Store
 
+# Vercel CLI link (project metadata, not for commit)
+.vercel/
+
 # Project specific
 /output/
 /versions/
