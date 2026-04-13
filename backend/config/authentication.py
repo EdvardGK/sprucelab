@@ -70,10 +70,43 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         return (user, payload)
 
     def _decode_token(self, token):
+        """
+        Verify a Supabase access token.
+
+        Modern Supabase projects (Pro tier, new projects) sign session JWTs
+        asymmetrically with ES256/RS256 and publish the public key at
+        /auth/v1/.well-known/jwks.json. Legacy projects used HS256 with a
+        shared secret. We auto-detect from the JWT header.
+        """
+        try:
+            header = jwt.get_unverified_header(token)
+        except jwt.InvalidTokenError as e:
+            raise exceptions.AuthenticationFailed(f'Malformed token: {e}')
+
+        alg = header.get('alg', 'HS256')
+
+        if alg in ('ES256', 'RS256', 'ES384', 'RS384', 'ES512', 'RS512'):
+            # Asymmetric: verify with the public key from JWKS.
+            jwks_client = _get_jwks_client()
+            try:
+                signing_key = jwks_client.get_signing_key_from_jwt(token).key
+            except Exception as e:
+                raise exceptions.AuthenticationFailed(
+                    f'Could not resolve signing key from JWKS: {e}'
+                )
+            return jwt.decode(
+                token,
+                signing_key,
+                algorithms=[alg],
+                audience='authenticated',
+            )
+
+        # HS256 fallback (legacy Supabase projects).
         jwt_secret = settings.SUPABASE_JWT_SECRET
         if not jwt_secret:
-            raise exceptions.AuthenticationFailed('SUPABASE_JWT_SECRET not configured')
-
+            raise exceptions.AuthenticationFailed(
+                'Token is HS256 but SUPABASE_JWT_SECRET is not configured'
+            )
         return jwt.decode(
             token,
             jwt_secret,
