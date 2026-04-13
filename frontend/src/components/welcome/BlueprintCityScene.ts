@@ -628,6 +628,19 @@ export function initBlueprintCity(container: HTMLElement): () => void {
       const d = isTower ? 1.8 + Math.random() * 1.3 : 2.8 + Math.random() * 2.4;
       const h = isTower ? 9 + Math.random() * 13 : 3 + Math.random() * 6;
 
+      // Clash control — AABB check against everything already placed
+      // (landmarks, park, previous buildings). Sprucelab does not ship
+      // colliding geometry.
+      const CLEARANCE = 0.6;
+      const clashes = occupied.some((o) => {
+        const dx = Math.abs(cx - o.x);
+        const dz = Math.abs(cz - o.z);
+        const minDx = w / 2 + o.w / 2 + CLEARANCE;
+        const minDz = d / 2 + o.d / 2 + CLEARANCE;
+        return dx < minDx && dz < minDz;
+      });
+      if (clashes) continue;
+
       const geometry = new THREE.BoxGeometry(w, h, d);
       geometry.translate(0, h / 2, 0);
 
