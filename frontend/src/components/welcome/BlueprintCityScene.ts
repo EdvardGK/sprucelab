@@ -854,7 +854,8 @@ export function initBlueprintCity(container: HTMLElement): () => void {
       }
     });
     streetMaterialMinor.dispose();
-    streetMaterialMajor.dispose();
+    streetMaterialBoulevard.dispose();
+    medianMaterial.dispose();
 
     for (const d of landmarkDisposables) d.dispose();
 
