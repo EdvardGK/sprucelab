@@ -468,7 +468,7 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     landmarkGroup.add(operaBase);
 
     // Reserve footprint so generic buildings don't overlap
-    occupied.push({ x: cx, z: cz, w: footprintW + 1.5, d: footprintD + 1.5 });
+    occupied.push({ x: cx, z: cz, w: footprintW, d: footprintD });
   }
 
   // --- 2. Barcode Project (Oslo) ---------------------------------------
