@@ -596,10 +596,16 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     streetMaterialMinor.dispose();
     streetMaterialMajor.dispose();
 
-    waterGeometry.dispose();
-    waterMaterial.dispose();
-    waterEdgeGeom.dispose();
-    (waterEdges.material as THREE.Material).dispose();
+    parkGeometry.dispose();
+    parkMaterial.dispose();
+    parkInnerGeom.dispose();
+    parkInnerMaterial.dispose();
+    parkEdgeGeom.dispose();
+    (parkEdges.material as THREE.Material).dispose();
+    pondGeometry.dispose();
+    pondMaterial.dispose();
+    pondEdgeGeom.dispose();
+    (pondEdges.material as THREE.Material).dispose();
 
     treeGroup.traverse((obj) => {
       if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {
