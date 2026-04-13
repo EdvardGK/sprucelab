@@ -163,37 +163,77 @@ export function initBlueprintCity(container: HTMLElement): () => void {
   const halfAxis = (axisCount - 1) / 2;
   const blockExtent = halfAxis * spacing + spacing * 0.5;
 
-  // Street grid — thin ink strips running along the block boundaries.
-  // Rendered as slightly raised planes so they sit on top of the ground tint.
+  // Streets and boulevards — grid of minor streets plus two grand boulevards
+  // running east/west and north/south through the middle. Boulevards are wider,
+  // darker, with painted medians. Tree rows are dropped in later once the park
+  // location is known, so they go around the park rather than through it.
   const streetGroup = new THREE.Group();
   const streetMaterialMinor = new THREE.MeshBasicMaterial({
     color: INK,
     transparent: true,
-    opacity: 0.16,
+    opacity: 0.18,
   });
-  const streetMaterialMajor = new THREE.MeshBasicMaterial({
+  const streetMaterialBoulevard = new THREE.MeshBasicMaterial({
     color: INK,
     transparent: true,
-    opacity: 0.22,
+    opacity: 0.32,
+  });
+  const medianMaterial = new THREE.MeshBasicMaterial({
+    color: PARK_GRASS,
+    transparent: true,
+    opacity: 0.75,
   });
 
-  // Minor streets between every row/column of cells
-  for (let i = 0; i <= axisCount; i++) {
-    const pos = (i - axisCount / 2) * spacing;
-    const isMajor = i === 0 || i === Math.floor(axisCount / 2) + 1 || i === axisCount;
-    const mat = isMajor ? streetMaterialMajor : streetMaterialMinor;
-    const widthHere = isMajor ? 1.3 : 0.7;
+  // Two boulevards — one along X axis at z=0, one along Z axis at x=0
+  const BOULEVARD_WIDTH = 2.4;
+  const MEDIAN_WIDTH = 0.45;
 
-    // Horizontal (running along X)
-    const hGeom = new THREE.PlaneGeometry(blockExtent * 2, widthHere);
-    const h = new THREE.Mesh(hGeom, mat);
+  // Boulevard running along X (at z=0)
+  {
+    const asphaltGeom = new THREE.PlaneGeometry(blockExtent * 2, BOULEVARD_WIDTH);
+    const asphalt = new THREE.Mesh(asphaltGeom, streetMaterialBoulevard);
+    asphalt.rotation.x = -Math.PI / 2;
+    asphalt.position.set(0, 0.006, 0);
+    streetGroup.add(asphalt);
+
+    const medianGeom = new THREE.PlaneGeometry(blockExtent * 2, MEDIAN_WIDTH);
+    const median = new THREE.Mesh(medianGeom, medianMaterial);
+    median.rotation.x = -Math.PI / 2;
+    median.position.set(0, 0.008, 0);
+    streetGroup.add(median);
+  }
+
+  // Boulevard running along Z (at x=0)
+  {
+    const asphaltGeom = new THREE.PlaneGeometry(BOULEVARD_WIDTH, blockExtent * 2);
+    const asphalt = new THREE.Mesh(asphaltGeom, streetMaterialBoulevard);
+    asphalt.rotation.x = -Math.PI / 2;
+    asphalt.position.set(0, 0.006, 0);
+    streetGroup.add(asphalt);
+
+    const medianGeom = new THREE.PlaneGeometry(MEDIAN_WIDTH, blockExtent * 2);
+    const median = new THREE.Mesh(medianGeom, medianMaterial);
+    median.rotation.x = -Math.PI / 2;
+    median.position.set(0, 0.008, 0);
+    streetGroup.add(median);
+  }
+
+  // Minor streets between every other row/column so it doesn't get too busy
+  for (let i = 1; i < axisCount; i++) {
+    const pos = (i - axisCount / 2) * spacing;
+    // Skip if on top of a boulevard (distance < boulevard half-width + small buffer)
+    if (Math.abs(pos) < BOULEVARD_WIDTH * 0.6) continue;
+
+    // Horizontal minor street
+    const hGeom = new THREE.PlaneGeometry(blockExtent * 2, 0.65);
+    const h = new THREE.Mesh(hGeom, streetMaterialMinor);
     h.rotation.x = -Math.PI / 2;
     h.position.set(0, 0.005, pos);
     streetGroup.add(h);
 
-    // Vertical (running along Z)
-    const vGeom = new THREE.PlaneGeometry(widthHere, blockExtent * 2);
-    const v = new THREE.Mesh(vGeom, mat);
+    // Vertical minor street
+    const vGeom = new THREE.PlaneGeometry(0.65, blockExtent * 2);
+    const v = new THREE.Mesh(vGeom, streetMaterialMinor);
     v.rotation.x = -Math.PI / 2;
     v.position.set(pos, 0.005, 0);
     streetGroup.add(v);
