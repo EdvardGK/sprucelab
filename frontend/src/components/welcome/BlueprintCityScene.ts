@@ -168,17 +168,17 @@ export function initBlueprintCity(container: HTMLElement): () => void {
       // Wrap age into [0, cyclePeriod). Adding a large multiple keeps it positive
       // if (elapsed - birthTime) is still negative on the first frame.
       const age = (elapsed - b.birthTime + b.cyclePeriod * 100) % b.cyclePeriod;
-      const rise = b.cyclePeriod * 0.18;
-      const hold = b.cyclePeriod * 0.62;
+      const rise = b.cyclePeriod * 0.28;
+      const hold = b.cyclePeriod * 0.44;
       const fade = b.cyclePeriod - rise - hold;
 
       let progress: number;
       if (age < rise) {
-        progress = easeOutQuint(age / rise);
+        progress = easeOutCubic(age / rise);
       } else if (age < rise + hold) {
         progress = 1;
       } else {
-        progress = 1 - easeInQuint((age - rise - hold) / fade);
+        progress = 1 - easeInCubic((age - rise - hold) / fade);
       }
 
       b.mesh.scale.y = Math.max(0.001, progress);
