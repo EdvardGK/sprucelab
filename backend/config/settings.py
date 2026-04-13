@@ -36,7 +36,10 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv(
+    'ALLOWED_HOSTS',
+    'localhost,127.0.0.1,sprucelab-production.up.railway.app,api.sprucelab.io',
+).split(',')
 
 
 # Application definition
@@ -58,6 +61,7 @@ INSTALLED_APPS = [
     'storages',  # Cloud storage (Supabase/S3)
 
     # Local apps
+    'apps.accounts',
     'apps.projects',
     'apps.models',
     'apps.entities',
@@ -223,7 +227,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',  # Keep for Django admin
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # TODO: Change to IsAuthenticated when ready
+        'apps.accounts.permissions.IsApprovedUser',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
@@ -242,7 +246,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
-    "https://sprucelab.vercel.app",  # Production frontend
+    "https://sprucelab.vercel.app",  # Production frontend (Vercel alias)
+    "https://sprucelab.io",          # Production custom domain
+    "https://www.sprucelab.io",
 ]
 
 # Allow Vercel preview deployments (unique URLs per deployment)
@@ -285,7 +291,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
-    "https://sprucelab.vercel.app",  # Production frontend
+    "https://sprucelab.vercel.app",  # Production frontend (Vercel alias)
+    "https://sprucelab.io",          # Production custom domain
+    "https://www.sprucelab.io",
 ]
 
 # Add additional frontend URLs from environment

@@ -1,5 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
@@ -242,7 +243,8 @@ class ModelViewSet(viewsets.ModelViewSet):
             version_number=version_number,
             parent_model=parent_model,  # Link to previous version
             ifc_timestamp=new_ifc_timestamp,  # Store IFC timestamp
-            status='processing'  # Set to processing immediately
+            status='processing',  # Set to processing immediately
+            uploaded_by=request.user if request.user.is_authenticated else None,
         )
 
         # Start IFC processing via FastAPI
@@ -510,6 +512,7 @@ class ModelViewSet(viewsets.ModelViewSet):
             file_size=file_size or 0,
             status='processing',
             parsing_status='pending',
+            uploaded_by=request.user if request.user.is_authenticated else None,
         )
 
         print(f"✅ Model created: {model.name} v{model.version_number}")
@@ -651,7 +654,8 @@ class ModelViewSet(viewsets.ModelViewSet):
                 parsing_status='parsed',
                 geometry_status='completed',  # Frontend has geometry
                 validation_status='pending',
-                status='ready'  # Model is ready to use immediately!
+                status='ready',  # Model is ready to use immediately!
+                uploaded_by=request.user if request.user.is_authenticated else None,
             )
 
             # Optionally: Store entities from metadata (bulk insert)
@@ -972,7 +976,8 @@ class ModelViewSet(viewsets.ModelViewSet):
             file_size=old_model.file_size,
             version_number=new_version_number,
             parent_model=old_model,
-            status='processing'  # Set to processing immediately
+            status='processing',  # Set to processing immediately
+            uploaded_by=request.user if request.user.is_authenticated else None,
         )
 
         # Start async revert task with Celery
@@ -1429,7 +1434,7 @@ class ModelViewSet(viewsets.ModelViewSet):
 
         return Response({'status': 'ok'})
 
-    @action(detail=True, methods=['post'], url_path='process-complete')
+    @action(detail=True, methods=['post'], url_path='process-complete', permission_classes=[AllowAny])
     def process_complete(self, request, pk=None):
         """
         Callback from FastAPI when IFC processing completes.

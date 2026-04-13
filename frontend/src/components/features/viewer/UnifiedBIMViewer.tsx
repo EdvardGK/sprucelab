@@ -24,12 +24,11 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import * as OBC from '@thatopen/components';
 import * as OBCF from '@thatopen/components-front';
 import * as THREE from 'three';
-import type { FragmentsGroup } from '@thatopen/fragments';
+import type { FragmentsGroup, FragmentIdMap } from '@thatopen/fragments';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, Box, Layers } from 'lucide-react';
 import { useSectionPlanes, type SectionPlane } from '@/hooks/useSectionPlanes';
-import { ViewerContextMenu, useViewerContextMenu } from './ViewerContextMenu';
 import { ElementPropertiesPanel, type ElementProperties } from './ElementPropertiesPanel';
 import { ViewerFilterHUD, type TypeInfo } from './ViewerFilterHUD';
 import * as ifcService from '@/lib/ifc-service-client';
@@ -49,6 +48,27 @@ const toAbsoluteUrl = (url: string): string => {
   }
   return `${DJANGO_BASE}${url}`;
 };
+
+/**
+ * Union several ThatOpen FragmentIdMaps into one. Used by the delta-based
+ * type-visibility effect to combine flipped-on or flipped-off type maps into
+ * a single hider.set() call per direction.
+ */
+function unionFragmentIdMaps(maps: FragmentIdMap[]): FragmentIdMap {
+  const result: FragmentIdMap = {};
+  for (const map of maps) {
+    for (const fragId in map) {
+      const ids = map[fragId];
+      if (!result[fragId]) {
+        result[fragId] = new Set(ids);
+      } else {
+        const target = result[fragId];
+        for (const id of ids) target.add(id);
+      }
+    }
+  }
+  return result;
+}
 
 /**
  * Safely access world.camera which throws in ThatOpen if not initialized.
@@ -161,10 +181,16 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [loadingProgress, setLoadingProgress] = useState<Record<string, boolean>>({});
 
-  // Type filtering state - auto-discovered from loaded models
-  const [typeInfo, setTypeInfo] = useState<Map<string, { guids: string[]; count: number }>>(new Map());
+  // Type filtering state - auto-discovered from loaded models.
+  // Stores each type's FragmentIdMap directly so the Hider can be driven without
+  // converting back through GUID arrays every toggle.
+  const [typeInfo, setTypeInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
+  const cullerRef = useRef<OBC.MeshCullerRenderer | null>(null);
+  // Previous applied visibility state, so the effect below can do delta updates
+  // instead of rebuilding and re-applying the full scene visibility every toggle.
+  const prevTypeVisibilityRef = useRef<Record<string, boolean>>({});
 
   // View mode: store original materials so we can restore them
   const originalMaterialsRef = useRef<Map<number, THREE.Material | THREE.Material[]>>(new Map());
@@ -181,9 +207,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     renderer: THREE.WebGLRenderer | null;
     scene: THREE.Scene | null;
   }>({ components: null, world: null, renderer: null, scene: null });
-
-  // Context menu state
-  const contextMenu = useViewerContextMenu();
 
   // Section planes hook - uses ThatOpen's OBC.Clipper for reliability
   const sectionPlanes = useSectionPlanes({
@@ -353,6 +376,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
     let cleanupSelection: (() => void) | null = null;
     let cleanupResize: (() => void) | null = null;
+    let cleanupTelemetry: (() => void) | null = null;
 
     const initViewer = async () => {
       try {
@@ -386,6 +410,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         // 4. Setup Renderer
         world.renderer = new OBC.SimpleRenderer(components, container);
+        // Cap pixel ratio: HiDPI/4K displays otherwise render 2-4x the fragments,
+        // tanking framerate on federated loads. 1.5 keeps edges acceptable.
+        world.renderer.three.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
         // 5. Setup Camera
         world.camera = new OBC.OrthoPerspectiveCamera(components);
@@ -437,11 +464,52 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         // 10. Setup element selection with ThatOpen Highlighter
         const highlighter = components.get(OBCF.Highlighter);
-        highlighter.setup({ world });
+        // hoverEnabled:false — hover raycasts every mouse move against all fragments.
+        // With 4 federated models this blows the 16ms frame budget (rAF violations).
+        // We only need click-to-select anyway.
+        highlighter.setup({ world, hoverEnabled: false });
 
         // 10b. Setup Hider for type filtering
         const hider = components.get(OBC.Hider);
         hiderRef.current = hider;
+
+        // 10c. Setup MeshCullerRenderer — off-main-thread visibility checks.
+        // Fragments outside the camera frustum are not drawn.
+        //
+        // Diagnostic kill switches via URL query params — useful for isolating
+        // which Phase A optimization is causing a visual regression:
+        //   ?culler=off         — disable MeshCullerRenderer entirely
+        //   ?static-matrix=off  — skip matrixAutoUpdate=false on fragments
+        const params = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search)
+          : null;
+        const cullerDisabled = params?.get('culler') === 'off';
+        const staticMatrixDisabled = params?.get('static-matrix') === 'off';
+
+        if (!cullerDisabled) {
+          const cullers = components.get(OBC.Cullers);
+          const culler = cullers.create(world);
+          culler.config.threshold = 5;
+          cullerRef.current = culler;
+
+          // Force the culler to re-probe visibility whenever the camera stops
+          // moving. Without this, the first probe runs at the default camera
+          // position (before fit-to-view), captures "nothing visible," and
+          // hides all opaque geometry until the user pans/zooms the camera.
+          const ctrls = (world.camera as OBC.OrthoPerspectiveCamera | undefined)?.controls;
+          if (ctrls && 'addEventListener' in ctrls) {
+            ctrls.addEventListener('rest', () => {
+              if (cullerRef.current) {
+                (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
+              }
+            });
+          }
+        } else {
+          console.warn('[Viewer] Culler disabled via ?culler=off query param');
+        }
+        if (staticMatrixDisabled) {
+          console.warn('[Viewer] Static matrix optimization disabled via ?static-matrix=off');
+        }
 
         // Configure highlighter - DISABLE all automatic camera movement
         highlighter.zoomToSelection = false; // Don't zoom on selection
@@ -729,164 +797,16 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         container.addEventListener('dblclick', handleDoubleClick);
         container.addEventListener('auxclick', handleAuxClick);
 
-        // Setup right-click handler for context menu (section planes)
-        const handleContextMenu = async (event: MouseEvent) => {
+        // Suppress the native browser context menu on the canvas so right-click
+        // stays free for OrbitControls pan. The right-click-to-add-section-plane
+        // flow was removed in favour of a future HUD button — right-drag to pan
+        // was colliding with the click threshold and spawning the menu on every
+        // camera nudge, and the old flow also dropped persistent debug gizmos
+        // in the scene.
+        const handleNativeContextMenu = (event: MouseEvent) => {
           event.preventDefault();
-
-          try {
-            // Use Three.js raycasting directly for reliability
-            const bounds = container.getBoundingClientRect();
-            const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-            const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
-
-            // Get camera from world
-            const ctxCam = getCamera(world);
-            const camera = ctxCam?.three;
-            if (!camera) return;
-
-            // Create Three.js raycaster
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-
-            // Get all meshes from the scene
-            const scene = world.scene?.three;
-            if (!scene) return;
-
-            // Find all intersectable objects (excluding grid/helpers)
-            const intersectables: THREE.Object3D[] = [];
-            scene.traverse((object) => {
-              if (object instanceof THREE.Mesh && object.visible) {
-                // Skip grid and helper objects
-                const isHelper = object.name?.includes('grid') ||
-                                 object.name?.includes('helper') ||
-                                 object.parent?.name?.includes('grid');
-                if (!isHelper) {
-                  intersectables.push(object);
-                }
-              }
-            });
-
-            // Perform raycast
-            const intersections = raycaster.intersectObjects(intersectables, false);
-
-            if (intersections.length > 0) {
-              const result = intersections[0];
-
-              if (result.face) {
-                // Compute normal from actual triangle vertices (more accurate than stored normals)
-                const mesh = result.object as THREE.Mesh;
-                const geometry = mesh.geometry;
-                const face = result.face!;
-
-                // Get vertex positions from geometry
-                const positionAttr = geometry.getAttribute('position');
-                const indexAttr = geometry.getIndex();
-
-                let a: number, b: number, c: number;
-                if (indexAttr) {
-                  a = indexAttr.getX(face.a);
-                  b = indexAttr.getX(face.b);
-                  c = indexAttr.getX(face.c);
-                } else {
-                  a = face.a;
-                  b = face.b;
-                  c = face.c;
-                }
-
-                // Get vertices in local space
-                const vA = new THREE.Vector3().fromBufferAttribute(positionAttr, a);
-                const vB = new THREE.Vector3().fromBufferAttribute(positionAttr, b);
-                const vC = new THREE.Vector3().fromBufferAttribute(positionAttr, c);
-
-                // Transform to world space
-                vA.applyMatrix4(mesh.matrixWorld);
-                vB.applyMatrix4(mesh.matrixWorld);
-                vC.applyMatrix4(mesh.matrixWorld);
-
-                // Compute face normal from cross product
-                const edge1 = new THREE.Vector3().subVectors(vB, vA);
-                const edge2 = new THREE.Vector3().subVectors(vC, vA);
-                let worldNormal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-
-                // Ensure normal points toward camera (visible face convention)
-                const cameraPosition = camera.position.clone();
-                const toCamera = cameraPosition.sub(result.point).normalize();
-                const dotProduct = worldNormal.dot(toCamera);
-
-                if (dotProduct < 0) {
-                  // Normal points away from camera - flip it
-                  worldNormal.negate();
-                }
-
-                // Store for visualization (surface normal points OUTWARD from surface toward camera)
-                const originalWorldNormal = worldNormal.clone();
-
-                // For Dalux-style behavior: clicking a wall should let us see THROUGH it
-                // So we negate the normal to clip the near side and reveal what's behind
-                worldNormal.negate();
-
-                // Add visual indicator
-                const sceneForHelper = world.scene?.three;
-                if (sceneForHelper) {
-                  // Remove old debug helpers
-                  const oldHelper = sceneForHelper.getObjectByName('debug-normal-helper');
-                  if (oldHelper) sceneForHelper.remove(oldHelper);
-
-                  const debugGroup = new THREE.Group();
-                  debugGroup.name = 'debug-normal-helper';
-
-                  // Small sphere at hit point (white)
-                  const sphereGeo = new THREE.SphereGeometry(0.15);
-                  const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false });
-                  const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-                  sphere.position.copy(result.point);
-                  sphere.renderOrder = 999;
-                  debugGroup.add(sphere);
-
-                  // Arrow showing surface normal (MAGENTA - distinct from axes)
-                  const arrowNormal = new THREE.ArrowHelper(
-                    originalWorldNormal,
-                    result.point,
-                    3,
-                    0xff00ff,
-                    0.4,
-                    0.2
-                  );
-                  arrowNormal.renderOrder = 999;
-                  debugGroup.add(arrowNormal);
-
-                  // Add individual axis arrows
-                  const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), result.point, 2, 0xff0000, 0.3, 0.15);
-                  const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), result.point, 2, 0x00ff00, 0.3, 0.15);
-                  const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), result.point, 2, 0x0000ff, 0.3, 0.15);
-                  debugGroup.add(arrowX);
-                  debugGroup.add(arrowY);
-                  debugGroup.add(arrowZ);
-
-                  sceneForHelper.add(debugGroup);
-                }
-
-                // Try to get IFC type if available
-                let ifcType: string | undefined;
-                // TODO: Get IFC type from the intersection if possible
-
-                // Open context menu with intersection data
-                contextMenu.openMenu(
-                  { x: event.clientX, y: event.clientY },
-                  {
-                    point: result.point.clone(),
-                    normal: worldNormal,
-                    ifcType,
-                  }
-                );
-              }
-            }
-          } catch (err) {
-            console.error('Context menu raycast error:', err);
-          }
         };
-
-        container.addEventListener('contextmenu', handleContextMenu);
+        container.addEventListener('contextmenu', handleNativeContextMenu);
 
         // Setup Shift+Scroll for section plane manipulation (uses ref to avoid stale closure)
         const handleWheel = (event: WheelEvent) => {
@@ -1049,7 +969,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           container.removeEventListener('dblclick', handleDoubleClickSelect);
           container.removeEventListener('dblclick', handleDoubleClick);
           container.removeEventListener('auxclick', handleAuxClick);
-          container.removeEventListener('contextmenu', handleContextMenu);
+          container.removeEventListener('contextmenu', handleNativeContextMenu);
           container.removeEventListener('wheel', handleWheel, { capture: true });
           window.removeEventListener('keydown', handleKeyDown);
           highlighter.events.select.onHighlight.reset();
@@ -1064,6 +984,54 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         };
         window.addEventListener('resize', handleResize);
         cleanupResize = () => window.removeEventListener('resize', handleResize);
+
+        // Dev-only perf telemetry: draw calls + longtask observer.
+        // Used as baseline for Phase A optimizations. Not shipped to production.
+        if (import.meta.env.DEV) {
+          let lastLog = 0;
+          let rafId = 0;
+          let cancelled = false;
+          const logPerf = () => {
+            if (cancelled) return;
+            const now = performance.now();
+            if (now - lastLog > 1000) {
+              try {
+                const info = (world.renderer as OBC.SimpleRenderer | null)?.three?.info;
+                if (info) {
+                  // eslint-disable-next-line no-console
+                  console.debug('[viewer.perf]', {
+                    calls: info.render.calls,
+                    tris: info.render.triangles,
+                    geoms: info.memory.geometries,
+                    textures: info.memory.textures,
+                  });
+                }
+              } catch { /* renderer not ready */ }
+              lastLog = now;
+            }
+            rafId = requestAnimationFrame(logPerf);
+          };
+          rafId = requestAnimationFrame(logPerf);
+
+          let longtaskObs: PerformanceObserver | null = null;
+          try {
+            longtaskObs = new PerformanceObserver(list => {
+              for (const entry of list.getEntries()) {
+                if (entry.duration > 50) {
+                  // eslint-disable-next-line no-console
+                  console.warn('[viewer.longtask]', entry.duration.toFixed(0), 'ms', entry.name);
+                }
+              }
+            });
+            longtaskObs.observe({ entryTypes: ['longtask'] });
+          } catch { /* longtask entry type unsupported */ }
+
+          cleanupTelemetry = () => {
+            cancelled = true;
+            if (rafId) cancelAnimationFrame(rafId);
+            longtaskObs?.disconnect();
+          };
+        }
 
         // Set viewer state for hooks that need components/world/Three.js objects
         // Use try-catch for scene/renderer access as ThatOpen getters can throw
@@ -1101,6 +1069,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     return () => {
       cleanupSelection?.();
       cleanupResize?.();
+      cleanupTelemetry?.();
 
       // Dispose of components properly
       if (componentsRef.current) {
@@ -1145,6 +1114,91 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const fragments = components.get(OBC.FragmentsManager);
         const ifcLoader = components.get(OBC.IfcLoader);
 
+        // Single place for everything that must happen to a loaded FragmentsGroup:
+        // attach to scene, freeze static matrices, register with the culler, map
+        // fragment IDs to backend model IDs, extract types via Classifier, fire-and-forget
+        // the FastAPI open, push into the loaded-models ref, report progress.
+        //
+        // Both the fragments and IFC load paths call this — keeps behavior identical and
+        // means future perf work only has to change one place.
+        const finalizeLoadedGroup = (
+          group: FragmentsGroup,
+          modelData: { name: string; file_url: string },
+          modelId: string,
+          loadMethod: 'fragments' | 'ifc',
+        ): LoadedModel => {
+          worldRef.current!.scene!.three.add(group);
+
+          // Note: Phase A originally set matrixAutoUpdate=false on fragment meshes
+          // to skip per-frame matrix recompute. That change broke the
+          // MeshCullerRenderer's internal visibility probe — opaque fragments
+          // disappeared on first load, leaving only transparent geometry (windows,
+          // curtain walls). The Culler is a much bigger perf win, so A2 is dropped.
+
+          // Count elements + map every fragment UUID to its backend model ID, and
+          // register each fragment mesh with the MeshCullerRenderer so off-screen
+          // geometry stops drawing.
+          let totalElements = 0;
+          for (const fragment of group.items) {
+            totalElements += fragment.capacity;
+            modelIdMapRef.current.set(fragment.id, modelId);
+            if (cullerRef.current && fragment.mesh) {
+              cullerRef.current.add(fragment.mesh);
+            }
+          }
+          modelIdMapRef.current.set(group.uuid, modelId);
+
+          const loadedModel: LoadedModel = {
+            modelId,
+            fragmentModelId: group.uuid,
+            group,
+            elementCount: totalElements,
+            loadMethod,
+            name: modelData.name,
+            fileUrl: modelData.file_url,
+          };
+
+          // Derive IFC types locally from the loaded FragmentsGroup via Classifier.byEntity.
+          // In-memory pass, zero network, zero main-thread blocking. The Classifier
+          // accumulates state across all classified groups, so we just read its
+          // list.entities after each byEntity call and snapshot the current state.
+          try {
+            const classifier = components.get(OBC.Classifier);
+            classifier.byEntity(group);
+            const newTypeMap = new Map<string, { map: FragmentIdMap; count: number }>();
+            const entities = classifier.list.entities || {};
+            for (const [entityName, entity] of Object.entries(entities)) {
+              let count = 0;
+              for (const ids of Object.values(entity.map)) count += ids.size;
+              newTypeMap.set(entityName, { map: entity.map, count });
+            }
+            setTypeInfo(newTypeMap);
+            setTypeVisibility?.(prev => {
+              const updated = { ...prev };
+              for (const type of newTypeMap.keys()) {
+                if (!(type in updated)) updated[type] = true;
+              }
+              return updated;
+            });
+          } catch (err) {
+            console.warn('[Viewer] Local type extraction failed:', err);
+          }
+
+          // Fire-and-forget FastAPI open so click-to-inspect can resolve element props later.
+          if (modelData.file_url) {
+            const absoluteUrl = toAbsoluteUrl(modelData.file_url);
+            ifcService.openFromUrl(absoluteUrl)
+              .then(result => { loadedModel.ifcServiceFileId = result.file_id; })
+              .catch(() => { /* property fetch will fail gracefully on click */ });
+          }
+
+          loadedModelsRef.current.push(loadedModel);
+          setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
+          onModelLoaded?.(modelId, totalElements);
+
+          return loadedModel;
+        };
+
         // Load all models in parallel
         const loadPromises = modelIds.map(async (modelId) => {
           setLoadingProgress(prev => ({ ...prev, [modelId]: true }));
@@ -1157,205 +1211,33 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             }
             const modelData = await modelResponse.json();
 
-            // Try to load Fragments first (fast path)
+            // Fast path: prebuilt fragments
             try {
               const fragmentsResponse = await fetch(`${API_BASE}/models/${modelId}/fragments/`);
-
               if (fragmentsResponse.ok) {
                 const { fragments_url } = await fragmentsResponse.json();
-
                 const response = await fetch(fragments_url);
-                const data = await response.arrayBuffer();
-                const buffer = new Uint8Array(data);
-
-                // Load fragments (returns FragmentsGroup)
+                const buffer = new Uint8Array(await response.arrayBuffer());
                 const group = fragments.load(buffer);
-
-                // Add to scene
-                worldRef.current!.scene!.three.add(group);
-
-                // Count total elements and map all fragments to backend model
-                let totalElements = 0;
-                for (const fragment of group.items) {
-                  totalElements += fragment.capacity;
-
-                  // Map each individual fragment UUID to backend model ID
-                  // ThatOpen uses individual fragment UUIDs in selection events, not group UUID
-                  modelIdMapRef.current.set(fragment.id, modelId);
-                }
-
-                // Also map the group UUID for compatibility
-                modelIdMapRef.current.set(group.uuid, modelId);
-
-                const loadedModel: LoadedModel = {
-                  modelId,
-                  fragmentModelId: group.uuid,
-                  group,
-                  elementCount: totalElements,
-                  loadMethod: 'fragments',
-                  name: modelData.name,
-                  fileUrl: modelData.file_url,
-                };
-
-                // Pre-load IFC in FastAPI for property queries and type discovery
-                if (modelData.file_url) {
-                  const absoluteUrl = toAbsoluteUrl(modelData.file_url);
-                  ifcService.openFromUrl(absoluteUrl)
-                    .then(async (result) => {
-                      loadedModel.ifcServiceFileId = result.file_id;
-
-                      // Discover IFC types from the model
-                      try {
-                        const elementsResponse = await ifcService.getElements(result.file_id, { limit: 10000 });
-                        const newTypeMap = new Map<string, { guids: string[]; count: number }>();
-
-                        for (const elem of elementsResponse.elements) {
-                          const existing = newTypeMap.get(elem.ifc_type) || { guids: [], count: 0 };
-                          existing.guids.push(elem.guid);
-                          existing.count++;
-                          newTypeMap.set(elem.ifc_type, existing);
-                        }
-
-                        // Merge with existing types and update state
-                        setTypeInfo(prev => {
-                          const merged = new Map(prev);
-                          for (const [type, data] of newTypeMap) {
-                            const existing = merged.get(type) || { guids: [], count: 0 };
-                            existing.guids.push(...data.guids);
-                            existing.count += data.count;
-                            merged.set(type, existing);
-                          }
-                          return merged;
-                        });
-
-                        // Initialize visibility for new types (all visible by default)
-                        // Only in uncontrolled mode
-                        setTypeVisibility?.(prev => {
-                          const updated = { ...prev };
-                          for (const type of newTypeMap.keys()) {
-                            if (!(type in updated)) {
-                              updated[type] = true;
-                            }
-                          }
-                          return updated;
-                        });
-                      } catch {
-                        // Type discovery failed, continue without it
-                      }
-                    })
-                    .catch(() => {
-                      // FastAPI not available, will fall back to Django
-                    });
-                }
-
-                loadedModelsRef.current.push(loadedModel);
-                setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
-                onModelLoaded?.(modelId, totalElements);
-
-                return loadedModel;
+                return finalizeLoadedGroup(group, modelData, modelId, 'fragments');
               }
             } catch {
               // Fragments not available, fall back to IFC
             }
 
-            // Fallback: Load IFC file
+            // Fallback: parse raw IFC in-browser
             if (!modelData.file_url) {
               throw new Error(`No IFC file available for model ${modelId}`);
             }
-
             const response = await fetch(modelData.file_url);
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = new Uint8Array(arrayBuffer);
-
-            // Load IFC (returns FragmentsGroup)
+            const buffer = new Uint8Array(await response.arrayBuffer());
             const group = await ifcLoader.load(buffer, true, modelData.name);
+            const loadedModel = finalizeLoadedGroup(group, modelData, modelId, 'ifc');
 
-            // Add to scene
-            worldRef.current!.scene!.three.add(group);
-
-            // Count total elements and map all fragments to backend model
-            let totalElements = 0;
-            for (const fragment of group.items) {
-              totalElements += fragment.capacity;
-
-              // Map each individual fragment UUID to backend model ID
-              // ThatOpen uses individual fragment UUIDs in selection events, not group UUID
-              modelIdMapRef.current.set(fragment.id, modelId);
-            }
-
-            // Also map the group UUID for compatibility
-            modelIdMapRef.current.set(group.uuid, modelId);
-
-            const loadedModel: LoadedModel = {
-              modelId,
-              fragmentModelId: group.uuid,
-              group,
-              elementCount: totalElements,
-              loadMethod: 'ifc',
-              name: modelData.name,
-              fileUrl: modelData.file_url,
-            };
-
-            // Pre-load IFC in FastAPI for property queries and type discovery
-            if (modelData.file_url) {
-              const absoluteUrl = toAbsoluteUrl(modelData.file_url);
-              ifcService.openFromUrl(absoluteUrl)
-                .then(async (result) => {
-                  loadedModel.ifcServiceFileId = result.file_id;
-
-                  // Discover IFC types from the model
-                  try {
-                    const elementsResponse = await ifcService.getElements(result.file_id, { limit: 10000 });
-                    const newTypeMap = new Map<string, { guids: string[]; count: number }>();
-
-                    for (const elem of elementsResponse.elements) {
-                      const existing = newTypeMap.get(elem.ifc_type) || { guids: [], count: 0 };
-                      existing.guids.push(elem.guid);
-                      existing.count++;
-                      newTypeMap.set(elem.ifc_type, existing);
-                    }
-
-                    // Merge with existing types
-                    setTypeInfo(prev => {
-                      const merged = new Map(prev);
-                      for (const [type, data] of newTypeMap) {
-                        const existing = merged.get(type) || { guids: [], count: 0 };
-                        existing.guids.push(...data.guids);
-                        existing.count += data.count;
-                        merged.set(type, existing);
-                      }
-                      return merged;
-                    });
-
-                    // Initialize visibility for new types (only in uncontrolled mode)
-                    setTypeVisibility?.(prev => {
-                      const updated = { ...prev };
-                      for (const type of newTypeMap.keys()) {
-                        if (!(type in updated)) {
-                          updated[type] = true;
-                        }
-                      }
-                      return updated;
-                    });
-                  } catch {
-                    // Type discovery failed
-                  }
-                })
-                .catch(() => {
-                  // FastAPI not available, will fall back to Django
-                });
-            }
-
-            loadedModelsRef.current.push(loadedModel);
-            setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
-            onModelLoaded?.(modelId, totalElements);
-
-            // Optionally trigger Fragment generation for next time
+            // Kick off async fragment generation so the next load uses the fast path.
             fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, {
               method: 'POST',
-            }).catch(() => {
-              // Silent fail - fragments are optional optimization
-            });
+            }).catch(() => { /* silent — fragments are an optimization */ });
 
             return loadedModel;
           } catch (err) {
@@ -1379,6 +1261,16 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           fitAllModelsToView();
         }
 
+        // Force the Culler to re-probe once immediately after fit-to-view as a
+        // belt-and-suspenders measure. The camera 'rest' listener set up in
+        // initViewer handles subsequent re-probes. Without at least one forced
+        // update here, the Culler's first probe runs at the default camera
+        // position (before fit-to-view) and captures "nothing visible" for
+        // opaque geometry.
+        if (cullerRef.current) {
+          (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
+        }
+
         setIsLoading(false);
       } catch (err) {
         console.error('Failed to load models:', err);
@@ -1393,39 +1285,68 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     loadModels();
   }, [isInitialized, modelIds.join(','), autoFitToView, fitAllModelsToView, onModelLoaded, onError, viewerState.components]);
 
-  // Apply type visibility filtering using Hider
+  // Apply type visibility filtering using Hider — delta-based.
+  //
+  // The previous implementation rebuilt the full visible-GUIDs array for every toggle
+  // (tens of thousands of strings), converted them back into a FragmentIdMap, then
+  // called hider.set(false) followed by hider.set(true, map) — two full scene
+  // traversals on every single click. Delta version only touches types that flipped
+  // state since the last applied visibility, and calls hider.set at most once per
+  // direction.
+  //
+  // Single-frame debounce via requestAnimationFrame coalesces rapid Show/Hide-All
+  // clicks into one Hider operation.
   useEffect(() => {
-    if (!hiderRef.current || !viewerState.components || typeInfo.size === 0) return;
+    if (!hiderRef.current || typeInfo.size === 0) return;
 
-    const fragmentsManager = viewerState.components.get(OBC.FragmentsManager);
-    if (!fragmentsManager) return;
+    const rafId = requestAnimationFrame(() => {
+      const hider = hiderRef.current;
+      if (!hider) return;
 
-    // Collect all GUIDs for visible types
-    const visibleGuids: string[] = [];
-    for (const [type, data] of typeInfo) {
-      if (typeVisibility[type] !== false) {
-        visibleGuids.push(...data.guids);
+      const prev = prevTypeVisibilityRef.current;
+      const flippedOn: FragmentIdMap[] = [];
+      const flippedOff: FragmentIdMap[] = [];
+
+      for (const [type, data] of typeInfo) {
+        const now = typeVisibility[type] !== false; // default: visible
+        const before = type in prev ? prev[type] : now; // first-sync: no change
+        if (now === before) continue;
+        (now ? flippedOn : flippedOff).push(data.map);
       }
-    }
 
-    try {
-      if (visibleGuids.length === 0) {
-        // Hide all elements
-        hiderRef.current.set(false);
-      } else {
-        // Show only visible types
-        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(visibleGuids);
-        hiderRef.current.set(false); // Hide all first
-        hiderRef.current.set(true, fragmentIdMap); // Show filtered
+      try {
+        if (flippedOff.length > 0) hider.set(false, unionFragmentIdMaps(flippedOff));
+        if (flippedOn.length > 0) hider.set(true, unionFragmentIdMaps(flippedOn));
+      } catch (err) {
+        console.error('Type visibility filtering failed:', err);
+        hider.set(true);
       }
-    } catch (err) {
-      console.error('Type visibility filtering failed:', err);
-      // Filtering failed, show all elements
-      hiderRef.current.set(true);
-    }
-  }, [typeVisibility, typeInfo, viewerState.components]);
 
-  // Apply class-based coloring when classColorMap is provided
+      // Capture the applied visibility for next delta computation.
+      const snapshot: Record<string, boolean> = {};
+      for (const type of typeInfo.keys()) {
+        snapshot[type] = typeVisibility[type] !== false;
+      }
+      prevTypeVisibilityRef.current = snapshot;
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [typeVisibility, typeInfo]);
+
+  // Reset delta tracking when the set of loaded types changes out from under us
+  // (e.g. new model loaded). The next visibility effect run will re-sync from
+  // scratch for any type it hasn't seen yet.
+  useEffect(() => {
+    // Drop entries for types that no longer exist in typeInfo.
+    const next: Record<string, boolean> = {};
+    for (const [type, applied] of Object.entries(prevTypeVisibilityRef.current)) {
+      if (typeInfo.has(type)) next[type] = applied;
+    }
+    prevTypeVisibilityRef.current = next;
+  }, [typeInfo]);
+
+  // Apply class-based coloring when classColorMap is provided.
+  // Uses the FragmentIdMap stored directly in typeInfo — no GUID round-trip.
   useEffect(() => {
     if (!classColorMap || !viewerState.components || typeInfo.size === 0) return;
 
@@ -1439,28 +1360,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
       const color = new THREE.Color(hexColor);
 
-      try {
-        const fragmentIdMap = fragmentsManager.guidToFragmentIdMap(data.guids);
+      for (const [fragId, expressIds] of Object.entries(data.map)) {
+        const fragment = fragmentsManager.list.get(fragId);
+        if (!fragment) continue;
 
-        for (const [fragId, expressIds] of Object.entries(fragmentIdMap)) {
-          const fragment = fragmentsManager.list.get(fragId);
-          if (!fragment) continue;
-
-          // ThatOpen Fragment.setColor(color, itemIDs) colors specific instances
-          try {
-            fragment.setColor(color, [...expressIds]);
-          } catch {
-            // Fallback: color entire fragment mesh material
-            const mesh = fragment.mesh;
-            if (mesh && mesh.material && !Array.isArray(mesh.material)) {
-              const cloned = (mesh.material as THREE.MeshLambertMaterial).clone();
-              cloned.color.copy(color);
-              (mesh as unknown as { material: THREE.Material }).material = cloned;
-            }
+        try {
+          fragment.setColor(color, [...expressIds]);
+        } catch {
+          // Fallback: color entire fragment mesh material
+          const mesh = fragment.mesh;
+          if (mesh && mesh.material && !Array.isArray(mesh.material)) {
+            const cloned = (mesh.material as THREE.MeshLambertMaterial).clone();
+            cloned.color.copy(color);
+            (mesh as unknown as { material: THREE.Material }).material = cloned;
           }
         }
-      } catch {
-        // Fragment mapping failed for this class, skip
       }
     }
   }, [classColorMap, typeInfo, viewerState.components]);
@@ -1685,26 +1599,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         </div>
       )}
 
-      {/* Context Menu for Section Planes */}
-      <ViewerContextMenu
-        position={contextMenu.position}
-        target={contextMenu.target}
-        canAddPlane={sectionPlanes.canAddPlane}
-        planeCount={sectionPlanes.planes.length}
-        onAddSectionPlane={(point, normal, orientation) => {
-          sectionPlanes.addPlane(point, normal, orientation);
-        }}
-        onHideType={(_type) => {
-          // TODO: Implement type hiding via parent callback
-        }}
-        onIsolateType={(_type) => {
-          // TODO: Implement type isolation via parent callback
-        }}
-        onShowAllTypes={() => {
-          // TODO: Implement show all via parent callback
-        }}
-        onClose={contextMenu.closeMenu}
-      />
+      {/* ThatOpen attribution (MIT-licensed, but we credit them explicitly). */}
+      <a
+        href="https://thatopen.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pointer-events-auto absolute bottom-2 right-2 z-40 rounded-sm bg-black/40 px-2 py-0.5 text-[10px] font-medium text-white/80 backdrop-blur-sm transition hover:bg-black/60 hover:text-white"
+      >
+        Powered by ThatOpen
+      </a>
     </div>
   );
 });

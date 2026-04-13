@@ -9,7 +9,7 @@
  * Right:  What the IFC file says (quantities, key props, psets, materials)
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Layers, AlertTriangle } from 'lucide-react';
@@ -83,6 +83,19 @@ export default function FederatedViewer() {
 
   // Model load errors
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
+
+  // Memoize props passed to UnifiedBIMViewer. Without these, every FederatedViewer
+  // re-render produces new object/array references, which makes UnifiedBIMViewer's
+  // useEffect dependencies fire and re-run expensive hider operations across
+  // tens of thousands of GUIDs — blowing the rAF budget on every interaction.
+  const modelIdList = useMemo(
+    () => group?.models?.map(m => m.model) ?? [],
+    [group?.models]
+  );
+  const typeVisibilityMap = useMemo(
+    () => Object.fromEntries(typeFilters.map(f => [f.type, f.visible])),
+    [typeFilters]
+  );
 
   // Initialize model visibility when group loads
   useEffect(() => {
@@ -241,7 +254,7 @@ export default function FederatedViewer() {
             <>
               <UnifiedBIMViewer
                 ref={viewerRef}
-                modelIds={group.models.map(m => m.model)}
+                modelIds={modelIdList}
                 modelVisibility={modelVisibility}
                 showPropertiesPanel={false}
                 showModelInfo={false}
@@ -250,7 +263,7 @@ export default function FederatedViewer() {
                 onSectionPlanesChange={setSectionPlanes}
                 onSelectionChange={setSelectedElement}
                 onTypesDiscovered={handleTypesDiscovered}
-                typeVisibility={Object.fromEntries(typeFilters.map(f => [f.type, f.visible]))}
+                typeVisibility={typeVisibilityMap}
                 onError={(err) => setLoadErrors(prev => [...prev, err])}
               />
 
