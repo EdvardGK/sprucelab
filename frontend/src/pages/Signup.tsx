@@ -92,17 +92,30 @@ export default function Signup() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
-            Navn
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              required
-              autoComplete="name"
-              className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+              Fornavn
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                autoComplete="given-name"
+                className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+              Etternavn
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                autoComplete="family-name"
+                className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+              />
+            </label>
+          </div>
 
           <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
             E-post
