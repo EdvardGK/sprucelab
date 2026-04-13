@@ -520,7 +520,7 @@ export function initBlueprintCity(container: HTMLElement): () => void {
       landmarkGroup.add(slab);
     }
 
-    occupied.push({ x: cx, z: cz, w: rowLength + 1.5, d: slabD + 1.5 });
+    occupied.push({ x: cx, z: cz, w: rowLength, d: slabD });
   }
 
   // --- 3. Stavkirke (stave church) -------------------------------------
