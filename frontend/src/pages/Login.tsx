@@ -16,8 +16,8 @@ export default function Login() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base,#f7f8fa)]">
-        <p className="text-sm text-[var(--text-muted,#6b7280)]">Laster...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-slate-500">Laster...</p>
       </div>
     );
   }
@@ -49,14 +49,14 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base,#f7f8fa)] px-4">
-      <div className="w-full max-w-sm rounded-lg border border-[var(--border-subtle,#e5e7eb)] bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold text-[var(--text-primary,#111827)]">Sprucelab</h1>
-          <p className="mt-2 text-sm text-[var(--text-muted,#6b7280)]">Logg inn for å fortsette</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Sprucelab</h1>
+          <p className="mt-2 text-sm text-slate-500">Logg inn for å fortsette</p>
         </div>
 
-        <div className="mb-5 flex rounded-md border border-[var(--border-subtle,#e5e7eb)] p-0.5 text-xs">
+        <div className="mb-5 flex rounded-md border border-slate-200 p-0.5 text-xs">
           <button
             type="button"
             onClick={() => {
@@ -66,8 +66,8 @@ export default function Login() {
             }}
             className={`flex-1 rounded px-3 py-1.5 font-medium transition ${
               mode === 'password'
-                ? 'bg-[var(--surface-base,#f7f8fa)] text-[var(--text-primary,#111827)]'
-                : 'text-[var(--text-muted,#6b7280)] hover:text-[var(--text-primary,#111827)]'
+                ? 'bg-slate-100 text-slate-900'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             Passord
@@ -81,8 +81,8 @@ export default function Login() {
             }}
             className={`flex-1 rounded px-3 py-1.5 font-medium transition ${
               mode === 'magic'
-                ? 'bg-[var(--surface-base,#f7f8fa)] text-[var(--text-primary,#111827)]'
-                : 'text-[var(--text-muted,#6b7280)] hover:text-[var(--text-primary,#111827)]'
+                ? 'bg-slate-100 text-slate-900'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             Magisk lenke
@@ -90,7 +90,7 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+          <label className="block text-xs font-medium text-slate-600">
             E-post
             <input
               type="email"
@@ -98,12 +98,12 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none"
             />
           </label>
 
           {mode === 'password' && (
-            <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+            <label className="block text-xs font-medium text-slate-600">
               Passord
               <input
                 type="password"
@@ -111,7 +111,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none"
               />
             </label>
           )}
@@ -119,7 +119,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={pending}
-            className="mt-1 w-full rounded-md bg-[var(--text-primary,#111827)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-1 w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending
               ? 'Sender...'
@@ -147,9 +147,9 @@ export default function Login() {
           </div>
         )}
 
-        <p className="mt-6 text-center text-xs text-[var(--text-muted,#6b7280)]">
+        <p className="mt-6 text-center text-xs text-slate-500">
           Ny bruker?{' '}
-          <Link to="/signup" className="font-medium text-[var(--text-primary,#111827)] underline">
+          <Link to="/signup" className="font-medium text-slate-900 underline">
             Opprett konto
           </Link>
         </p>
