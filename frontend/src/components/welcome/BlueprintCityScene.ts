@@ -297,10 +297,10 @@ export function initBlueprintCity(container: HTMLElement): () => void {
       const cx = (ix - halfAxis) * spacing + (Math.random() - 0.5) * 2.4;
       const cz = (iz - halfAxis) * spacing + (Math.random() - 0.5) * 2.4;
 
-      // Skip cells that fall within the water footprint
+      // Skip cells that fall within the park footprint
       if (
-        Math.abs(cx - water.position.x) < spacing * 1.1 &&
-        Math.abs(cz - water.position.z) < spacing * 1.1
+        Math.abs(cx - parkCenter.x) < parkW * 0.55 &&
+        Math.abs(cz - parkCenter.z) < parkD * 0.55
       ) {
         continue;
       }
