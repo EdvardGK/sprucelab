@@ -554,8 +554,9 @@ export function initBlueprintCity(container: HTMLElement): () => void {
       }
     });
     trunkMaterial.dispose();
-    canopyMaterial.dispose();
-    canopyEdgeMaterial.dispose();
+    spruceMaterialDark.dispose();
+    spruceMaterialMid.dispose();
+    spruceEdgeMaterial.dispose();
 
     windowTexture.dispose();
     groundGeometry.dispose();
