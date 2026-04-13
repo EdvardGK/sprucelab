@@ -355,56 +355,99 @@ export function initBlueprintCity(container: HTMLElement): () => void {
 
   scene.add(buildingGroup);
 
-  // Trees — small cylinder trunks + cone canopies, scattered in empty spots.
-  // Use the reusable occupied list to avoid landing on buildings or water.
+  // Spruce trees — stacked low-poly cones (4 sides → crisp diamond silhouette).
+  // We are Sprucelab, so the trees are on-brand. Dark forest green, tall and
+  // narrow, scattered in empty spots. Occupied list keeps them off buildings
+  // and water.
   const treeGroup = new THREE.Group();
   const trunkMaterial = new THREE.MeshStandardMaterial({
-    color: 0x7a6a4a,
+    color: 0x6b5a3c,
     metalness: 0.0,
-    roughness: 0.95,
+    roughness: 0.98,
   });
-  const canopyMaterial = new THREE.MeshStandardMaterial({
-    color: TREE_GREEN,
+  const spruceMaterialDark = new THREE.MeshStandardMaterial({
+    color: 0x2f6b49, // deeper spruce green
     metalness: 0.0,
-    roughness: 0.85,
+    roughness: 0.9,
   });
-  const canopyEdgeMaterial = new THREE.LineBasicMaterial({
+  const spruceMaterialMid = new THREE.MeshStandardMaterial({
+    color: TREE_GREEN, // Sprucelab Forest palette
+    metalness: 0.0,
+    roughness: 0.9,
+  });
+  const spruceEdgeMaterial = new THREE.LineBasicMaterial({
     color: INK,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.6,
   });
 
-  const treeCount = 26;
+  const treeCount = 30;
   let placed = 0;
   let attempts = 0;
-  while (placed < treeCount && attempts < 400) {
+  while (placed < treeCount && attempts < 500) {
     attempts++;
-    const tx = (Math.random() - 0.5) * blockExtent * 1.9;
-    const tz = (Math.random() - 0.5) * blockExtent * 1.9;
+    const tx = (Math.random() - 0.5) * blockExtent * 1.95;
+    const tz = (Math.random() - 0.5) * blockExtent * 1.95;
 
     const collides = occupied.some(
-      (o) => Math.abs(tx - o.x) < o.w / 2 + 0.4 && Math.abs(tz - o.z) < o.d / 2 + 0.4
+      (o) => Math.abs(tx - o.x) < o.w / 2 + 0.5 && Math.abs(tz - o.z) < o.d / 2 + 0.5
     );
     if (collides) continue;
 
-    const trunkH = 0.6 + Math.random() * 0.5;
-    const canopyR = 0.55 + Math.random() * 0.35;
-    const canopyH = 1.1 + Math.random() * 0.6;
+    // Spruce proportions: tall and narrow, 3 stacked cone tiers
+    const scale = 0.85 + Math.random() * 0.7;
+    const trunkH = 0.35 * scale;
+    const trunkR = 0.12 * scale;
 
-    const trunkGeom = new THREE.CylinderGeometry(0.08, 0.1, trunkH, 6);
+    // 4-sided cones = diamond silhouette from any angle → true low-poly
+    const tierSides = 4;
+
+    // Tier 1 (bottom, widest)
+    const r1 = 0.8 * scale;
+    const h1 = 1.1 * scale;
+    // Tier 2 (middle)
+    const r2 = 0.62 * scale;
+    const h2 = 1.0 * scale;
+    // Tier 3 (top, narrowest)
+    const r3 = 0.42 * scale;
+    const h3 = 0.9 * scale;
+
+    const trunkGeom = new THREE.CylinderGeometry(trunkR, trunkR * 1.15, trunkH, 5);
     const trunk = new THREE.Mesh(trunkGeom, trunkMaterial);
     trunk.position.set(tx, trunkH / 2, tz);
     treeGroup.add(trunk);
 
-    const canopyGeom = new THREE.ConeGeometry(canopyR, canopyH, 7);
-    const canopy = new THREE.Mesh(canopyGeom, canopyMaterial);
-    canopy.position.set(tx, trunkH + canopyH / 2 - 0.1, tz);
-    treeGroup.add(canopy);
+    // Alternate between slightly different greens so the grove isn't uniform
+    const canopyMat = Math.random() < 0.5 ? spruceMaterialDark : spruceMaterialMid;
 
-    const canopyEdgeGeom = new THREE.EdgesGeometry(canopyGeom);
-    const canopyEdges = new THREE.LineSegments(canopyEdgeGeom, canopyEdgeMaterial);
-    canopyEdges.position.copy(canopy.position);
-    treeGroup.add(canopyEdges);
+    // Tier 1
+    const g1 = new THREE.ConeGeometry(r1, h1, tierSides);
+    const m1 = new THREE.Mesh(g1, canopyMat);
+    m1.position.set(tx, trunkH + h1 / 2, tz);
+    m1.rotation.y = Math.random() * Math.PI;
+    treeGroup.add(m1);
+    treeGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g1), spruceEdgeMaterial).translateX(tx).translateY(trunkH + h1 / 2).translateZ(tz));
+
+    // Tier 2 — starts 60% up tier 1
+    const y2Base = trunkH + h1 * 0.6;
+    const g2 = new THREE.ConeGeometry(r2, h2, tierSides);
+    const m2 = new THREE.Mesh(g2, canopyMat);
+    m2.position.set(tx, y2Base + h2 / 2, tz);
+    m2.rotation.y = Math.random() * Math.PI;
+    treeGroup.add(m2);
+    treeGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g2), spruceEdgeMaterial).translateX(tx).translateY(y2Base + h2 / 2).translateZ(tz));
+
+    // Tier 3 — starts 60% up tier 2
+    const y3Base = y2Base + h2 * 0.6;
+    const g3 = new THREE.ConeGeometry(r3, h3, tierSides);
+    const m3 = new THREE.Mesh(g3, canopyMat);
+    m3.position.set(tx, y3Base + h3 / 2, tz);
+    m3.rotation.y = Math.random() * Math.PI;
+    treeGroup.add(m3);
+    treeGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g3), spruceEdgeMaterial).translateX(tx).translateY(y3Base + h3 / 2).translateZ(tz));
+
+    // Small footprint reservation so trees don't overlap each other
+    occupied.push({ x: tx, z: tz, w: r1 * 2.2, d: r1 * 2.2 });
 
     placed++;
   }
