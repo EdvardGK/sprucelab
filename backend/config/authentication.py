@@ -118,10 +118,22 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
             user = User.objects.create_user(
                 username=self._unique_username(email, supabase_id),
                 email=email or '',
-                first_name=display_name.split(' ', 1)[0][:30] if display_name else '',
+                first_name=first_name or (display_name.split(' ', 1)[0][:30] if display_name else ''),
+                last_name=last_name,
             )
             user.set_unusable_password()
             user.save(update_fields=['password'])
+        else:
+            # Sync first/last name from metadata if missing on the linked user.
+            user_changed = []
+            if first_name and not user.first_name:
+                user.first_name = first_name
+                user_changed.append('first_name')
+            if last_name and not user.last_name:
+                user.last_name = last_name
+                user_changed.append('last_name')
+            if user_changed:
+                user.save(update_fields=user_changed)
 
         # Superusers (e.g. the first bootstrap admin) are auto-approved so
         # they can reach the Django admin from day one.
