@@ -41,7 +41,8 @@ export default function Signup() {
       const result = await signUpWithPassword({
         email,
         password,
-        displayName,
+        firstName,
+        lastName,
         companyName,
       });
       if (result.needsConfirmation) {
