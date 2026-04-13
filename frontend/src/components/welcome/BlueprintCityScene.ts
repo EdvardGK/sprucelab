@@ -313,6 +313,11 @@ export function initBlueprintCity(container: HTMLElement): () => void {
 
   scene.add(parkGroup);
 
+  // Footprint reservations used by buildings, trees, and landmarks so
+  // nothing overlaps. Declared here because landmarks register theirs
+  // before the generic-building loop runs.
+  const occupied: Array<{ x: number; z: number; w: number; d: number }> = [];
+
   // Windows texture — reused across every building material
   const windowTexture = makeWindowTexture();
 
