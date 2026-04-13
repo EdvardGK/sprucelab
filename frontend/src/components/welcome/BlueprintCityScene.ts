@@ -24,8 +24,8 @@ interface Building {
   cyclePeriod: number;
 }
 
-const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5);
-const easeInQuint = (t: number) => t * t * t * t * t;
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+const easeInCubic = (t: number) => t * t * t;
 
 export function initBlueprintCity(container: HTMLElement): () => void {
   const scene = new THREE.Scene();
