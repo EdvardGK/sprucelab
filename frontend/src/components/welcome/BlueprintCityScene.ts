@@ -21,7 +21,11 @@ const DISCIPLINE_COLORS = [
 const INK = 0x21263a;
 const CREAM = 0xf7f3e4;
 const TREE_GREEN = 0x4ba27f;
-const WATER_BLUE = 0xb9c7d6;
+const WATER_BLUE = 0xa8b9c9;
+const PARK_GRASS = 0xc6d6a8;
+const PARK_GRASS_DARK = 0xa4b887;
+const STONE_WHITE = 0xece7d8;
+const WOOD_DARK = 0x4a3827;
 
 interface Building {
   mesh: THREE.Mesh;
