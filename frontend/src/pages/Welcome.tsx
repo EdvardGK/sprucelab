@@ -26,17 +26,35 @@ function firstNameFrom(email: string | undefined, displayName: string | undefine
   return '';
 }
 
+const DEV_PREVIEW =
+  import.meta.env.DEV &&
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('preview') === '1';
+
+const DEV_PREVIEW_USER = { email: 'preview@sprucelab.io' } as { email?: string };
+const DEV_PREVIEW_ME = {
+  profile: {
+    display_name: 'Edvard',
+    approval_status: 'pending' as const,
+    created_at: new Date().toISOString(),
+    signup_metadata: {},
+  },
+};
+
 export default function Welcome() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user: realUser, loading: realAuthLoading, signOut } = useAuth();
+  const user = DEV_PREVIEW ? DEV_PREVIEW_USER : realUser;
+  const authLoading = DEV_PREVIEW ? false : realAuthLoading;
   const queryClient = useQueryClient();
   const sceneContainerRef = useRef<HTMLDivElement>(null);
 
-  const { data: me, isLoading } = useQuery({
+  const { data: meReal, isLoading } = useQuery({
     queryKey: ['me'],
     queryFn: fetchMe,
-    enabled: !!user,
+    enabled: !!user && !DEV_PREVIEW,
     refetchInterval: 15_000,
   });
+  const me = DEV_PREVIEW ? DEV_PREVIEW_ME : meReal;
 
   const [role, setRole] = useState('');
   const [useCase, setUseCase] = useState('');
