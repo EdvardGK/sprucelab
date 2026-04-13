@@ -13,7 +13,8 @@ import { supabase } from '../lib/supabase';
 export interface SignUpInput {
   email: string;
   password: string;
-  displayName: string;
+  firstName: string;
+  lastName: string;
   companyName?: string;
 }
 
