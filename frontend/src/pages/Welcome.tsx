@@ -31,11 +31,11 @@ const DEV_PREVIEW =
   typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).get('preview') === '1';
 
-const DEV_PREVIEW_USER = { email: 'preview@sprucelab.io' } as { email?: string };
-const DEV_PREVIEW_ME = {
+const DEV_PREVIEW_USER = { email: 'preview@sprucelab.io' } as any;
+const DEV_PREVIEW_ME: any = {
   profile: {
     display_name: 'Edvard',
-    approval_status: 'pending' as const,
+    approval_status: 'pending',
     created_at: new Date().toISOString(),
     signup_metadata: {},
   },
@@ -48,7 +48,7 @@ export default function Welcome() {
   const queryClient = useQueryClient();
   const sceneContainerRef = useRef<HTMLDivElement>(null);
 
-  const { data: meReal, isLoading } = useQuery({
+  const { data: meReal } = useQuery({
     queryKey: ['me'],
     queryFn: fetchMe,
     enabled: !!user && !DEV_PREVIEW,
