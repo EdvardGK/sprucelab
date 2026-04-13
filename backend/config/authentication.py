@@ -76,11 +76,14 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed('Token subject is not a valid UUID')
 
         metadata = payload.get('user_metadata', {}) or {}
+        first_name = (metadata.get('first_name') or '').strip()[:30]
+        last_name = (metadata.get('last_name') or '').strip()[:150]
         display_name = (
             metadata.get('display_name')
             or metadata.get('full_name')
             or metadata.get('name')
             or metadata.get('preferred_username')
+            or ' '.join(filter(None, [first_name, last_name]))
             or ''
         )[:255]
         avatar_url = (metadata.get('avatar_url') or '')[:500]
@@ -89,9 +92,9 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         signup_metadata = {
             k: v
             for k, v in metadata.items()
-            if k not in ('display_name', 'full_name', 'name', 'preferred_username',
-                         'avatar_url', 'email_verified', 'phone_verified', 'sub',
-                         'iss', 'picture')
+            if k not in ('first_name', 'last_name', 'display_name', 'full_name',
+                         'name', 'preferred_username', 'avatar_url',
+                         'email_verified', 'phone_verified', 'sub', 'iss', 'picture')
         }
 
         # 1. Fast path: profile already exists.
