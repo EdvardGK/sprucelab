@@ -288,7 +288,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
-    "https://sprucelab.vercel.app",  # Production frontend
+    "https://sprucelab.vercel.app",  # Production frontend (Vercel alias)
+    "https://sprucelab.io",          # Production custom domain
+    "https://www.sprucelab.io",
 ]
 
 # Add additional frontend URLs from environment
