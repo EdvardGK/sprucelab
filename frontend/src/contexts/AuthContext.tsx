@@ -100,15 +100,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signUpWithPassword = useCallback(
-    async ({ email, password, displayName, companyName }: SignUpInput) => {
+    async ({ email, password, firstName, lastName, companyName }: SignUpInput) => {
       setError(null);
+      const first = firstName.trim();
+      const last = lastName.trim();
+      const displayName = [first, last].filter(Boolean).join(' ');
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
-            display_name: displayName.trim(),
+            first_name: first,
+            last_name: last,
+            display_name: displayName,
             ...(companyName?.trim() ? { company_name: companyName.trim() } : {}),
           },
         },
