@@ -540,7 +540,6 @@ export function initBlueprintCity(container: HTMLElement): () => void {
   // Buildings
   const buildingGroup = new THREE.Group();
   const buildings: Building[] = [];
-  const occupied: Array<{ x: number; z: number; w: number; d: number }> = [];
 
   // Reserve the park footprint so we don't drop a building on top of it
   occupied.push({
