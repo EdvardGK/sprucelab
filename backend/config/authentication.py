@@ -8,6 +8,7 @@ the UserProfile shadow row keyed by supabase_id.
 import uuid
 
 import jwt
+from jwt import PyJWKClient
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -17,6 +18,24 @@ from rest_framework import authentication, exceptions
 from apps.accounts.models import UserProfile
 
 User = get_user_model()
+
+# Shared JWKS client: caches keys in-memory across requests. Supabase serves
+# its signing keys at /auth/v1/.well-known/jwks.json and rotates them rarely.
+_JWKS_CLIENT: PyJWKClient | None = None
+
+
+def _get_jwks_client() -> PyJWKClient:
+    global _JWKS_CLIENT
+    if _JWKS_CLIENT is None:
+        supabase_url = (settings.SUPABASE_URL or '').rstrip('/')
+        if not supabase_url:
+            raise exceptions.AuthenticationFailed('SUPABASE_URL not configured')
+        _JWKS_CLIENT = PyJWKClient(
+            f'{supabase_url}/auth/v1/.well-known/jwks.json',
+            cache_keys=True,
+            lifespan=3600,
+        )
+    return _JWKS_CLIENT
 
 
 class SupabaseAuthentication(authentication.BaseAuthentication):
