@@ -5,6 +5,7 @@ Validates JWTs issued by Supabase and maps them to a local Django user via
 the UserProfile shadow row keyed by supabase_id.
 """
 
+import logging
 import uuid
 
 import jwt
@@ -18,6 +19,7 @@ from rest_framework import authentication, exceptions
 from apps.accounts.models import UserProfile
 
 User = get_user_model()
+logger = logging.getLogger('apps.accounts.auth')
 
 # Shared JWKS client: caches keys in-memory across requests. Supabase serves
 # its signing keys at /auth/v1/.well-known/jwks.json and rotates them rarely.
