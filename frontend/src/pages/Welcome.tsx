@@ -48,13 +48,14 @@ export default function Welcome() {
   const queryClient = useQueryClient();
   const sceneContainerRef = useRef<HTMLDivElement>(null);
 
-  const { data: meReal } = useQuery({
+  const { data: meReal, isLoading: meLoading } = useQuery({
     queryKey: ['me'],
     queryFn: fetchMe,
     enabled: !!user && !DEV_PREVIEW,
     refetchInterval: 15_000,
   });
   const me = DEV_PREVIEW ? DEV_PREVIEW_ME : meReal;
+  const isLoading = DEV_PREVIEW ? false : meLoading;
 
   const [role, setRole] = useState('');
   const [useCase, setUseCase] = useState('');
