@@ -17,8 +17,8 @@ export default function Signup() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base,#f7f8fa)]">
-        <p className="text-sm text-[var(--text-muted,#6b7280)]">Laster...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-slate-500">Laster...</p>
       </div>
     );
   }
@@ -59,18 +59,18 @@ export default function Signup() {
 
   if (needsConfirmation) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base,#f7f8fa)] px-4">
-        <div className="w-full max-w-sm rounded-lg border border-[var(--border-subtle,#e5e7eb)] bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-semibold text-[var(--text-primary,#111827)]">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-semibold text-slate-900">
             Bekreft e-posten din
           </h1>
-          <p className="mt-3 text-sm text-[var(--text-muted,#6b7280)]">
+          <p className="mt-3 text-sm text-slate-500">
             Vi har sendt en bekreftelseslenke til <strong>{email}</strong>. Klikk lenken for å
             fullføre registreringen.
           </p>
           <Link
             to="/login"
-            className="mt-6 inline-block text-xs font-medium text-[var(--text-primary,#111827)] underline"
+            className="mt-6 inline-block text-xs font-medium text-slate-900 underline"
           >
             Tilbake til innlogging
           </Link>
@@ -80,20 +80,20 @@ export default function Signup() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base,#f7f8fa)] px-4 py-8">
-      <div className="w-full max-w-sm rounded-lg border border-[var(--border-subtle,#e5e7eb)] bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
+      <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold text-[var(--text-primary,#111827)]">
+          <h1 className="text-2xl font-semibold text-slate-900">
             Opprett konto
           </h1>
-          <p className="mt-2 text-sm text-[var(--text-muted,#6b7280)]">
+          <p className="mt-2 text-sm text-slate-500">
             Sprucelab er for øyeblikket i lukket beta. Etter registrering må kontoen din godkjennes.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+            <label className="block text-xs font-medium text-slate-600">
               Fornavn
               <input
                 type="text"
@@ -101,10 +101,10 @@ export default function Signup() {
                 onChange={(e) => setFirstName(e.target.value)}
                 required
                 autoComplete="given-name"
-                className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none"
               />
             </label>
-            <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+            <label className="block text-xs font-medium text-slate-600">
               Etternavn
               <input
                 type="text"
@@ -112,12 +112,12 @@ export default function Signup() {
                 onChange={(e) => setLastName(e.target.value)}
                 required
                 autoComplete="family-name"
-                className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none"
               />
             </label>
           </div>
 
-          <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+          <label className="block text-xs font-medium text-slate-600">
             E-post
             <input
               type="email"
@@ -125,11 +125,11 @@ export default function Signup() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none"
             />
           </label>
 
-          <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+          <label className="block text-xs font-medium text-slate-600">
             Passord
             <input
               type="password"
@@ -138,28 +138,28 @@ export default function Signup() {
               required
               minLength={8}
               autoComplete="new-password"
-              className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none"
             />
-            <span className="mt-1 block text-[10px] font-normal text-[var(--text-muted,#6b7280)]">
+            <span className="mt-1 block text-[10px] font-normal text-slate-500">
               Minst 8 tegn.
             </span>
           </label>
 
-          <label className="block text-xs font-medium text-[var(--text-muted,#6b7280)]">
+          <label className="block text-xs font-medium text-slate-600">
             Firma <span className="font-normal">(valgfritt)</span>
             <input
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               autoComplete="organization"
-              className="mt-1 w-full rounded-md border border-[var(--border-subtle,#e5e7eb)] bg-white px-3 py-2 text-sm text-[var(--text-primary,#111827)] shadow-sm focus:border-[var(--border-strong,#9ca3af)] focus:outline-none"
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none"
             />
           </label>
 
           <button
             type="submit"
             disabled={pending}
-            className="mt-1 w-full rounded-md bg-[var(--text-primary,#111827)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-1 w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? 'Oppretter...' : 'Opprett konto'}
           </button>
@@ -174,9 +174,9 @@ export default function Signup() {
           </div>
         )}
 
-        <p className="mt-6 text-center text-xs text-[var(--text-muted,#6b7280)]">
+        <p className="mt-6 text-center text-xs text-slate-500">
           Har du allerede en konto?{' '}
-          <Link to="/login" className="font-medium text-[var(--text-primary,#111827)] underline">
+          <Link to="/login" className="font-medium text-slate-900 underline">
             Logg inn
           </Link>
         </p>
