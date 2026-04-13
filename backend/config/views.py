@@ -1,5 +1,5 @@
 """
-Auth views for the API.
+Root-level auth / identity / health views.
 """
 
 from rest_framework.decorators import api_view, permission_classes
@@ -7,16 +7,13 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.db import connection
 
+from apps.accounts.models import UserProfile
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
-    """
-    Health check endpoint for Railway/load balancers.
-
-    Returns basic service status and database connectivity.
-    """
-    # Check database connection
+    """Health check endpoint for Railway/load balancers."""
     db_ok = False
     try:
         with connection.cursor() as cursor:
@@ -34,21 +31,76 @@ def health_check(request):
     }, status=200 if db_ok else 503)
 
 
+def _serialize_profile(user):
+    """Return the current user's identity + approval state."""
+    profile = getattr(user, 'profile', None)
+    if profile is None:
+        profile = UserProfile.objects.filter(user=user).first()
+
+    return {
+        'id': user.id,
+        'email': user.email,
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
+        'date_joined': user.date_joined,
+        'profile': {
+            'supabase_id': str(profile.supabase_id) if profile else None,
+            'display_name': profile.display_name if profile else '',
+            'avatar_url': profile.avatar_url if profile else '',
+            'approval_status': profile.approval_status if profile else UserProfile.APPROVAL_PENDING,
+            'approved_at': profile.approved_at if profile else None,
+            'signup_metadata': profile.signup_metadata if profile else {},
+            'created_at': profile.created_at if profile else None,
+        } if profile else None,
+    }
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def current_user(request):
     """
-    Get the current authenticated user's info.
+    Return the authenticated user + profile + approval state.
 
-    Returns 401 if not authenticated.
+    Deliberately uses IsAuthenticated (not IsApprovedUser) so unapproved users
+    can poll this endpoint from the waitlist page to detect approval.
     """
-    user = request.user
-    return Response({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'is_staff': user.is_staff,
-        'date_joined': user.date_joined,
-    })
+    return Response(_serialize_profile(request.user))
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    """
+    Update the current user's signup_metadata and display_name.
+
+    Accepts:
+      - display_name: str
+      - signup_metadata: dict (merged into existing; pass {} to clear a key
+        explicitly — top-level keys are merged, not replaced recursively)
+    """
+    profile = getattr(request.user, 'profile', None)
+    if profile is None:
+        profile = UserProfile.objects.filter(user=request.user).first()
+    if profile is None:
+        return Response({'error': 'Profile not found'}, status=404)
+
+    dirty = []
+    display_name = request.data.get('display_name')
+    if display_name is not None:
+        profile.display_name = display_name[:255]
+        dirty.append('display_name')
+
+    incoming_meta = request.data.get('signup_metadata')
+    if isinstance(incoming_meta, dict):
+        merged = dict(profile.signup_metadata or {})
+        merged.update(incoming_meta)
+        profile.signup_metadata = merged
+        dirty.append('signup_metadata')
+
+    if dirty:
+        profile.save(update_fields=dirty + ['updated_at'])
+
+    return Response(_serialize_profile(request.user))

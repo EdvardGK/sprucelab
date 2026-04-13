@@ -11,6 +11,7 @@ import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import authentication, exceptions
 
 from apps.accounts.models import UserProfile
@@ -76,12 +77,22 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
 
         metadata = payload.get('user_metadata', {}) or {}
         display_name = (
-            metadata.get('full_name')
+            metadata.get('display_name')
+            or metadata.get('full_name')
             or metadata.get('name')
             or metadata.get('preferred_username')
             or ''
         )[:255]
         avatar_url = (metadata.get('avatar_url') or '')[:500]
+
+        # Self-reported signup info (company_name, role, use_case, etc.)
+        signup_metadata = {
+            k: v
+            for k, v in metadata.items()
+            if k not in ('display_name', 'full_name', 'name', 'preferred_username',
+                         'avatar_url', 'email_verified', 'phone_verified', 'sub',
+                         'iss', 'picture')
+        }
 
         # 1. Fast path: profile already exists.
         profile = (
@@ -91,7 +102,7 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
             .first()
         )
         if profile:
-            self._refresh_profile(profile, email, display_name, avatar_url)
+            self._refresh_profile(profile, email, display_name, avatar_url, signup_metadata)
             return profile.user
 
         # 2. Bootstrap: link to an existing Django user by email (e.g. the
@@ -109,16 +120,28 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
             user.set_unusable_password()
             user.save(update_fields=['password'])
 
+        # Superusers (e.g. the first bootstrap admin) are auto-approved so
+        # they can reach the Django admin from day one.
+        initial_status = (
+            UserProfile.APPROVAL_APPROVED
+            if user.is_superuser
+            else UserProfile.APPROVAL_PENDING
+        )
+        approved_at = timezone.now() if user.is_superuser else None
+
         UserProfile.objects.create(
             user=user,
             supabase_id=supabase_id,
             display_name=display_name,
             avatar_url=avatar_url,
+            approval_status=initial_status,
+            approved_at=approved_at,
+            signup_metadata=signup_metadata,
         )
         return user
 
     @staticmethod
-    def _refresh_profile(profile, email, display_name, avatar_url):
+    def _refresh_profile(profile, email, display_name, avatar_url, signup_metadata):
         dirty = []
         if display_name and profile.display_name != display_name:
             profile.display_name = display_name
@@ -126,6 +149,16 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         if avatar_url and profile.avatar_url != avatar_url:
             profile.avatar_url = avatar_url
             dirty.append('avatar_url')
+        if signup_metadata:
+            merged = dict(profile.signup_metadata or {})
+            changed = False
+            for k, v in signup_metadata.items():
+                if merged.get(k) != v:
+                    merged[k] = v
+                    changed = True
+            if changed:
+                profile.signup_metadata = merged
+                dirty.append('signup_metadata')
         if email and profile.user.email != email:
             profile.user.email = email
             profile.user.save(update_fields=['email'])

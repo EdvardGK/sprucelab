@@ -10,13 +10,23 @@ import {
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+export interface SignUpInput {
+  email: string;
+  password: string;
+  displayName: string;
+  companyName?: string;
+}
+
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
   error: string | null;
-  signInWithMicrosoft: () => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  signInWithMagicLink: (email: string) => Promise<void>;
+  signUpWithPassword: (input: SignUpInput) => Promise<{ needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -61,20 +71,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, []);
 
-  const signInWithMicrosoft = useCallback(async () => {
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
     setError(null);
-    const { error: signInError } = await supabase.auth.signInWithOAuth({
-      provider: 'azure',
-      options: {
-        scopes: 'email openid profile',
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
     });
     if (signInError) {
       setError(signInError.message);
       throw signInError;
     }
   }, []);
+
+  const signInWithMagicLink = useCallback(async (email: string) => {
+    setError(null);
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        shouldCreateUser: false,
+      },
+    });
+    if (otpError) {
+      setError(otpError.message);
+      throw otpError;
+    }
+  }, []);
+
+  const signUpWithPassword = useCallback(
+    async ({ email, password, displayName, companyName }: SignUpInput) => {
+      setError(null);
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            display_name: displayName.trim(),
+            ...(companyName?.trim() ? { company_name: companyName.trim() } : {}),
+          },
+        },
+      });
+      if (signUpError) {
+        setError(signUpError.message);
+        throw signUpError;
+      }
+      // If email confirmation is enabled in Supabase, session will be null
+      // and the user must click the confirmation link first.
+      const needsConfirmation = data.session === null;
+      return { needsConfirmation };
+    },
+    [],
+  );
 
   const signOut = useCallback(async () => {
     setError(null);
@@ -85,16 +133,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const clearError = useCallback(() => setError(null), []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user: session?.user ?? null,
       session,
       loading,
       error,
-      signInWithMicrosoft,
+      signInWithPassword,
+      signInWithMagicLink,
+      signUpWithPassword,
       signOut,
+      clearError,
     }),
-    [session, loading, error, signInWithMicrosoft, signOut],
+    [
+      session,
+      loading,
+      error,
+      signInWithPassword,
+      signInWithMagicLink,
+      signUpWithPassword,
+      signOut,
+      clearError,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

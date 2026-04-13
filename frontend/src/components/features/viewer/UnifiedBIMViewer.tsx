@@ -29,7 +29,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, Box, Layers } from 'lucide-react';
 import { useSectionPlanes, type SectionPlane } from '@/hooks/useSectionPlanes';
-import { ViewerContextMenu, useViewerContextMenu } from './ViewerContextMenu';
 import { ElementPropertiesPanel, type ElementProperties } from './ElementPropertiesPanel';
 import { ViewerFilterHUD, type TypeInfo } from './ViewerFilterHUD';
 import * as ifcService from '@/lib/ifc-service-client';
@@ -208,9 +207,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     renderer: THREE.WebGLRenderer | null;
     scene: THREE.Scene | null;
   }>({ components: null, world: null, renderer: null, scene: null });
-
-  // Context menu state
-  const contextMenu = useViewerContextMenu();
 
   // Section planes hook - uses ThatOpen's OBC.Clipper for reliability
   const sectionPlanes = useSectionPlanes({
@@ -801,190 +797,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         container.addEventListener('dblclick', handleDoubleClick);
         container.addEventListener('auxclick', handleAuxClick);
 
-        // Right-click drag-vs-click tracking. The native `contextmenu` event fires
-        // on right-button mousedown — which is also where right-drag pan starts —
-        // so using it directly makes the menu pop on every pan. Instead we track
-        // right mousedown/mouseup ourselves and only open on a clean click
-        // (same thresholds as the left-click selection handler above).
-        let rightDownPos = { x: 0, y: 0 };
-        let rightDownTime = 0;
-        const handleRightMouseDown = (event: MouseEvent) => {
-          if (event.button !== 2) return;
-          rightDownPos = { x: event.clientX, y: event.clientY };
-          rightDownTime = Date.now();
-        };
-
-        // Suppress the native browser context menu unconditionally.
+        // Suppress the native browser context menu on the canvas so right-click
+        // stays free for OrbitControls pan. The right-click-to-add-section-plane
+        // flow was removed in favour of a future HUD button — right-drag to pan
+        // was colliding with the click threshold and spawning the menu on every
+        // camera nudge, and the old flow also dropped persistent debug gizmos
+        // in the scene.
         const handleNativeContextMenu = (event: MouseEvent) => {
           event.preventDefault();
         };
-
-        const handleRightMouseUp = async (event: MouseEvent) => {
-          if (event.button !== 2) return;
-
-          const dx = Math.abs(event.clientX - rightDownPos.x);
-          const dy = Math.abs(event.clientY - rightDownPos.y);
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          const elapsed = Date.now() - rightDownTime;
-          if (distance > CLICK_THRESHOLD_PX || elapsed > CLICK_THRESHOLD_MS) {
-            return; // drag, not a click — don't open menu
-          }
-
-          try {
-            // Use Three.js raycasting directly for reliability
-            const bounds = container.getBoundingClientRect();
-            const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-            const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
-
-            // Get camera from world
-            const ctxCam = getCamera(world);
-            const camera = ctxCam?.three;
-            if (!camera) return;
-
-            // Create Three.js raycaster
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-
-            // Get all meshes from the scene
-            const scene = world.scene?.three;
-            if (!scene) return;
-
-            // Find all intersectable objects (excluding grid/helpers)
-            const intersectables: THREE.Object3D[] = [];
-            scene.traverse((object) => {
-              if (object instanceof THREE.Mesh && object.visible) {
-                // Skip grid and helper objects
-                const isHelper = object.name?.includes('grid') ||
-                                 object.name?.includes('helper') ||
-                                 object.parent?.name?.includes('grid');
-                if (!isHelper) {
-                  intersectables.push(object);
-                }
-              }
-            });
-
-            // Perform raycast
-            const intersections = raycaster.intersectObjects(intersectables, false);
-
-            if (intersections.length > 0) {
-              const result = intersections[0];
-
-              if (result.face) {
-                // Compute normal from actual triangle vertices (more accurate than stored normals)
-                const mesh = result.object as THREE.Mesh;
-                const geometry = mesh.geometry;
-                const face = result.face!;
-
-                // Get vertex positions from geometry
-                const positionAttr = geometry.getAttribute('position');
-                const indexAttr = geometry.getIndex();
-
-                let a: number, b: number, c: number;
-                if (indexAttr) {
-                  a = indexAttr.getX(face.a);
-                  b = indexAttr.getX(face.b);
-                  c = indexAttr.getX(face.c);
-                } else {
-                  a = face.a;
-                  b = face.b;
-                  c = face.c;
-                }
-
-                // Get vertices in local space
-                const vA = new THREE.Vector3().fromBufferAttribute(positionAttr, a);
-                const vB = new THREE.Vector3().fromBufferAttribute(positionAttr, b);
-                const vC = new THREE.Vector3().fromBufferAttribute(positionAttr, c);
-
-                // Transform to world space
-                vA.applyMatrix4(mesh.matrixWorld);
-                vB.applyMatrix4(mesh.matrixWorld);
-                vC.applyMatrix4(mesh.matrixWorld);
-
-                // Compute face normal from cross product
-                const edge1 = new THREE.Vector3().subVectors(vB, vA);
-                const edge2 = new THREE.Vector3().subVectors(vC, vA);
-                let worldNormal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-
-                // Ensure normal points toward camera (visible face convention)
-                const cameraPosition = camera.position.clone();
-                const toCamera = cameraPosition.sub(result.point).normalize();
-                const dotProduct = worldNormal.dot(toCamera);
-
-                if (dotProduct < 0) {
-                  // Normal points away from camera - flip it
-                  worldNormal.negate();
-                }
-
-                // Store for visualization (surface normal points OUTWARD from surface toward camera)
-                const originalWorldNormal = worldNormal.clone();
-
-                // For Dalux-style behavior: clicking a wall should let us see THROUGH it
-                // So we negate the normal to clip the near side and reveal what's behind
-                worldNormal.negate();
-
-                // Add visual indicator
-                const sceneForHelper = world.scene?.three;
-                if (sceneForHelper) {
-                  // Remove old debug helpers
-                  const oldHelper = sceneForHelper.getObjectByName('debug-normal-helper');
-                  if (oldHelper) sceneForHelper.remove(oldHelper);
-
-                  const debugGroup = new THREE.Group();
-                  debugGroup.name = 'debug-normal-helper';
-
-                  // Small sphere at hit point (white)
-                  const sphereGeo = new THREE.SphereGeometry(0.15);
-                  const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false });
-                  const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-                  sphere.position.copy(result.point);
-                  sphere.renderOrder = 999;
-                  debugGroup.add(sphere);
-
-                  // Arrow showing surface normal (MAGENTA - distinct from axes)
-                  const arrowNormal = new THREE.ArrowHelper(
-                    originalWorldNormal,
-                    result.point,
-                    3,
-                    0xff00ff,
-                    0.4,
-                    0.2
-                  );
-                  arrowNormal.renderOrder = 999;
-                  debugGroup.add(arrowNormal);
-
-                  // Add individual axis arrows
-                  const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), result.point, 2, 0xff0000, 0.3, 0.15);
-                  const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), result.point, 2, 0x00ff00, 0.3, 0.15);
-                  const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), result.point, 2, 0x0000ff, 0.3, 0.15);
-                  debugGroup.add(arrowX);
-                  debugGroup.add(arrowY);
-                  debugGroup.add(arrowZ);
-
-                  sceneForHelper.add(debugGroup);
-                }
-
-                // Try to get IFC type if available
-                let ifcType: string | undefined;
-                // TODO: Get IFC type from the intersection if possible
-
-                // Open context menu with intersection data
-                contextMenu.openMenu(
-                  { x: event.clientX, y: event.clientY },
-                  {
-                    point: result.point.clone(),
-                    normal: worldNormal,
-                    ifcType,
-                  }
-                );
-              }
-            }
-          } catch (err) {
-            console.error('Context menu raycast error:', err);
-          }
-        };
-
-        container.addEventListener('mousedown', handleRightMouseDown);
-        container.addEventListener('mouseup', handleRightMouseUp);
         container.addEventListener('contextmenu', handleNativeContextMenu);
 
         // Setup Shift+Scroll for section plane manipulation (uses ref to avoid stale closure)
@@ -1145,8 +966,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         cleanupSelection = () => {
           container.removeEventListener('mousedown', handleMouseDown);
           container.removeEventListener('mouseup', handleMouseUp);
-          container.removeEventListener('mousedown', handleRightMouseDown);
-          container.removeEventListener('mouseup', handleRightMouseUp);
           container.removeEventListener('dblclick', handleDoubleClickSelect);
           container.removeEventListener('dblclick', handleDoubleClick);
           container.removeEventListener('auxclick', handleAuxClick);
@@ -1780,26 +1599,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         </div>
       )}
 
-      {/* Context Menu for Section Planes */}
-      <ViewerContextMenu
-        position={contextMenu.position}
-        target={contextMenu.target}
-        canAddPlane={sectionPlanes.canAddPlane}
-        planeCount={sectionPlanes.planes.length}
-        onAddSectionPlane={(point, normal, orientation) => {
-          sectionPlanes.addPlane(point, normal, orientation);
-        }}
-        onHideType={(_type) => {
-          // TODO: Implement type hiding via parent callback
-        }}
-        onIsolateType={(_type) => {
-          // TODO: Implement type isolation via parent callback
-        }}
-        onShowAllTypes={() => {
-          // TODO: Implement show all via parent callback
-        }}
-        onClose={contextMenu.closeMenu}
-      />
+      {/* ThatOpen attribution (MIT-licensed, but we credit them explicitly). */}
+      <a
+        href="https://thatopen.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pointer-events-auto absolute bottom-2 right-2 z-40 rounded-sm bg-black/40 px-2 py-0.5 text-[10px] font-medium text-white/80 backdrop-blur-sm transition hover:bg-black/60 hover:text-white"
+      >
+        Powered by ThatOpen
+      </a>
     </div>
   );
 });

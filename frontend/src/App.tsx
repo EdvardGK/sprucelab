@@ -7,6 +7,8 @@ import { UploadProvider } from './contexts/UploadContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { RequireAuth } from './components/RequireAuth';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Welcome from './pages/Welcome';
 import AuthCallback from './pages/AuthCallback';
 import MyPage from './pages/MyPage';
 import ProjectsGallery from './pages/ProjectsGallery';
@@ -37,6 +39,8 @@ const guard = (element: ReactNode) => <RequireAuth>{element}</RequireAuth>;
 
 const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
+  { path: "/signup", element: <Signup /> },
+  { path: "/welcome", element: <Welcome /> },
   { path: "/auth/callback", element: <AuthCallback /> },
   { path: "/", element: guard(<ProjectsGallery />) },
   { path: "/my-page", element: guard(<MyPage />) },
