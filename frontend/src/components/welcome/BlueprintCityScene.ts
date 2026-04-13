@@ -145,8 +145,8 @@ export function initBlueprintCity(container: HTMLElement): () => void {
 
       // Stagger birth from center outward — creates a radial wave
       const distanceFromCenter = Math.sqrt(cx * cx + cz * cz);
-      const cyclePeriod = 22_000 + Math.random() * 8_000;
-      const birthOffset = distanceFromCenter * 140 + Math.random() * 600;
+      const cyclePeriod = 38_000 + Math.random() * 12_000;
+      const birthOffset = distanceFromCenter * 220 + Math.random() * 900;
 
       buildings.push({ mesh, edges, birthTime: birthOffset, cyclePeriod });
     }
