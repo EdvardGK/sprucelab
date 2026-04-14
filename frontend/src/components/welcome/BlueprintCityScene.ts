@@ -1648,7 +1648,15 @@ export function initBlueprintCity(
       scaffoldEdgeMat,
     };
 
-    const modules = buildGenericBuilding(spec.w, spec.d, spec.h, mats, tracker);
+    const modules = buildGenericBuilding(
+      spec.w,
+      spec.d,
+      spec.h,
+      mats,
+      tracker,
+      spec.roofStyle ?? 'flat',
+      spec.antenna ? genericAntennaMat : null
+    );
     modules.group.position.set(spec.x, 0, spec.z);
     buildingGroup.add(modules.group);
     setBuildingStatic(modules);
