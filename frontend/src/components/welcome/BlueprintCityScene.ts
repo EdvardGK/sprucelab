@@ -144,12 +144,11 @@ function makeWindowTexture(): THREE.Texture {
   ctx.stroke();
 
   const texture = new THREE.CanvasTexture(canvas);
-  // ClampToEdge so the base band stays at the bottom and cornice at the top
-  // regardless of how many times we tile vertically. Horizontal tiling still
-  // repeats the window grid cleanly.
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.anisotropy = 4;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.NearestFilter; // crisper pixel-art feel
   return texture;
 }
 
