@@ -974,7 +974,7 @@ export function initBlueprintCity(
   const riverEdges = new THREE.LineSegments(riverEdgeGeom, riverEdgeMat);
   scene.add(riverEdges);
 
-  // --- Streets / boulevards ---
+  // --- Streets — grid-aligned, river-aware, park-aware ---
   const streetGroup = new THREE.Group();
   const streetMat = tracker.trackMat(
     new THREE.MeshBasicMaterial({
@@ -985,85 +985,65 @@ export function initBlueprintCity(
       depthWrite: false,
     })
   );
-  const boulevardMat = tracker.trackMat(
-    new THREE.MeshBasicMaterial({
-      color: palette.street,
-      transparent: true,
-      opacity: Math.min(1, palette.streetOpacity * 1.4),
-      blending: palette.streetBlending,
-      depthWrite: false,
-    })
-  );
-  const medianMat = tracker.trackMat(
-    new THREE.MeshBasicMaterial({
-      color: palette.median,
-      transparent: true,
-      opacity: 0.7,
-    })
-  );
 
-  const BOULEVARD_WIDTH = 2.4;
-  const MEDIAN_WIDTH = 0.45;
+  const STREET_THICKNESS = 0.7;
 
-  // X-axis boulevard
-  {
-    const asphaltGeom = tracker.trackGeom(
-      new THREE.PlaneGeometry(blockExtent * 2, BOULEVARD_WIDTH)
-    );
-    const asphalt = new THREE.Mesh(asphaltGeom, boulevardMat);
-    asphalt.rotation.x = -Math.PI / 2;
-    asphalt.position.set(0, 0.006, 0);
-    streetGroup.add(asphalt);
+  // Helpers to draw a straight street segment, skipping the park interior
+  // for horizontal strips that pass through the park z range and vice versa.
+  const parkXmin = parkCenter.x - parkW / 2;
+  const parkXmax = parkCenter.x + parkW / 2;
+  const parkZmin = parkCenter.z - parkD / 2;
+  const parkZmax = parkCenter.z + parkD / 2;
 
-    if (variant === 'day') {
-      const medianGeom = tracker.trackGeom(
-        new THREE.PlaneGeometry(blockExtent * 2, MEDIAN_WIDTH)
-      );
-      const median = new THREE.Mesh(medianGeom, medianMat);
-      median.rotation.x = -Math.PI / 2;
-      median.position.set(0, 0.008, 0);
-      streetGroup.add(median);
+  function drawHorizontalSegment(z: number, xStart: number, xEnd: number) {
+    if (xEnd <= xStart) return;
+    const length = xEnd - xStart;
+    const geom = tracker.trackGeom(new THREE.PlaneGeometry(length, STREET_THICKNESS));
+    const mesh = new THREE.Mesh(geom, streetMat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set((xStart + xEnd) / 2, 0.005, z);
+    streetGroup.add(mesh);
+  }
+
+  function drawVerticalSegment(x: number, zStart: number, zEnd: number) {
+    if (zEnd <= zStart) return;
+    const length = zEnd - zStart;
+    const geom = tracker.trackGeom(new THREE.PlaneGeometry(STREET_THICKNESS, length));
+    const mesh = new THREE.Mesh(geom, streetMat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(x, 0.005, (zStart + zEnd) / 2);
+    streetGroup.add(mesh);
+  }
+
+  const STREET_POSITIONS = [-18, -12, -6, 0, 6, 12, 18];
+
+  // Horizontal streets (running along X). Each may span the full width,
+  // or be split into two segments that skip the park interior.
+  // They also cross the river as bridges (no special treatment — the street
+  // is drawn on top of the river plane at a slightly higher y).
+  for (const z of STREET_POSITIONS) {
+    const inPark = z > parkZmin && z < parkZmax;
+    if (!inPark) {
+      drawHorizontalSegment(z, -blockExtent, blockExtent);
+    } else {
+      // Skip the park interior
+      drawHorizontalSegment(z, -blockExtent, parkXmin);
+      drawHorizontalSegment(z, parkXmax, blockExtent);
     }
   }
 
-  // Z-axis boulevard
-  {
-    const asphaltGeom = tracker.trackGeom(
-      new THREE.PlaneGeometry(BOULEVARD_WIDTH, blockExtent * 2)
-    );
-    const asphalt = new THREE.Mesh(asphaltGeom, boulevardMat);
-    asphalt.rotation.x = -Math.PI / 2;
-    asphalt.position.set(0, 0.006, 0);
-    streetGroup.add(asphalt);
-
-    if (variant === 'day') {
-      const medianGeom = tracker.trackGeom(
-        new THREE.PlaneGeometry(MEDIAN_WIDTH, blockExtent * 2)
-      );
-      const median = new THREE.Mesh(medianGeom, medianMat);
-      median.rotation.x = -Math.PI / 2;
-      median.position.set(0, 0.008, 0);
-      streetGroup.add(median);
+  // Vertical streets (running along Z). Skip x=0 — that's the river.
+  for (const x of STREET_POSITIONS) {
+    if (x === 0) continue; // river takes this slot
+    const inPark = x > parkXmin && x < parkXmax;
+    if (!inPark) {
+      drawVerticalSegment(x, -blockExtent, blockExtent);
+    } else {
+      drawVerticalSegment(x, -blockExtent, parkZmin);
+      drawVerticalSegment(x, parkZmax, blockExtent);
     }
   }
 
-  // Minor streets every other row/column
-  for (let i = 1; i < axisCount; i++) {
-    const pos = (i - axisCount / 2) * spacing;
-    if (Math.abs(pos) < BOULEVARD_WIDTH * 0.6) continue;
-
-    const hGeom = tracker.trackGeom(new THREE.PlaneGeometry(blockExtent * 2, 0.65));
-    const h = new THREE.Mesh(hGeom, streetMat);
-    h.rotation.x = -Math.PI / 2;
-    h.position.set(0, 0.005, pos);
-    streetGroup.add(h);
-
-    const vGeom = tracker.trackGeom(new THREE.PlaneGeometry(0.65, blockExtent * 2));
-    const v = new THREE.Mesh(vGeom, streetMat);
-    v.rotation.x = -Math.PI / 2;
-    v.position.set(pos, 0.005, 0);
-    streetGroup.add(v);
-  }
   scene.add(streetGroup);
 
   // --- Park + pond ---
