@@ -323,6 +323,8 @@ interface BuildingModules {
   corniceEdges: THREE.LineSegments;
   parapet: THREE.Mesh;
   parapetEdges: THREE.LineSegments;
+  roof: THREE.Mesh | null;
+  antenna: THREE.Group | null;
   bodyHeight: number;
 }
 
