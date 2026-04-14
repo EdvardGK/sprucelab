@@ -148,9 +148,9 @@ export default function Login() {
         )}
 
         <p className="mt-6 text-center text-xs text-slate-500">
-          Ny bruker?{' '}
+          New here?{' '}
           <Link to="/signup" className="font-medium text-slate-900 underline">
-            Opprett konto
+            Apply for access
           </Link>
         </p>
       </div>
