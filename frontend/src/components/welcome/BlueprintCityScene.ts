@@ -332,8 +332,6 @@ interface ConstructionSlot {
   modules: BuildingModules;
   birthTime: number;
   cyclePeriod: number;
-  positions: Array<{ x: number; z: number; w: number; d: number; h: number }>;
-  posIdx: number;
 }
 
 // ---------------------------------------------------------------------------
