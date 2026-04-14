@@ -1402,7 +1402,7 @@ export function initBlueprintCity(
   }
 
   // --- Generic buildings — zoned static ---
-  const buildingSpecs = placeZonedBuildings(occupied, parkCenter, parkW, parkD, spacing);
+  const buildingSpecs = placeZonedBuildings(occupied);
 
   const buildingGroup = new THREE.Group();
   scene.add(buildingGroup);
