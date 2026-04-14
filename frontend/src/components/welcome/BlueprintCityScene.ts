@@ -1211,10 +1211,6 @@ export function initBlueprintCity(
 
   scene.add(parkGroup);
 
-  // --- Footprint reservations ---
-  const occupied: Array<{ x: number; z: number; w: number; d: number }> = [];
-  occupied.push({ x: parkCenter.x, z: parkCenter.z, w: parkW, d: parkD });
-
   // --- Shared window textures ---
   const windowColorTex = tracker.track(makeWindowColorTexture());
 
