@@ -90,7 +90,7 @@ export default function Welcome() {
     return (
       <div className="welcome-root">
         <div className="welcome-frame" style={{ justifyItems: 'center', alignItems: 'center' }}>
-          <p className="welcome-loading">Laster…</p>
+          <p className="welcome-loading">Loading…</p>
         </div>
       </div>
     );
