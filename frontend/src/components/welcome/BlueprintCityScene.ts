@@ -800,18 +800,17 @@ function placeZonedBuildings(
   // Cell centers along each axis. x=0 is excluded (river).
   // We'll pull specific cells per zone.
 
-  // ---- CBD (NE quadrant, east of river) — tall towers ----
-  // East column cells: x=9, x=15. Z range: 3, 9, 15.
-  // Barcode is at (15, 6), so skip x=15 z=3..9. Use x=9 column heavily.
+  // ---- CBD (NE quadrant, east of river) — sparse, Willis + Petronas are heroes ----
+  // Willis occupies (9, -3), Petronas occupies (9, 9).
+  // Supporting towers: one tall tower with chamfered cap and one with pyramid.
   const cbd: Array<[number, number, number, number, number, RoofStyle, boolean]> = [
-    [9, 3, 4.2, 4.2, 13, 'flat', false],
-    [9, 9, 4.0, 4.0, 17, 'chamfered', true],
-    [9, 15, 4.2, 4.0, 15, 'flat', true],
-    [15, 15, 3.8, 3.8, 12, 'pyramid', false],
+    [9, 3, 4.2, 4.2, 12, 'chamfered', false],
+    [9, 15, 4.0, 4.0, 14, 'pyramid', true],
+    [15, 15, 3.8, 3.8, 10, 'flat', false],
   ];
   for (let i = 0; i < cbd.length; i++) {
     const [cx, cz, w, d, h, roof, ant] = cbd[i];
-    const accent = i === 1 ? DISCIPLINE_COLORS[3] : null;
+    const accent = i === 0 ? DISCIPLINE_COLORS[3] : null;
     tryPlace(cx, cz, w, d, h, accent, 100 + i, roof, ant);
   }
 
