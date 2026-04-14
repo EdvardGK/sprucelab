@@ -1449,10 +1449,10 @@ export function initBlueprintCity(
 
   // --- Construction slots — 4 dedicated slots at grid-aligned positions ---
   const constructionPositions: Array<{ x: number; z: number; w: number; d: number; h: number }> = [
-    { x: 15, 'z': 9, w: 4.0, d: 4.0, h: 16 }, // CBD spare cell
-    { x: 15, 'z': 3, w: 4.0, d: 4.0, h: 14 }, // CBD south
-    { x: -15, 'z': -3, w: 4.0, d: 4.0, h: 6 }, // Old Town/residential edge
-    { x: -9, 'z': 15, w: 3.8, d: 4.0, h: 7 }, // near park edge
+    { x: 15, z: 9, w: 4.0, d: 4.0, h: 16 }, // CBD spare cell
+    { x: 15, z: 3, w: 4.0, d: 4.0, h: 14 }, // CBD south
+    { x: -15, z: -3, w: 4.0, d: 4.0, h: 6 }, // Old Town/residential edge
+    { x: -9, z: 15, w: 3.8, d: 4.0, h: 7 }, // near park edge
   ];
 
   const constructionSlots: ConstructionSlot[] = [];
