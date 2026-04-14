@@ -1222,14 +1222,16 @@ export function initBlueprintCity(
   }
 
   // ---- Barcode Project (CBD, deep east side — clear of waterfront) ----
+  // Row of 12 slabs running along the Z axis (parallel to the river) so
+  // the silhouette reads from the camera orbit as it passes the east side.
   {
     const cx = 15;
-    const cz = 3;
+    const cz = 6;
     const slabCount = 12;
-    const slabW = 0.85;
-    const slabD = 4.2;
+    const slabD = 0.85; // narrow in Z direction (row length)
+    const slabW = 4.2;  // wider in X (facing east/west)
     const slabGap = 0.35;
-    const rowLength = slabCount * (slabW + slabGap) - slabGap;
+    const rowLength = slabCount * (slabD + slabGap) - slabGap;
 
     const heightPattern = [7, 9, 12, 10, 14, 11, 13, 15, 12, 10, 8, 6];
 
