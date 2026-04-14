@@ -26,10 +26,23 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error?.response?.status === 401) {
-      // Token expired or invalid — let the AuthContext detect session loss
-      // via onAuthStateChange and redirect to /login. We don't force signOut
-      // here because a legitimate refresh may already be in flight.
-      console.warn('[api-client] 401 from backend — session may be stale');
+      // Backend rejected our token. Ask Supabase to refresh; if that fails
+      // or still yields no session, sign out hard and bounce to /login so
+      // the user doesn't sit on a zombie app shell.
+      try {
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !data.session) {
+          await supabase.auth.signOut();
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+            window.location.replace('/login');
+          }
+        }
+      } catch {
+        await supabase.auth.signOut().catch(() => undefined);
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          window.location.replace('/login');
+        }
+      }
     }
     return Promise.reject(error);
   },

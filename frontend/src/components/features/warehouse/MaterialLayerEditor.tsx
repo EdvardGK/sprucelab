@@ -21,6 +21,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { authedFetch } from '@/lib/authed-fetch';
 
 // API base URL
 const API_BASE = import.meta.env.VITE_API_URL
@@ -153,7 +154,7 @@ export function MaterialLayerEditor({
 
     setIsSaving(true);
     try {
-      const response = await fetch(`${API_BASE}/entities/type-definition-layers/bulk-update/`, {
+      const response = await authedFetch(`${API_BASE}/entities/type-definition-layers/bulk-update/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

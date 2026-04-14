@@ -32,6 +32,7 @@ import { useSectionPlanes, type SectionPlane } from '@/hooks/useSectionPlanes';
 import { ElementPropertiesPanel, type ElementProperties } from './ElementPropertiesPanel';
 import { ViewerFilterHUD, type TypeInfo } from './ViewerFilterHUD';
 import * as ifcService from '@/lib/ifc-service-client';
+import { authedFetch } from '@/lib/authed-fetch';
 
 // API base URL - use env var for production, fallback to relative path for local dev
 const API_BASE = import.meta.env.VITE_API_URL
@@ -1205,15 +1206,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
           try {
             // Fetch model metadata
-            const modelResponse = await fetch(`${API_BASE}/models/${modelId}/`);
+            const modelResponse = await authedFetch(`${API_BASE}/models/${modelId}/`);
             if (!modelResponse.ok) {
-              throw new Error(`Model ${modelId} not found`);
+              if (modelResponse.status === 401 || modelResponse.status === 403) {
+                throw new Error('Authentication required — please sign in again');
+              }
+              if (modelResponse.status === 404) {
+                throw new Error(`Model ${modelId} not found`);
+              }
+              throw new Error(`Failed to load model ${modelId} (HTTP ${modelResponse.status})`);
             }
             const modelData = await modelResponse.json();
 
             // Fast path: prebuilt fragments
             try {
-              const fragmentsResponse = await fetch(`${API_BASE}/models/${modelId}/fragments/`);
+              const fragmentsResponse = await authedFetch(`${API_BASE}/models/${modelId}/fragments/`);
               if (fragmentsResponse.ok) {
                 const { fragments_url } = await fragmentsResponse.json();
                 const response = await fetch(fragments_url);
@@ -1235,7 +1242,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             const loadedModel = finalizeLoadedGroup(group, modelData, modelId, 'ifc');
 
             // Kick off async fragment generation so the next load uses the fast path.
-            fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, {
+            authedFetch(`${API_BASE}/models/${modelId}/generate_fragments/`, {
               method: 'POST',
             }).catch(() => { /* silent — fragments are an optimization */ });
 

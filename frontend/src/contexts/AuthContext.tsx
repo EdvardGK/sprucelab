@@ -102,6 +102,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signUpWithPassword = useCallback(
     async ({ email, password, firstName, lastName, companyName }: SignUpInput) => {
       setError(null);
+      // Clear any existing session first so a new signup can't silently land
+      // the user inside someone else's (e.g. a leftover superuser) account.
+      await supabase.auth.signOut().catch(() => undefined);
       const first = firstName.trim();
       const last = lastName.trim();
       const displayName = [first, last].filter(Boolean).join(' ');

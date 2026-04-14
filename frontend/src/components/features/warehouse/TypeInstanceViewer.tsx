@@ -28,6 +28,7 @@ import { useSectionPlanes } from '@/hooks/useSectionPlanes';
 import { ViewerContextMenu, useViewerContextMenu } from '@/components/features/viewer/ViewerContextMenu';
 import { ElementPropertiesPanel, type ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import * as ifcService from '@/lib/ifc-service-client';
+import { authedFetch } from '@/lib/authed-fetch';
 
 // API base URL - use env var for production, fallback to relative path for local dev
 const API_BASE = import.meta.env.VITE_API_URL
@@ -674,7 +675,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
 
         // Try to load Fragments first
         try {
-          const fragmentsResponse = await fetch(`${API_BASE}/models/${modelId}/fragments/`);
+          const fragmentsResponse = await authedFetch(`${API_BASE}/models/${modelId}/fragments/`);
 
           if (fragmentsResponse.ok) {
             const fragmentsData = await fragmentsResponse.json();
@@ -689,7 +690,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
             fragmentsGroupRef.current = group;
 
             // Still need original IFC for FastAPI property queries
-            const modelResponse = await fetch(`${API_BASE}/models/${modelId}/`);
+            const modelResponse = await authedFetch(`${API_BASE}/models/${modelId}/`);
             if (modelResponse.ok) {
               const modelData = await modelResponse.json();
               if (modelData.file_url) {
@@ -713,8 +714,16 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         }
 
         // Fallback: Load IFC
-        const modelResponse = await fetch(`${API_BASE}/models/${modelId}/`);
-        if (!modelResponse.ok) throw new Error('Model not found');
+        const modelResponse = await authedFetch(`${API_BASE}/models/${modelId}/`);
+        if (!modelResponse.ok) {
+          if (modelResponse.status === 401 || modelResponse.status === 403) {
+            throw new Error('Authentication required — please sign in again');
+          }
+          if (modelResponse.status === 404) {
+            throw new Error('Model not found');
+          }
+          throw new Error(`Failed to load model (HTTP ${modelResponse.status})`);
+        }
 
         const modelData = await modelResponse.json();
         if (!modelData.file_url) throw new Error('No IFC file available');
@@ -742,7 +751,7 @@ export function TypeInstanceViewer({ modelId, typeId, className }: TypeInstanceV
         }
 
         // Trigger fragment generation for next time
-        fetch(`${API_BASE}/models/${modelId}/generate_fragments/`, { method: 'POST' });
+        authedFetch(`${API_BASE}/models/${modelId}/generate_fragments/`, { method: 'POST' });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load model');
       } finally {
