@@ -134,7 +134,7 @@ export default function Login() {
             role="status"
             className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800"
           >
-            Magisk lenke sendt til {email}. Sjekk e-posten.
+            Magic link sent to {email}. Check your inbox.
           </div>
         )}
 
