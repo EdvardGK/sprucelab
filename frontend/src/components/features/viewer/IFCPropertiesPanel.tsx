@@ -321,60 +321,86 @@ function ElementIdentity({ element }: { element: ElementProperties }) {
 
 // ── Quantity Grid (filtered by IFC class, primary highlight on rep unit) ──
 
+interface QtyCell {
+  value: number | null;
+  unit: string;
+  label: string;
+  isPrimary: boolean;
+}
+
 function QuantityGrid({ element }: { element: ElementProperties }) {
   const { t } = useTranslation();
   const config = QTY_DEFAULTS[element.type];
 
-  // Fallback: show all available quantities if no config
-  const cells = config
-    ? config.quantities
-        .filter(q => element[q.key] != null)
-        .map(q => ({
-          value: q.transform ? q.transform(element[q.key] as number) : (element[q.key] as number),
+  // Always render all configured slots; missing values become null placeholders.
+  const cells: QtyCell[] = config
+    ? config.quantities.map(q => {
+        const raw = element[q.key];
+        const value =
+          raw != null
+            ? q.transform
+              ? q.transform(raw as number)
+              : (raw as number)
+            : null;
+        return {
+          value,
           unit: q.unit,
           label: t(`viewer.properties.${q.labelKey}`),
           isPrimary: q.key === config.primaryKey,
-        }))
+        };
+      })
     : buildFallbackQuantities(element, t);
-
-  if (cells.length === 0) return null;
 
   return (
     <div className="flex gap-px bg-black/[0.03] border-b border-black/[0.04]">
-      {cells.map((cell, i) => (
-        <div
-          key={i}
-          className={cn(
-            'flex-1 px-1.5 py-[6px] text-center',
-            cell.isPrimary ? 'bg-[var(--primary-light)]' : 'bg-card',
-          )}
-        >
-          <div className={cn(
-            'text-[14px] font-bold tabular-nums',
-            cell.isPrimary ? 'text-[var(--primary)]' : 'text-text-primary',
-          )}>
-            {formatQty(cell.value)}
+      {cells.map((cell, i) => {
+        const missing = cell.value == null;
+        return (
+          <div
+            key={i}
+            className={cn(
+              'flex-1 px-1.5 py-[6px] text-center',
+              cell.isPrimary && !missing ? 'bg-[var(--primary-light)]' : 'bg-card',
+            )}
+          >
+            <div
+              className={cn(
+                'text-[14px] font-bold tabular-nums',
+                cell.isPrimary && !missing ? 'text-[var(--primary)]' : 'text-text-primary',
+                missing && 'opacity-40',
+              )}
+            >
+              {missing ? MISSING : formatQty(cell.value!)}
+            </div>
+            <div
+              className={cn(
+                'text-[8px] uppercase tracking-wide mt-px',
+                cell.isPrimary && !missing ? 'text-[var(--primary)] opacity-70' : 'text-text-tertiary',
+              )}
+            >
+              {cell.unit} {cell.label}
+            </div>
           </div>
-          <div className={cn(
-            'text-[8px] uppercase tracking-wide mt-px',
-            cell.isPrimary ? 'text-[var(--primary)] opacity-70' : 'text-text-tertiary',
-          )}>
-            {cell.unit} {cell.label}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function buildFallbackQuantities(element: ElementProperties, t: (key: string) => string) {
-  const cells: Array<{ value: number; unit: string; label: string; isPrimary: boolean }> = [];
-  if (element.area != null) cells.push({ value: element.area, unit: 'm²', label: t('viewer.properties.area'), isPrimary: cells.length === 0 });
-  if (element.length != null) cells.push({ value: element.length, unit: 'm', label: t('viewer.properties.length'), isPrimary: false });
-  if (element.height != null) cells.push({ value: element.height, unit: 'm', label: t('viewer.properties.height'), isPrimary: false });
-  if (element.width != null) cells.push({ value: element.width * 1000, unit: 'mm', label: t('viewer.properties.thickness'), isPrimary: false });
-  if (element.volume != null) cells.push({ value: element.volume, unit: 'm³', label: t('viewer.properties.volume'), isPrimary: false });
-  return cells;
+function buildFallbackQuantities(element: ElementProperties, t: (key: string) => string): QtyCell[] {
+  // Default slot layout when we have no per-class config: always render all five.
+  return [
+    { value: element.area ?? null, unit: 'm²', label: t('viewer.properties.area'), isPrimary: true },
+    { value: element.length ?? null, unit: 'm', label: t('viewer.properties.length'), isPrimary: false },
+    { value: element.height ?? null, unit: 'm', label: t('viewer.properties.height'), isPrimary: false },
+    {
+      value: element.width != null ? element.width * 1000 : null,
+      unit: 'mm',
+      label: t('viewer.properties.thickness'),
+      isPrimary: false,
+    },
+    { value: element.volume ?? null, unit: 'm³', label: t('viewer.properties.volume'), isPrimary: false },
+  ];
 }
 
 function formatQty(v: number): string {
