@@ -176,9 +176,9 @@ export default function Signup() {
         )}
 
         <p className="mt-6 text-center text-xs text-slate-500">
-          Har du allerede en konto?{' '}
+          Already have an account?{' '}
           <Link to="/login" className="font-medium text-slate-900 underline">
-            Logg inn
+            Sign in
           </Link>
         </p>
       </div>
