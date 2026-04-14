@@ -104,7 +104,7 @@ export default function Login() {
 
           {mode === 'password' && (
             <label className="block text-xs font-medium text-slate-600">
-              Passord
+              Password
               <input
                 type="password"
                 value={password}
