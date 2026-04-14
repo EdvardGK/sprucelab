@@ -84,10 +84,11 @@ export default function Signup() {
       <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold text-slate-900">
-            Opprett konto
+            Apply for access
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Sprucelab er for øyeblikket i lukket beta. Etter registrering må kontoen din godkjennes.
+            Sprucelab is currently in closed beta. After signing up, your
+            account needs to be approved before you can sign in.
           </p>
         </div>
 
