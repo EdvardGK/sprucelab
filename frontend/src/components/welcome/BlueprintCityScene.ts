@@ -1631,28 +1631,12 @@ export function initBlueprintCity(
 
     const elapsed = clock.getElapsedTime() * 1000;
 
-    // Update construction slots
+    // Update construction slots — each slot cycles in place.
     for (const slot of constructionSlots) {
       const age = elapsed - slot.birthTime;
       if (age < 0) continue;
       const t = (age % slot.cyclePeriod) / slot.cyclePeriod;
       updateBuildingConstruction(slot.modules, t);
-
-      // When we wrap around (t just became < previous t), move to a new position
-      const cycleIndex = Math.floor(age / slot.cyclePeriod);
-      const expectedPosIdx =
-        (slot.posIdx + cycleIndex) % slot.positions.length;
-      if (expectedPosIdx !== ((slot.posIdx + cycleIndex) % slot.positions.length)) {
-        // unreachable; keeping structure
-      }
-      // Compute the "current" position: initial idx plus number of completed cycles
-      const curPos = slot.positions[(slot.posIdx + cycleIndex) % slot.positions.length];
-      if (
-        slot.modules.group.position.x !== curPos.x ||
-        slot.modules.group.position.z !== curPos.z
-      ) {
-        slot.modules.group.position.set(curPos.x, 0, curPos.z);
-      }
     }
 
     // Lightning (night only)
