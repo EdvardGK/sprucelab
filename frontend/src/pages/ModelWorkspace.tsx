@@ -129,7 +129,7 @@ export default function ModelWorkspace() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
           {activeTab === 'validation' && (isReady ? <PlaceholderTab title="Validation" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
           {activeTab === 'metadata' && <MetadataTab model={model} />}
@@ -257,8 +257,8 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
   return (
     <>
-      <div className="p-[clamp(0.75rem,1.5vw,1rem)] max-w-[1440px] mx-auto w-full h-full overflow-hidden">
-        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)] h-full grid-rows-[auto_1fr]">
+      <div className="p-[clamp(0.75rem,1.5vw,1rem)] max-w-[1440px] mx-auto w-full min-h-full">
+        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-full grid-rows-[auto_1fr]">
           {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
           <div className="col-span-2">
             <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} />
