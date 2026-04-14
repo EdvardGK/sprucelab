@@ -24,7 +24,7 @@ export default function AuthCallback() {
             onClick={() => navigate('/login', { replace: true })}
             className="mt-3 text-xs text-[var(--text-primary,#111827)] underline"
           >
-            Tilbake til innlogging
+            Back to sign in
           </button>
         )}
       </div>
