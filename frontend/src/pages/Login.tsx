@@ -53,7 +53,7 @@ export default function Login() {
       <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold text-slate-900">Sprucelab</h1>
-          <p className="mt-2 text-sm text-slate-500">Logg inn for å fortsette</p>
+          <p className="mt-2 text-sm text-slate-500">Sign in to continue</p>
         </div>
 
         <div className="mb-5 flex rounded-md border border-slate-200 p-0.5 text-xs">
