@@ -95,7 +95,7 @@ export default function Signup() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-medium text-slate-600">
-              Fornavn
+              First name
               <input
                 type="text"
                 value={firstName}
@@ -106,7 +106,7 @@ export default function Signup() {
               />
             </label>
             <label className="block text-xs font-medium text-slate-600">
-              Etternavn
+              Last name
               <input
                 type="text"
                 value={lastName}
