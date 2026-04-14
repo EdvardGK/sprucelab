@@ -119,7 +119,7 @@ export default function Signup() {
           </div>
 
           <label className="block text-xs font-medium text-slate-600">
-            E-post
+            Email
             <input
               type="email"
               value={email}
@@ -131,7 +131,7 @@ export default function Signup() {
           </label>
 
           <label className="block text-xs font-medium text-slate-600">
-            Passord
+            Password
             <input
               type="password"
               value={password}
@@ -142,12 +142,12 @@ export default function Signup() {
               className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none"
             />
             <span className="mt-1 block text-[10px] font-normal text-slate-500">
-              Minst 8 tegn.
+              At least 8 characters.
             </span>
           </label>
 
           <label className="block text-xs font-medium text-slate-600">
-            Firma <span className="font-normal">(valgfritt)</span>
+            Company <span className="font-normal">(optional)</span>
             <input
               type="text"
               value={companyName}
