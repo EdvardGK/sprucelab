@@ -476,20 +476,26 @@ function PsetDropdown({ element }: { element: ElementProperties }) {
       <div className="px-2.5 py-1" ref={menuRef}>
         <div className="relative">
           <button
-            onClick={() => setOpen(o => !o)}
-            className="flex items-center gap-1 w-full px-2 py-1 border border-border rounded bg-card cursor-pointer text-[10px] font-semibold text-text-secondary hover:border-border-strong hover:shadow-sm transition-all"
+            onClick={() => hasPsets && setOpen(o => !o)}
+            disabled={!hasPsets}
+            className={cn(
+              'flex items-center gap-1 w-full px-2 py-1 border border-border rounded bg-card text-[10px] font-semibold text-text-secondary transition-all',
+              hasPsets
+                ? 'cursor-pointer hover:border-border-strong hover:shadow-sm'
+                : 'cursor-default opacity-60',
+            )}
           >
             <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-left">
-              {activeName}
+              {activeName ?? 'No property sets'}
             </span>
             <span className="text-[8.5px] font-semibold text-text-tertiary bg-surface-muted px-1 rounded-[3px] leading-[15px] flex-shrink-0">
               {propCount}
             </span>
-            <ChevronDown className={cn('w-2.5 h-2.5 text-text-tertiary flex-shrink-0 transition-transform', open && 'rotate-180')} />
+            <ChevronDown className={cn('w-2.5 h-2.5 text-text-tertiary flex-shrink-0 transition-transform', open && 'rotate-180', !hasPsets && 'opacity-40')} />
           </button>
 
           {/* Dropdown menu */}
-          {open && (
+          {open && hasPsets && (
             <div className="absolute top-full left-0 right-0 mt-0.5 z-10 bg-card border border-border rounded shadow-md overflow-hidden">
               {psetEntries.map(([name, props]) => (
                 <button
@@ -515,6 +521,11 @@ function PsetDropdown({ element }: { element: ElementProperties }) {
 
       {/* Active pset rows */}
       <div className="border-t border-black/[0.03]">
+        {!hasPsets && (
+          <div className="flex px-2.5 py-[3px] text-[10px] text-text-tertiary opacity-60 italic">
+            No property sets on this element
+          </div>
+        )}
         {Object.entries(activeProps).map(([key, val]) => (
           <div key={key} className="flex px-2.5 py-[2.5px] text-[10px]">
             <span className="flex-1 text-text-tertiary">{key}</span>
