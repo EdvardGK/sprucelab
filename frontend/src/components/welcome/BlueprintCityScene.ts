@@ -654,6 +654,13 @@ function setBuildingStatic(modules: BuildingModules) {
   modules.body.visible = true;
   modules.cornice.visible = true;
   modules.parapet.visible = true;
+  if (modules.roof) {
+    modules.roof.visible = true;
+    modules.roof.scale.y = 1;
+  }
+  if (modules.antenna) {
+    modules.antenna.visible = true;
+  }
   // Scaffolding elements hidden — the body occludes them when full-sized,
   // but explicitly hide so they aren't drawn at all.
   for (const c of modules.columns) c.visible = false;
