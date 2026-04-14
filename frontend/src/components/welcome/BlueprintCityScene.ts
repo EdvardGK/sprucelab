@@ -800,10 +800,9 @@ function placeZonedBuildings(
   // We'll pull specific cells per zone.
 
   // ---- CBD (NE quadrant, east of river) — sparse, Willis + Petronas are heroes ----
-  // Willis occupies (9, -3), Petronas occupies (9, 9).
-  // Supporting towers: one tall tower with chamfered cap and one with pyramid.
+  // Willis occupies (9, -3), Petronas occupies (9, 9). (9, 3) is a
+  // construction slot — see constructionPositions below.
   const cbd: Array<[number, number, number, number, number, RoofStyle, boolean]> = [
-    [9, 3, 4.2, 4.2, 12, 'chamfered', false],
     [9, 15, 4.0, 4.0, 14, 'pyramid', true],
     [15, 15, 3.8, 3.8, 10, 'flat', false],
   ];
@@ -814,11 +813,10 @@ function placeZonedBuildings(
   }
 
   // ---- Waterfront east (x=3 column, south of center) — mid-rise ----
-  // Opera is at (3, -9), so skip that cell.
+  // Opera is at (3, -9), (3, 15) is a construction slot.
   const waterfrontEast: Array<[number, number, number, number, number]> = [
     [3, 3, 4.0, 4.2, 9],
     [3, 9, 3.8, 4.2, 10],
-    [3, 15, 4.0, 4.0, 8],
     [3, -3, 3.8, 4.0, 9],
     [3, -15, 4.0, 4.0, 7],
   ];
@@ -841,13 +839,13 @@ function placeZonedBuildings(
   }
 
   // ---- Waterfront west (x=-3 column) — mid-rise, faces river east ----
+  // (-3, -15) is a construction slot.
   const waterfrontWest: Array<[number, number, number, number, number]> = [
     [-3, 15, 4.0, 4.0, 8],
     [-3, 9, 3.8, 4.2, 10],
     [-3, 3, 4.0, 4.2, 11],
     [-3, -3, 3.8, 4.2, 9],
     [-3, -9, 4.0, 4.0, 8],
-    [-3, -15, 4.0, 4.0, 7],
   ];
   for (let i = 0; i < waterfrontWest.length; i++) {
     const [cx, cz, w, d, h] = waterfrontWest[i];
@@ -855,9 +853,9 @@ function placeZonedBuildings(
   }
 
   // ---- Old Town (SW quadrant, west of river, south) — low tight blocks ----
+  // (-9, -9) is a construction slot.
   const oldTown: Array<[number, number, number, number, number, number | null]> = [
     [-9, -3, 4.0, 3.8, 5, null],
-    [-9, -9, 3.8, 4.0, 5.5, DISCIPLINE_COLORS[1]],
     [-9, -15, 4.0, 4.0, 4.5, null],
     [-15, -3, 4.0, 4.0, 5, null],
     [-15, -9, 3.8, 4.0, 4.8, DISCIPLINE_COLORS[1]],
@@ -1662,12 +1660,14 @@ export function initBlueprintCity(
     staticModules.push(modules);
   }
 
-  // --- Construction slots — 4 dedicated slots at grid-aligned positions ---
+  // --- Construction slots — 4 dedicated cells, one per quadrant, spread
+  //     so the camera orbit always has at least one visible. Heights are
+  //     matched to each zone (tall CBD, mid waterfront, low Old Town).
   const constructionPositions: Array<{ x: number; z: number; w: number; d: number; h: number }> = [
-    { x: 15, z: 9, w: 4.0, d: 4.0, h: 16 }, // CBD spare cell
-    { x: 15, z: 3, w: 4.0, d: 4.0, h: 14 }, // CBD south
-    { x: -15, z: -3, w: 4.0, d: 4.0, h: 6 }, // Old Town/residential edge
-    { x: -9, z: 15, w: 3.8, d: 4.0, h: 7 }, // near park edge
+    { x: 9, z: 3, w: 4.2, d: 4.2, h: 15 }, // CBD NE — tall tower
+    { x: 3, z: 15, w: 4.0, d: 4.0, h: 10 }, // Waterfront east — mid-rise
+    { x: -3, z: -15, w: 4.0, d: 4.0, h: 9 }, // Waterfront west — mid-rise
+    { x: -9, z: -9, w: 3.8, d: 4.0, h: 6 }, // Old Town SW — low block
   ];
 
   const constructionSlots: ConstructionSlot[] = [];
