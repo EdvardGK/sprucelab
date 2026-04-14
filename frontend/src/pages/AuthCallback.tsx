@@ -16,7 +16,7 @@ export default function AuthCallback() {
     <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base,#f7f8fa)]">
       <div className="text-center">
         <p className="text-sm text-[var(--text-muted,#6b7280)]">
-          {error ? 'Innlogging feilet' : 'Fullfører innlogging...'}
+          {error ? 'Sign-in failed' : 'Completing sign-in...'}
         </p>
         {error && (
           <button
