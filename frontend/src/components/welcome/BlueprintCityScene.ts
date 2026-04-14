@@ -693,7 +693,7 @@ function updateBuildingConstruction(modules: BuildingModules, t: number) {
 
   // Slabs 0.12 → 0.22, staggered
   for (let i = 0; i < modules.slabs.length; i++) {
-    const start = 0.12 + (i * 0.03);
+    const start = 0.12 + i * 0.03;
     const end = start + 0.03;
     modules.slabs[i].visible = t >= start;
     modules.slabs[i].scale.y = smoothstep(start, end, t);
@@ -711,6 +711,16 @@ function updateBuildingConstruction(modules: BuildingModules, t: number) {
   modules.parapet.visible = t >= 0.53;
   modules.parapet.scale.y = smoothstep(0.53, 0.56, t);
 
+  // Roof cap + antenna come on after the parapet
+  if (modules.roof) {
+    modules.roof.visible = t >= 0.56;
+    modules.roof.scale.y = smoothstep(0.56, 0.6, t);
+  }
+  if (modules.antenna) {
+    modules.antenna.visible = t >= 0.6;
+    modules.antenna.scale.y = smoothstep(0.6, 0.64, t);
+  }
+
   // At the end of the cycle (t > 0.95), everything goes invisible so the
   // reset can reposition without a visible jump.
   if (t > 0.95) {
@@ -718,6 +728,8 @@ function updateBuildingConstruction(modules: BuildingModules, t: number) {
     modules.body.visible = false;
     modules.cornice.visible = false;
     modules.parapet.visible = false;
+    if (modules.roof) modules.roof.visible = false;
+    if (modules.antenna) modules.antenna.visible = false;
     for (const c of modules.columns) c.visible = false;
     for (const s of modules.slabs) s.visible = false;
   }
