@@ -748,8 +748,8 @@ interface BuildingSpec {
   h: number;
   accentColor: number | null;
   seed: number;
-  roofStyle: RoofStyle;
-  antenna: boolean;
+  roofStyle?: RoofStyle;
+  antenna?: boolean;
 }
 
 function placeZonedBuildings(
