@@ -635,6 +635,8 @@ function buildGenericBuilding(
     corniceEdges,
     parapet,
     parapetEdges,
+    roof,
+    antenna,
     bodyHeight: safeBodyH,
   };
 }
