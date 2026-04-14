@@ -70,7 +70,7 @@ export default function Login() {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            Passord
+            Password
           </button>
           <button
             type="button"
