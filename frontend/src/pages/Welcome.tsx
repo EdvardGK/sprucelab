@@ -129,62 +129,64 @@ export default function Welcome() {
             className="welcome-signout"
             onClick={() => signOut()}
           >
-            Logg ut
+            Sign out
           </button>
         </header>
 
         <main className="welcome-main">
           {isRejected ? (
             <section className="welcome-panel">
-              <div className="welcome-tag">Søknad · Ikke godkjent</div>
-              <h1 className="welcome-heading">Søknaden din ble ikke godkjent</h1>
+              <div className="welcome-tag">Application · Not approved</div>
+              <h1 className="welcome-heading">Your application wasn't approved</h1>
               <p className="welcome-lede">
-                Takk for interessen i Sprucelab. Dersom du mener dette er en feil,
-                ta kontakt på <em>hei@sprucelab.io</em> så ser vi på saken.
+                Thanks for your interest in Sprucelab. If you think this is a
+                mistake, reach out at <em>hi@sprucelab.io</em> and we'll take
+                another look.
               </p>
             </section>
           ) : (
             <section className="welcome-panel">
-              <div className="welcome-tag">Beta · Invitasjonsbasert</div>
+              <div className="welcome-tag">Beta · Invitation only</div>
               <h1 className="welcome-heading">
-                Takk{fornavn ? `, ${fornavn}` : ''}.
+                Thanks{fornavn ? `, ${fornavn}` : ''}.
               </h1>
               <p className="welcome-lede">
-                Sprucelab er i lukket beta. Vi åpner tilgang manuelt for hver konto
-                de første ukene — så vi får møte deg, ikke bare e-posten din.
+                Sprucelab is in closed beta. We're opening access manually for
+                each account during the first weeks — so we get to meet you,
+                not just your email address.
               </p>
 
               <ol className="welcome-timeline">
                 <li className="welcome-step done">
                   <span className="welcome-step-dot" aria-hidden="true" />
-                  <span className="welcome-step-label">Registrert</span>
+                  <span className="welcome-step-label">Registered</span>
                   <span className="welcome-step-meta">{formatTimestamp(registeredAt)}</span>
                 </li>
                 <li className="welcome-step current">
                   <span className="welcome-step-dot" aria-hidden="true" />
-                  <span className="welcome-step-label">Søknad til godkjenning</span>
-                  <span className="welcome-step-meta">Vi vurderer nå</span>
+                  <span className="welcome-step-label">Under review</span>
+                  <span className="welcome-step-meta">Reviewing now</span>
                 </li>
                 <li className="welcome-step">
                   <span className="welcome-step-dot" aria-hidden="true" />
-                  <span className="welcome-step-label">Tilgang åpnes</span>
-                  <span className="welcome-step-meta">Siden laster automatisk</span>
+                  <span className="welcome-step-label">Access granted</span>
+                  <span className="welcome-step-meta">Page refreshes automatically</span>
                 </li>
                 <li className="welcome-step">
                   <span className="welcome-step-dot" aria-hidden="true" />
-                  <span className="welcome-step-label">Første innlogging</span>
-                  <span className="welcome-step-meta">Kom i gang</span>
+                  <span className="welcome-step-label">First sign-in</span>
+                  <span className="welcome-step-meta">Get started</span>
                 </li>
               </ol>
 
               <details className="welcome-more">
                 <summary className="welcome-more-summary">
-                  Fortell oss hva du vil bruke Sprucelab til
+                  Tell us what you'd use Sprucelab for
                 </summary>
                 <form className="welcome-form" onSubmit={handleSave}>
                   <div className="welcome-field">
                     <label className="welcome-field-label" htmlFor="welcome-role">
-                      Rolle
+                      Role
                     </label>
                     <input
                       id="welcome-role"
@@ -192,21 +194,21 @@ export default function Welcome() {
                       className="welcome-input"
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
-                      placeholder="BIM-koordinator, prosjektleder, …"
+                      placeholder="BIM coordinator, project lead, …"
                       autoComplete="organization-title"
                     />
                   </div>
 
                   <div className="welcome-field">
                     <label className="welcome-field-label" htmlFor="welcome-usecase">
-                      Bruksområde
+                      Use case
                     </label>
                     <textarea
                       id="welcome-usecase"
                       className="welcome-textarea"
                       value={useCase}
                       onChange={(e) => setUseCase(e.target.value)}
-                      placeholder="Hvilke IFC-modeller jobber du med? Hva håper du Sprucelab løser?"
+                      placeholder="What IFC models are you working with? What do you hope Sprucelab solves for you?"
                       rows={3}
                     />
                   </div>
@@ -217,9 +219,9 @@ export default function Welcome() {
                       className="welcome-submit"
                       disabled={saveProfile.isPending}
                     >
-                      {saveProfile.isPending ? 'Lagrer…' : 'Lagre notat'}
+                      {saveProfile.isPending ? 'Saving…' : 'Save note'}
                     </button>
-                    {saved && <span className="welcome-saved">Lagret</span>}
+                    {saved && <span className="welcome-saved">Saved</span>}
                   </div>
                 </form>
               </details>
@@ -230,7 +232,7 @@ export default function Welcome() {
         <footer className="welcome-footer">
           <div className="welcome-meta">
             <span>{emailDisplay}</span>
-            <span>{isLoading ? 'Status: henter…' : `Kø-ID · ${me?.profile?.supabase_id?.slice(0, 8) ?? '—'}`}</span>
+            <span>{isLoading ? 'Status: fetching…' : `Queue ID · ${me?.profile?.supabase_id?.slice(0, 8) ?? '—'}`}</span>
           </div>
           <div className="welcome-coords">
             <div>sprucelab.io / welcome</div>
