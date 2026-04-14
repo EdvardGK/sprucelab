@@ -752,15 +752,17 @@ interface BuildingSpec {
   antenna?: boolean;
 }
 
+/**
+ * Zone-based building placement on a proper grid.
+ * Grid cell centers are at x,z ∈ {-15, -9, -3, 3, 9, 15}.
+ * The center column (x=0) is reserved for the river.
+ * Each cell is ~5 units wide with ~1 unit of street margin.
+ */
 function placeZonedBuildings(
-  occupied: Array<{ x: number; z: number; w: number; d: number }>,
-  parkCenter: { x: number; z: number },
-  parkW: number,
-  parkD: number,
-  spacing: number
+  occupied: Array<{ x: number; z: number; w: number; d: number }>
 ): BuildingSpec[] {
   const specs: BuildingSpec[] = [];
-  const CLEARANCE = 0.8;
+  const CLEARANCE = 0.5;
 
   const tryPlace = (
     cx: number,
@@ -769,7 +771,9 @@ function placeZonedBuildings(
     d: number,
     h: number,
     accentColor: number | null,
-    seedBase: number
+    seedBase: number,
+    roofStyle: RoofStyle = 'flat',
+    antenna = false
   ) => {
     const clashes = occupied.some((o) => {
       const dx = Math.abs(cx - o.x);
@@ -780,68 +784,103 @@ function placeZonedBuildings(
       );
     });
     if (clashes) return false;
-    if (
-      Math.abs(cx - parkCenter.x) < parkW * 0.55 &&
-      Math.abs(cz - parkCenter.z) < parkD * 0.55
-    ) {
-      return false;
-    }
     occupied.push({ x: cx, z: cz, w, d });
-    specs.push({ x: cx, z: cz, w, d, h, accentColor, seed: seedBase });
+    specs.push({
+      x: cx,
+      z: cz,
+      w,
+      d,
+      h,
+      accentColor,
+      seed: seedBase,
+      roofStyle,
+      antenna,
+    });
     return true;
   };
 
-  // ---- CBD (NE quadrant) — tall towers near Barcode ----
-  const cbdPositions: Array<[number, number, number, number, number]> = [
-    [spacing * 1.2, spacing * 2.0, 3.2, 3.2, 16],
-    [spacing * 0.6, spacing * 2.2, 2.8, 3.0, 18],
-    [spacing * 0.2, spacing * 1.4, 3.4, 3.0, 14],
-    [spacing * 0.8, spacing * 1.0, 2.6, 2.6, 19],
-    [spacing * 2.2, spacing * 0.6, 3.2, 3.2, 13],
+  // Cell centers along each axis. x=0 is excluded (river).
+  // We'll pull specific cells per zone.
+
+  // ---- CBD (NE quadrant, east of river) — tall towers ----
+  // East column cells: x=9, x=15. Z range: 3, 9, 15.
+  // Barcode is at (15, 6), so skip x=15 z=3..9. Use x=9 column heavily.
+  const cbd: Array<[number, number, number, number, number, RoofStyle, boolean]> = [
+    [9, 3, 4.2, 4.2, 13, 'flat', false],
+    [9, 9, 4.0, 4.0, 17, 'chamfered', true],
+    [9, 15, 4.2, 4.0, 15, 'flat', true],
+    [15, 15, 3.8, 3.8, 12, 'pyramid', false],
   ];
-  for (let i = 0; i < cbdPositions.length; i++) {
-    const [cx, cz, w, d, h] = cbdPositions[i];
-    const accent = i % 3 === 0 ? DISCIPLINE_COLORS[0] : null;
-    tryPlace(cx, cz, w, d, h, accent, 100 + i);
+  for (let i = 0; i < cbd.length; i++) {
+    const [cx, cz, w, d, h, roof, ant] = cbd[i];
+    const accent = i === 1 ? DISCIPLINE_COLORS[3] : null;
+    tryPlace(cx, cz, w, d, h, accent, 100 + i, roof, ant);
   }
 
-  // ---- Civic (SE quadrant) — wide low-rise civic blocks beside the Opera ----
-  const civicPositions: Array<[number, number, number, number, number]> = [
-    [spacing * 2.0, -spacing * 0.6, 4.2, 3.8, 5.5],
-    [spacing * 1.2, -spacing * 0.4, 3.6, 3.2, 6.5],
-    [spacing * 0.4, -spacing * 0.8, 3.2, 3.0, 5.0],
+  // ---- Waterfront east (x=3 column, south of center) — mid-rise ----
+  // Opera is at (3, -9), so skip that cell.
+  const waterfrontEast: Array<[number, number, number, number, number]> = [
+    [3, 3, 4.0, 4.2, 9],
+    [3, 9, 3.8, 4.2, 10],
+    [3, 15, 4.0, 4.0, 8],
+    [3, -3, 3.8, 4.0, 9],
+    [3, -15, 4.0, 4.0, 7],
   ];
-  for (let i = 0; i < civicPositions.length; i++) {
-    const [cx, cz, w, d, h] = civicPositions[i];
+  for (let i = 0; i < waterfrontEast.length; i++) {
+    const [cx, cz, w, d, h] = waterfrontEast[i];
     tryPlace(cx, cz, w, d, h, null, 200 + i);
   }
 
-  // ---- Old Town (SW quadrant) — tight cluster of low blocks ----
+  // ---- Civic (SE quadrant, east of river, south) — wide low-rise ----
+  const civic: Array<[number, number, number, number, number]> = [
+    [9, -3, 4.2, 4.2, 6],
+    [9, -9, 4.2, 4.2, 6.5],
+    [9, -15, 4.0, 4.0, 5.5],
+    [15, -9, 4.0, 4.0, 5],
+    [15, -3, 3.8, 4.0, 6],
+  ];
+  for (let i = 0; i < civic.length; i++) {
+    const [cx, cz, w, d, h] = civic[i];
+    tryPlace(cx, cz, w, d, h, null, 300 + i);
+  }
+
+  // ---- Waterfront west (x=-3 column) — mid-rise, faces river east ----
+  const waterfrontWest: Array<[number, number, number, number, number]> = [
+    [-3, 15, 4.0, 4.0, 8],
+    [-3, 9, 3.8, 4.2, 10],
+    [-3, 3, 4.0, 4.2, 11],
+    [-3, -3, 3.8, 4.2, 9],
+    [-3, -9, 4.0, 4.0, 8],
+    [-3, -15, 4.0, 4.0, 7],
+  ];
+  for (let i = 0; i < waterfrontWest.length; i++) {
+    const [cx, cz, w, d, h] = waterfrontWest[i];
+    tryPlace(cx, cz, w, d, h, null, 400 + i);
+  }
+
+  // ---- Old Town (SW quadrant, west of river, south) — low tight blocks ----
   const oldTown: Array<[number, number, number, number, number, number | null]> = [
-    [-spacing * 0.4, -spacing * 1.4, 2.8, 2.6, 4.2, null],
-    [-spacing * 1.1, -spacing * 1.6, 2.6, 2.4, 3.8, DISCIPLINE_COLORS[1]],
-    [-spacing * 1.8, -spacing * 1.2, 2.8, 2.8, 4.5, null],
-    [-spacing * 0.6, -spacing * 2.2, 3.0, 2.6, 3.6, null],
-    [-spacing * 1.4, -spacing * 2.3, 2.6, 2.4, 4.4, null],
-    [-spacing * 2.1, -spacing * 1.9, 2.8, 2.8, 3.9, DISCIPLINE_COLORS[1]],
-    [-spacing * 0.2, -spacing * 2.6, 2.4, 2.4, 4.0, null],
+    [-9, -3, 4.0, 3.8, 5, null],
+    [-9, -9, 3.8, 4.0, 5.5, DISCIPLINE_COLORS[1]],
+    [-9, -15, 4.0, 4.0, 4.5, null],
+    [-15, -3, 4.0, 4.0, 5, null],
+    [-15, -9, 3.8, 4.0, 4.8, DISCIPLINE_COLORS[1]],
+    [-15, -15, 4.0, 4.0, 5.2, null],
   ];
   for (let i = 0; i < oldTown.length; i++) {
     const [cx, cz, w, d, h, accent] = oldTown[i];
-    tryPlace(cx, cz, w, d, h, accent, 300 + i);
+    tryPlace(cx, cz, w, d, h, accent, 500 + i);
   }
 
-  // ---- Residential ring around the park (NW quadrant, outside the park) ----
+  // ---- Residential ring around park (NW quadrant) ----
+  // Park occupies x=-15,-9 × z=9,15. These are the cells not in the park.
   const residential: Array<[number, number, number, number, number]> = [
-    [-spacing * 2.6, -spacing * 0.4, 2.6, 2.6, 5.5],
-    [-spacing * 2.8, spacing * 0.6, 2.8, 2.6, 5.0],
-    [-spacing * 0.6, spacing * 2.4, 2.6, 2.4, 5.8],
-    [-spacing * 1.4, spacing * 2.6, 2.8, 2.6, 5.2],
-    [-spacing * 2.2, spacing * 2.5, 2.6, 2.4, 4.8],
+    [-9, 3, 3.8, 4.0, 6.5],
+    [-15, 3, 4.0, 4.0, 5.5],
   ];
   for (let i = 0; i < residential.length; i++) {
     const [cx, cz, w, d, h] = residential[i];
-    tryPlace(cx, cz, w, d, h, null, 400 + i);
+    tryPlace(cx, cz, w, d, h, null, 600 + i);
   }
 
   return specs;
