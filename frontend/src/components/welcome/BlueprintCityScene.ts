@@ -971,12 +971,6 @@ export function initBlueprintCity(
   // Cell-aligned coordinate system
   // Cell centers on each axis: -15, -9, -3, 3, 9, 15  (6 cells per axis)
   // Streets between cells at: -18, -12, -6, 0, 6, 12, 18
-  // River replaces the x=0 street — Bangkok-style waterfront runs N-S
-  const CELL_CENTERS = [-15, -9, -3, 3, 9, 15];
-  const RIVER_X = 0;
-  const RIVER_HALF_WIDTH = 1.4;
-  const RIVER_Z_MIN = -blockExtent;
-  const RIVER_Z_MAX = blockExtent;
 
   // Park footprint — NW quadrant, 2×2 cells
   // Spans cells (x=-15, z=9), (x=-15, z=15), (x=-9, z=9), (x=-9, z=15)
@@ -984,32 +978,96 @@ export function initBlueprintCity(
   const parkW = 12;
   const parkD = 12;
 
-  // River mesh — opaque blue strip running N-S
-  const riverGeom = tracker.trackGeom(
-    new THREE.PlaneGeometry(RIVER_HALF_WIDTH * 2, RIVER_Z_MAX - RIVER_Z_MIN)
+  // River — S-curve through the center of the map, then wraps around the
+  // east edge forming one full side. Implemented as a CatmullRomCurve3
+  // sampled into a flat ribbon mesh on the ground plane.
+  const RIVER_HALF_WIDTH = 1.5;
+  const riverCurve = new THREE.CatmullRomCurve3(
+    [
+      new THREE.Vector3(-18, 0, 18), // enters from NW corner
+      new THREE.Vector3(-6, 0, 12), // bend 1
+      new THREE.Vector3(6, 0, 3), // S crossover (middle)
+      new THREE.Vector3(-6, 0, -6), // bend 2
+      new THREE.Vector3(6, 0, -15), // exit S, heading to SE
+      new THREE.Vector3(18, 0, -18), // enter east-edge wrap
+      new THREE.Vector3(20, 0, -6), // along east edge
+      new THREE.Vector3(20, 0, 6), // continue east edge
+      new THREE.Vector3(18, 0, 18), // end at NE corner
+    ],
+    false,
+    'catmullrom',
+    0.5
   );
+
+  const RIVER_SAMPLES = 120;
+  const riverPoints = riverCurve.getSpacedPoints(RIVER_SAMPLES);
+
+  const riverVerts: number[] = [];
+  const riverIdx: number[] = [];
+  for (let i = 0; i <= RIVER_SAMPLES; i++) {
+    const pt = riverPoints[i];
+    const t = i / RIVER_SAMPLES;
+    const tan = riverCurve.getTangent(t);
+    // Perpendicular in the XZ plane, rotated 90° CCW
+    const perp = new THREE.Vector3(-tan.z, 0, tan.x).normalize();
+    const l = pt.clone().addScaledVector(perp, RIVER_HALF_WIDTH);
+    const r = pt.clone().addScaledVector(perp, -RIVER_HALF_WIDTH);
+    riverVerts.push(l.x, 0.003, l.z);
+    riverVerts.push(r.x, 0.003, r.z);
+    if (i > 0) {
+      const a = (i - 1) * 2;
+      const b = (i - 1) * 2 + 1;
+      const c = i * 2;
+      const d = i * 2 + 1;
+      riverIdx.push(a, b, c);
+      riverIdx.push(b, d, c);
+    }
+  }
+  const riverGeom = tracker.trackGeom(new THREE.BufferGeometry());
+  riverGeom.setAttribute('position', new THREE.Float32BufferAttribute(riverVerts, 3));
+  riverGeom.setIndex(riverIdx);
+  riverGeom.computeVertexNormals();
+
   const riverMat = tracker.trackMat(
-    new THREE.MeshBasicMaterial({ color: palette.water, transparent: false })
+    new THREE.MeshBasicMaterial({
+      color: palette.water,
+      transparent: false,
+      side: THREE.DoubleSide,
+    })
   );
   const river = new THREE.Mesh(riverGeom, riverMat);
-  river.rotation.x = -Math.PI / 2;
-  river.position.set(RIVER_X, 0.003, (RIVER_Z_MIN + RIVER_Z_MAX) / 2);
   scene.add(river);
 
-  // River edge lines — two ink stripes along the banks
-  const riverEdgeMat = tracker.trackMat(
+  // Bank outline — draw two polylines along the left and right edges
+  const bankLeftPts: number[] = [];
+  const bankRightPts: number[] = [];
+  for (let i = 0; i <= RIVER_SAMPLES; i++) {
+    const pt = riverPoints[i];
+    const t = i / RIVER_SAMPLES;
+    const tan = riverCurve.getTangent(t);
+    const perp = new THREE.Vector3(-tan.z, 0, tan.x).normalize();
+    const l = pt.clone().addScaledVector(perp, RIVER_HALF_WIDTH);
+    const r = pt.clone().addScaledVector(perp, -RIVER_HALF_WIDTH);
+    bankLeftPts.push(l.x, 0.005, l.z);
+    bankRightPts.push(r.x, 0.005, r.z);
+  }
+  const bankMat = tracker.trackMat(
     new THREE.LineBasicMaterial({ color: palette.edge, transparent: true, opacity: 0.6 })
   );
-  const riverEdgeGeom = tracker.trackGeom(new THREE.BufferGeometry());
-  const riverEdgeVerts = new Float32Array([
-    RIVER_X - RIVER_HALF_WIDTH, 0.004, RIVER_Z_MIN,
-    RIVER_X - RIVER_HALF_WIDTH, 0.004, RIVER_Z_MAX,
-    RIVER_X + RIVER_HALF_WIDTH, 0.004, RIVER_Z_MIN,
-    RIVER_X + RIVER_HALF_WIDTH, 0.004, RIVER_Z_MAX,
-  ]);
-  riverEdgeGeom.setAttribute('position', new THREE.BufferAttribute(riverEdgeVerts, 3));
-  const riverEdges = new THREE.LineSegments(riverEdgeGeom, riverEdgeMat);
-  scene.add(riverEdges);
+  const bankLeftGeom = tracker.trackGeom(new THREE.BufferGeometry());
+  bankLeftGeom.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(bankLeftPts, 3)
+  );
+  const bankLeft = new THREE.Line(bankLeftGeom, bankMat);
+  scene.add(bankLeft);
+  const bankRightGeom = tracker.trackGeom(new THREE.BufferGeometry());
+  bankRightGeom.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(bankRightPts, 3)
+  );
+  const bankRight = new THREE.Line(bankRightGeom, bankMat);
+  scene.add(bankRight);
 
   // --- Streets — grid-aligned, river-aware, park-aware ---
   const streetGroup = new THREE.Group();
