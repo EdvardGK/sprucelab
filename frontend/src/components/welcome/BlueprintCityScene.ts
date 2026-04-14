@@ -441,6 +441,138 @@ function buildGenericBuilding(
   parapet.add(parapetEdges);
   group.add(parapet);
 
+  // Roof cap — additional top element based on roofStyle.
+  // "flat" leaves parapet as the final element and adds nothing.
+  let roof: THREE.Mesh | null = null;
+  const roofBaseY = plinthH + safeBodyH + corniceH + parapetH;
+  if (roofStyle === 'pyramid') {
+    // 4-sided pyramid capping the building, slightly wider than body
+    const capR = Math.min(w, d) * 0.55;
+    const capH = Math.min(w, d) * 0.55;
+    const roofGeom = tracker.trackGeom(new THREE.ConeGeometry(capR, capH, 4));
+    roofGeom.rotateY(Math.PI / 4);
+    roofGeom.translate(0, roofBaseY + capH / 2, 0);
+    roof = new THREE.Mesh(roofGeom, mats.stoneMat);
+    const re = new THREE.LineSegments(
+      tracker.trackGeom(new THREE.EdgesGeometry(roofGeom)),
+      mats.edgeMat
+    );
+    roof.add(re);
+    group.add(roof);
+  } else if (roofStyle === 'chamfered') {
+    // 4-sided frustum — wider at base, narrower at top, crisp low-poly
+    const bottomR = Math.min(w, d) * 0.6;
+    const topR = Math.min(w, d) * 0.32;
+    const capH = Math.min(w, d) * 0.35;
+    const roofGeom = tracker.trackGeom(
+      new THREE.CylinderGeometry(topR, bottomR, capH, 4)
+    );
+    roofGeom.rotateY(Math.PI / 4);
+    roofGeom.translate(0, roofBaseY + capH / 2, 0);
+    roof = new THREE.Mesh(roofGeom, mats.stoneMat);
+    const re = new THREE.LineSegments(
+      tracker.trackGeom(new THREE.EdgesGeometry(roofGeom)),
+      mats.edgeMat
+    );
+    roof.add(re);
+    group.add(roof);
+  } else if (roofStyle === 'slanted') {
+    // One-sided pitched roof — box with two top verts lowered. Easier:
+    // use a pentagon cross-section extruded.
+    const capH = Math.min(w, d) * 0.45;
+    const shape = new THREE.Shape();
+    shape.moveTo(-w / 2, 0);
+    shape.lineTo(w / 2, 0);
+    shape.lineTo(w / 2, capH);
+    shape.lineTo(-w / 2, capH * 0.2);
+    shape.lineTo(-w / 2, 0);
+    const roofGeom = tracker.trackGeom(
+      new THREE.ExtrudeGeometry(shape, {
+        depth: d,
+        bevelEnabled: false,
+        curveSegments: 1,
+      })
+    );
+    roofGeom.translate(0, roofBaseY, -d / 2);
+    roof = new THREE.Mesh(roofGeom, mats.stoneMat);
+    const re = new THREE.LineSegments(
+      tracker.trackGeom(new THREE.EdgesGeometry(roofGeom)),
+      mats.edgeMat
+    );
+    roof.add(re);
+    group.add(roof);
+  } else if (roofStyle === 'diamond-cap') {
+    // Small box raised diamond — like a cupola. Thin vertical diamond.
+    const capR = Math.min(w, d) * 0.25;
+    const capH = Math.min(w, d) * 0.6;
+    // Octahedron: ConeGeometry(r, h, 4) back to back
+    const lower = tracker.trackGeom(new THREE.ConeGeometry(capR, capH / 2, 4));
+    lower.rotateY(Math.PI / 4);
+    lower.rotateZ(Math.PI);
+    lower.translate(0, roofBaseY + capH / 4, 0);
+    const upper = tracker.trackGeom(new THREE.ConeGeometry(capR, capH / 2, 4));
+    upper.rotateY(Math.PI / 4);
+    upper.translate(0, roofBaseY + (capH * 3) / 4, 0);
+
+    const diamondGroup = new THREE.Group();
+    const lm = new THREE.Mesh(lower, mats.stoneMat);
+    lm.add(
+      new THREE.LineSegments(
+        tracker.trackGeom(new THREE.EdgesGeometry(lower)),
+        mats.edgeMat
+      )
+    );
+    const um = new THREE.Mesh(upper, mats.stoneMat);
+    um.add(
+      new THREE.LineSegments(
+        tracker.trackGeom(new THREE.EdgesGeometry(upper)),
+        mats.edgeMat
+      )
+    );
+    diamondGroup.add(lm);
+    diamondGroup.add(um);
+    // We need to return a single Mesh for the `roof` field; pack group
+    // inside a dummy parent mesh for the caller.
+    roof = lm; // use lower mesh as handle; upper stays grouped
+    group.add(diamondGroup);
+  }
+
+  // Antenna — thin cylinder + tip ball on top of roof, if requested
+  let antenna: THREE.Group | null = null;
+  if (antennaMat) {
+    antenna = new THREE.Group();
+    const mastH = 1.6;
+    const mastGeom = tracker.trackGeom(new THREE.CylinderGeometry(0.04, 0.04, mastH, 5));
+    mastGeom.translate(0, mastH / 2, 0);
+    const mast = new THREE.Mesh(mastGeom, antennaMat);
+
+    // Where does the antenna base sit? Above the roof or parapet.
+    let mastBaseY = roofBaseY;
+    if (roofStyle === 'pyramid' || roofStyle === 'chamfered') {
+      mastBaseY += Math.min(w, d) * 0.45;
+    } else if (roofStyle === 'slanted') {
+      mastBaseY += Math.min(w, d) * 0.3;
+    } else if (roofStyle === 'diamond-cap') {
+      mastBaseY += Math.min(w, d) * 0.65;
+    }
+    antenna.position.y = mastBaseY;
+    antenna.add(mast);
+
+    // Crossbar — thin horizontal bar near the top
+    const crossGeom = tracker.trackGeom(new THREE.BoxGeometry(0.45, 0.05, 0.05));
+    crossGeom.translate(0, mastH * 0.7, 0);
+    const cross = new THREE.Mesh(crossGeom, antennaMat);
+    antenna.add(cross);
+
+    // Tip ball
+    const tipGeom = tracker.trackGeom(new THREE.SphereGeometry(0.07, 6, 4));
+    tipGeom.translate(0, mastH + 0.1, 0);
+    const tip = new THREE.Mesh(tipGeom, antennaMat);
+    antenna.add(tip);
+
+    group.add(antenna);
+  }
+
   // 4 corner columns + 3 floor slabs — used only by construction slots.
   // Built but hidden for static buildings.
   const columns: THREE.Mesh[] = [];
