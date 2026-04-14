@@ -1048,9 +1048,6 @@ export function initBlueprintCity(
 
   // --- Park + pond ---
   const parkGroup = new THREE.Group();
-  const parkCenter = new THREE.Vector3(-spacing * 1.9, 0, -spacing * 1.9);
-  const parkW = spacing * 2.6;
-  const parkD = spacing * 2.6;
 
   const parkGeometry = tracker.trackGeom(new THREE.PlaneGeometry(parkW, parkD));
   const parkMaterial = tracker.trackMat(
