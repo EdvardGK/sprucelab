@@ -353,7 +353,9 @@ function buildGenericBuilding(
   d: number,
   h: number,
   mats: BuildingMaterials,
-  tracker: DisposalTracker
+  tracker: DisposalTracker,
+  roofStyle: RoofStyle = 'flat',
+  antennaMat: THREE.MeshStandardMaterial | null = null
 ): BuildingModules {
   const group = new THREE.Group();
 
