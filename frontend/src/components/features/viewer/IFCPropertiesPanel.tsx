@@ -548,8 +548,8 @@ function PsetDropdown({ element }: { element: ElementProperties }) {
 
 function MaterialLayers({ element }: { element: ElementProperties }) {
   const { t } = useTranslation();
-  const materials = element.materials;
-  if (!materials || materials.length === 0) return null;
+  const materials = element.materials ?? [];
+  const hasMaterials = materials.length > 0;
 
   const totalThickness = materials.reduce((sum, m) => sum + (m.thickness ?? 0), 0);
   const epdLinked = materials.filter(m => m.hasEpd).length;
@@ -557,6 +557,19 @@ function MaterialLayers({ element }: { element: ElementProperties }) {
     : element.representativeUnit === 'length' ? 'm'
     : element.representativeUnit === 'volume' ? 'm³'
     : 'm²'; // default for walls
+
+  if (!hasMaterials) {
+    return (
+      <div className="px-2.5 py-1.5 pb-2.5">
+        <div className="text-[8.5px] font-bold uppercase tracking-wider text-text-tertiary mb-[5px]">
+          {t('viewer.properties.materialLayers')}
+        </div>
+        <div className="border border-dashed border-border rounded px-[7px] py-2 text-[10px] text-text-tertiary italic opacity-60">
+          No material layers defined
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-2.5 py-1.5 pb-2.5">
