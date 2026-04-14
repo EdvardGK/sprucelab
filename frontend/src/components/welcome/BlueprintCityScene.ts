@@ -931,6 +931,49 @@ export function initBlueprintCity(
   const halfAxis = (axisCount - 1) / 2;
   const blockExtent = halfAxis * spacing + spacing * 0.5;
 
+  // Cell-aligned coordinate system
+  // Cell centers on each axis: -15, -9, -3, 3, 9, 15  (6 cells per axis)
+  // Streets between cells at: -18, -12, -6, 0, 6, 12, 18
+  // River replaces the x=0 street — Bangkok-style waterfront runs N-S
+  const CELL_CENTERS = [-15, -9, -3, 3, 9, 15];
+  const RIVER_X = 0;
+  const RIVER_HALF_WIDTH = 1.4;
+  const RIVER_Z_MIN = -blockExtent;
+  const RIVER_Z_MAX = blockExtent;
+
+  // Park footprint — NW quadrant, 2×2 cells
+  // Spans cells (x=-15, z=9), (x=-15, z=15), (x=-9, z=9), (x=-9, z=15)
+  const parkCenter = new THREE.Vector3(-12, 0, 12);
+  const parkW = 12;
+  const parkD = 12;
+
+  // River mesh — opaque blue strip running N-S
+  const riverGeom = tracker.trackGeom(
+    new THREE.PlaneGeometry(RIVER_HALF_WIDTH * 2, RIVER_Z_MAX - RIVER_Z_MIN)
+  );
+  const riverMat = tracker.trackMat(
+    new THREE.MeshBasicMaterial({ color: palette.water, transparent: false })
+  );
+  const river = new THREE.Mesh(riverGeom, riverMat);
+  river.rotation.x = -Math.PI / 2;
+  river.position.set(RIVER_X, 0.003, (RIVER_Z_MIN + RIVER_Z_MAX) / 2);
+  scene.add(river);
+
+  // River edge lines — two ink stripes along the banks
+  const riverEdgeMat = tracker.trackMat(
+    new THREE.LineBasicMaterial({ color: palette.edge, transparent: true, opacity: 0.6 })
+  );
+  const riverEdgeGeom = tracker.trackGeom(new THREE.BufferGeometry());
+  const riverEdgeVerts = new Float32Array([
+    RIVER_X - RIVER_HALF_WIDTH, 0.004, RIVER_Z_MIN,
+    RIVER_X - RIVER_HALF_WIDTH, 0.004, RIVER_Z_MAX,
+    RIVER_X + RIVER_HALF_WIDTH, 0.004, RIVER_Z_MIN,
+    RIVER_X + RIVER_HALF_WIDTH, 0.004, RIVER_Z_MAX,
+  ]);
+  riverEdgeGeom.setAttribute('position', new THREE.BufferAttribute(riverEdgeVerts, 3));
+  const riverEdges = new THREE.LineSegments(riverEdgeGeom, riverEdgeMat);
+  scene.add(riverEdges);
+
   // --- Streets / boulevards ---
   const streetGroup = new THREE.Group();
   const streetMat = tracker.trackMat(
