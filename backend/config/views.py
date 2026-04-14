@@ -2,7 +2,7 @@
 Root-level auth / identity / health views.
 """
 
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.db import connection
@@ -12,6 +12,7 @@ from apps.accounts.models import UserProfile
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([])  # Exempt from rate limiting so Railway health probes never fail
 def health_check(request):
     """Health check endpoint for Railway/load balancers."""
     db_ok = False
