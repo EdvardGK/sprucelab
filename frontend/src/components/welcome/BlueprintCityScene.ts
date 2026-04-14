@@ -1602,6 +1602,16 @@ export function initBlueprintCity(
   // --- Generic buildings — zoned static ---
   const buildingSpecs = placeZonedBuildings(occupied);
 
+  // Shared antenna material for buildings flagged with antenna=true
+  const genericAntennaMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: variant === 'night' ? 0x3a4160 : 0x2a2e40,
+      metalness: 0.1,
+      roughness: 0.6,
+      transparent: false,
+    })
+  );
+
   const buildingGroup = new THREE.Group();
   scene.add(buildingGroup);
   const staticModules: BuildingModules[] = [];
