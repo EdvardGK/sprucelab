@@ -122,10 +122,10 @@ export default function Login() {
             className="mt-1 w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending
-              ? 'Sender...'
+              ? 'Sending...'
               : mode === 'password'
-              ? 'Logg inn'
-              : 'Send magisk lenke'}
+              ? 'Sign in'
+              : 'Send magic link'}
           </button>
         </form>
 
