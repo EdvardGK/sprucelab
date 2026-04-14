@@ -1447,14 +1447,12 @@ export function initBlueprintCity(
     staticModules.push(modules);
   }
 
-  // --- Construction slots — 4 dedicated slots that rotate through curated positions ---
+  // --- Construction slots — 4 dedicated slots at grid-aligned positions ---
   const constructionPositions: Array<{ x: number; z: number; w: number; d: number; h: number }> = [
-    { x: -spacing * 0.2, z: spacing * 0.9, w: 3.0, d: 3.0, h: 12 }, // between CBD and center
-    { x: spacing * 1.6, z: spacing * 0.4, w: 3.2, d: 3.0, h: 14 }, // CBD south edge
-    { x: -spacing * 1.3, z: -spacing * 0.6, w: 2.8, d: 2.6, h: 8 }, // Old Town / residential
-    { x: -spacing * 0.1, z: -spacing * 0.6, w: 2.8, d: 2.6, h: 7 }, // centre south
-    { x: spacing * 0.4, z: -spacing * 2.6, w: 3.2, d: 3.0, h: 9 }, // civic edge
-    { x: -spacing * 2.6, z: spacing * 1.4, w: 2.6, d: 2.6, h: 6 }, // residential north
+    { x: 15, 'z': 9, w: 4.0, d: 4.0, h: 16 }, // CBD spare cell
+    { x: 15, 'z': 3, w: 4.0, d: 4.0, h: 14 }, // CBD south
+    { x: -15, 'z': -3, w: 4.0, d: 4.0, h: 6 }, // Old Town/residential edge
+    { x: -9, 'z': 15, w: 3.8, d: 4.0, h: 7 }, // near park edge
   ];
 
   const constructionSlots: ConstructionSlot[] = [];
