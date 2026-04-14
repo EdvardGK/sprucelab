@@ -984,18 +984,21 @@ export function initBlueprintCity(
   occupied.push({ x: parkCenter.x, z: parkCenter.z, w: parkW, d: parkD });
 
   // River — polyline of axis-aligned segments with 90° turns. Follows the
-  // street grid and forms an S through the city, then wraps around the
-  // east edge for one full side. Each segment renders as a flat plane and
-  // registers its footprint in `occupied` so buildings avoid it.
-  const RIVER_WIDTH = 2.6;
+  // street grid (waypoints on street positions, not cell centers) and
+  // forms an S through the city, then wraps around the east edge for one
+  // full side. Each segment renders as a wide flat plane and registers
+  // its footprint so buildings avoid it.
+  // Width 4 — meaningfully wider than streets (0.7) so it reads as water,
+  // not infrastructure.
+  const RIVER_WIDTH = 4;
   const riverWaypoints: Array<[number, number]> = [
-    [-18, 15], // enter NW, at street z=15
-    [0, 15], // east along z=15
-    [0, 3], // south along x=0
-    [-12, 3], // west along z=3
-    [-12, -9], // south along x=-12
-    [18, -9], // east along z=-9 (long traverse to east edge)
-    [18, 18], // north along x=18 (wraps east edge all the way to NE corner)
+    [-18, 12], // enter NW at street z=12
+    [0, 12], // east along z=12 street
+    [0, 0], // south along x=0 street
+    [-12, 0], // west along z=0 street
+    [-12, -12], // south along x=-12 street
+    [18, -12], // east along z=-12 street (long traverse)
+    [18, 18], // north along x=18 east edge (wraps full east side)
   ];
 
   const riverGroup = new THREE.Group();
