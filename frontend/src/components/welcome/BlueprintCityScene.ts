@@ -1,16 +1,25 @@
 import * as THREE from 'three';
 
 /**
- * Procedural "blueprint city" for the waitlist Welcome page.
+ * Procedural low-poly city for the Welcome page.
  *
- * A static line-drawn city on warm parchment: grid of building volumes with
- * street grid, scattered trees, a small water feature, and windows etched into
- * the facades. Most buildings are permanent; a small subset rises and fades on
- * long cycles so the scene feels alive without feeling busy. Slow orbital
- * camera drift, distance fog to hide edges, paused when the page is hidden.
+ * Two variants selected by the `variant` parameter:
+ *  - "day":   warm parchment background, cream opaque buildings, blue pond,
+ *             spruce forest, Oslo-inspired zoned layout.
+ *  - "night": dark navy sky, glowing cyan street-veins, lit windows via
+ *             emissiveMap, occasional lightning storm.
+ *
+ * Both variants share the same geometry and layout — only palette, lighting,
+ * and emissive details change. Slow orbital camera, distance fog, paused when
+ * the page is hidden.
  */
 
-// Sprucelab discipline palette (from docs/design-system.html)
+export type BlueprintCityVariant = 'day' | 'night';
+
+// ---------------------------------------------------------------------------
+// Palette + discipline colors
+// ---------------------------------------------------------------------------
+
 const DISCIPLINE_COLORS = [
   0x8b95b8, // ARK Lavender
   0xc5c97f, // RIB Lime
@@ -18,144 +27,675 @@ const DISCIPLINE_COLORS = [
   0x3a4160, // RIE Navy
 ];
 
-const INK = 0x21263a;
-const CREAM = 0xf7f3e4;
-const TREE_GREEN = 0x4ba27f;
-const WATER_BLUE = 0xa8b9c9;
-const PARK_GRASS = 0xc6d6a8;
-const PARK_GRASS_DARK = 0xa4b887;
-const STONE_WHITE = 0xece7d8;
-const WOOD_DARK = 0x4a3827;
-
-interface Building {
-  mesh: THREE.Mesh;
-  edges: THREE.LineSegments;
-  isDynamic: boolean;
-  birthTime: number;
-  cyclePeriod: number;
+interface Palette {
+  bg: THREE.Color | null;
+  ground: number;
+  buildingCream: number;
+  buildingNavy: number;
+  stone: number;
+  edge: number;
+  edgeOpacity: number;
+  wood: number;
+  roof: number;
+  grass: number;
+  grassDark: number;
+  water: number;
+  street: number;
+  streetOpacity: number;
+  streetBlending: THREE.Blending;
+  median: number;
+  fog: number;
+  fogNear: number;
+  fogFar: number;
+  ambient: number;
+  ambientIntensity: number;
+  key: number;
+  keyIntensity: number;
+  fill: number;
+  fillIntensity: number;
+  // Optional emissive layer for night windows + night landmarks
+  windowEmissive: boolean;
+  emissiveAmber: number;
+  emissiveCream: number;
+  emissiveBlue: number;
+  // Construction scaffolding highlight (lime by day, bright lime + emissive by night)
+  scaffold: number;
+  scaffoldEmissive: number;
 }
 
+const DAY_PALETTE: Palette = {
+  bg: null, // let CSS parchment show through
+  ground: 0xf5f0dd,
+  buildingCream: 0xf1ead5,
+  buildingNavy: 0x3a4160,
+  stone: 0xe0d9c1,
+  edge: 0x21263a,
+  edgeOpacity: 0.95,
+  wood: 0x4a3827,
+  roof: 0x2a1e12,
+  grass: 0xc6d6a8,
+  grassDark: 0xa4b887,
+  water: 0xa8b9c9,
+  street: 0x21263a,
+  streetOpacity: 0.28,
+  streetBlending: THREE.NormalBlending,
+  median: 0xc6d6a8,
+  fog: 0xfaf8f3,
+  fogNear: 62,
+  fogFar: 150,
+  ambient: 0xffffff,
+  ambientIntensity: 0.62,
+  key: 0xffffff,
+  keyIntensity: 0.7,
+  fill: 0xe8e1c9,
+  fillIntensity: 0.28,
+  windowEmissive: false,
+  emissiveAmber: 0x000000,
+  emissiveCream: 0x000000,
+  emissiveBlue: 0x000000,
+  scaffold: 0xc5c97f,
+  scaffoldEmissive: 0x000000,
+};
+
+const NIGHT_PALETTE: Palette = {
+  bg: new THREE.Color(0x0a0e1a),
+  ground: 0x14192b,
+  buildingCream: 0x1a1f33,
+  buildingNavy: 0x0f1322,
+  stone: 0x262d45,
+  edge: 0x5a6280,
+  edgeOpacity: 0.8,
+  wood: 0x1a1208,
+  roof: 0x080502,
+  grass: 0x1a2a1c,
+  grassDark: 0x111f14,
+  water: 0x1a3348,
+  street: 0x6fb8d9,
+  streetOpacity: 0.9,
+  streetBlending: THREE.AdditiveBlending,
+  median: 0x1a2a1c,
+  fog: 0x0a0e1a,
+  fogNear: 48,
+  fogFar: 120,
+  ambient: 0x6a7090,
+  ambientIntensity: 0.22,
+  key: 0xaab4d6,
+  keyIntensity: 0.28,
+  fill: 0x2a3156,
+  fillIntensity: 0.18,
+  windowEmissive: true,
+  emissiveAmber: 0xffc56b,
+  emissiveCream: 0xf7f3e4,
+  emissiveBlue: 0x6fb8d9,
+  scaffold: 0xc5c97f,
+  scaffoldEmissive: 0xc5c97f,
+};
+
+// ---------------------------------------------------------------------------
+// Ease helpers
+// ---------------------------------------------------------------------------
+
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-const easeInCubic = (t: number) => t * t * t;
+const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
+const smoothstep = (a: number, b: number, t: number) => {
+  if (b === a) return t < a ? 0 : 1;
+  const x = clamp01((t - a) / (b - a));
+  return x * x * (3 - 2 * x);
+};
+
+// ---------------------------------------------------------------------------
+// Deterministic PRNG — gives each building a stable "seed" for its lit-window
+// pattern so neighbors look different but the same building doesn't flicker
+// between frames.
+// ---------------------------------------------------------------------------
+
+function mulberry32(seed: number) {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = t;
+    r = Math.imul(r ^ (r >>> 15), r | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Window texture factories
+// ---------------------------------------------------------------------------
 
 /**
- * Build a reusable canvas texture that reads as "windows" when mapped onto a
- * building facade. Symmetric grid, no per-window randomness — the variation
- * comes from architectural features: a stone base band at the bottom, a
- * cornice band at the top, vertical pilasters at regular intervals, and a
- * central double-width window bay. The facade material multiplies its color
- * with this, so accent buildings still tint correctly.
+ * Returns a pure repeating window grid. No base/cornice/central-bay baked in
+ * (those live in geometry now, not texture). Tiles cleanly in both axes so
+ * tall buildings show more floors.
  */
-function makeWindowTexture(): THREE.Texture {
-  const size = 512;
+function makeWindowColorTexture(): THREE.Texture {
+  const size = 128;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (!ctx) return new THREE.CanvasTexture(canvas);
 
-  // Base facade tone
-  ctx.fillStyle = '#f7f3e4';
+  // Facade tone (will be multiplied by the material color)
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, size, size);
 
-  // Grid geometry — symmetric, no randomness per window
-  const cols = 8;
-  const rows = 10;
-  const baseBandH = size * 0.09; // stone base band at bottom
-  const cornineBandH = size * 0.06; // cornice band at top
-  const innerY0 = baseBandH;
-  const innerY1 = size - cornineBandH;
-  const innerH = innerY1 - innerY0;
+  // 4 cols × 5 rows symmetric grid
+  const cols = 4;
+  const rows = 5;
   const cellW = size / cols;
-  const cellH = innerH / rows;
+  const cellH = size / rows;
   const winW = cellW * 0.48;
-  const winH = cellH * 0.58;
+  const winH = cellH * 0.62;
 
-  // Draw the regular window grid
   ctx.fillStyle = '#21263a';
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const cellCx = c * cellW + cellW / 2;
-      const cellCy = innerY0 + r * cellH + cellH / 2;
-
-      // Central bay (cols 3 and 4) gets a taller double-height window
-      // every other floor — architectural rhythm trick
-      const isCentralBay = c === 3 || c === 4;
-      const rhythmRow = r % 3 === 0;
-      if (isCentralBay && rhythmRow) {
-        const tallH = winH * 1.3;
-        ctx.fillRect(cellCx - winW / 2, cellCy - tallH / 2, winW, tallH);
-        continue;
-      }
-
-      ctx.fillRect(cellCx - winW / 2, cellCy - winH / 2, winW, winH);
+      const cx = c * cellW + cellW / 2;
+      const cy = r * cellH + cellH / 2;
+      ctx.fillRect(cx - winW / 2, cy - winH / 2, winW, winH);
     }
   }
 
-  // Vertical pilasters — faint lighter stripes between every other column,
-  // giving the facade a regular rhythm
-  ctx.fillStyle = 'rgba(184, 170, 140, 0.18)';
+  // Faint pilaster stripes between every other column
+  ctx.fillStyle = 'rgba(33, 38, 58, 0.12)';
   for (let c = 1; c < cols; c += 2) {
-    const x = c * cellW - 2;
-    ctx.fillRect(x, innerY0, 4, innerH);
+    const x = c * cellW - 1;
+    ctx.fillRect(x, 0, 2, size);
   }
 
-  // Floor lines every 2 rows — faint horizontal ruling
-  ctx.strokeStyle = 'rgba(33, 38, 58, 0.22)';
+  // Floor lines every 2 rows
+  ctx.strokeStyle = 'rgba(33, 38, 58, 0.16)';
   ctx.lineWidth = 1;
   for (let r = 2; r < rows; r += 2) {
-    const y = innerY0 + r * cellH;
+    const y = r * cellH;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(size, y);
     ctx.stroke();
   }
 
-  // Stone base band — darker strip at the bottom with a shadow line on top
-  ctx.fillStyle = 'rgba(184, 170, 140, 0.35)';
-  ctx.fillRect(0, 0, size, baseBandH);
-  ctx.strokeStyle = 'rgba(33, 38, 58, 0.35)';
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(0, baseBandH);
-  ctx.lineTo(size, baseBandH);
-  ctx.stroke();
-
-  // Ground-floor "storefront" windows — wider, shorter, in the base band
-  const gfWinH = baseBandH * 0.55;
-  const gfWinY = baseBandH / 2 - gfWinH / 2;
-  const gfCols = 6;
-  const gfCellW = size / gfCols;
-  const gfWinW = gfCellW * 0.68;
-  ctx.fillStyle = '#21263a';
-  for (let c = 0; c < gfCols; c++) {
-    const cellCx = c * gfCellW + gfCellW / 2;
-    ctx.fillRect(cellCx - gfWinW / 2, gfWinY, gfWinW, gfWinH);
-  }
-
-  // Cornice band at the top — darker strip framed by two lines
-  ctx.fillStyle = 'rgba(184, 170, 140, 0.28)';
-  ctx.fillRect(0, innerY1, size, cornineBandH);
-  ctx.strokeStyle = 'rgba(33, 38, 58, 0.35)';
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(0, innerY1);
-  ctx.lineTo(size, innerY1);
-  ctx.stroke();
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.anisotropy = 4;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.NearestFilter; // crisper pixel-art feel
-  return texture;
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.LinearFilter;
+  return tex;
 }
 
-export function initBlueprintCity(container: HTMLElement): () => void {
+/**
+ * Night-only emissive companion texture — same grid positions as the color
+ * texture, but only the "lit" windows are bright. Building picks its own
+ * random pattern via a seeded PRNG so each building is distinct.
+ */
+function makeWindowEmissiveTexture(seed: number, palette: Palette): THREE.Texture {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+
+  // Start fully dark
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, size, size);
+
+  const cols = 4;
+  const rows = 5;
+  const cellW = size / cols;
+  const cellH = size / rows;
+  const winW = cellW * 0.48;
+  const winH = cellH * 0.62;
+
+  const prng = mulberry32(seed);
+
+  const amberHex = '#' + palette.emissiveAmber.toString(16).padStart(6, '0');
+  const creamHex = '#' + palette.emissiveCream.toString(16).padStart(6, '0');
+  const blueHex = '#' + palette.emissiveBlue.toString(16).padStart(6, '0');
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const roll = prng();
+      if (roll < 0.4) continue; // ~40% dark
+      const cx = c * cellW + cellW / 2;
+      const cy = r * cellH + cellH / 2;
+      const colorRoll = prng();
+      ctx.fillStyle =
+        colorRoll < 0.65 ? amberHex : colorRoll < 0.9 ? creamHex : blueHex;
+      ctx.fillRect(cx - winW / 2, cy - winH / 2, winW, winH);
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.LinearFilter;
+  return tex;
+}
+
+// ---------------------------------------------------------------------------
+// Disposables tracker
+// ---------------------------------------------------------------------------
+
+class DisposalTracker {
+  private items: Array<{ dispose: () => void }> = [];
+  track<T extends { dispose: () => void }>(item: T): T {
+    this.items.push(item);
+    return item;
+  }
+  trackMat<T extends THREE.Material>(mat: T): T {
+    this.items.push(mat);
+    return mat;
+  }
+  trackGeom<T extends THREE.BufferGeometry>(g: T): T {
+    this.items.push(g);
+    return g;
+  }
+  disposeAll() {
+    for (const i of this.items) i.dispose();
+    this.items = [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Building module interface
+// ---------------------------------------------------------------------------
+
+interface BuildingModules {
+  group: THREE.Group;
+  plinth: THREE.Mesh;
+  plinthEdges: THREE.LineSegments;
+  columns: THREE.Mesh[];
+  columnsEdges: THREE.LineSegments[];
+  slabs: THREE.Mesh[];
+  slabsEdges: THREE.LineSegments[];
+  body: THREE.Mesh;
+  bodyEdges: THREE.LineSegments;
+  cornice: THREE.Mesh;
+  corniceEdges: THREE.LineSegments;
+  parapet: THREE.Mesh;
+  parapetEdges: THREE.LineSegments;
+  bodyHeight: number;
+}
+
+interface ConstructionSlot {
+  modules: BuildingModules;
+  birthTime: number;
+  cyclePeriod: number;
+  positions: Array<{ x: number; z: number; w: number; d: number; h: number }>;
+  posIdx: number;
+}
+
+// ---------------------------------------------------------------------------
+// Build one modular generic building at origin, caller positions the group
+// ---------------------------------------------------------------------------
+
+interface BuildingMaterials {
+  stoneMat: THREE.MeshStandardMaterial;
+  bodyMat: THREE.MeshStandardMaterial;
+  edgeMat: THREE.LineBasicMaterial;
+  scaffoldMat: THREE.MeshStandardMaterial;
+  scaffoldEdgeMat: THREE.LineBasicMaterial;
+}
+
+function buildGenericBuilding(
+  w: number,
+  d: number,
+  h: number,
+  mats: BuildingMaterials,
+  tracker: DisposalTracker
+): BuildingModules {
+  const group = new THREE.Group();
+
+  // Plinth — base slab, wider than body
+  const plinthH = 0.4;
+  const plinthW = w + 0.3;
+  const plinthD = d + 0.3;
+  const plinthGeom = tracker.trackGeom(new THREE.BoxGeometry(plinthW, plinthH, plinthD));
+  plinthGeom.translate(0, plinthH / 2, 0);
+  const plinth = new THREE.Mesh(plinthGeom, mats.stoneMat);
+  const plinthEdges = new THREE.LineSegments(
+    tracker.trackGeom(new THREE.EdgesGeometry(plinthGeom)),
+    mats.edgeMat
+  );
+  plinth.add(plinthEdges);
+  group.add(plinth);
+
+  // Body height sits between plinth top and cornice bottom
+  const corniceH = 0.25;
+  const parapetH = 0.35;
+  const bodyH = h - plinthH - corniceH - parapetH;
+  if (bodyH < 1) {
+    // Safeguard — for very short buildings, skip cornice/parapet
+  }
+  const safeBodyH = Math.max(1, bodyH);
+  const bodyGeom = tracker.trackGeom(new THREE.BoxGeometry(w, safeBodyH, d));
+  bodyGeom.translate(0, plinthH + safeBodyH / 2, 0);
+
+  // UV repeats so windows tile cleanly. Integer repeats in each axis.
+  const uvs = bodyGeom.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < uvs.count; i++) {
+    const faceIdx = Math.floor(i / 4);
+    const u = uvs.getX(i);
+    const v = uvs.getY(i);
+    let repU = 1;
+    let repV = 1;
+    if (faceIdx === 0 || faceIdx === 1) {
+      repU = Math.max(1, Math.round(d / 2.5));
+      repV = Math.max(1, Math.round(safeBodyH / 2.6));
+    } else if (faceIdx === 4 || faceIdx === 5) {
+      repU = Math.max(1, Math.round(w / 2.5));
+      repV = Math.max(1, Math.round(safeBodyH / 2.6));
+    } else {
+      // top/bottom — no windows
+      repU = 0.01;
+      repV = 0.01;
+    }
+    uvs.setXY(i, u * repU, v * repV);
+  }
+  uvs.needsUpdate = true;
+
+  const body = new THREE.Mesh(bodyGeom, mats.bodyMat);
+  const bodyEdges = new THREE.LineSegments(
+    tracker.trackGeom(new THREE.EdgesGeometry(bodyGeom)),
+    mats.edgeMat
+  );
+  body.add(bodyEdges);
+  group.add(body);
+
+  // Cornice — slightly wider than body, thin band above body
+  const corniceW = w + 0.15;
+  const corniceD = d + 0.15;
+  const corniceGeom = tracker.trackGeom(new THREE.BoxGeometry(corniceW, corniceH, corniceD));
+  corniceGeom.translate(0, plinthH + safeBodyH + corniceH / 2, 0);
+  const cornice = new THREE.Mesh(corniceGeom, mats.stoneMat);
+  const corniceEdges = new THREE.LineSegments(
+    tracker.trackGeom(new THREE.EdgesGeometry(corniceGeom)),
+    mats.edgeMat
+  );
+  cornice.add(corniceEdges);
+  group.add(cornice);
+
+  // Parapet — slightly wider again, thin cap
+  const parapetW = w + 0.25;
+  const parapetD = d + 0.25;
+  const parapetGeom = tracker.trackGeom(new THREE.BoxGeometry(parapetW, parapetH, parapetD));
+  parapetGeom.translate(0, plinthH + safeBodyH + corniceH + parapetH / 2, 0);
+  const parapet = new THREE.Mesh(parapetGeom, mats.stoneMat);
+  const parapetEdges = new THREE.LineSegments(
+    tracker.trackGeom(new THREE.EdgesGeometry(parapetGeom)),
+    mats.edgeMat
+  );
+  parapet.add(parapetEdges);
+  group.add(parapet);
+
+  // 4 corner columns + 3 floor slabs — used only by construction slots.
+  // Built but hidden for static buildings.
+  const columns: THREE.Mesh[] = [];
+  const columnsEdges: THREE.LineSegments[] = [];
+  const colW = 0.28;
+  const colPositions: Array<[number, number]> = [
+    [-w / 2 + colW / 2, -d / 2 + colW / 2],
+    [w / 2 - colW / 2, -d / 2 + colW / 2],
+    [w / 2 - colW / 2, d / 2 - colW / 2],
+    [-w / 2 + colW / 2, d / 2 - colW / 2],
+  ];
+  for (const [cx, cz] of colPositions) {
+    const colGeom = tracker.trackGeom(new THREE.BoxGeometry(colW, safeBodyH, colW));
+    colGeom.translate(cx, plinthH + safeBodyH / 2, cz);
+    const col = new THREE.Mesh(colGeom, mats.scaffoldMat);
+    const cEdges = new THREE.LineSegments(
+      tracker.trackGeom(new THREE.EdgesGeometry(colGeom)),
+      mats.scaffoldEdgeMat
+    );
+    col.add(cEdges);
+    group.add(col);
+    columns.push(col);
+    columnsEdges.push(cEdges);
+  }
+
+  // Floor slabs — thin horizontal plates spanning between columns at
+  // intermediate heights. Count scales with body height.
+  const slabs: THREE.Mesh[] = [];
+  const slabsEdges: THREE.LineSegments[] = [];
+  const slabCount = Math.max(1, Math.min(3, Math.floor(safeBodyH / 3)));
+  const slabH = 0.1;
+  for (let i = 0; i < slabCount; i++) {
+    const slabGeom = tracker.trackGeom(
+      new THREE.BoxGeometry(w - colW * 2, slabH, d - colW * 2)
+    );
+    const fraction = (i + 1) / (slabCount + 1);
+    slabGeom.translate(0, plinthH + safeBodyH * fraction, 0);
+    const slab = new THREE.Mesh(slabGeom, mats.scaffoldMat);
+    const sEdges = new THREE.LineSegments(
+      tracker.trackGeom(new THREE.EdgesGeometry(slabGeom)),
+      mats.scaffoldEdgeMat
+    );
+    slab.add(sEdges);
+    group.add(slab);
+    slabs.push(slab);
+    slabsEdges.push(sEdges);
+  }
+
+  return {
+    group,
+    plinth,
+    plinthEdges,
+    columns,
+    columnsEdges,
+    slabs,
+    slabsEdges,
+    body,
+    bodyEdges,
+    cornice,
+    corniceEdges,
+    parapet,
+    parapetEdges,
+    bodyHeight: safeBodyH,
+  };
+}
+
+/**
+ * Snap a building's modules to "fully built, no scaffolding" visual state.
+ * Used for static buildings (the 95% that don't cycle).
+ */
+function setBuildingStatic(modules: BuildingModules) {
+  modules.plinth.scale.y = 1;
+  modules.body.scale.y = 1;
+  modules.cornice.scale.y = 1;
+  modules.parapet.scale.y = 1;
+  modules.plinth.visible = true;
+  modules.body.visible = true;
+  modules.cornice.visible = true;
+  modules.parapet.visible = true;
+  // Scaffolding elements hidden — the body occludes them when full-sized,
+  // but explicitly hide so they aren't drawn at all.
+  for (const c of modules.columns) c.visible = false;
+  for (const s of modules.slabs) s.visible = false;
+}
+
+/**
+ * Set construction progress for a dynamic building slot. `t` is 0..1 across
+ * one full cycle. Phases (all non-overlapping):
+ *  0.00 - 0.02  plinth rises
+ *  0.02 - 0.12  four columns rise staggered
+ *  0.12 - 0.22  slabs appear bottom-up
+ *  0.22 - 0.50  body cladding scale.y 0→1 (progressively occludes frame)
+ *  0.50 - 0.56  cornice + parapet
+ *  0.56 - 0.90  hold
+ *  0.90 - 1.00  (nothing visible, reset handled externally)
+ */
+function updateBuildingConstruction(modules: BuildingModules, t: number) {
+  // Plinth 0.00 → 0.02
+  modules.plinth.visible = t >= 0;
+  modules.plinth.scale.y = smoothstep(0, 0.02, t);
+
+  // Columns 0.02 → 0.12, each staggered by 0.025
+  for (let i = 0; i < modules.columns.length; i++) {
+    const start = 0.02 + i * 0.025;
+    const end = start + 0.03;
+    modules.columns[i].visible = t >= start;
+    modules.columns[i].scale.y = smoothstep(start, end, t);
+  }
+
+  // Slabs 0.12 → 0.22, staggered
+  for (let i = 0; i < modules.slabs.length; i++) {
+    const start = 0.12 + (i * 0.03);
+    const end = start + 0.03;
+    modules.slabs[i].visible = t >= start;
+    modules.slabs[i].scale.y = smoothstep(start, end, t);
+  }
+
+  // Body 0.22 → 0.50
+  modules.body.visible = t >= 0.22;
+  modules.body.scale.y = smoothstep(0.22, 0.5, t);
+
+  // Cornice 0.50 → 0.53
+  modules.cornice.visible = t >= 0.5;
+  modules.cornice.scale.y = smoothstep(0.5, 0.53, t);
+
+  // Parapet 0.53 → 0.56
+  modules.parapet.visible = t >= 0.53;
+  modules.parapet.scale.y = smoothstep(0.53, 0.56, t);
+
+  // At the end of the cycle (t > 0.95), everything goes invisible so the
+  // reset can reposition without a visible jump.
+  if (t > 0.95) {
+    modules.plinth.visible = false;
+    modules.body.visible = false;
+    modules.cornice.visible = false;
+    modules.parapet.visible = false;
+    for (const c of modules.columns) c.visible = false;
+    for (const s of modules.slabs) s.visible = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Zone-based placement: produces a list of (x, z, w, d, h, accent) building
+// specs for a given zone
+// ---------------------------------------------------------------------------
+
+interface BuildingSpec {
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  h: number;
+  accentColor: number | null;
+  seed: number;
+}
+
+function placeZonedBuildings(
+  occupied: Array<{ x: number; z: number; w: number; d: number }>,
+  parkCenter: { x: number; z: number },
+  parkW: number,
+  parkD: number,
+  spacing: number
+): BuildingSpec[] {
+  const specs: BuildingSpec[] = [];
+  const CLEARANCE = 0.8;
+
+  const tryPlace = (
+    cx: number,
+    cz: number,
+    w: number,
+    d: number,
+    h: number,
+    accentColor: number | null,
+    seedBase: number
+  ) => {
+    const clashes = occupied.some((o) => {
+      const dx = Math.abs(cx - o.x);
+      const dz = Math.abs(cz - o.z);
+      return (
+        dx < w / 2 + o.w / 2 + CLEARANCE &&
+        dz < d / 2 + o.d / 2 + CLEARANCE
+      );
+    });
+    if (clashes) return false;
+    if (
+      Math.abs(cx - parkCenter.x) < parkW * 0.55 &&
+      Math.abs(cz - parkCenter.z) < parkD * 0.55
+    ) {
+      return false;
+    }
+    occupied.push({ x: cx, z: cz, w, d });
+    specs.push({ x: cx, z: cz, w, d, h, accentColor, seed: seedBase });
+    return true;
+  };
+
+  // ---- CBD (NE quadrant) — tall towers near Barcode ----
+  const cbdPositions: Array<[number, number, number, number, number]> = [
+    [spacing * 1.2, spacing * 2.0, 3.2, 3.2, 16],
+    [spacing * 0.6, spacing * 2.2, 2.8, 3.0, 18],
+    [spacing * 0.2, spacing * 1.4, 3.4, 3.0, 14],
+    [spacing * 0.8, spacing * 1.0, 2.6, 2.6, 19],
+    [spacing * 2.2, spacing * 0.6, 3.2, 3.2, 13],
+  ];
+  for (let i = 0; i < cbdPositions.length; i++) {
+    const [cx, cz, w, d, h] = cbdPositions[i];
+    const accent = i % 3 === 0 ? DISCIPLINE_COLORS[0] : null;
+    tryPlace(cx, cz, w, d, h, accent, 100 + i);
+  }
+
+  // ---- Civic (SE quadrant) — wide low-rise civic blocks beside the Opera ----
+  const civicPositions: Array<[number, number, number, number, number]> = [
+    [spacing * 2.0, -spacing * 0.6, 4.2, 3.8, 5.5],
+    [spacing * 1.2, -spacing * 0.4, 3.6, 3.2, 6.5],
+    [spacing * 0.4, -spacing * 0.8, 3.2, 3.0, 5.0],
+  ];
+  for (let i = 0; i < civicPositions.length; i++) {
+    const [cx, cz, w, d, h] = civicPositions[i];
+    tryPlace(cx, cz, w, d, h, null, 200 + i);
+  }
+
+  // ---- Old Town (SW quadrant) — tight cluster of low blocks ----
+  const oldTown: Array<[number, number, number, number, number, number | null]> = [
+    [-spacing * 0.4, -spacing * 1.4, 2.8, 2.6, 4.2, null],
+    [-spacing * 1.1, -spacing * 1.6, 2.6, 2.4, 3.8, DISCIPLINE_COLORS[1]],
+    [-spacing * 1.8, -spacing * 1.2, 2.8, 2.8, 4.5, null],
+    [-spacing * 0.6, -spacing * 2.2, 3.0, 2.6, 3.6, null],
+    [-spacing * 1.4, -spacing * 2.3, 2.6, 2.4, 4.4, null],
+    [-spacing * 2.1, -spacing * 1.9, 2.8, 2.8, 3.9, DISCIPLINE_COLORS[1]],
+    [-spacing * 0.2, -spacing * 2.6, 2.4, 2.4, 4.0, null],
+  ];
+  for (let i = 0; i < oldTown.length; i++) {
+    const [cx, cz, w, d, h, accent] = oldTown[i];
+    tryPlace(cx, cz, w, d, h, accent, 300 + i);
+  }
+
+  // ---- Residential ring around the park (NW quadrant, outside the park) ----
+  const residential: Array<[number, number, number, number, number]> = [
+    [-spacing * 2.6, -spacing * 0.4, 2.6, 2.6, 5.5],
+    [-spacing * 2.8, spacing * 0.6, 2.8, 2.6, 5.0],
+    [-spacing * 0.6, spacing * 2.4, 2.6, 2.4, 5.8],
+    [-spacing * 1.4, spacing * 2.6, 2.8, 2.6, 5.2],
+    [-spacing * 2.2, spacing * 2.5, 2.6, 2.4, 4.8],
+  ];
+  for (let i = 0; i < residential.length; i++) {
+    const [cx, cz, w, d, h] = residential[i];
+    tryPlace(cx, cz, w, d, h, null, 400 + i);
+  }
+
+  return specs;
+}
+
+// ---------------------------------------------------------------------------
+// Main entry
+// ---------------------------------------------------------------------------
+
+export function initBlueprintCity(
+  container: HTMLElement,
+  variant: BlueprintCityVariant = 'day'
+): () => void {
+  const palette = variant === 'night' ? NIGHT_PALETTE : DAY_PALETTE;
+  const tracker = new DisposalTracker();
+
   const scene = new THREE.Scene();
-  scene.background = null; // let CSS parchment show through
-  scene.fog = new THREE.Fog(0xfaf8f3, 58, 140);
+  scene.background = palette.bg;
+  scene.fog = new THREE.Fog(palette.fog, palette.fogNear, palette.fogFar);
 
   const width = container.clientWidth;
   const height = container.clientHeight;
@@ -177,40 +717,47 @@ export function initBlueprintCity(container: HTMLElement): () => void {
   renderer.domElement.style.width = '100%';
   renderer.domElement.style.height = '100%';
 
-  // Lighting — flat, architectural, no drama
-  scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+  // Lighting
+  const ambient = new THREE.AmbientLight(palette.ambient, palette.ambientIntensity);
+  scene.add(ambient);
 
-  const keyLight = new THREE.DirectionalLight(0xffffff, 0.7);
+  const keyLight = new THREE.DirectionalLight(palette.key, palette.keyIntensity);
   keyLight.position.set(28, 42, 22);
   scene.add(keyLight);
 
-  const fillLight = new THREE.DirectionalLight(0xe8e1c9, 0.28);
+  const fillLight = new THREE.DirectionalLight(palette.fill, palette.fillIntensity);
   fillLight.position.set(-18, 22, -14);
   scene.add(fillLight);
 
-  // Ground plane — warm parchment, barely visible
-  const groundGeometry = new THREE.PlaneGeometry(240, 240);
-  const groundMaterial = new THREE.MeshBasicMaterial({
-    color: 0xf5f0dd,
-    transparent: true,
-    opacity: 0.55,
-  });
+  // Ground
+  const groundGeometry = tracker.trackGeom(new THREE.PlaneGeometry(240, 240));
+  const groundMaterial = tracker.trackMat(
+    new THREE.MeshBasicMaterial({
+      color: palette.ground,
+      transparent: false,
+    })
+  );
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.01;
   scene.add(ground);
 
-  // Technical grid overlay — the "blueprint" texture
-  const grid = new THREE.GridHelper(140, 70, 0x21263a, 0xb8b19c);
+  // Blueprint grid overlay
+  const grid = new THREE.GridHelper(
+    140,
+    70,
+    palette.edge,
+    variant === 'night' ? 0x2a3156 : 0xb8b19c
+  );
   const gridMaterial = grid.material as THREE.Material | THREE.Material[];
   if (Array.isArray(gridMaterial)) {
     gridMaterial.forEach((m) => {
       m.transparent = true;
-      m.opacity = 0.22;
+      m.opacity = variant === 'night' ? 0.35 : 0.22;
     });
   } else {
     gridMaterial.transparent = true;
-    gridMaterial.opacity = 0.22;
+    gridMaterial.opacity = variant === 'night' ? 0.35 : 0.22;
   }
   scene.add(grid);
 
@@ -219,148 +766,166 @@ export function initBlueprintCity(container: HTMLElement): () => void {
   const halfAxis = (axisCount - 1) / 2;
   const blockExtent = halfAxis * spacing + spacing * 0.5;
 
-  // Streets and boulevards — grid of minor streets plus two grand boulevards
-  // running east/west and north/south through the middle. Boulevards are wider,
-  // darker, with painted medians. Tree rows are dropped in later once the park
-  // location is known, so they go around the park rather than through it.
+  // --- Streets / boulevards ---
   const streetGroup = new THREE.Group();
-  const streetMaterialMinor = new THREE.MeshBasicMaterial({
-    color: INK,
-    transparent: true,
-    opacity: 0.18,
-  });
-  const streetMaterialBoulevard = new THREE.MeshBasicMaterial({
-    color: INK,
-    transparent: true,
-    opacity: 0.32,
-  });
-  const medianMaterial = new THREE.MeshBasicMaterial({
-    color: PARK_GRASS,
-    transparent: true,
-    opacity: 0.75,
-  });
+  const streetMat = tracker.trackMat(
+    new THREE.MeshBasicMaterial({
+      color: palette.street,
+      transparent: true,
+      opacity: palette.streetOpacity,
+      blending: palette.streetBlending,
+      depthWrite: false,
+    })
+  );
+  const boulevardMat = tracker.trackMat(
+    new THREE.MeshBasicMaterial({
+      color: palette.street,
+      transparent: true,
+      opacity: Math.min(1, palette.streetOpacity * 1.4),
+      blending: palette.streetBlending,
+      depthWrite: false,
+    })
+  );
+  const medianMat = tracker.trackMat(
+    new THREE.MeshBasicMaterial({
+      color: palette.median,
+      transparent: true,
+      opacity: 0.7,
+    })
+  );
 
-  // Two boulevards — one along X axis at z=0, one along Z axis at x=0
   const BOULEVARD_WIDTH = 2.4;
   const MEDIAN_WIDTH = 0.45;
 
-  // Boulevard running along X (at z=0)
+  // X-axis boulevard
   {
-    const asphaltGeom = new THREE.PlaneGeometry(blockExtent * 2, BOULEVARD_WIDTH);
-    const asphalt = new THREE.Mesh(asphaltGeom, streetMaterialBoulevard);
+    const asphaltGeom = tracker.trackGeom(
+      new THREE.PlaneGeometry(blockExtent * 2, BOULEVARD_WIDTH)
+    );
+    const asphalt = new THREE.Mesh(asphaltGeom, boulevardMat);
     asphalt.rotation.x = -Math.PI / 2;
     asphalt.position.set(0, 0.006, 0);
     streetGroup.add(asphalt);
 
-    const medianGeom = new THREE.PlaneGeometry(blockExtent * 2, MEDIAN_WIDTH);
-    const median = new THREE.Mesh(medianGeom, medianMaterial);
-    median.rotation.x = -Math.PI / 2;
-    median.position.set(0, 0.008, 0);
-    streetGroup.add(median);
+    if (variant === 'day') {
+      const medianGeom = tracker.trackGeom(
+        new THREE.PlaneGeometry(blockExtent * 2, MEDIAN_WIDTH)
+      );
+      const median = new THREE.Mesh(medianGeom, medianMat);
+      median.rotation.x = -Math.PI / 2;
+      median.position.set(0, 0.008, 0);
+      streetGroup.add(median);
+    }
   }
 
-  // Boulevard running along Z (at x=0)
+  // Z-axis boulevard
   {
-    const asphaltGeom = new THREE.PlaneGeometry(BOULEVARD_WIDTH, blockExtent * 2);
-    const asphalt = new THREE.Mesh(asphaltGeom, streetMaterialBoulevard);
+    const asphaltGeom = tracker.trackGeom(
+      new THREE.PlaneGeometry(BOULEVARD_WIDTH, blockExtent * 2)
+    );
+    const asphalt = new THREE.Mesh(asphaltGeom, boulevardMat);
     asphalt.rotation.x = -Math.PI / 2;
     asphalt.position.set(0, 0.006, 0);
     streetGroup.add(asphalt);
 
-    const medianGeom = new THREE.PlaneGeometry(MEDIAN_WIDTH, blockExtent * 2);
-    const median = new THREE.Mesh(medianGeom, medianMaterial);
-    median.rotation.x = -Math.PI / 2;
-    median.position.set(0, 0.008, 0);
-    streetGroup.add(median);
+    if (variant === 'day') {
+      const medianGeom = tracker.trackGeom(
+        new THREE.PlaneGeometry(MEDIAN_WIDTH, blockExtent * 2)
+      );
+      const median = new THREE.Mesh(medianGeom, medianMat);
+      median.rotation.x = -Math.PI / 2;
+      median.position.set(0, 0.008, 0);
+      streetGroup.add(median);
+    }
   }
 
-  // Minor streets between every other row/column so it doesn't get too busy
+  // Minor streets every other row/column
   for (let i = 1; i < axisCount; i++) {
     const pos = (i - axisCount / 2) * spacing;
-    // Skip if on top of a boulevard (distance < boulevard half-width + small buffer)
     if (Math.abs(pos) < BOULEVARD_WIDTH * 0.6) continue;
 
-    // Horizontal minor street
-    const hGeom = new THREE.PlaneGeometry(blockExtent * 2, 0.65);
-    const h = new THREE.Mesh(hGeom, streetMaterialMinor);
+    const hGeom = tracker.trackGeom(new THREE.PlaneGeometry(blockExtent * 2, 0.65));
+    const h = new THREE.Mesh(hGeom, streetMat);
     h.rotation.x = -Math.PI / 2;
     h.position.set(0, 0.005, pos);
     streetGroup.add(h);
 
-    // Vertical minor street
-    const vGeom = new THREE.PlaneGeometry(0.65, blockExtent * 2);
-    const v = new THREE.Mesh(vGeom, streetMaterialMinor);
+    const vGeom = tracker.trackGeom(new THREE.PlaneGeometry(0.65, blockExtent * 2));
+    const v = new THREE.Mesh(vGeom, streetMat);
     v.rotation.x = -Math.PI / 2;
     v.position.set(pos, 0.005, 0);
     streetGroup.add(v);
   }
   scene.add(streetGroup);
 
-  // Park with a pond — a big green rectangle replaces two blocks in one
-  // quadrant. Inside: a darker grass ring around a small blue pond, crossed
-  // by a central path. The stave church landmark sits just inside this park.
+  // --- Park + pond ---
   const parkGroup = new THREE.Group();
   const parkCenter = new THREE.Vector3(-spacing * 1.9, 0, -spacing * 1.9);
   const parkW = spacing * 2.6;
   const parkD = spacing * 2.6;
 
-  const parkGeometry = new THREE.PlaneGeometry(parkW, parkD);
-  const parkMaterial = new THREE.MeshBasicMaterial({
-    color: PARK_GRASS,
-    transparent: true,
-    opacity: 0.85,
-  });
+  const parkGeometry = tracker.trackGeom(new THREE.PlaneGeometry(parkW, parkD));
+  const parkMaterial = tracker.trackMat(
+    new THREE.MeshBasicMaterial({ color: palette.grass, transparent: false })
+  );
   const park = new THREE.Mesh(parkGeometry, parkMaterial);
   park.rotation.x = -Math.PI / 2;
   park.position.copy(parkCenter);
   park.position.y = 0.004;
   parkGroup.add(park);
 
-  // Darker grass ring (a slightly smaller plane in a darker tone)
-  const parkInnerGeom = new THREE.PlaneGeometry(parkW * 0.72, parkD * 0.72);
-  const parkInnerMaterial = new THREE.MeshBasicMaterial({
-    color: PARK_GRASS_DARK,
-    transparent: true,
-    opacity: 0.65,
-  });
+  const parkInnerGeom = tracker.trackGeom(
+    new THREE.PlaneGeometry(parkW * 0.72, parkD * 0.72)
+  );
+  const parkInnerMaterial = tracker.trackMat(
+    new THREE.MeshBasicMaterial({ color: palette.grassDark, transparent: false })
+  );
   const parkInner = new THREE.Mesh(parkInnerGeom, parkInnerMaterial);
   parkInner.rotation.x = -Math.PI / 2;
   parkInner.position.copy(parkCenter);
   parkInner.position.y = 0.006;
   parkGroup.add(parkInner);
 
-  // Park outline — ink edge
-  const parkEdgeGeom = new THREE.EdgesGeometry(parkGeometry);
+  const parkEdgeGeom = tracker.trackGeom(new THREE.EdgesGeometry(parkGeometry));
   const parkEdges = new THREE.LineSegments(
     parkEdgeGeom,
-    new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.55 })
+    tracker.trackMat(
+      new THREE.LineBasicMaterial({
+        color: palette.edge,
+        transparent: true,
+        opacity: 0.55,
+      })
+    )
   );
   parkEdges.rotation.x = -Math.PI / 2;
   parkEdges.position.copy(parkCenter);
   parkEdges.position.y = 0.007;
   parkGroup.add(parkEdges);
 
-  // Central pond — small, in the NE corner of the park so the stave church
-  // can sit in the SW corner without overlapping it.
+  // Pond in the NE corner of the park
   const pondOffset = new THREE.Vector3(parkW * 0.18, 0, -parkD * 0.18);
   const pondW = parkW * 0.34;
   const pondD = parkD * 0.34;
-  const pondGeometry = new THREE.PlaneGeometry(pondW, pondD);
-  const pondMaterial = new THREE.MeshBasicMaterial({
-    color: WATER_BLUE,
-    transparent: true,
-    opacity: 0.75,
-  });
+  const pondGeometry = tracker.trackGeom(new THREE.PlaneGeometry(pondW, pondD));
+  const pondMaterial = tracker.trackMat(
+    new THREE.MeshBasicMaterial({ color: palette.water, transparent: false })
+  );
   const pond = new THREE.Mesh(pondGeometry, pondMaterial);
   pond.rotation.x = -Math.PI / 2;
   pond.position.copy(parkCenter).add(pondOffset);
   pond.position.y = 0.008;
   parkGroup.add(pond);
 
-  const pondEdgeGeom = new THREE.EdgesGeometry(pondGeometry);
+  const pondEdgeGeom = tracker.trackGeom(new THREE.EdgesGeometry(pondGeometry));
   const pondEdges = new THREE.LineSegments(
     pondEdgeGeom,
-    new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.75 })
+    tracker.trackMat(
+      new THREE.LineBasicMaterial({
+        color: palette.edge,
+        transparent: true,
+        opacity: 0.75,
+      })
+    )
   );
   pondEdges.rotation.x = -Math.PI / 2;
   pondEdges.position.copy(pond.position);
@@ -369,46 +934,56 @@ export function initBlueprintCity(container: HTMLElement): () => void {
 
   scene.add(parkGroup);
 
-  // Footprint reservations used by buildings, trees, and landmarks so
-  // nothing overlaps. Declared here because landmarks register theirs
-  // before the generic-building loop runs.
+  // --- Footprint reservations ---
   const occupied: Array<{ x: number; z: number; w: number; d: number }> = [];
+  occupied.push({ x: parkCenter.x, z: parkCenter.z, w: parkW, d: parkD });
 
-  // Windows texture — reused across every building material
-  const windowTexture = makeWindowTexture();
+  // --- Shared window textures ---
+  const windowColorTex = tracker.track(makeWindowColorTexture());
 
-  // ------------------------------------------------------------------
-  // Landmarks — three hand-crafted Norwegian buildings as scene anchors.
-  // All are static (no construction animation), placed in curated spots,
-  // and their footprints are reserved so generic buildings go around them.
-  // ------------------------------------------------------------------
+  // --- Shared edge material ---
+  const sharedEdgeMat = tracker.trackMat(
+    new THREE.LineBasicMaterial({
+      color: palette.edge,
+      transparent: palette.edgeOpacity < 1,
+      opacity: palette.edgeOpacity,
+    })
+  );
+  const sharedStoneMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: palette.stone,
+      metalness: 0.0,
+      roughness: 0.85,
+      transparent: false,
+    })
+  );
+  const scaffoldMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: palette.scaffold,
+      emissive: palette.scaffoldEmissive,
+      emissiveIntensity: variant === 'night' ? 0.6 : 0,
+      metalness: 0.0,
+      roughness: 0.8,
+      transparent: false,
+    })
+  );
+  const scaffoldEdgeMat = tracker.trackMat(
+    new THREE.LineBasicMaterial({ color: palette.scaffold, transparent: true, opacity: 0.9 })
+  );
+
+  // --- Landmarks ---
   const landmarkGroup = new THREE.Group();
   scene.add(landmarkGroup);
-  const landmarkDisposables: Array<{ dispose: () => void }> = [];
 
-  const trackMat = (m: THREE.Material) => {
-    landmarkDisposables.push({ dispose: () => m.dispose() });
-    return m;
-  };
-  const trackGeom = (g: THREE.BufferGeometry) => {
-    landmarkDisposables.push({ dispose: () => g.dispose() });
-    return g;
-  };
-
-  /** Add an ink-line edge overlay on a mesh. */
-  function addEdges(mesh: THREE.Mesh, opacity = 0.95) {
-    const eg = trackGeom(new THREE.EdgesGeometry(mesh.geometry));
-    const em = trackMat(new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity }));
-    const edges = new THREE.LineSegments(eg, em);
-    mesh.add(edges);
+  function addEdges(mesh: THREE.Mesh, edgeMat: THREE.LineBasicMaterial) {
+    const eg = tracker.trackGeom(new THREE.EdgesGeometry(mesh.geometry));
+    mesh.add(new THREE.LineSegments(eg, edgeMat));
   }
 
-  // --- 1. Oslo Opera House (Snøhetta) ----------------------------------
-  // Low wide sloped ramp in white marble. Two trapezoidal wedges meeting
-  // at a ridge, with a short vertical box above for the fly tower.
+  // ---- Opera House (Civic, SE quadrant) ----
   {
-    const cx = spacing * 1.8;
-    const cz = spacing * 1.2;
+    const cx = spacing * 2.4;
+    const cz = -spacing * 1.8;
     const footprintW = 9;
     const footprintD = 6.5;
     const peakH = 3.2;
@@ -416,16 +991,17 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     const operaBase = new THREE.Group();
     operaBase.position.set(cx, 0, cz);
 
-    const marbleMat = trackMat(
+    const marbleMat = tracker.trackMat(
       new THREE.MeshStandardMaterial({
-        color: STONE_WHITE,
+        color: variant === 'night' ? 0x3a4055 : 0xece7d8,
+        emissive: variant === 'night' ? 0x8a8070 : 0x000000,
+        emissiveIntensity: variant === 'night' ? 0.35 : 0,
         metalness: 0.05,
         roughness: 0.72,
+        transparent: false,
       })
     );
 
-    // Build a wedge via ExtrudeGeometry: profile is a trapezoid rising to
-    // a point on one edge (the signature Opera House ramp).
     const profile = new THREE.Shape();
     profile.moveTo(-footprintW / 2, 0);
     profile.lineTo(footprintW / 2, 0);
@@ -435,7 +1011,7 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     profile.lineTo(-footprintW / 2, peakH * 0.55);
     profile.lineTo(-footprintW / 2, 0);
 
-    const wedgeGeom = trackGeom(
+    const wedgeGeom = tracker.trackGeom(
       new THREE.ExtrudeGeometry(profile, {
         depth: footprintD,
         bevelEnabled: false,
@@ -444,88 +1020,102 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     );
     wedgeGeom.translate(0, 0, -footprintD / 2);
     const wedge = new THREE.Mesh(wedgeGeom, marbleMat);
-    addEdges(wedge);
+    addEdges(wedge, sharedEdgeMat);
     operaBase.add(wedge);
 
-    // Fly tower — vertical glass box above the ridge
-    const towerGeom = trackGeom(new THREE.BoxGeometry(3.8, 2.2, footprintD * 0.55));
+    const towerGeom = tracker.trackGeom(new THREE.BoxGeometry(3.8, 2.2, footprintD * 0.55));
     towerGeom.translate(-0.8, peakH + 1.1, 0);
-    const towerMat = trackMat(
+    const towerEmissive = variant === 'night'
+      ? tracker.track(makeWindowEmissiveTexture(717, palette))
+      : null;
+    const towerMat = tracker.trackMat(
       new THREE.MeshStandardMaterial({
-        color: 0xaec3cd,
+        color: variant === 'night' ? 0x0e1530 : 0xaec3cd,
+        map: windowColorTex.clone(),
+        emissive: variant === 'night' ? 0xffffff : 0x000000,
+        emissiveMap: towerEmissive ?? undefined,
+        emissiveIntensity: variant === 'night' ? 1.1 : 0,
         metalness: 0.15,
         roughness: 0.5,
-        map: windowTexture.clone(),
-        transparent: true,
-        opacity: 0.92,
+        transparent: false,
       })
     );
+    if (towerMat.map) {
+      towerMat.map.wrapS = THREE.RepeatWrapping;
+      towerMat.map.wrapT = THREE.RepeatWrapping;
+      towerMat.map.needsUpdate = true;
+    }
     const tower = new THREE.Mesh(towerGeom, towerMat);
-    addEdges(tower);
+    addEdges(tower, sharedEdgeMat);
     operaBase.add(tower);
 
     landmarkGroup.add(operaBase);
-
-    // Reserve footprint so generic buildings don't overlap
     occupied.push({ x: cx, z: cz, w: footprintW, d: footprintD });
   }
 
-  // --- 2. Barcode Project (Oslo) ---------------------------------------
-  // Tight row of 12 narrow slabs with varied heights. Placed perpendicular
-  // to the main orbit so the "barcode" silhouette reads cleanly from the
-  // side. Alternating dark/cream facades.
+  // ---- Barcode Project (CBD, NE quadrant) ----
   {
-    const cx = spacing * 1.8;
-    const cz = -spacing * 1.6;
+    const cx = spacing * 2.4;
+    const cz = spacing * 1.6;
     const slabCount = 12;
     const slabW = 0.85;
     const slabD = 4.2;
     const slabGap = 0.35;
     const rowLength = slabCount * (slabW + slabGap) - slabGap;
 
-    const darkMat = trackMat(
-      new THREE.MeshStandardMaterial({
-        color: 0x3a4160,
-        metalness: 0.1,
-        roughness: 0.62,
-        map: windowTexture.clone(),
-        transparent: true,
-        opacity: 0.94,
-      })
-    );
-    const creamMat = trackMat(
-      new THREE.MeshStandardMaterial({
-        color: CREAM,
-        metalness: 0.05,
-        roughness: 0.8,
-        map: windowTexture.clone(),
-        transparent: true,
-        opacity: 0.94,
-      })
-    );
-
-    // Heights form a pleasing mini-skyline, not monotonic
     const heightPattern = [7, 9, 12, 10, 14, 11, 13, 15, 12, 10, 8, 6];
 
     for (let i = 0; i < slabCount; i++) {
       const h = heightPattern[i];
-      const geom = trackGeom(new THREE.BoxGeometry(slabW, h, slabD));
+      const geom = tracker.trackGeom(new THREE.BoxGeometry(slabW, h, slabD));
       geom.translate(0, h / 2, 0);
-      const mat = i % 2 === 0 ? darkMat : creamMat;
+      const isDark = i % 2 === 0;
+
+      const slabColorTex = windowColorTex.clone();
+      slabColorTex.wrapS = THREE.RepeatWrapping;
+      slabColorTex.wrapT = THREE.RepeatWrapping;
+      slabColorTex.repeat.set(1, Math.max(1, Math.round(h / 2.6)));
+      slabColorTex.needsUpdate = true;
+
+      let slabEmissive: THREE.Texture | null = null;
+      if (variant === 'night') {
+        slabEmissive = tracker.track(makeWindowEmissiveTexture(900 + i, palette));
+        slabEmissive.wrapS = THREE.RepeatWrapping;
+        slabEmissive.wrapT = THREE.RepeatWrapping;
+        slabEmissive.repeat.set(1, Math.max(1, Math.round(h / 2.6)));
+      }
+
+      const mat = tracker.trackMat(
+        new THREE.MeshStandardMaterial({
+          color:
+            variant === 'night'
+              ? isDark
+                ? 0x0a0e1a
+                : 0x1a1f33
+              : isDark
+                ? 0x3a4160
+                : palette.buildingCream,
+          map: slabColorTex,
+          emissiveMap: slabEmissive ?? undefined,
+          emissive: variant === 'night' ? 0xffffff : 0x000000,
+          emissiveIntensity: variant === 'night' ? 1.0 : 0,
+          metalness: 0.1,
+          roughness: 0.62,
+          transparent: false,
+        })
+      );
+
       const slab = new THREE.Mesh(geom, mat);
       const offsetX = -rowLength / 2 + i * (slabW + slabGap) + slabW / 2;
       slab.position.set(cx + offsetX, 0, cz);
-      addEdges(slab, 0.9);
+      addEdges(slab, sharedEdgeMat);
       landmarkGroup.add(slab);
     }
 
     occupied.push({ x: cx, z: cz, w: rowLength, d: slabD });
   }
 
-  // --- 3. Stavkirke (stave church) -------------------------------------
-  // Traditional Norwegian wooden church — stacked gabled roofs shrinking
-  // upward, dark-stained pine. Sits in the SW corner of the park so the
-  // green frame reads as "churchyard".
+  // ---- Stavkirke (inside park) ----
   {
     const sx = parkCenter.x - parkW * 0.24;
     const sz = parkCenter.z + parkD * 0.24;
@@ -533,235 +1123,232 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     const stavkirke = new THREE.Group();
     stavkirke.position.set(sx, 0, sz);
 
-    const woodMat = trackMat(
+    const woodMat = tracker.trackMat(
       new THREE.MeshStandardMaterial({
-        color: WOOD_DARK,
+        color: palette.wood,
         metalness: 0.0,
         roughness: 0.95,
+        transparent: false,
       })
     );
-    const roofMat = trackMat(
+    const roofMat = tracker.trackMat(
       new THREE.MeshStandardMaterial({
-        color: 0x2a1e12,
+        color: palette.roof,
         metalness: 0.0,
         roughness: 0.98,
+        transparent: false,
       })
     );
 
-    // Builds one tier: a square wooden box with a pyramidal roof on top.
-    // Returns the total height used so the next tier stacks on top.
-    function addTier(widthXY: number, wallH: number, roofH: number, yBase: number) {
-      const wallGeom = trackGeom(new THREE.BoxGeometry(widthXY, wallH, widthXY));
+    const addTier = (
+      widthXY: number,
+      wallH: number,
+      roofH: number,
+      yBase: number
+    ) => {
+      const wallGeom = tracker.trackGeom(new THREE.BoxGeometry(widthXY, wallH, widthXY));
       wallGeom.translate(0, wallH / 2, 0);
       const wall = new THREE.Mesh(wallGeom, woodMat);
       wall.position.y = yBase;
-      addEdges(wall, 0.85);
+      addEdges(wall, sharedEdgeMat);
       stavkirke.add(wall);
 
-      // 4-sided pyramid roof (cone with 4 sides)
-      const roofGeom = trackGeom(new THREE.ConeGeometry(widthXY * 0.78, roofH, 4));
+      const roofGeom = tracker.trackGeom(new THREE.ConeGeometry(widthXY * 0.78, roofH, 4));
       roofGeom.rotateY(Math.PI / 4);
       const roof = new THREE.Mesh(roofGeom, roofMat);
       roof.position.y = yBase + wallH + roofH / 2;
-      addEdges(roof, 0.9);
+      addEdges(roof, sharedEdgeMat);
       stavkirke.add(roof);
-
       return wallH + roofH;
-    }
+    };
 
-    // Three tiers, shrinking
     let y = 0;
     y += addTier(3.2, 2.4, 1.8, y);
-    y += addTier(2.2, 1.6, 1.4, y) - 0.4; // slight overlap for the tiered look
+    y += addTier(2.2, 1.6, 1.4, y) - 0.4;
     y += addTier(1.4, 1.2, 1.1, y) - 0.3;
 
-    // Spire / cross on top
-    const spireGeom = trackGeom(new THREE.CylinderGeometry(0.05, 0.08, 0.9, 4));
+    const spireGeom = tracker.trackGeom(new THREE.CylinderGeometry(0.05, 0.08, 0.9, 4));
     const spire = new THREE.Mesh(spireGeom, roofMat);
     spire.position.y = y + 0.45;
     stavkirke.add(spire);
 
-    // Cross bar
-    const crossBarGeom = trackGeom(new THREE.BoxGeometry(0.3, 0.06, 0.06));
+    const crossBarGeom = tracker.trackGeom(new THREE.BoxGeometry(0.3, 0.06, 0.06));
     const crossBar = new THREE.Mesh(crossBarGeom, roofMat);
     crossBar.position.y = y + 0.7;
     stavkirke.add(crossBar);
 
-    landmarkGroup.add(stavkirke);
+    // Night: one warm lit window high on the top tier
+    if (variant === 'night') {
+      const litGeom = tracker.trackGeom(new THREE.PlaneGeometry(0.18, 0.22));
+      const litMat = tracker.trackMat(
+        new THREE.MeshBasicMaterial({ color: palette.emissiveAmber })
+      );
+      const lit = new THREE.Mesh(litGeom, litMat);
+      lit.position.set(0, y - 1.5, 0.71);
+      stavkirke.add(lit);
+    }
 
-    // Reserve a modest footprint inside the park
+    landmarkGroup.add(stavkirke);
     occupied.push({ x: sx, z: sz, w: 4.2, d: 4.2 });
   }
 
-  // Buildings
+  // --- Generic buildings — zoned static ---
+  const buildingSpecs = placeZonedBuildings(occupied, parkCenter, parkW, parkD, spacing);
+
   const buildingGroup = new THREE.Group();
-  const buildings: Building[] = [];
+  scene.add(buildingGroup);
+  const staticModules: BuildingModules[] = [];
 
-  // Reserve the park footprint so we don't drop a building on top of it
-  occupied.push({
-    x: parkCenter.x,
-    z: parkCenter.z,
-    w: parkW,
-    d: parkD,
-  });
+  for (const spec of buildingSpecs) {
+    const bodyColor = spec.accentColor ?? palette.buildingCream;
 
-  for (let ix = 0; ix < axisCount; ix++) {
-    for (let iz = 0; iz < axisCount; iz++) {
-      // Skip ~32% of cells for breathing room
-      if (Math.random() < 0.32) continue;
+    const bodyColorTex = windowColorTex.clone();
+    bodyColorTex.needsUpdate = true;
 
-      const cx = (ix - halfAxis) * spacing + (Math.random() - 0.5) * 2.4;
-      const cz = (iz - halfAxis) * spacing + (Math.random() - 0.5) * 2.4;
-
-      // Skip cells that fall within the park footprint
-      if (
-        Math.abs(cx - parkCenter.x) < parkW * 0.55 &&
-        Math.abs(cz - parkCenter.z) < parkD * 0.55
-      ) {
-        continue;
-      }
-
-      // Footprint variety: towers vs lowrises
-      const isTower = Math.random() < 0.3;
-      const w = isTower ? 1.8 + Math.random() * 1.3 : 2.8 + Math.random() * 2.4;
-      const d = isTower ? 1.8 + Math.random() * 1.3 : 2.8 + Math.random() * 2.4;
-      const h = isTower ? 9 + Math.random() * 13 : 3 + Math.random() * 6;
-
-      // Clash control — AABB check against everything already placed
-      // (landmarks, park, previous buildings). Sprucelab does not ship
-      // colliding geometry.
-      const CLEARANCE = 0.6;
-      const clashes = occupied.some((o) => {
-        const dx = Math.abs(cx - o.x);
-        const dz = Math.abs(cz - o.z);
-        const minDx = w / 2 + o.w / 2 + CLEARANCE;
-        const minDz = d / 2 + o.d / 2 + CLEARANCE;
-        return dx < minDx && dz < minDz;
-      });
-      if (clashes) continue;
-
-      const geometry = new THREE.BoxGeometry(w, h, d);
-      geometry.translate(0, h / 2, 0);
-
-      // UV scaling so the window texture reads at a sensible density per facade.
-      // We repeat based on the facade dimensions so short buildings get fewer
-      // window rows and tall towers get more.
-      const uvs = geometry.attributes.uv as THREE.BufferAttribute;
-      const pos = geometry.attributes.position as THREE.BufferAttribute;
-      const tmpUv = uvs.clone();
-      for (let i = 0; i < pos.count; i++) {
-        // Three's BoxGeometry orders faces +X, -X, +Y, -Y, +Z, -Z, each 4 verts
-        const faceIdx = Math.floor(i / 4);
-        const u = tmpUv.getX(i);
-        const v = tmpUv.getY(i);
-        let repeatU = 1;
-        let repeatV = 1;
-        if (faceIdx === 0 || faceIdx === 1) {
-          // +X / -X → facade width = d, height = h
-          repeatU = Math.max(1, Math.round(d / 3));
-          repeatV = Math.max(1, Math.round(h / 2.2));
-        } else if (faceIdx === 4 || faceIdx === 5) {
-          // +Z / -Z → facade width = w, height = h
-          repeatU = Math.max(1, Math.round(w / 3));
-          repeatV = Math.max(1, Math.round(h / 2.2));
-        } else {
-          // top/bottom — suppress windows on roof/underside
-          repeatU = 0.01;
-          repeatV = 0.01;
-        }
-        uvs.setXY(i, u * repeatU, v * repeatV);
-      }
-      uvs.needsUpdate = true;
-
-      // 18% chance of a discipline accent color
-      const isAccent = Math.random() < 0.18;
-      const color = isAccent
-        ? DISCIPLINE_COLORS[Math.floor(Math.random() * DISCIPLINE_COLORS.length)]
-        : CREAM;
-
-      // Per-building texture clone so each building can pick a random offset
-      // (breaks alignment between neighbors, makes each facade unique)
-      const buildingTex = windowTexture.clone();
-      buildingTex.needsUpdate = true;
-      buildingTex.offset.set(Math.random(), Math.random());
-
-      const material = new THREE.MeshStandardMaterial({
-        color,
-        map: buildingTex,
-        metalness: 0.04,
-        roughness: 0.88,
-        transparent: true,
-        opacity: 0,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(cx, 0, cz);
-
-      const edgeGeometry = new THREE.EdgesGeometry(geometry);
-      const edgeMaterial = new THREE.LineBasicMaterial({
-        color: INK,
-        transparent: true,
-        opacity: 0,
-      });
-      const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-      mesh.add(edges);
-
-      buildingGroup.add(mesh);
-
-      // ~22% of buildings are "dynamic" — they cycle. The rest stand still.
-      const isDynamic = Math.random() < 0.22;
-
-      if (!isDynamic) {
-        mesh.scale.y = 1;
-        material.opacity = 0.93;
-        edgeMaterial.opacity = 0.98;
-      } else {
-        mesh.scale.y = 0.001;
-      }
-
-      occupied.push({ x: cx, z: cz, w, d });
-
-      // Dynamic buildings: very long cycle, widely spread births so only one
-      // or two are ever visibly transitioning at a time.
-      const cyclePeriod = 48_000 + Math.random() * 18_000;
-      const birthOffset = Math.random() * cyclePeriod * 3;
-
-      buildings.push({
-        mesh,
-        edges,
-        isDynamic,
-        birthTime: birthOffset,
-        cyclePeriod,
-      });
+    let emissive: THREE.Texture | null = null;
+    if (palette.windowEmissive) {
+      emissive = tracker.track(makeWindowEmissiveTexture(spec.seed, palette));
     }
+
+    const bodyMat = tracker.trackMat(
+      new THREE.MeshStandardMaterial({
+        color: bodyColor,
+        map: bodyColorTex,
+        emissiveMap: emissive ?? undefined,
+        emissive: palette.windowEmissive ? 0xffffff : 0x000000,
+        emissiveIntensity: palette.windowEmissive ? 1.0 : 0,
+        metalness: 0.05,
+        roughness: 0.88,
+        transparent: false,
+      })
+    );
+
+    const mats: BuildingMaterials = {
+      stoneMat: sharedStoneMat,
+      bodyMat,
+      edgeMat: sharedEdgeMat,
+      scaffoldMat,
+      scaffoldEdgeMat,
+    };
+
+    const modules = buildGenericBuilding(spec.w, spec.d, spec.h, mats, tracker);
+    modules.group.position.set(spec.x, 0, spec.z);
+    buildingGroup.add(modules.group);
+    setBuildingStatic(modules);
+    staticModules.push(modules);
   }
 
-  scene.add(buildingGroup);
+  // --- Construction slots — 4 dedicated slots that rotate through curated positions ---
+  const constructionPositions: Array<{ x: number; z: number; w: number; d: number; h: number }> = [
+    { x: -spacing * 0.2, z: spacing * 0.9, w: 3.0, d: 3.0, h: 12 }, // between CBD and center
+    { x: spacing * 1.6, z: spacing * 0.4, w: 3.2, d: 3.0, h: 14 }, // CBD south edge
+    { x: -spacing * 1.3, z: -spacing * 0.6, w: 2.8, d: 2.6, h: 8 }, // Old Town / residential
+    { x: -spacing * 0.1, z: -spacing * 0.6, w: 2.8, d: 2.6, h: 7 }, // centre south
+    { x: spacing * 0.4, z: -spacing * 2.6, w: 3.2, d: 3.0, h: 9 }, // civic edge
+    { x: -spacing * 2.6, z: spacing * 1.4, w: 2.6, d: 2.6, h: 6 }, // residential north
+  ];
 
-  // Spruce trees — stacked low-poly cones (4 sides → crisp diamond silhouette).
-  // We are Sprucelab, so the trees are on-brand. Dark forest green, tall and
-  // narrow, scattered in empty spots. Occupied list keeps them off buildings
-  // and water.
+  const constructionSlots: ConstructionSlot[] = [];
+  const slotCount = 4;
+  // Give each slot its own reusable "pair" of building sizes so the geometry
+  // is created once per slot and just repositioned on reset.
+  for (let i = 0; i < slotCount; i++) {
+    const startPos = constructionPositions[i % constructionPositions.length];
+
+    const bodyColorTex = windowColorTex.clone();
+    bodyColorTex.needsUpdate = true;
+
+    let emissive: THREE.Texture | null = null;
+    if (palette.windowEmissive) {
+      emissive = tracker.track(makeWindowEmissiveTexture(500 + i, palette));
+    }
+
+    const bodyMat = tracker.trackMat(
+      new THREE.MeshStandardMaterial({
+        color: palette.buildingCream,
+        map: bodyColorTex,
+        emissiveMap: emissive ?? undefined,
+        emissive: palette.windowEmissive ? 0xffffff : 0x000000,
+        emissiveIntensity: palette.windowEmissive ? 1.0 : 0,
+        metalness: 0.05,
+        roughness: 0.88,
+        transparent: false,
+      })
+    );
+
+    const mats: BuildingMaterials = {
+      stoneMat: sharedStoneMat,
+      bodyMat,
+      edgeMat: sharedEdgeMat,
+      scaffoldMat,
+      scaffoldEdgeMat,
+    };
+
+    const modules = buildGenericBuilding(
+      startPos.w,
+      startPos.d,
+      startPos.h,
+      mats,
+      tracker
+    );
+    modules.group.position.set(startPos.x, 0, startPos.z);
+    buildingGroup.add(modules.group);
+
+    // Reserve the footprint so static buildings don't land here
+    occupied.push({ x: startPos.x, z: startPos.z, w: startPos.w, d: startPos.d });
+
+    // Initial state: invisible (will appear as cycle advances)
+    updateBuildingConstruction(modules, 0);
+    modules.plinth.visible = false;
+    modules.body.visible = false;
+    modules.cornice.visible = false;
+    modules.parapet.visible = false;
+    for (const c of modules.columns) c.visible = false;
+    for (const s of modules.slabs) s.visible = false;
+
+    const cyclePeriod = 48_000 + Math.random() * 12_000;
+    constructionSlots.push({
+      modules,
+      birthTime: -cyclePeriod * (i / slotCount), // stagger births
+      cyclePeriod,
+      positions: constructionPositions,
+      posIdx: i % constructionPositions.length,
+    });
+  }
+
+  // --- Spruce forest ---
   const treeGroup = new THREE.Group();
-  const trunkMaterial = new THREE.MeshStandardMaterial({
-    color: 0x6b5a3c,
-    metalness: 0.0,
-    roughness: 0.98,
-  });
-  const spruceMaterialDark = new THREE.MeshStandardMaterial({
-    color: 0x2f6b49, // deeper spruce green
-    metalness: 0.0,
-    roughness: 0.9,
-  });
-  const spruceMaterialMid = new THREE.MeshStandardMaterial({
-    color: TREE_GREEN, // Sprucelab Forest palette
-    metalness: 0.0,
-    roughness: 0.9,
-  });
-  const spruceEdgeMaterial = new THREE.LineBasicMaterial({
-    color: INK,
-    transparent: true,
-    opacity: 0.6,
-  });
+  const trunkMaterial = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: variant === 'night' ? 0x1a150c : 0x6b5a3c,
+      metalness: 0.0,
+      roughness: 0.98,
+      transparent: false,
+    })
+  );
+  const spruceMaterialDark = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: variant === 'night' ? 0x0f2418 : 0x2f6b49,
+      metalness: 0.0,
+      roughness: 0.9,
+      transparent: false,
+    })
+  );
+  const spruceMaterialMid = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: variant === 'night' ? 0x153726 : 0x4ba27f,
+      metalness: 0.0,
+      roughness: 0.9,
+      transparent: false,
+    })
+  );
+  const spruceEdgeMaterial = tracker.trackMat(
+    new THREE.LineBasicMaterial({
+      color: palette.edge,
+      transparent: true,
+      opacity: 0.6,
+    })
+  );
 
   const treeCount = 30;
   let placed = 0;
@@ -772,72 +1359,64 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     const tz = (Math.random() - 0.5) * blockExtent * 1.95;
 
     const collides = occupied.some(
-      (o) => Math.abs(tx - o.x) < o.w / 2 + 0.5 && Math.abs(tz - o.z) < o.d / 2 + 0.5
+      (o) =>
+        Math.abs(tx - o.x) < o.w / 2 + 0.5 && Math.abs(tz - o.z) < o.d / 2 + 0.5
     );
     if (collides) continue;
 
-    // Spruce proportions: tall and narrow, 3 stacked cone tiers
     const scale = 0.85 + Math.random() * 0.7;
     const trunkH = 0.35 * scale;
     const trunkR = 0.12 * scale;
-
-    // 4-sided cones = diamond silhouette from any angle → true low-poly
     const tierSides = 4;
-
-    // Tier 1 (bottom, widest)
     const r1 = 0.8 * scale;
     const h1 = 1.1 * scale;
-    // Tier 2 (middle)
     const r2 = 0.62 * scale;
     const h2 = 1.0 * scale;
-    // Tier 3 (top, narrowest)
     const r3 = 0.42 * scale;
     const h3 = 0.9 * scale;
 
-    const trunkGeom = new THREE.CylinderGeometry(trunkR, trunkR * 1.15, trunkH, 5);
+    const trunkGeom = tracker.trackGeom(
+      new THREE.CylinderGeometry(trunkR, trunkR * 1.15, trunkH, 5)
+    );
     const trunk = new THREE.Mesh(trunkGeom, trunkMaterial);
     trunk.position.set(tx, trunkH / 2, tz);
     treeGroup.add(trunk);
 
-    // Alternate between slightly different greens so the grove isn't uniform
     const canopyMat = Math.random() < 0.5 ? spruceMaterialDark : spruceMaterialMid;
 
-    // Tier 1
-    const g1 = new THREE.ConeGeometry(r1, h1, tierSides);
-    const m1 = new THREE.Mesh(g1, canopyMat);
-    m1.position.set(tx, trunkH + h1 / 2, tz);
-    m1.rotation.y = Math.random() * Math.PI;
-    treeGroup.add(m1);
-    treeGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g1), spruceEdgeMaterial).translateX(tx).translateY(trunkH + h1 / 2).translateZ(tz));
+    const addCone = (r: number, h: number, yBase: number) => {
+      const g = tracker.trackGeom(new THREE.ConeGeometry(r, h, tierSides));
+      const m = new THREE.Mesh(g, canopyMat);
+      m.position.set(tx, yBase + h / 2, tz);
+      m.rotation.y = Math.random() * Math.PI;
+      treeGroup.add(m);
+      const edgeGeom = tracker.trackGeom(new THREE.EdgesGeometry(g));
+      const edges = new THREE.LineSegments(edgeGeom, spruceEdgeMaterial);
+      edges.position.copy(m.position);
+      edges.rotation.copy(m.rotation);
+      treeGroup.add(edges);
+    };
 
-    // Tier 2 — starts 60% up tier 1
-    const y2Base = trunkH + h1 * 0.6;
-    const g2 = new THREE.ConeGeometry(r2, h2, tierSides);
-    const m2 = new THREE.Mesh(g2, canopyMat);
-    m2.position.set(tx, y2Base + h2 / 2, tz);
-    m2.rotation.y = Math.random() * Math.PI;
-    treeGroup.add(m2);
-    treeGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g2), spruceEdgeMaterial).translateX(tx).translateY(y2Base + h2 / 2).translateZ(tz));
+    addCone(r1, h1, trunkH);
+    addCone(r2, h2, trunkH + h1 * 0.6);
+    addCone(r3, h3, trunkH + h1 * 0.6 + h2 * 0.6);
 
-    // Tier 3 — starts 60% up tier 2
-    const y3Base = y2Base + h2 * 0.6;
-    const g3 = new THREE.ConeGeometry(r3, h3, tierSides);
-    const m3 = new THREE.Mesh(g3, canopyMat);
-    m3.position.set(tx, y3Base + h3 / 2, tz);
-    m3.rotation.y = Math.random() * Math.PI;
-    treeGroup.add(m3);
-    treeGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g3), spruceEdgeMaterial).translateX(tx).translateY(y3Base + h3 / 2).translateZ(tz));
-
-    // Small footprint reservation so trees don't overlap each other
     occupied.push({ x: tx, z: tz, w: r1 * 2.2, d: r1 * 2.2 });
-
     placed++;
   }
   scene.add(treeGroup);
 
+  // --- Animation loop ---
   const clock = new THREE.Clock();
   let animationId = 0;
   let running = true;
+
+  // Lightning state (night only)
+  let nextLightningAt = variant === 'night' ? 8_000 + Math.random() * 12_000 : Infinity;
+  let lightningPhase = 0;
+  let lightningStart = 0;
+
+  const baseAmbientIntensity = palette.ambientIntensity;
 
   function animate() {
     if (!running) return;
@@ -845,29 +1424,67 @@ export function initBlueprintCity(container: HTMLElement): () => void {
 
     const elapsed = clock.getElapsedTime() * 1000;
 
-    for (const b of buildings) {
-      if (!b.isDynamic) continue;
+    // Update construction slots
+    for (const slot of constructionSlots) {
+      const age = elapsed - slot.birthTime;
+      if (age < 0) continue;
+      const t = (age % slot.cyclePeriod) / slot.cyclePeriod;
+      updateBuildingConstruction(slot.modules, t);
 
-      const age = (elapsed - b.birthTime + b.cyclePeriod * 100) % b.cyclePeriod;
-      const rise = b.cyclePeriod * 0.3;
-      const hold = b.cyclePeriod * 0.4;
-      const fade = b.cyclePeriod - rise - hold;
-
-      let progress: number;
-      if (age < rise) {
-        progress = easeOutCubic(age / rise);
-      } else if (age < rise + hold) {
-        progress = 1;
-      } else {
-        progress = 1 - easeInCubic((age - rise - hold) / fade);
+      // When we wrap around (t just became < previous t), move to a new position
+      const cycleIndex = Math.floor(age / slot.cyclePeriod);
+      const expectedPosIdx =
+        (slot.posIdx + cycleIndex) % slot.positions.length;
+      if (expectedPosIdx !== ((slot.posIdx + cycleIndex) % slot.positions.length)) {
+        // unreachable; keeping structure
       }
-
-      b.mesh.scale.y = Math.max(0.001, progress);
-      (b.mesh.material as THREE.MeshStandardMaterial).opacity = progress * 0.93;
-      (b.edges.material as THREE.LineBasicMaterial).opacity = progress * 0.98;
+      // Compute the "current" position: initial idx plus number of completed cycles
+      const curPos = slot.positions[(slot.posIdx + cycleIndex) % slot.positions.length];
+      if (
+        slot.modules.group.position.x !== curPos.x ||
+        slot.modules.group.position.z !== curPos.z
+      ) {
+        slot.modules.group.position.set(curPos.x, 0, curPos.z);
+      }
     }
 
-    // Slow orbital camera drift
+    // Lightning (night only)
+    if (variant === 'night') {
+      if (elapsed >= nextLightningAt && lightningPhase === 0) {
+        lightningPhase = 1;
+        lightningStart = elapsed;
+      }
+      if (lightningPhase > 0) {
+        const dt = elapsed - lightningStart;
+        // Phase timing: 0-60ms main flash, 60-250ms decay, 250-270ms flicker, 270-600ms final decay
+        if (dt < 60) {
+          ambient.intensity = baseAmbientIntensity + 2.2;
+          scene.background = new THREE.Color(0xffffff);
+        } else if (dt < 250) {
+          const k = 1 - (dt - 60) / 190;
+          ambient.intensity = baseAmbientIntensity + 1.8 * k;
+          scene.background = new THREE.Color().lerpColors(
+            palette.bg!,
+            new THREE.Color(0xffffff),
+            k * 0.8
+          );
+        } else if (dt < 270) {
+          ambient.intensity = baseAmbientIntensity + 1.2;
+          scene.background = new THREE.Color(0xf0f0ff);
+        } else if (dt < 600) {
+          const k = 1 - (dt - 270) / 330;
+          ambient.intensity = baseAmbientIntensity + 1.0 * k;
+          scene.background = new THREE.Color().lerpColors(palette.bg!, new THREE.Color(0xffffff), k * 0.4);
+        } else {
+          ambient.intensity = baseAmbientIntensity;
+          scene.background = palette.bg;
+          lightningPhase = 0;
+          nextLightningAt = elapsed + 18_000 + Math.random() * 22_000;
+        }
+      }
+    }
+
+    // Orbital camera drift
     const t = elapsed / 1000;
     const radius = 52;
     camera.position.x = Math.sin(t * 0.038) * radius;
@@ -908,50 +1525,7 @@ export function initBlueprintCity(container: HTMLElement): () => void {
     window.removeEventListener('resize', onResize);
     document.removeEventListener('visibilitychange', onVisibilityChange);
 
-    for (const b of buildings) {
-      b.mesh.geometry.dispose();
-      const mat = b.mesh.material as THREE.MeshStandardMaterial;
-      mat.map?.dispose();
-      mat.dispose();
-      b.edges.geometry.dispose();
-      (b.edges.material as THREE.Material).dispose();
-    }
-
-    streetGroup.traverse((obj) => {
-      if (obj instanceof THREE.Mesh) {
-        obj.geometry.dispose();
-      }
-    });
-    streetMaterialMinor.dispose();
-    streetMaterialBoulevard.dispose();
-    medianMaterial.dispose();
-
-    for (const d of landmarkDisposables) d.dispose();
-
-    parkGeometry.dispose();
-    parkMaterial.dispose();
-    parkInnerGeom.dispose();
-    parkInnerMaterial.dispose();
-    parkEdgeGeom.dispose();
-    (parkEdges.material as THREE.Material).dispose();
-    pondGeometry.dispose();
-    pondMaterial.dispose();
-    pondEdgeGeom.dispose();
-    (pondEdges.material as THREE.Material).dispose();
-
-    treeGroup.traverse((obj) => {
-      if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {
-        obj.geometry.dispose();
-      }
-    });
-    trunkMaterial.dispose();
-    spruceMaterialDark.dispose();
-    spruceMaterialMid.dispose();
-    spruceEdgeMaterial.dispose();
-
-    windowTexture.dispose();
-    groundGeometry.dispose();
-    groundMaterial.dispose();
+    tracker.disposeAll();
     (grid.geometry as THREE.BufferGeometry).dispose();
     if (Array.isArray(gridMaterial)) {
       gridMaterial.forEach((m) => m.dispose());
