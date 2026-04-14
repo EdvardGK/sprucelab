@@ -1516,8 +1516,6 @@ export function initBlueprintCity(
       modules,
       birthTime: -cyclePeriod * (i / slotCount), // stagger births
       cyclePeriod,
-      positions: constructionPositions,
-      posIdx: i % constructionPositions.length,
     });
   }
 
