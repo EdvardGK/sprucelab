@@ -42,6 +42,35 @@ ALLOWED_HOSTS = os.getenv(
 ).split(',')
 
 
+# --- Security headers ------------------------------------------------------
+# These are all free and apply to every response via SecurityMiddleware +
+# XFrameOptionsMiddleware. Gated on `not DEBUG` where the behavior would
+# break local development (HSTS, SSL redirect).
+
+# Don't sniff MIME types — stops some XSS vectors
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Deprecated but cheap — older browsers honor it
+SECURE_BROWSER_XSS_FILTER = True
+
+# Limit referrer info leaked to third parties
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Disable clickjacking via frame embed
+X_FRAME_OPTIONS = 'DENY'
+
+# HSTS + SSL redirect — only in production to avoid breaking `runserver`.
+# One year HSTS, include subdomains, preload-ready.
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS = 31_536_000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+
 # Application definition
 
 INSTALLED_APPS = [
