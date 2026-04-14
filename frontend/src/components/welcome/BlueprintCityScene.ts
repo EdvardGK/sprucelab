@@ -1276,13 +1276,13 @@ export function initBlueprintCity(
       );
 
       const slab = new THREE.Mesh(geom, mat);
-      const offsetX = -rowLength / 2 + i * (slabW + slabGap) + slabW / 2;
-      slab.position.set(cx + offsetX, 0, cz);
+      const offsetZ = -rowLength / 2 + i * (slabD + slabGap) + slabD / 2;
+      slab.position.set(cx, 0, cz + offsetZ);
       addEdges(slab, sharedEdgeMat);
       landmarkGroup.add(slab);
     }
 
-    occupied.push({ x: cx, z: cz, w: rowLength, d: slabD });
+    occupied.push({ x: cx, z: cz, w: slabW, d: rowLength });
   }
 
   // ---- Stavkirke (inside park) ----
