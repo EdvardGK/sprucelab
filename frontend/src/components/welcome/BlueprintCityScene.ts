@@ -135,7 +135,6 @@ const NIGHT_PALETTE: Palette = {
 // Ease helpers
 // ---------------------------------------------------------------------------
 
-const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
 const smoothstep = (a: number, b: number, t: number) => {
   if (b === a) return t < a ? 0 : 1;
