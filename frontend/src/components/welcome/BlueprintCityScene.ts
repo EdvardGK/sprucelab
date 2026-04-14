@@ -1165,20 +1165,25 @@ export function initBlueprintCity(
     mesh.add(new THREE.LineSegments(eg, edgeMat));
   }
 
-  // ---- Opera House (Civic, SE quadrant) ----
+  // ---- Opera House (East bank of the river, faces the water) ----
+  // Abstracted as a clean trapezoidal wedge: low front edge, tall back edge,
+  // sloped marble roof/ramp connecting them. No floating fly tower — the
+  // signature feature is the ramp itself.
   {
-    const cx = spacing * 2.4;
-    const cz = -spacing * 1.8;
-    const footprintW = 9;
-    const footprintD = 6.5;
-    const peakH = 3.2;
+    // East waterfront cell, south section
+    const cx = 3;
+    const cz = -9;
+    const footprintW = 5.5; // along X (perpendicular to river)
+    const footprintD = 9;    // along Z (parallel to river)
+    const lowH = 0.8;       // front-edge (west/river-facing) height
+    const peakH = 4.2;      // back-edge (east-facing) height
 
     const operaBase = new THREE.Group();
     operaBase.position.set(cx, 0, cz);
 
     const marbleMat = tracker.trackMat(
       new THREE.MeshStandardMaterial({
-        color: variant === 'night' ? 0x3a4055 : 0xece7d8,
+        color: variant === 'night' ? 0x4a5066 : 0xece7d8,
         emissive: variant === 'night' ? 0x8a8070 : 0x000000,
         emissiveIntensity: variant === 'night' ? 0.35 : 0,
         metalness: 0.05,
@@ -1187,13 +1192,17 @@ export function initBlueprintCity(
       })
     );
 
+    // Profile looking along +Z (depth axis): a trapezoid that rises from
+    // the river edge to a tall back wall. The slope is the iconic ramp.
+    //   (-W/2, 0)       ← river edge, ground level
+    //   (+W/2, 0)       ← east edge, ground level
+    //   (+W/2, peakH)   ← back top
+    //   (-W/2, lowH)    ← river-facing top (low)
     const profile = new THREE.Shape();
     profile.moveTo(-footprintW / 2, 0);
     profile.lineTo(footprintW / 2, 0);
-    profile.lineTo(footprintW / 2, 0.35);
-    profile.lineTo(footprintW / 2 - 2.2, 0.35);
-    profile.lineTo(-footprintW / 2 + 1.2, peakH);
-    profile.lineTo(-footprintW / 2, peakH * 0.55);
+    profile.lineTo(footprintW / 2, peakH);
+    profile.lineTo(-footprintW / 2, lowH);
     profile.lineTo(-footprintW / 2, 0);
 
     const wedgeGeom = tracker.trackGeom(
@@ -1207,32 +1216,6 @@ export function initBlueprintCity(
     const wedge = new THREE.Mesh(wedgeGeom, marbleMat);
     addEdges(wedge, sharedEdgeMat);
     operaBase.add(wedge);
-
-    const towerGeom = tracker.trackGeom(new THREE.BoxGeometry(3.8, 2.2, footprintD * 0.55));
-    towerGeom.translate(-0.8, peakH + 1.1, 0);
-    const towerEmissive = variant === 'night'
-      ? tracker.track(makeWindowEmissiveTexture(717, palette))
-      : null;
-    const towerMat = tracker.trackMat(
-      new THREE.MeshStandardMaterial({
-        color: variant === 'night' ? 0x0e1530 : 0xaec3cd,
-        map: windowColorTex.clone(),
-        emissive: variant === 'night' ? 0xffffff : 0x000000,
-        emissiveMap: towerEmissive ?? undefined,
-        emissiveIntensity: variant === 'night' ? 1.1 : 0,
-        metalness: 0.15,
-        roughness: 0.5,
-        transparent: false,
-      })
-    );
-    if (towerMat.map) {
-      towerMat.map.wrapS = THREE.RepeatWrapping;
-      towerMat.map.wrapT = THREE.RepeatWrapping;
-      towerMat.map.needsUpdate = true;
-    }
-    const tower = new THREE.Mesh(towerGeom, towerMat);
-    addEdges(tower, sharedEdgeMat);
-    operaBase.add(tower);
 
     landmarkGroup.add(operaBase);
     occupied.push({ x: cx, z: cz, w: footprintW, d: footprintD });
