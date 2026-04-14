@@ -264,6 +264,19 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    # Throttling — baseline protection against abuse / accidental loops.
+    # `anon` covers unauthenticated requests (health checks, /me/ probing).
+    # `user` covers authenticated requests per account.
+    # Individual views can override with their own throttle_classes or
+    # throttle_scope for stricter limits.
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/min',
+        'user': '600/min',
+    },
 }
 
 
