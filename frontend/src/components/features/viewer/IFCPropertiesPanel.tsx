@@ -451,11 +451,13 @@ function PsetDropdown({ element }: { element: ElementProperties }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const psetEntries = element.psets ? Object.entries(element.psets) : [];
-  if (psetEntries.length === 0) return null;
+  const hasPsets = psetEntries.length > 0;
 
   // Auto-select first pset (prefer *Common)
-  const activeName = selectedPset ?? psetEntries.find(([n]) => n.includes('Common'))?.[0] ?? psetEntries[0][0];
-  const activeProps = element.psets?.[activeName] ?? {};
+  const activeName = hasPsets
+    ? selectedPset ?? psetEntries.find(([n]) => n.includes('Common'))?.[0] ?? psetEntries[0][0]
+    : null;
+  const activeProps = hasPsets && activeName ? element.psets?.[activeName] ?? {} : {};
   const propCount = Object.keys(activeProps).length;
 
   // Close dropdown on outside click
