@@ -42,7 +42,7 @@ export default function Login() {
         setMagicSent(true);
       }
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Innlogging feilet');
+      setLocalError(err instanceof Error ? err.message : 'Sign-in failed');
     } finally {
       setPending(false);
     }
