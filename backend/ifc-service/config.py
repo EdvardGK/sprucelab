@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # This should match the key configured in Django settings
     IFC_SERVICE_API_KEY: str = "dev-api-key-change-in-production"
 
-    # CORS origins (exact match list)
+    # CORS origins
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
@@ -42,9 +42,6 @@ class Settings(BaseSettings):
         "https://sprucelab.io",
         "https://www.sprucelab.io",
     ]
-
-    # CORS origin regex (for Vercel preview URLs: sprucelab-<hash>-skiplum.vercel.app)
-    CORS_ORIGIN_REGEX: str = r"https://sprucelab-[a-z0-9]+-skiplum\.vercel\.app"
 
     # IFC Processing limits
     MAX_FILE_SIZE_MB: int = 1024  # 1GB
