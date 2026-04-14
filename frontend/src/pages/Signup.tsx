@@ -33,7 +33,7 @@ export default function Signup() {
     e.preventDefault();
     setLocalError(null);
     if (password.length < 8) {
-      setLocalError('Passord må være minst 8 tegn.');
+      setLocalError('Password must be at least 8 characters.');
       return;
     }
     setPending(true);
