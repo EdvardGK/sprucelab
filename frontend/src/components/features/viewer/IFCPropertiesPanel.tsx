@@ -415,18 +415,23 @@ function formatQty(v: number): string {
 function KeyPropertiesGrid({ element }: { element: ElementProperties }) {
   const { t } = useTranslation();
   const props = extractKeyProps(element);
-  if (props.length === 0) return null;
 
   return (
-    <div className="grid gap-px bg-black/[0.03] border-b border-black/[0.04]" style={{ gridTemplateColumns: `repeat(${Math.min(props.length, 4)}, 1fr)` }}>
+    <div
+      className="grid gap-px bg-black/[0.03] border-b border-black/[0.04]"
+      style={{ gridTemplateColumns: `repeat(${props.length}, 1fr)` }}
+    >
       {props.map((p, i) => (
         <div key={i} className="px-[6px] py-[5px] bg-card text-center">
-          <div className={cn(
-            'text-xs font-bold tabular-nums',
-            p.variant === 'yes' && 'text-[var(--tl-green-text)]',
-            p.variant === 'no' && 'text-[var(--tl-red-text)]',
-            (p.variant === 'rating' || p.variant === 'value') && 'text-text-primary',
-          )}>
+          <div
+            className={cn(
+              'text-xs font-bold tabular-nums',
+              p.isMissing && 'text-text-tertiary opacity-40',
+              !p.isMissing && p.variant === 'yes' && 'text-[var(--tl-green-text)]',
+              !p.isMissing && p.variant === 'no' && 'text-[var(--tl-red-text)]',
+              !p.isMissing && (p.variant === 'rating' || p.variant === 'value') && 'text-text-primary',
+            )}
+          >
             {p.value}
           </div>
           <div className="text-[8px] text-text-tertiary uppercase tracking-wide mt-px">
