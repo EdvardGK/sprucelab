@@ -51,7 +51,7 @@ export default function Signup() {
         navigate('/welcome', { replace: true });
       }
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Registrering feilet');
+      setLocalError(err instanceof Error ? err.message : 'Sign-up failed');
     } finally {
       setPending(false);
     }
