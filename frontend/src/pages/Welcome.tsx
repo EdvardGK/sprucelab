@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { fetchMe, updateMyProfile } from '../lib/me';
 import { useAuth } from '../contexts/AuthContext';
 import { initBlueprintCity } from '../components/welcome/BlueprintCityScene';
+import { initDioramaScene } from '../components/welcome/DioramaScene';
 import './Welcome.css';
 
 function formatTimestamp(iso: string | null | undefined): string {
@@ -69,11 +70,19 @@ export default function Welcome() {
     }
   }, [me]);
 
-  // Three.js scene mount
+  // Three.js scene mount — `?scene=diorama` opts into the architect-diorama variant,
+  // otherwise the default BlueprintCity scene renders.
   useEffect(() => {
     const container = sceneContainerRef.current;
     if (!container) return;
-    const cleanup = initBlueprintCity(container);
+    const sceneParam =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('scene')
+        : null;
+    const cleanup =
+      sceneParam === 'diorama'
+        ? initDioramaScene(container)
+        : initBlueprintCity(container);
     return cleanup;
   }, []);
 

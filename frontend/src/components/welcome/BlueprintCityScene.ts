@@ -813,12 +813,11 @@ function placeZonedBuildings(
   }
 
   // ---- Waterfront east (x=3 column, south of center) — mid-rise ----
-  // Opera is at (3, -9), (3, 15) is a construction slot.
+  // Opera is at (3, -9), (3, 15) is a construction slot, (3, -15) is a tree cell.
   const waterfrontEast: Array<[number, number, number, number, number]> = [
     [3, 3, 4.0, 4.2, 9],
     [3, 9, 3.8, 4.2, 10],
     [3, -3, 3.8, 4.0, 9],
-    [3, -15, 4.0, 4.0, 7],
   ];
   for (let i = 0; i < waterfrontEast.length; i++) {
     const [cx, cz, w, d, h] = waterfrontEast[i];
@@ -853,13 +852,11 @@ function placeZonedBuildings(
   }
 
   // ---- Old Town (SW quadrant, west of river, south) — low tight blocks ----
-  // (-9, -9) is a construction slot.
+  // (-9, -9) is a construction slot, (-15, -15) and (-9, -15) are tree cells.
   const oldTown: Array<[number, number, number, number, number, number | null]> = [
     [-9, -3, 4.0, 3.8, 5, null],
-    [-9, -15, 4.0, 4.0, 4.5, null],
     [-15, -3, 4.0, 4.0, 5, null],
     [-15, -9, 3.8, 4.0, 4.8, DISCIPLINE_COLORS[1]],
-    [-15, -15, 4.0, 4.0, 5.2, null],
   ];
   for (let i = 0; i < oldTown.length; i++) {
     const [cx, cz, w, d, h, accent] = oldTown[i];
@@ -867,10 +864,9 @@ function placeZonedBuildings(
   }
 
   // ---- Residential ring around park (NW quadrant) ----
-  // Park occupies x=-15,-9 × z=9,15. These are the cells not in the park.
+  // Park occupies x=-15,-9 × z=9,15. (-15, 3) is a tree cell.
   const residential: Array<[number, number, number, number, number]> = [
     [-9, 3, 3.8, 4.0, 6.5],
-    [-15, 3, 4.0, 4.0, 5.5],
   ];
   for (let i = 0; i < residential.length; i++) {
     const [cx, cz, w, d, h] = residential[i];
@@ -927,210 +923,477 @@ export function initBlueprintCity(
   fillLight.position.set(-18, 22, -14);
   scene.add(fillLight);
 
-  // Ground
-  const groundGeometry = tracker.trackGeom(new THREE.PlaneGeometry(240, 240));
-  const groundMaterial = tracker.trackMat(
-    new THREE.MeshBasicMaterial({
-      color: palette.ground,
-      transparent: false,
-    })
-  );
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.01;
-  scene.add(ground);
-
-  // Blueprint grid overlay
-  const grid = new THREE.GridHelper(
-    140,
-    70,
-    palette.edge,
-    variant === 'night' ? 0x2a3156 : 0xb8b19c
-  );
-  const gridMaterial = grid.material as THREE.Material | THREE.Material[];
-  if (Array.isArray(gridMaterial)) {
-    gridMaterial.forEach((m) => {
-      m.transparent = true;
-      m.opacity = variant === 'night' ? 0.35 : 0.22;
-    });
-  } else {
-    gridMaterial.transparent = true;
-    gridMaterial.opacity = variant === 'night' ? 0.35 : 0.22;
-  }
-  scene.add(grid);
-
+  // --- Tile + corridor constants ---
   const axisCount = 7;
   const spacing = 6;
   const halfAxis = (axisCount - 1) / 2;
-  const blockExtent = halfAxis * spacing + spacing * 0.5;
+  const blockExtent = halfAxis * spacing + spacing * 0.5; // 21
+  const TILE_HALF = blockExtent;
+
+  const GROUND_THICKNESS = 1.2;
+
+  // Road + sidewalk corridor — fills the offset gap between cells (gap ~2)
+  const STREET_WIDTH = 1.4;
+  const SIDEWALK_WIDTH = 0.3;
+  const ROAD_HEIGHT = 0.06;
+  const SIDEWALK_HEIGHT = 0.12;
+
+  // River + boardwalk corridor — same total width as road corridor
+  const RIVER_WIDTH = 1.4;
+  const RIVER_HALF = RIVER_WIDTH / 2;
+  const BOARDWALK_WIDTH = 0.3;
+  const RIVER_CORRIDOR_HALF = RIVER_HALF + BOARDWALK_WIDTH; // 1.0
+  const BOARDWALK_HEIGHT = 0.1;
+  const RIVER_RECESS = 0.12;
+  const RIVER_DEPTH = 0.55;
+
+  // Material colors — day and night variants
+  const grassColor = variant === 'night' ? 0x1a3b26 : 0x7ca364;
+  const earthColor = variant === 'night' ? 0x2a1f15 : 0x5a3f27;
+  const roadColor = variant === 'night' ? 0x0a0a0d : 0x14141a;
+  const sidewalkColor = variant === 'night' ? 0x3a3530 : 0xbfb19a;
+  const boardwalkColor = variant === 'night' ? 0x2a1a0f : 0x8b5e3c;
+  const waterColor = variant === 'night' ? 0x0c1e3a : 0x1e3a5f;
 
   // Cell-aligned coordinate system
   // Cell centers on each axis: -15, -9, -3, 3, 9, 15  (6 cells per axis)
   // Streets between cells at: -18, -12, -6, 0, 6, 12, 18
 
-  // Footprint reservations. Declared early so the river can register its
-  // segments before anything else tries to place geometry.
   const occupied: Array<{ x: number; z: number; w: number; d: number }> = [];
 
   // Park footprint — NW quadrant, 2×2 cells
-  // Spans cells (x=-15, z=9), (x=-15, z=15), (x=-9, z=9), (x=-9, z=15)
   const parkCenter = new THREE.Vector3(-12, 0, 12);
   const parkW = 12;
   const parkD = 12;
-  occupied.push({ x: parkCenter.x, z: parkCenter.z, w: parkW, d: parkD });
-
-  // River — polyline of axis-aligned segments with 90° turns. Follows the
-  // street grid (waypoints on street positions, not cell centers) and
-  // forms an S through the city, then wraps around the east edge for one
-  // full side. Each segment renders as a wide flat plane and registers
-  // its footprint so buildings avoid it.
-  // Width 4 — meaningfully wider than streets (0.7) so it reads as water,
-  // not infrastructure.
-  const RIVER_WIDTH = 4;
-  const riverWaypoints: Array<[number, number]> = [
-    [-18, 12], // enter NW at street z=12
-    [0, 12], // east along z=12 street
-    [0, 0], // south along x=0 street
-    [-12, 0], // west along z=0 street
-    [-12, -12], // south along x=-12 street
-    [18, -12], // east along z=-12 street (long traverse)
-    [18, 18], // north along x=18 east edge (wraps full east side)
-  ];
-
-  const riverGroup = new THREE.Group();
-  scene.add(riverGroup);
-  const riverMat = tracker.trackMat(
-    new THREE.MeshBasicMaterial({
-      color: palette.water,
-      transparent: false,
-    })
-  );
-  const bankMat = tracker.trackMat(
-    new THREE.LineBasicMaterial({
-      color: palette.edge,
-      transparent: true,
-      opacity: 0.6,
-    })
-  );
-
-  for (let i = 0; i < riverWaypoints.length - 1; i++) {
-    const [x1, z1] = riverWaypoints[i];
-    const [x2, z2] = riverWaypoints[i + 1];
-
-    // Extend each segment by half the river width at both ends so corners
-    // overlap cleanly (no gaps at the inside of a turn).
-    const half = RIVER_WIDTH / 2;
-    let segX = Math.min(x1, x2) - (x1 === x2 ? half : 0);
-    let segZ = Math.min(z1, z2) - (z1 === z2 ? half : 0);
-    let segW = Math.abs(x2 - x1) + (x1 === x2 ? RIVER_WIDTH : 0);
-    let segD = Math.abs(z2 - z1) + (z1 === z2 ? RIVER_WIDTH : 0);
-    if (x1 === x2) segW = RIVER_WIDTH;
-    if (z1 === z2) segD = RIVER_WIDTH;
-
-    // Centre of the segment
-    const cx = segX + segW / 2;
-    const cz = segZ + segD / 2;
-
-    const segGeom = tracker.trackGeom(new THREE.PlaneGeometry(segW, segD));
-    const seg = new THREE.Mesh(segGeom, riverMat);
-    seg.rotation.x = -Math.PI / 2;
-    seg.position.set(cx, 0.003, cz);
-    riverGroup.add(seg);
-
-    // Register segment footprint so buildings cannot land here. Pad by
-    // one unit of clearance for bank walking room.
-    occupied.push({ x: cx, z: cz, w: segW + 1, d: segD + 1 });
-
-    // Bank outline — two short lines along the segment's long edges.
-    const bankPts: number[] = [];
-    if (x1 === x2) {
-      // vertical segment — banks run along X-constant sides
-      bankPts.push(cx - half, 0.005, segZ);
-      bankPts.push(cx - half, 0.005, segZ + segD);
-      bankPts.push(cx + half, 0.005, segZ);
-      bankPts.push(cx + half, 0.005, segZ + segD);
-    } else {
-      // horizontal segment
-      bankPts.push(segX, 0.005, cz - half);
-      bankPts.push(segX + segW, 0.005, cz - half);
-      bankPts.push(segX, 0.005, cz + half);
-      bankPts.push(segX + segW, 0.005, cz + half);
-    }
-    const bankGeom = tracker.trackGeom(new THREE.BufferGeometry());
-    bankGeom.setAttribute('position', new THREE.Float32BufferAttribute(bankPts, 3));
-    const bank = new THREE.LineSegments(bankGeom, bankMat);
-    riverGroup.add(bank);
-  }
-
-  // --- Streets — grid-aligned, river-aware, park-aware ---
-  const streetGroup = new THREE.Group();
-  const streetMat = tracker.trackMat(
-    new THREE.MeshBasicMaterial({
-      color: palette.street,
-      transparent: true,
-      opacity: palette.streetOpacity,
-      blending: palette.streetBlending,
-      depthWrite: false,
-    })
-  );
-
-  const STREET_THICKNESS = 0.7;
-
-  // Helpers to draw a straight street segment, skipping the park interior
-  // for horizontal strips that pass through the park z range and vice versa.
   const parkXmin = parkCenter.x - parkW / 2;
   const parkXmax = parkCenter.x + parkW / 2;
   const parkZmin = parkCenter.z - parkD / 2;
   const parkZmax = parkCenter.z + parkD / 2;
+  occupied.push({ x: parkCenter.x, z: parkCenter.z, w: parkW, d: parkD });
 
-  function drawHorizontalSegment(z: number, xStart: number, xEnd: number) {
-    if (xEnd <= xStart) return;
-    const length = xEnd - xStart;
-    const geom = tracker.trackGeom(new THREE.PlaneGeometry(length, STREET_THICKNESS));
-    const mesh = new THREE.Mesh(geom, streetMat);
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set((xStart + xEnd) / 2, 0.005, z);
-    streetGroup.add(mesh);
+  // --- River polyline + disjoint rects for box rendering + occupied ---
+  const riverWaypoints: Array<[number, number]> = [
+    [-18, 12],
+    [0, 12],
+    [0, 0],
+    [-12, 0],
+    [-12, -12],
+    [18, -12],
+    [18, 18],
+  ];
+
+  type Rect = { x: number; z: number; w: number; d: number };
+  const riverRects: Rect[] = [];
+
+  for (let i = 0; i < riverWaypoints.length - 1; i++) {
+    const [x1, z1] = riverWaypoints[i];
+    const [x2, z2] = riverWaypoints[i + 1];
+    const clipStart = i > 0;
+    const clipEnd = i < riverWaypoints.length - 2;
+
+    if (x1 === x2) {
+      const dir = Math.sign(z2 - z1) || 1;
+      const zStart = clipStart ? z1 + dir * RIVER_HALF : z1 - dir * RIVER_HALF;
+      const zEnd = clipEnd ? z2 - dir * RIVER_HALF : z2 + dir * RIVER_HALF;
+      const zMin = Math.min(zStart, zEnd);
+      const zMax = Math.max(zStart, zEnd);
+      riverRects.push({ x: x1, z: (zMin + zMax) / 2, w: RIVER_WIDTH, d: zMax - zMin });
+    } else {
+      const dir = Math.sign(x2 - x1) || 1;
+      const xStart = clipStart ? x1 + dir * RIVER_HALF : x1 - dir * RIVER_HALF;
+      const xEnd = clipEnd ? x2 - dir * RIVER_HALF : x2 + dir * RIVER_HALF;
+      const xMin = Math.min(xStart, xEnd);
+      const xMax = Math.max(xStart, xEnd);
+      riverRects.push({ x: (xMin + xMax) / 2, z: z1, w: xMax - xMin, d: RIVER_WIDTH });
+    }
+  }
+  for (let i = 1; i < riverWaypoints.length - 1; i++) {
+    const [x, z] = riverWaypoints[i];
+    riverRects.push({ x, z, w: RIVER_WIDTH, d: RIVER_WIDTH });
+  }
+  for (const r of riverRects) {
+    occupied.push({ x: r.x, z: r.z, w: r.w + 1, d: r.d + 1 });
   }
 
-  function drawVerticalSegment(x: number, zStart: number, zEnd: number) {
-    if (zEnd <= zStart) return;
-    const length = zEnd - zStart;
-    const geom = tracker.trackGeom(new THREE.PlaneGeometry(STREET_THICKNESS, length));
-    const mesh = new THREE.Mesh(geom, streetMat);
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(x, 0.005, (zStart + zEnd) / 2);
-    streetGroup.add(mesh);
+  // --- Offset polygon tracer ---
+  // Walks the right-side walls forward along the polyline, then the
+  // left-side walls backward. Produces a single closed polygon with no
+  // internal walls at segment joints — required for a clean ExtrudeGeometry
+  // hole at the river and a clean boardwalk ring around it.
+  function riverOutlinePolygon(halfWidth: number): Array<[number, number]> {
+    type Seg = { axis: 'x' | 'z'; dir: 1 | -1; rightConst: number; leftConst: number };
+    const segs: Seg[] = [];
+    for (let i = 0; i < riverWaypoints.length - 1; i++) {
+      const [x1, z1] = riverWaypoints[i];
+      const [x2, z2] = riverWaypoints[i + 1];
+      if (x1 === x2) {
+        const dir = ((Math.sign(z2 - z1) || 1) as 1 | -1);
+        // Right of +Z viewed from +Y is +X; right of -Z is -X.
+        const rightConst = dir === 1 ? x1 + halfWidth : x1 - halfWidth;
+        const leftConst = dir === 1 ? x1 - halfWidth : x1 + halfWidth;
+        segs.push({ axis: 'z', dir, rightConst, leftConst });
+      } else {
+        const dir = ((Math.sign(x2 - x1) || 1) as 1 | -1);
+        // Right of +X is -Z; right of -X is +Z.
+        const rightConst = dir === 1 ? z1 - halfWidth : z1 + halfWidth;
+        const leftConst = dir === 1 ? z1 + halfWidth : z1 - halfWidth;
+        segs.push({ axis: 'x', dir, rightConst, leftConst });
+      }
+    }
+
+    const poly: Array<[number, number]> = [];
+    const first = segs[0];
+    const [sx, sz] = riverWaypoints[0];
+    if (first.axis === 'x') {
+      poly.push([sx - first.dir * halfWidth, first.rightConst]);
+    } else {
+      poly.push([first.rightConst, sz - first.dir * halfWidth]);
+    }
+
+    for (let i = 0; i < segs.length; i++) {
+      const seg = segs[i];
+      if (i < segs.length - 1) {
+        const next = segs[i + 1];
+        const pt: [number, number] =
+          seg.axis === 'x'
+            ? [next.rightConst, seg.rightConst]
+            : [seg.rightConst, next.rightConst];
+        poly.push(pt);
+      } else {
+        const [ex, ez] = riverWaypoints[segs.length];
+        if (seg.axis === 'x') {
+          poly.push([ex + seg.dir * halfWidth, seg.rightConst]);
+        } else {
+          poly.push([seg.rightConst, ez + seg.dir * halfWidth]);
+        }
+      }
+    }
+
+    const last = segs[segs.length - 1];
+    const [ex, ez] = riverWaypoints[segs.length];
+    if (last.axis === 'x') {
+      poly.push([ex + last.dir * halfWidth, last.leftConst]);
+    } else {
+      poly.push([last.leftConst, ez + last.dir * halfWidth]);
+    }
+
+    for (let i = segs.length - 1; i >= 0; i--) {
+      const seg = segs[i];
+      if (i > 0) {
+        const prev = segs[i - 1];
+        const pt: [number, number] =
+          seg.axis === 'x'
+            ? [prev.leftConst, seg.leftConst]
+            : [seg.leftConst, prev.leftConst];
+        poly.push(pt);
+      } else {
+        const [ssx, ssz] = riverWaypoints[0];
+        if (seg.axis === 'x') {
+          poly.push([ssx - seg.dir * halfWidth, seg.leftConst]);
+        } else {
+          poly.push([seg.leftConst, ssz - seg.dir * halfWidth]);
+        }
+      }
+    }
+
+    return poly;
+  }
+
+  const riverPolygon = riverOutlinePolygon(RIVER_HALF);
+  const boardwalkOuterPolygon = riverOutlinePolygon(RIVER_CORRIDOR_HALF);
+
+  // --- Ground slab — grass top, earth sides, single river hole ---
+  const groundShape = new THREE.Shape();
+  groundShape.moveTo(-TILE_HALF, -TILE_HALF);
+  groundShape.lineTo(TILE_HALF, -TILE_HALF);
+  groundShape.lineTo(TILE_HALF, TILE_HALF);
+  groundShape.lineTo(-TILE_HALF, TILE_HALF);
+  groundShape.lineTo(-TILE_HALF, -TILE_HALF);
+
+  // River hole — reverse the traced CCW polygon to CW so Extrude treats it as a hole
+  const reversedRiverPoly = riverPolygon.slice().reverse();
+  const riverHolePath = new THREE.Path();
+  riverHolePath.moveTo(reversedRiverPoly[0][0], reversedRiverPoly[0][1]);
+  for (let i = 1; i < reversedRiverPoly.length; i++) {
+    riverHolePath.lineTo(reversedRiverPoly[i][0], reversedRiverPoly[i][1]);
+  }
+  riverHolePath.lineTo(reversedRiverPoly[0][0], reversedRiverPoly[0][1]);
+  groundShape.holes.push(riverHolePath);
+
+  const groundGeometry = tracker.trackGeom(
+    new THREE.ExtrudeGeometry(groundShape, {
+      depth: GROUND_THICKNESS,
+      bevelEnabled: false,
+    })
+  );
+  groundGeometry.rotateX(Math.PI / 2);
+
+  // ExtrudeGeometry creates two groups: 0 = top/bottom caps, 1 = side walls
+  // (outer walls AND river hole inner walls). Caps get grass, walls get earth.
+  const grassMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: grassColor,
+      metalness: 0.0,
+      roughness: 0.95,
+      transparent: false,
+    })
+  );
+  const earthMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: earthColor,
+      metalness: 0.0,
+      roughness: 0.98,
+      transparent: false,
+    })
+  );
+  const ground = new THREE.Mesh(groundGeometry, [grassMat, earthMat]);
+  scene.add(ground);
+
+  // --- Boardwalk ring — wraps the river on the grass top ---
+  const boardwalkShape = new THREE.Shape();
+  boardwalkShape.moveTo(boardwalkOuterPolygon[0][0], boardwalkOuterPolygon[0][1]);
+  for (let i = 1; i < boardwalkOuterPolygon.length; i++) {
+    boardwalkShape.lineTo(boardwalkOuterPolygon[i][0], boardwalkOuterPolygon[i][1]);
+  }
+  boardwalkShape.lineTo(boardwalkOuterPolygon[0][0], boardwalkOuterPolygon[0][1]);
+  const boardwalkHolePath = new THREE.Path();
+  boardwalkHolePath.moveTo(reversedRiverPoly[0][0], reversedRiverPoly[0][1]);
+  for (let i = 1; i < reversedRiverPoly.length; i++) {
+    boardwalkHolePath.lineTo(reversedRiverPoly[i][0], reversedRiverPoly[i][1]);
+  }
+  boardwalkHolePath.lineTo(reversedRiverPoly[0][0], reversedRiverPoly[0][1]);
+  boardwalkShape.holes.push(boardwalkHolePath);
+
+  const boardwalkGeometry = tracker.trackGeom(
+    new THREE.ExtrudeGeometry(boardwalkShape, {
+      depth: BOARDWALK_HEIGHT,
+      bevelEnabled: false,
+    })
+  );
+  boardwalkGeometry.rotateX(Math.PI / 2);
+  boardwalkGeometry.translate(0, BOARDWALK_HEIGHT, 0);
+  const boardwalkMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: boardwalkColor,
+      metalness: 0.0,
+      roughness: 0.9,
+      transparent: false,
+    })
+  );
+  const boardwalk = new THREE.Mesh(boardwalkGeometry, boardwalkMat);
+  scene.add(boardwalk);
+
+  // --- River — translucent navy boxes recessed into the slab ---
+  const riverGroup = new THREE.Group();
+  scene.add(riverGroup);
+  const riverMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: waterColor,
+      metalness: 0.25,
+      roughness: 0.3,
+      transparent: true,
+      opacity: 0.78,
+    })
+  );
+
+  const riverTopY = -RIVER_RECESS;
+  const riverBottomY = -RIVER_RECESS - RIVER_DEPTH;
+  for (const r of riverRects) {
+    const geom = tracker.trackGeom(new THREE.BoxGeometry(r.w, RIVER_DEPTH, r.d));
+    const mesh = new THREE.Mesh(geom, riverMat);
+    mesh.position.set(r.x, (riverTopY + riverBottomY) / 2, r.z);
+    riverGroup.add(mesh);
+  }
+
+  // --- Streets — thick black road boxes flanked by raised sidewalks ---
+  const streetGroup = new THREE.Group();
+  const roadMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: roadColor,
+      metalness: 0.0,
+      roughness: 0.92,
+      transparent: false,
+    })
+  );
+  const sidewalkMat = tracker.trackMat(
+    new THREE.MeshStandardMaterial({
+      color: sidewalkColor,
+      metalness: 0.0,
+      roughness: 0.88,
+      transparent: false,
+    })
+  );
+
+  const MIN_SEG_LEN = 0.8;
+  const SIDEWALK_OFFSET = STREET_WIDTH / 2 + SIDEWALK_WIDTH / 2;
+  const HALF_ROAD = STREET_WIDTH / 2;
+
+  type Interval = [number, number];
+
+  function complementIntervals(
+    cuts: Interval[],
+    min: number,
+    max: number,
+    minLen: number
+  ): Interval[] {
+    const sorted = cuts.slice().sort((a, b) => a[0] - b[0]);
+    const out: Interval[] = [];
+    let cursor = min;
+    for (const [a, b] of sorted) {
+      const clippedA = Math.max(a, min);
+      const clippedB = Math.min(b, max);
+      if (clippedA > cursor) {
+        if (clippedA - cursor >= minLen) out.push([cursor, clippedA]);
+      }
+      if (clippedB > cursor) cursor = clippedB;
+    }
+    if (max - cursor >= minLen) out.push([cursor, max]);
+    return out;
+  }
+
+  // Cuts that apply equally to horizontal and vertical streets: the river
+  // corridor (river + boardwalk padding) and the park footprint.
+  function horizontalCutsFor(z: number): Interval[] {
+    const cuts: Interval[] = [];
+    for (const r of riverRects) {
+      const halfCorridorD = r.d / 2 + BOARDWALK_WIDTH;
+      const halfCorridorW = r.w / 2 + BOARDWALK_WIDTH;
+      if (z > r.z - halfCorridorD && z < r.z + halfCorridorD) {
+        cuts.push([r.x - halfCorridorW, r.x + halfCorridorW]);
+      }
+    }
+    if (z > parkZmin && z < parkZmax) cuts.push([parkXmin, parkXmax]);
+    return cuts;
+  }
+
+  function verticalCutsFor(x: number): Interval[] {
+    const cuts: Interval[] = [];
+    for (const r of riverRects) {
+      const halfCorridorD = r.d / 2 + BOARDWALK_WIDTH;
+      const halfCorridorW = r.w / 2 + BOARDWALK_WIDTH;
+      if (x > r.x - halfCorridorW && x < r.x + halfCorridorW) {
+        cuts.push([r.z - halfCorridorD, r.z + halfCorridorD]);
+      }
+    }
+    if (x > parkXmin && x < parkXmax) cuts.push([parkZmin, parkZmax]);
+    return cuts;
   }
 
   const STREET_POSITIONS = [-18, -12, -6, 0, 6, 12, 18];
 
-  // Horizontal streets (running along X). Each may span the full width,
-  // or be split into two segments that skip the park interior.
-  // They also cross the river as bridges (no special treatment — the street
-  // is drawn on top of the river plane at a slightly higher y).
+  // Phase 1 — compute drawn road intervals for every street line.
+  const horizontalRoads = new Map<number, Interval[]>();
+  const verticalRoads = new Map<number, Interval[]>();
   for (const z of STREET_POSITIONS) {
-    const inPark = z > parkZmin && z < parkZmax;
-    if (!inPark) {
-      drawHorizontalSegment(z, -blockExtent, blockExtent);
-    } else {
-      // Skip the park interior
-      drawHorizontalSegment(z, -blockExtent, parkXmin);
-      drawHorizontalSegment(z, parkXmax, blockExtent);
+    horizontalRoads.set(
+      z,
+      complementIntervals(horizontalCutsFor(z), -TILE_HALF, TILE_HALF, MIN_SEG_LEN)
+    );
+  }
+  for (const x of STREET_POSITIONS) {
+    verticalRoads.set(
+      x,
+      complementIntervals(verticalCutsFor(x), -TILE_HALF, TILE_HALF, MIN_SEG_LEN)
+    );
+  }
+
+  // Phase 2 — road boxes, continuous across intersections (no cuts from
+  // perpendicular roads). Only cut by river/park already baked into intervals.
+  for (const [z, intervals] of horizontalRoads) {
+    for (const [a, b] of intervals) {
+      const length = b - a;
+      const rGeom = tracker.trackGeom(
+        new THREE.BoxGeometry(length, ROAD_HEIGHT, STREET_WIDTH)
+      );
+      const road = new THREE.Mesh(rGeom, roadMat);
+      road.position.set((a + b) / 2, ROAD_HEIGHT / 2, z);
+      streetGroup.add(road);
+    }
+  }
+  for (const [x, intervals] of verticalRoads) {
+    for (const [a, b] of intervals) {
+      const length = b - a;
+      const rGeom = tracker.trackGeom(
+        new THREE.BoxGeometry(STREET_WIDTH, ROAD_HEIGHT, length)
+      );
+      const road = new THREE.Mesh(rGeom, roadMat);
+      road.position.set(x, ROAD_HEIGHT / 2, (a + b) / 2);
+      streetGroup.add(road);
     }
   }
 
-  // Vertical streets (running along Z). Skip x=0 — that's the river.
-  for (const x of STREET_POSITIONS) {
-    if (x === 0) continue; // river takes this slot
-    const inPark = x > parkXmin && x < parkXmax;
-    if (!inPark) {
-      drawVerticalSegment(x, -blockExtent, blockExtent);
-    } else {
-      drawVerticalSegment(x, -blockExtent, parkZmin);
-      drawVerticalSegment(x, parkZmax, blockExtent);
+  // Phase 3 — sidewalks. Each road sub-segment gets sidewalks on both sides,
+  // cut by the STREET WIDTH of every perpendicular road that actually exists
+  // at that sidewalk's parallel coordinate. Corners are preserved because the
+  // cut is at STREET_WIDTH/2, not the full corridor — the 0.3-unit sidewalk
+  // square at the corner lies outside the perpendicular road's width.
+  function drawHorizontalSidewalks() {
+    for (const [z, intervals] of horizontalRoads) {
+      for (const [xStart, xEnd] of intervals) {
+        for (const sign of [-1, 1]) {
+          const swZ = z + sign * SIDEWALK_OFFSET;
+          const cuts: Interval[] = [];
+          for (const vx of STREET_POSITIONS) {
+            const vIntervals = verticalRoads.get(vx);
+            if (!vIntervals) continue;
+            for (const [vzStart, vzEnd] of vIntervals) {
+              if (swZ > vzStart && swZ < vzEnd) {
+                cuts.push([vx - HALF_ROAD, vx + HALF_ROAD]);
+                break;
+              }
+            }
+          }
+          // Also cut sidewalk where river corridor or park would cover it
+          for (const c of horizontalCutsFor(swZ)) cuts.push(c);
+          const subs = complementIntervals(cuts, xStart, xEnd, MIN_SEG_LEN);
+          for (const [a, b] of subs) {
+            const length = b - a;
+            const swGeom = tracker.trackGeom(
+              new THREE.BoxGeometry(length, SIDEWALK_HEIGHT, SIDEWALK_WIDTH)
+            );
+            const sw = new THREE.Mesh(swGeom, sidewalkMat);
+            sw.position.set((a + b) / 2, SIDEWALK_HEIGHT / 2, swZ);
+            streetGroup.add(sw);
+          }
+        }
+      }
     }
   }
+
+  function drawVerticalSidewalks() {
+    for (const [x, intervals] of verticalRoads) {
+      for (const [zStart, zEnd] of intervals) {
+        for (const sign of [-1, 1]) {
+          const swX = x + sign * SIDEWALK_OFFSET;
+          const cuts: Interval[] = [];
+          for (const hz of STREET_POSITIONS) {
+            const hIntervals = horizontalRoads.get(hz);
+            if (!hIntervals) continue;
+            for (const [hxStart, hxEnd] of hIntervals) {
+              if (swX > hxStart && swX < hxEnd) {
+                cuts.push([hz - HALF_ROAD, hz + HALF_ROAD]);
+                break;
+              }
+            }
+          }
+          for (const c of verticalCutsFor(swX)) cuts.push(c);
+          const subs = complementIntervals(cuts, zStart, zEnd, MIN_SEG_LEN);
+          for (const [a, b] of subs) {
+            const length = b - a;
+            const swGeom = tracker.trackGeom(
+              new THREE.BoxGeometry(SIDEWALK_WIDTH, SIDEWALK_HEIGHT, length)
+            );
+            const sw = new THREE.Mesh(swGeom, sidewalkMat);
+            sw.position.set(swX, SIDEWALK_HEIGHT / 2, (a + b) / 2);
+            streetGroup.add(sw);
+          }
+        }
+      }
+    }
+  }
+
+  drawHorizontalSidewalks();
+  drawVerticalSidewalks();
 
   scene.add(streetGroup);
 
@@ -1770,21 +2033,8 @@ export function initBlueprintCity(
     })
   );
 
-  const treeCount = 30;
-  let placed = 0;
-  let attempts = 0;
-  while (placed < treeCount && attempts < 500) {
-    attempts++;
-    const tx = (Math.random() - 0.5) * blockExtent * 1.95;
-    const tz = (Math.random() - 0.5) * blockExtent * 1.95;
-
-    const collides = occupied.some(
-      (o) =>
-        Math.abs(tx - o.x) < o.w / 2 + 0.5 && Math.abs(tz - o.z) < o.d / 2 + 0.5
-    );
-    if (collides) continue;
-
-    const scale = 0.85 + Math.random() * 0.7;
+  function spawnSpruce(tx: number, tz: number, scaleSeed: number) {
+    const scale = 0.85 + scaleSeed * 0.6;
     const trunkH = 0.35 * scale;
     const trunkR = 0.12 * scale;
     const tierSides = 4;
@@ -1802,7 +2052,7 @@ export function initBlueprintCity(
     trunk.position.set(tx, trunkH / 2, tz);
     treeGroup.add(trunk);
 
-    const canopyMat = Math.random() < 0.5 ? spruceMaterialDark : spruceMaterialMid;
+    const canopyMat = scaleSeed < 0.5 ? spruceMaterialDark : spruceMaterialMid;
 
     const addCone = (r: number, h: number, yBase: number) => {
       const g = tracker.trackGeom(new THREE.ConeGeometry(r, h, tierSides));
@@ -1820,9 +2070,48 @@ export function initBlueprintCity(
     addCone(r1, h1, trunkH);
     addCone(r2, h2, trunkH + h1 * 0.6);
     addCone(r3, h3, trunkH + h1 * 0.6 + h2 * 0.6);
+  }
 
-    occupied.push({ x: tx, z: tz, w: r1 * 2.2, d: r1 * 2.2 });
-    placed++;
+  // Grid-aligned spruce cells. For every empty cell (not claimed by a
+  // building, landmark, park, or river/boardwalk corridor), scatter a
+  // handful of spruce inside the cell interior — staying clear of the
+  // surrounding sidewalks.
+  const CELL_HALF_INTERIOR = 2.3; // keep inside the cell, clear of sidewalk corridor
+  const CELL_CENTERS = [-15, -9, -3, 3, 9, 15];
+  const TREES_PER_CELL = 6;
+  const cellClaimed = (cx: number, cz: number) =>
+    occupied.some(
+      (o) => Math.abs(cx - o.x) < o.w / 2 && Math.abs(cz - o.z) < o.d / 2
+    );
+
+  const subGrid: Array<[number, number]> = [
+    [-1.4, -1.4],
+    [1.4, -1.4],
+    [-1.4, 1.4],
+    [1.4, 1.4],
+    [0, -1.0],
+    [0, 1.0],
+  ];
+
+  for (const cx of CELL_CENTERS) {
+    for (const cz of CELL_CENTERS) {
+      if (cellClaimed(cx, cz)) continue;
+      for (let i = 0; i < TREES_PER_CELL; i++) {
+        const [dx, dz] = subGrid[i % subGrid.length];
+        const jitterX = (Math.random() - 0.5) * 0.5;
+        const jitterZ = (Math.random() - 0.5) * 0.5;
+        const tx = cx + dx + jitterX;
+        const tz = cz + dz + jitterZ;
+        // Final safety clamp to interior
+        if (
+          Math.abs(tx - cx) > CELL_HALF_INTERIOR ||
+          Math.abs(tz - cz) > CELL_HALF_INTERIOR
+        ) {
+          continue;
+        }
+        spawnSpruce(tx, tz, Math.random());
+      }
+    }
   }
   scene.add(treeGroup);
 
@@ -1930,12 +2219,6 @@ export function initBlueprintCity(
     document.removeEventListener('visibilitychange', onVisibilityChange);
 
     tracker.disposeAll();
-    (grid.geometry as THREE.BufferGeometry).dispose();
-    if (Array.isArray(gridMaterial)) {
-      gridMaterial.forEach((m) => m.dispose());
-    } else {
-      gridMaterial.dispose();
-    }
     renderer.dispose();
     if (renderer.domElement.parentElement) {
       renderer.domElement.parentElement.removeChild(renderer.domElement);
