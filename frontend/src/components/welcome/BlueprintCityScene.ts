@@ -1373,6 +1373,156 @@ export function initBlueprintCity(
     occupied.push({ x: cx, z: cz, w: slabW, d: rowLength });
   }
 
+  // ---- Willis Tower (stacked setbacks) — CBD ----
+  // Abstracted as 4 stacked boxes of decreasing footprint, each offset
+  // toward center. Creates the distinct stepped silhouette of the real
+  // Willis Tower's bundled-tube design.
+  {
+    const cx = 9;
+    const cz = -3;
+
+    const willisBodyMat = tracker.trackMat(
+      new THREE.MeshStandardMaterial({
+        color: variant === 'night' ? 0x0f1322 : 0x4a5068,
+        map: windowColorTex.clone(),
+        emissiveMap: variant === 'night'
+          ? tracker.track(makeWindowEmissiveTexture(811, palette))
+          : undefined,
+        emissive: variant === 'night' ? 0xffffff : 0x000000,
+        emissiveIntensity: variant === 'night' ? 1.0 : 0,
+        metalness: 0.05,
+        roughness: 0.7,
+        transparent: false,
+      })
+    );
+    if (willisBodyMat.map) {
+      willisBodyMat.map.wrapS = THREE.RepeatWrapping;
+      willisBodyMat.map.wrapT = THREE.RepeatWrapping;
+      willisBodyMat.map.repeat.set(2, 4);
+      willisBodyMat.map.needsUpdate = true;
+    }
+
+    // Layer heights (cumulative from 0)
+    // Stage 1: 5x5, y=0..8
+    // Stage 2: 4x4, y=8..13   (inset)
+    // Stage 3: 3x3, y=13..17  (further inset)
+    // Stage 4: 1.8x2.5, y=17..22  (twin antenna tubes)
+    const stages: Array<[number, number, number, number]> = [
+      [5, 5, 0, 8],
+      [4, 4, 8, 5],
+      [3, 3, 13, 4],
+      [1.8, 2.5, 17, 5],
+    ];
+    for (const [w, d, yBase, h] of stages) {
+      const g = tracker.trackGeom(new THREE.BoxGeometry(w, h, d));
+      g.translate(0, yBase + h / 2, 0);
+      const mesh = new THREE.Mesh(g, willisBodyMat);
+      mesh.position.set(cx, 0, cz);
+      addEdges(mesh, sharedEdgeMat);
+      landmarkGroup.add(mesh);
+    }
+
+    // Twin antennas on top of the final twin tubes
+    const antennaMat = tracker.trackMat(
+      new THREE.MeshStandardMaterial({
+        color: variant === 'night' ? 0x222838 : 0x2a2e40,
+        metalness: 0.1,
+        roughness: 0.6,
+        transparent: false,
+      })
+    );
+    for (const xOffset of [-0.6, 0.6]) {
+      const mastG = tracker.trackGeom(new THREE.CylinderGeometry(0.05, 0.05, 2.5, 5));
+      mastG.translate(0, 1.25, 0);
+      const mast = new THREE.Mesh(mastG, antennaMat);
+      mast.position.set(cx + xOffset, 22, cz);
+      landmarkGroup.add(mast);
+    }
+
+    occupied.push({ x: cx, z: cz, w: 5, d: 5 });
+  }
+
+  // ---- Petronas Twin Towers (nod, not replica) — CBD ----
+  // Two identical towers with tapered pyramid caps + a skybridge across
+  // the middle. Simplified low-poly abstraction of the Kuala Lumpur twins.
+  {
+    const cx = 9;
+    const cz = 9;
+    const towerW = 1.6;
+    const towerD = 1.6;
+    const towerH = 18;
+    const towerGap = 1.3;
+
+    const petronasBodyMat = tracker.trackMat(
+      new THREE.MeshStandardMaterial({
+        color: variant === 'night' ? 0x0c1028 : 0x9ca7b8,
+        map: windowColorTex.clone(),
+        emissiveMap: variant === 'night'
+          ? tracker.track(makeWindowEmissiveTexture(913, palette))
+          : undefined,
+        emissive: variant === 'night' ? 0xffffff : 0x000000,
+        emissiveIntensity: variant === 'night' ? 1.0 : 0,
+        metalness: 0.12,
+        roughness: 0.55,
+        transparent: false,
+      })
+    );
+    if (petronasBodyMat.map) {
+      petronasBodyMat.map.wrapS = THREE.RepeatWrapping;
+      petronasBodyMat.map.wrapT = THREE.RepeatWrapping;
+      petronasBodyMat.map.repeat.set(1, 7);
+      petronasBodyMat.map.needsUpdate = true;
+    }
+
+    const petronasCapMat = tracker.trackMat(
+      new THREE.MeshStandardMaterial({
+        color: variant === 'night' ? 0x2a3156 : 0x6b7380,
+        metalness: 0.15,
+        roughness: 0.55,
+        transparent: false,
+      })
+    );
+
+    for (const xOffset of [-towerGap, towerGap]) {
+      // Main shaft
+      const shaftG = tracker.trackGeom(new THREE.BoxGeometry(towerW, towerH, towerD));
+      shaftG.translate(0, towerH / 2, 0);
+      const shaft = new THREE.Mesh(shaftG, petronasBodyMat);
+      shaft.position.set(cx + xOffset, 0, cz);
+      addEdges(shaft, sharedEdgeMat);
+      landmarkGroup.add(shaft);
+
+      // Tapered cap — 4-sided cone
+      const capG = tracker.trackGeom(new THREE.ConeGeometry(towerW * 0.55, 2.4, 4));
+      capG.rotateY(Math.PI / 4);
+      capG.translate(0, towerH + 1.2, 0);
+      const cap = new THREE.Mesh(capG, petronasCapMat);
+      cap.position.set(cx + xOffset, 0, cz);
+      addEdges(cap, sharedEdgeMat);
+      landmarkGroup.add(cap);
+
+      // Needle spire on top of cap
+      const needleG = tracker.trackGeom(new THREE.CylinderGeometry(0.04, 0.06, 2, 5));
+      needleG.translate(0, towerH + 3.4, 0);
+      const needle = new THREE.Mesh(needleG, petronasCapMat);
+      needle.position.set(cx + xOffset, 0, cz);
+      landmarkGroup.add(needle);
+    }
+
+    // Skybridge — horizontal connector between the towers at mid-height
+    const bridgeG = tracker.trackGeom(new THREE.BoxGeometry(towerGap * 2 - towerW, 0.35, 0.6));
+    bridgeG.translate(0, towerH * 0.52, 0);
+    const bridge = new THREE.Mesh(bridgeG, petronasCapMat);
+    bridge.position.set(cx, 0, cz);
+    addEdges(bridge, sharedEdgeMat);
+    landmarkGroup.add(bridge);
+
+    // Bridge support struts (diagonal lines from towers to bridge base)
+    // Skipped for low-poly simplicity; the bridge reads on its own.
+
+    occupied.push({ x: cx, z: cz, w: towerGap * 2 + towerW, d: towerD + 0.3 });
+  }
+
   // ---- Stavkirke (inside park) ----
   {
     const sx = parkCenter.x - parkW * 0.24;
