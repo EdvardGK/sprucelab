@@ -256,15 +256,20 @@ export function IFCPropertiesPanel({ element, className }: IFCPropertiesPanelPro
 // ── Spatial Path ──
 
 function SpatialPath({ element }: { element: ElementProperties }) {
-  const parts = [element.site, element.building, element.storey].filter(Boolean) as string[];
-  if (parts.length === 0) return null;
+  const parts: Array<string | null> = [
+    element.site ?? null,
+    element.building ?? null,
+    element.storey ?? null,
+  ];
 
   return (
     <div className="flex items-center gap-[3px] flex-wrap px-2.5 py-1.5 text-[9.5px] text-text-tertiary border-b border-black/[0.03]">
       {parts.map((part, i) => (
         <span key={i} className="flex items-center gap-[3px]">
           {i > 0 && <ChevronSvg />}
-          <span className="text-text-secondary font-medium">{part}</span>
+          <span className={cn('font-medium', part ? 'text-text-secondary' : 'text-text-tertiary opacity-50')}>
+            {part ?? MISSING}
+          </span>
         </span>
       ))}
     </div>
