@@ -85,7 +85,7 @@ export default function Login() {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            Magisk lenke
+            Magic link
           </button>
         </div>
 
