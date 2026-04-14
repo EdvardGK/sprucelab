@@ -126,56 +126,55 @@ const MATERIAL_COLORS = [
 
 // ── Key properties extraction ──
 
-function extractKeyProps(element: ElementProperties): Array<{
+const MISSING = '—';
+
+interface KeyPropCell {
   value: string;
   label: string;
   variant: 'yes' | 'no' | 'rating' | 'value';
-}> {
-  const props: Array<{ value: string; label: string; variant: 'yes' | 'no' | 'rating' | 'value' }> = [];
+  isMissing: boolean;
+}
 
-  // IsExternal
+function extractKeyProps(element: ElementProperties): KeyPropCell[] {
   const isExt = element.isExternal ?? findInPsets(element.psets, 'IsExternal');
-  if (isExt !== undefined) {
-    const boolVal = toBool(isExt);
-    props.push({
-      value: boolVal ? 'Ja' : 'Nei',
-      label: 'isExternal',
-      variant: boolVal ? 'yes' : 'no',
-    });
-  }
-
-  // LoadBearing
   const loadB = element.loadBearing ?? findInPsets(element.psets, 'LoadBearing');
-  if (loadB !== undefined) {
-    const boolVal = toBool(loadB);
-    props.push({
-      value: boolVal ? 'Ja' : 'Nei',
-      label: 'loadBearing',
-      variant: boolVal ? 'yes' : 'no',
-    });
-  }
-
-  // FireRating
   const fire = element.fireRating ?? findInPsets(element.psets, 'FireRating');
-  if (fire !== undefined && fire !== '' && fire !== null) {
-    props.push({
-      value: String(fire),
-      label: 'fireRating',
-      variant: 'rating',
-    });
-  }
-
-  // ThermalTransmittance (U-value)
   const uVal = element.thermalTransmittance ?? findInPsets(element.psets, 'ThermalTransmittance');
-  if (uVal !== undefined && uVal !== null) {
-    props.push({
-      value: typeof uVal === 'number' ? uVal.toFixed(2) : String(uVal),
-      label: 'uValue',
-      variant: 'value',
-    });
-  }
 
-  return props;
+  const extBool = isExt !== undefined ? toBool(isExt) : null;
+  const loadBool = loadB !== undefined ? toBool(loadB) : null;
+
+  return [
+    {
+      label: 'isExternal',
+      value: extBool === null ? MISSING : extBool ? 'Ja' : 'Nei',
+      variant: extBool === null ? 'value' : extBool ? 'yes' : 'no',
+      isMissing: extBool === null,
+    },
+    {
+      label: 'loadBearing',
+      value: loadBool === null ? MISSING : loadBool ? 'Ja' : 'Nei',
+      variant: loadBool === null ? 'value' : loadBool ? 'yes' : 'no',
+      isMissing: loadBool === null,
+    },
+    {
+      label: 'fireRating',
+      value: fire !== undefined && fire !== '' && fire !== null ? String(fire) : MISSING,
+      variant: 'rating',
+      isMissing: fire === undefined || fire === '' || fire === null,
+    },
+    {
+      label: 'uValue',
+      value:
+        uVal !== undefined && uVal !== null
+          ? typeof uVal === 'number'
+            ? uVal.toFixed(2)
+            : String(uVal)
+          : MISSING,
+      variant: 'value',
+      isMissing: uVal === undefined || uVal === null,
+    },
+  ];
 }
 
 function findInPsets(psets: Record<string, Record<string, any>> | undefined, propName: string): any {
