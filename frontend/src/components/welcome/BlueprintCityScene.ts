@@ -1221,10 +1221,10 @@ export function initBlueprintCity(
     occupied.push({ x: cx, z: cz, w: footprintW, d: footprintD });
   }
 
-  // ---- Barcode Project (CBD, NE quadrant) ----
+  // ---- Barcode Project (CBD, deep east side — clear of waterfront) ----
   {
-    const cx = spacing * 2.4;
-    const cz = spacing * 1.6;
+    const cx = 15;
+    const cz = 3;
     const slabCount = 12;
     const slabW = 0.85;
     const slabD = 4.2;
