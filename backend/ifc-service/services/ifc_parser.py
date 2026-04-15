@@ -24,7 +24,7 @@ import hashlib
 
 from repositories.ifc_repository import (
     EntityData, PropertyData, SpatialData,
-    MaterialData, TypeData, SystemData, TypeAssignmentData
+    MaterialData, TypeData, TypeLayerData, SystemData, TypeAssignmentData
 )
 
 
