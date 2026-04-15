@@ -958,6 +958,7 @@ class IFCParserService:
         type_object,
         representative_element,
         representative_unit: str,
+        length_unit_scale: float = 1.0,
     ) -> List[TypeLayerData]:
         """
         Extract material layer stack for a type.
@@ -969,11 +970,16 @@ class IFCParserService:
           - IfcMaterialList → legacy list of materials
           - IfcMaterial → single material, emitted as a single layer
 
-        Thicknesses from IFC are stored in the file's length unit (usually meters);
-        we convert to mm. For area-based types (m²), thickness_m becomes the
-        quantity_per_unit in m³ (volume per m²). For other units we emit a
-        quantity_per_unit of 1.0 in the type's representative unit — still useful
-        for Materials Browser display even if not directly meaningful for LCA.
+        `length_unit_scale` is the factor to convert the file's length unit to
+        meters (e.g. 0.001 for a mm-based file, 1.0 for a meter-based file).
+        Obtain via ifcopenshell.util.unit.calculate_unit_scale(ifc_file) once per
+        file and pass in. Without this, mm-based files (common for Revit exports)
+        produce thicknesses that are wrong by 1000x.
+
+        For area-based types (m²), thickness_m becomes the quantity_per_unit in
+        m³ (volume per m²). For other units we emit a quantity_per_unit of 1.0
+        in the type's representative unit — still useful for Materials Browser
+        display even if not directly meaningful for LCA.
 
         Never raises: returns [] on any extraction failure.
         """
