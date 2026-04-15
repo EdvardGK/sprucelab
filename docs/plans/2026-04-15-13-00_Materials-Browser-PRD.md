@@ -64,36 +64,80 @@ LCA: EPD + GWP + confidence. Procurement: supplier + price + lead time + approva
 
 ## Normalization taxonomy
 
-**Two-level hierarchy over the existing `MATERIAL_CATEGORY_CHOICES` (40 leaves).**
+**Sprucelab-native L1 families, crosswalked outward to five secondary codes.** Research finding (see `/tmp/materials-taxonomy-research.md` 2026-04-15): no existing standard fits the way designers browse materials. CPV is procurement-oriented, EN 15804/NPCR is EPD-oriented, NS 9431 is waste-stream-oriented, NACE/PRODCOM are supply-side. None of them carve the space the way an architect or engineer thinks about it. KBOB (Swiss) is the closest real-world reference to what we want but isn't a formal standard.
 
-### L1 families (navigation default)
-- Concrete
-- Steel
-- Wood
-- Insulation
-- Boards
-- Glass
-- Membrane
-- Masonry
-- Metal (non-structural)
-- Polymer / Plastic
-- Finish
-- Composite (windows, doors, facades)
-- Other / Unclassified
+**Decision:** invent the L1 taxonomy. Crosswalk *outward* to the standards that matter for interop.
 
-### L2 subtypes = existing leaf categories
-Slotted under their family. Example:
+### L1 families (navigation default, sprucelab-native)
 
-- **Insulation** → `mineral_wool_inner`, `mineral_wool_outer`, `mineral_wool_roof`, `glass_wool`, `insulation_eps`, `insulation_xps`
-- **Concrete** → `concrete_cast`, `concrete_hollowcore`
-- **Wood** → `wood_glulam`, `wood_clt`, `wood_structural`, `wood_treated`
-- **Steel** → `steel_structural`, `rebar`
+1. **Concrete**
+2. **Masonry** (brick, block, stone)
+3. **Metal** — with L2 split into Steel / Aluminium / Copper / Zinc
+4. **Wood**
+5. **Boards** (gypsum, OSB, plywood, particleboard, cement board)
+6. **Insulation**
+7. **Glass**
+8. **Membrane / Waterproofing**
+9. **Polymer / Plastic**
+10. **Finish** (paint, tile, flooring)
+11. **Composite** (windows, doors, curtain walls — assembled products)
+12. **Technical** (sealant, adhesive, mortar, grout) — new category from research
+13. **Other / Unclassified**
+
+### L2 subtypes (designer-native, not the existing Enova leaves)
+
+The existing `MATERIAL_CATEGORY_CHOICES` leaves (`concrete_cast`, `mineral_wool_inner`, etc.) are too granular in some places and too vague in others. Redefined designer-native L2:
+
+- **Concrete** → In-situ / Precast / Lightweight / Fibre-reinforced / Low-carbon
+- **Metal → Steel** → Structural / Rebar / Cold-formed / Stainless
+- **Wood** → Solid / Glulam / CLT / LVL / Engineered / Treated
+- **Insulation** → Mineral wool / Glass wool / EPS / XPS / PIR / Cellulose / Wood fibre / Aerogel
+- **Boards** → Gypsum (standard/wetroom/fire) / OSB / Plywood / Particleboard / Cement board
+- **Glass** → Float / Laminated / Insulated unit / Tempered
+- **Membrane** → Vapor barrier / Wetroom / Roof / Geotextile
+
+Existing leaves are mapped to new L1/L2 via `LEGACY_LEAF_TO_L2` table. No data migration — just a projection map in Python.
+
+### Crosswalk: five secondary codes per material
+
+All optional, all nullable, all auto-suggested from L1/L2, all user-confirmable. TypeBank pattern — classify once, reuse across projects.
+
+| Code | Purpose | Source | Required? |
+|---|---|---|---|
+| **NS 9431 fraksjon** | Norwegian waste reporting (mandatory for projects >300m²) | Geonorge "Fraksjoner NS" register | Required for anything that can become waste |
+| **NPCR sub-PCR** | EPD linkage, LCA export anchor | EPD Norge (NPCR parts B) | Required for LCA-ready materials |
+| **CPV 8-digit** | EU procurement alignment (div. 44 primary) | CPV standard | Optional, valuable for public-sector projects |
+| **NS 3451 bygningsdelskode** | Norwegian BIM part table | NS 3451 (already in schema via TypeMapping) | Already in schema |
+| **HS/CN chapter** | Customs/trade, imported products | WCO Harmonized System | Optional, only for imports |
+
+### Schema work for crosswalks
+
+New model `MaterialClassification`:
+```
+material_library_id FK
+ns9431_fraksjon: char(10) nullable
+npcr_code: char(20) nullable       # e.g., "NPCR 013" for concrete
+cpv_code: char(10) nullable         # 8-digit CPV
+hs_chapter: char(4) nullable        # e.g., "7308" for iron/steel structures
+confidence: enum(suggested, confirmed, expert_verified)
+confirmed_by: FK user nullable
+confirmed_at: timestamp nullable
+```
+
+One row per `MaterialLibrary` entry. Auto-populated by heuristics on creation, confirmed by user.
 
 ### Implementation
-Hardcoded `LEAF_TO_FAMILY` map in Python. No migration. Pure projection over existing data. Lives at `backend/apps/entities/services/material_families.py`.
+
+- **`backend/apps/entities/services/material_families.py`** — L1 family definitions, L2 subtypes, `LEGACY_LEAF_TO_L2` map for backwards compat with existing `MATERIAL_CATEGORY_CHOICES` data
+- **`backend/apps/entities/services/material_classifier.py`** — heuristic classifier: raw IFC name → suggested L1/L2 + NS9431 + NPCR
+- **`backend/apps/entities/services/material_crosswalks.py`** — seed data: L1/L2 → default NS9431, NPCR, CPV codes. Loaded from YAML in `backend/data/material-crosswalks.yaml`.
+- **`MaterialLibrary`** schema comment fixed: replace "aligned with Enova classification" (misleading — no canonical Enova taxonomy exists, only a GWP reference table) with "sprucelab-native, crosswalked to NS 9431 / NPCR / CPV via MaterialClassification"
 
 ### Unclassified materials
-Per-model `Material` records without a `material_library` FK get a **suggested family** from a string-match classifier over the raw IFC name (`betong`/`concrete` → Concrete, `stål`/`steel` → Steel, `gips` → Boards, `stein/rockwool/glava/isover` → Insulation, etc.). The browser shows them under their suggested family with an "unverified" badge. User clicks to confirm.
+Per-model `Material` records without a `material_library` FK get a **suggested L1 family** from the classifier over the raw IFC name (`betong`/`concrete` → Concrete, `stål`/`steel` → Metal → Steel, `gips` → Boards, `stein/rockwool/glava/isover` → Insulation, etc.). Browser shows them under their suggested family with an "unverified" badge. User clicks to confirm — confirmation writes a `MaterialLibrary` link and promotes the row.
+
+### Seed reference data
+Download **KBOB Ökobilanzdaten Baubereich** Excel (`.xlsx`) as seed reference for L1/L2 structure. Licence permits reference use. Stash under `backend/data/reference/kbob-baubereich.xlsx`. Not a runtime dependency — just the seed for initial L1/L2 definitions + auto-suggestion dictionaries.
 
 ---
 
