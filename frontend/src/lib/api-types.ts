@@ -49,6 +49,7 @@ export interface Model {
   task_id: string | null;
   created_at: string;
   updated_at: string;
+  first_version_created_at: string;
 }
 
 export interface UploadModelRequest {
