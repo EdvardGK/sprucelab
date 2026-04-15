@@ -33,6 +33,13 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
+  // Auto-start the Vite dev server if it's not already running. Reuse if it is.
+  webServer: {
+    command: 'yarn dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: true,
+    timeout: 60_000,
+  },
   projects: [
     {
       name: 'setup',
