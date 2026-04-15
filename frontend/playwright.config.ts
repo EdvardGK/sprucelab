@@ -39,13 +39,21 @@ export default defineConfig({
       testMatch: /.*\.setup\.ts/,
     },
     {
+      // Public / unauthenticated tests — no storageState required.
+      // Smoke specs run under this project.
+      name: 'public',
+      use: devices['Desktop Chrome'],
+      testMatch: /smoke\.spec\.ts/,
+    },
+    {
+      // Authenticated tests — use the captured storage state from auth.setup.
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/e2e/.auth/user.json',
       },
       dependencies: ['setup'],
-      testIgnore: /.*\.setup\.ts/,
+      testIgnore: [/.*\.setup\.ts/, /smoke\.spec\.ts/],
     },
   ],
 });
