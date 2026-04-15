@@ -451,7 +451,7 @@ class IFCParserService:
             # ==================== STAGE: Types ====================
             stage_start = time.time()
             print("[Parser] Extracting type definitions...")
-            types, stage_errors = self._extract_types(ifc_file)
+            types, stage_errors = self._extract_types(ifc_file, length_unit_scale=length_unit_scale)
             result.types = types
             result.type_count = len(types)
 
