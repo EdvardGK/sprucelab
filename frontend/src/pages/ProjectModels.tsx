@@ -289,7 +289,8 @@ export default function ProjectModels() {
                         </div>
                       ) : (
                         <div className="text-xs text-text-tertiary pb-4 space-y-0.5">
-                          <div>Uploaded {new Date(model.created_at).toLocaleDateString()}</div>
+                          <div>Added {new Date(model.first_version_created_at || model.created_at).toLocaleDateString()}</div>
+                          <div>v{model.version_number} uploaded {new Date(model.created_at).toLocaleDateString()}</div>
                           <div className="flex items-center gap-1.5">
                             <span>by</span>
                             <span className="font-medium text-text-secondary">Current User</span>

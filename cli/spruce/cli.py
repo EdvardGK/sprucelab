@@ -13,12 +13,14 @@ from .config import (
     load_config
 )
 from .api_client import SprucelabClient
+from .dev import dev_app
 
 app = typer.Typer(
     name="spruce",
     help="Sprucelab automation pipeline CLI",
     no_args_is_help=True
 )
+app.add_typer(dev_app, name="dev")
 console = Console()
 
 # Config subcommand

@@ -15,6 +15,7 @@ class ModelSerializer(serializers.ModelSerializer):
     is_fork = serializers.BooleanField(read_only=True)
     fork_count = serializers.SerializerMethodField()
     mapped_type_count = serializers.SerializerMethodField()
+    first_version_created_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Model
@@ -37,7 +38,7 @@ class ModelSerializer(serializers.ModelSerializer):
             # Aggregate stats (element details queried via FastAPI)
             'element_count', 'storey_count', 'system_count',
             'type_count', 'mapped_type_count', 'material_count', 'type_summary',
-            'processing_error', 'created_at', 'updated_at'
+            'processing_error', 'created_at', 'updated_at', 'first_version_created_at'
         ]
         read_only_fields = [
             'id', 'ifc_schema', 'file_url', 'file_size',
@@ -48,8 +49,12 @@ class ModelSerializer(serializers.ModelSerializer):
             'forked_at', 'is_fork', 'fork_count',
             'element_count', 'storey_count', 'system_count',
             'type_count', 'mapped_type_count', 'material_count', 'type_summary',
-            'processing_error', 'created_at', 'updated_at'
+            'processing_error', 'created_at', 'updated_at', 'first_version_created_at'
         ]
+
+    def get_first_version_created_at(self, obj):
+        """When this model first hit the platform (v1's created_at)."""
+        return obj.get_first_version_created_at()
 
     def get_fork_count(self, obj):
         """Get count of forks for this model."""

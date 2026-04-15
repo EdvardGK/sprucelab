@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+
+# Playwright
+/playwright-report/
+/test-results/
+/tests/e2e/.auth/

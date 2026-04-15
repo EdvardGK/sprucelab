@@ -330,6 +330,23 @@ class Model(models.Model):
     def __str__(self):
         return f"{self.name} (v{self.version_number})"
 
+    def get_first_version_created_at(self):
+        """
+        Return the created_at of the first version of this model (v1).
+
+        Used to show users "when this model first hit the platform", independent
+        of which version is currently displayed. For v1 rows this is self.created_at
+        without a database query.
+        """
+        if self.version_number == 1 or self.parent_model_id is None:
+            return self.created_at
+        original_ts = Model.objects.filter(
+            project_id=self.project_id,
+            name=self.name,
+            version_number=1,
+        ).values_list('created_at', flat=True).first()
+        return original_ts or self.created_at
+
     def get_previous_version(self):
         """Get the previous version of this model."""
         return Model.objects.filter(

@@ -641,6 +641,168 @@
     "title": "Materialbibliotek",
     "comingSoon": "Materialbibliotek-funksjonalitet kommer snart"
   },
+  "materialBrowser": {
+    "loading": "Laster materialer …",
+    "loadError": "Kunne ikke laste materialer",
+    "emptyTitle": "Ingen materialer funnet",
+    "emptyDescription": "Ingen typer i dette prosjektet har materiallag ennå. Åpne Typebank og legg til materiallag på typer for å fylle dette biblioteket.",
+    "search": "Søk i materialer og alias",
+    "noResults": "Ingen treff",
+    "clearFilter": "Nullstill filter",
+    "aliases": "alias",
+    "suggested": "Foreslått",
+    "unclassified": "Uklassifisert",
+    "header": {
+      "materials": "materialer",
+      "sets": "sett",
+      "classified": "klassifisert",
+      "epdLinked": "med EPD",
+      "procurementLinked": "med produkt",
+      "loadingRemaining": "{{loaded}} modeller lastet, {{pending}} gjenstår"
+    },
+    "tab": {
+      "materials": "Materialer ({{count}})",
+      "sets": "Sett ({{count}})"
+    },
+    "lens": {
+      "all": "Alle",
+      "lca": "LCA",
+      "procurement": "Innkjøp"
+    },
+    "column": {
+      "name": "Navn",
+      "family": "Familie",
+      "quantity": "Mengde",
+      "usedIn": "Brukt i",
+      "lca": "LCA",
+      "procurement": "Innkjøp"
+    },
+    "detail": {
+      "material": "Material",
+      "set": "Materialsett",
+      "aliases": "Alias (IFC-navn)",
+      "quantities": "Mengder",
+      "usedIn": "Brukt i",
+      "types": "typer",
+      "instances": "forekomster",
+      "more": "til",
+      "lcaReadiness": "LCA-status",
+      "lcaReady": "EPD tilknyttet — klar for LCA-eksport",
+      "lcaMissing": "Ingen EPD tilknyttet. LCA-beregning blir nominell eller utelatt.",
+      "procurementReadiness": "Innkjøpsstatus",
+      "procurementReady": "Produkt og leverandør tilknyttet",
+      "procurementMissing": "Ingen produkt eller leverandør. Spesifikasjon er generisk.",
+      "selectPrompt": "Velg et material eller sett for å se detaljer",
+      "composition": "Sammensetning"
+    },
+    "set": {
+      "layers": "lag",
+      "types": "typer"
+    },
+    "family": {
+      "concrete": "Betong",
+      "masonry": "Murverk",
+      "metal": "Metall",
+      "wood": "Tre",
+      "boards": "Plater",
+      "insulation": "Isolasjon",
+      "glass": "Glass",
+      "membrane": "Membran",
+      "polymer": "Plast",
+      "finish": "Overflate",
+      "composite": "Sammensatt",
+      "technical": "Teknisk",
+      "other": "Annet"
+    },
+    "subtype": {
+      "concrete": {
+        "inSitu": "Plasstøpt",
+        "precast": "Prefabrikkert",
+        "lightweight": "Lettbetong",
+        "fibreReinforced": "Fiberarmert",
+        "lowCarbon": "Lavkarbon"
+      },
+      "masonry": {
+        "brick": "Tegl",
+        "block": "Blokk",
+        "stone": "Naturstein"
+      },
+      "metal": {
+        "steelStructural": "Konstruksjonsstål",
+        "steelRebar": "Armering",
+        "steelColdFormed": "Kaldformet stål",
+        "stainless": "Rustfritt",
+        "aluminium": "Aluminium",
+        "copper": "Kobber",
+        "zinc": "Sink"
+      },
+      "wood": {
+        "solid": "Massivt tre",
+        "glulam": "Limtre",
+        "clt": "CLT / Massivtre",
+        "lvl": "LVL",
+        "engineered": "Konstruksjonstre",
+        "treated": "Impregnert"
+      },
+      "boards": {
+        "gypsumStandard": "Gipsplate",
+        "gypsumWetroom": "Våtromsplate",
+        "gypsumFire": "Brannplate",
+        "osb": "OSB",
+        "plywood": "Kryssfiner",
+        "particleboard": "Sponplate",
+        "cementBoard": "Sementbundet plate"
+      },
+      "insulation": {
+        "mineralWool": "Mineralull",
+        "glassWool": "Glassull",
+        "eps": "EPS",
+        "xps": "XPS",
+        "pir": "PIR",
+        "cellulose": "Cellulose",
+        "woodFibre": "Trefiber",
+        "aerogel": "Aerogel"
+      },
+      "glass": {
+        "float": "Planglass",
+        "laminated": "Laminert",
+        "insulatedUnit": "Isolerglass",
+        "tempered": "Herdet"
+      },
+      "membrane": {
+        "vaporBarrier": "Dampsperre",
+        "wetroom": "Våtromsmembran",
+        "roof": "Takbelegg",
+        "geotextile": "Fiberduk"
+      },
+      "polymer": {
+        "pvc": "PVC",
+        "pe": "PE",
+        "pp": "PP",
+        "epoxy": "Epoxy"
+      },
+      "finish": {
+        "paint": "Maling",
+        "tile": "Flis",
+        "parquet": "Parkett",
+        "linoleum": "Linoleum",
+        "vinyl": "Vinyl",
+        "carpet": "Teppe",
+        "screed": "Avretting"
+      },
+      "composite": {
+        "window": "Vindu",
+        "door": "Dør",
+        "curtainWall": "Glassfasade"
+      },
+      "technical": {
+        "sealant": "Fugemasse",
+        "adhesive": "Lim",
+        "mortar": "Mørtel",
+        "grout": "Fugemørtel"
+      }
+    }
+  },
   "semanticTypes": {
     "title": "Semantiske typer",
     "description": "PA0802/IFC-typenormalisering for standardisert klassifisering",
