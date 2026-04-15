@@ -689,18 +689,25 @@ class IFCParserService:
         errors = []
 
         # ==================== PASS 1: Group elements by ObjectType ====================
-        # Key: ObjectType string, Value: dict with element GUIDs and IFC class info
+        # Key: ObjectType string, Value: dict with element GUIDs and IFC class info.
+        # Also captures the first element seen for each ObjectType as a representative
+        # sample — used later to extract material layers when the type's own
+        # IfcTypeObject lacks material associations (common in Revit exports).
         object_type_groups = defaultdict(lambda: {
             'guids': [],
             'ifc_classes': set(),  # Track which IFC classes use this type
+            'first_element': None,
         })
 
         try:
             for element in ifc_file.by_type('IfcElement'):
                 object_type = getattr(element, 'ObjectType', None)
                 if object_type:  # Only count typed elements
-                    object_type_groups[object_type]['guids'].append(element.GlobalId)
-                    object_type_groups[object_type]['ifc_classes'].add(element.is_a())
+                    group = object_type_groups[object_type]
+                    group['guids'].append(element.GlobalId)
+                    group['ifc_classes'].add(element.is_a())
+                    if group['first_element'] is None:
+                        group['first_element'] = element
         except Exception as e:
             errors.append({
                 'stage': 'types',
