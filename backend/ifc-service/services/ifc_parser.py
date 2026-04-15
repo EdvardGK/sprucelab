@@ -19,6 +19,7 @@ from typing import List, Dict, Optional, Tuple, Any
 from concurrent.futures import ThreadPoolExecutor
 
 import ifcopenshell
+import ifcopenshell.util.unit
 from collections import defaultdict
 import hashlib
 
