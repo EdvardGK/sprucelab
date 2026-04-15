@@ -728,10 +728,15 @@ Each event creates an immutable log entry. The current state of a passport is th
 
 ## One-page summary
 
-**Problem:** ProjectMaterialLibrary is a placeholder. We need a real materials subsystem — not just a list, but the organizing spine for LCA (concept-stage carbon), procurement (demand/consolidation/risk), construction (balance sheet), and circular economy (passports, reuse).
+**Problem:** ProjectMaterialLibrary is a placeholder. We need a real materials subsystem — not just a list, but the organizing spine for LCA (concept-stage carbon), procurement (demand/consolidation/risk), construction (balance sheet), waste compliance, and circular economy (passports, reuse). And it has to work internationally, not just in Norway.
 
-**Principle:** Materials relate to types but are first-class. Fungible in flow, non-fungible on install. One taxonomy (sprucelab-native L1 + designer L2) crosswalked to the standards that matter (NS 9431, NPCR, CPV, NS 3451, HS). Types-first architecture preserved — everything is a projection over existing `TypeDefinitionLayer` data until we need event logs.
+**Principle:** Materials relate to types but are first-class. Fungible in flow, non-fungible on install. Sprucelab-native L1 taxonomy (designer-navigable: Concrete, Steel, Wood, Insulation, ...) **crosswalked** to any classification standard via a standards-agnostic schema. Ships with Norwegian defaults (NS 9431, NPCR, NS 3451, CPV, HS) but every project can load its own standards via the Standards Workspace (v1.3, bsDD-integrated). Types-first architecture preserved — everything is a projection over existing data until we need event logs.
 
-**Strategy:** Ship the browser (v1) static over current data. Add LCA (v1.1) with resolution chain. Add balance sheet (v1.5) for supply chain visibility. Add waste (v2) for Norwegian compliance. Add passports (v2.5) for circular economy. Each phase is self-contained and shippable.
+**Strategy:** v1 ships the browser over current data with Norwegian seeded defaults and a standards-agnostic schema. v1.1 adds screening LCA. v1.2 adds change detection + hotspots. v1.3 adds the Standards Workspace — the architectural unlock for international, with bsDD integration and custom classifications. v1.5 adds the Balance Sheet (fungible supply chain flows). v2 adds Waste Management (plan vs actual, with NS 9431 / LoW / HMRC depending on project). v2.5 adds Material Passports (fungible → non-fungible, Madaster-compatible). v3 adds cross-project MaterialBank. v3+ adds an agnostic procurement integration layer (no vendor lock-in).
 
-**Differentiator:** Every LCA tool is late-stage. Sprucelab gives you defensible carbon numbers at concept stage. Every procurement tool is siloed from design. Sprucelab reconciles them on one screen. Nobody is building passports for Norwegian projects. Sprucelab can own that space.
+**Differentiators:**
+1. **Concept-stage LCA** — every LCA tool is late-stage; sprucelab gives defensible carbon numbers at concept stage via the resolution chain (product EPD → category EPD → family nominal).
+2. **One screen for LCA + procurement** — they're currently siloed. Sprucelab reconciles them with two lenses on one table.
+3. **Standards-agnostic from day one** — nobody else starts here. Every other tool is baked to one country's standards.
+4. **Passports for Norwegian projects** — greenfield, EU taxonomy tailwinds.
+5. **bsDD native** — sprucelab is one of the few BIM platforms that treats the buildingSMART Data Dictionary as a first-class data source, not a one-time import.
