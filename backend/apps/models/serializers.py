@@ -38,7 +38,7 @@ class ModelSerializer(serializers.ModelSerializer):
             # Aggregate stats (element details queried via FastAPI)
             'element_count', 'storey_count', 'system_count',
             'type_count', 'mapped_type_count', 'material_count', 'type_summary',
-            'processing_error', 'created_at', 'updated_at'
+            'processing_error', 'created_at', 'updated_at', 'first_version_created_at'
         ]
         read_only_fields = [
             'id', 'ifc_schema', 'file_url', 'file_size',
