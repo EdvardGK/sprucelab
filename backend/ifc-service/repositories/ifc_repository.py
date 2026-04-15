@@ -448,6 +448,138 @@ class IFCRepository:
 
         return guid_to_id
 
+    async def bulk_insert_type_definition_layers(
+        self,
+        model_id: str,
+        types: List[TypeData],
+        type_guid_to_id: Dict[str, str],
+    ) -> Dict[str, int]:
+        """
+        Write TypeMapping rows and TypeDefinitionLayer rows for types that have
+        material layer data parsed from IFC.
+
+        For each type with non-empty definition_layers:
+        1. UPSERT into type_mappings by ifc_type_id (OneToOne) — sets
+           representative_unit and notes='Parsed from IFC' on create.
+        2. Wipe existing type_definition_layers rows for that mapping tagged
+           notes='__parsed__' (preserves seed / user layers across reruns in
+           scenarios where delete_model_data did not run first).
+        3. Bulk insert new layers tagged notes='__parsed__'.
+
+        All writes happen inside a single transaction.
+
+        Returns:
+            Dict with stats: mappings_created, mappings_updated, layers_created,
+            layers_cleared, types_skipped
+        """
+        stats = {
+            'mappings_created': 0,
+            'mappings_updated': 0,
+            'layers_created': 0,
+            'layers_cleared': 0,
+            'types_skipped': 0,
+        }
+
+        if not types:
+            return stats
+
+        PARSED_TAG = '__parsed__'
+        now = datetime.now(timezone.utc)
+
+        async with get_transaction() as conn:
+            for type_data in types:
+                if not type_data.definition_layers:
+                    continue
+
+                type_id_str = type_guid_to_id.get(type_data.type_guid)
+                if not type_id_str:
+                    stats['types_skipped'] += 1
+                    continue
+
+                type_uuid = uuid.UUID(type_id_str)
+
+                try:
+                    # Upsert TypeMapping (unique on ifc_type_id via OneToOneField)
+                    # type_category default must match Django model default ('specific')
+                    mapping_row = await conn.fetchrow(
+                        """
+                        INSERT INTO type_mappings (
+                            id, ifc_type_id, representative_unit, mapping_status,
+                            type_category, verification_status, verification_issues,
+                            notes, created_at, updated_at
+                        ) VALUES (
+                            $1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10
+                        )
+                        ON CONFLICT (ifc_type_id) DO UPDATE
+                            SET representative_unit = COALESCE(type_mappings.representative_unit, EXCLUDED.representative_unit),
+                                updated_at = EXCLUDED.updated_at
+                        RETURNING id, (xmax = 0) AS inserted
+                        """,
+                        uuid.uuid4(),
+                        type_uuid,
+                        type_data.representative_unit or 'm2',
+                        'pending',
+                        'specific',
+                        'pending',
+                        json.dumps([]),
+                        'Parsed from IFC',
+                        now,
+                        now,
+                    )
+
+                    mapping_id = mapping_row['id']
+                    if mapping_row['inserted']:
+                        stats['mappings_created'] += 1
+                    else:
+                        stats['mappings_updated'] += 1
+
+                    # Clear existing __parsed__ layers for this mapping
+                    cleared = await conn.execute(
+                        """
+                        DELETE FROM type_definition_layers
+                        WHERE type_mapping_id = $1 AND notes = $2
+                        """,
+                        mapping_id,
+                        PARSED_TAG,
+                    )
+                    stats['layers_cleared'] += int(cleared.split()[-1]) if cleared else 0
+
+                    # Bulk insert new layers
+                    layer_records = []
+                    for layer in type_data.definition_layers:
+                        layer_records.append((
+                            uuid.uuid4(),
+                            mapping_id,
+                            layer.layer_order,
+                            layer.material_name,
+                            layer.thickness_mm,
+                            layer.quantity_per_unit,
+                            layer.material_unit,
+                            PARSED_TAG,
+                            now,
+                            now,
+                        ))
+
+                    if layer_records:
+                        await conn.executemany(
+                            """
+                            INSERT INTO type_definition_layers (
+                                id, type_mapping_id, layer_order, material_name,
+                                thickness_mm, quantity_per_unit, material_unit,
+                                notes, created_at, updated_at
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                            ON CONFLICT (type_mapping_id, layer_order) DO NOTHING
+                            """,
+                            layer_records
+                        )
+                        stats['layers_created'] += len(layer_records)
+
+                except Exception as e:
+                    print(f"[layers] Error writing layers for type {type_data.type_guid}: {e}")
+                    stats['types_skipped'] += 1
+
+        return stats
+
     async def bulk_insert_systems(
         self,
         model_id: str,
