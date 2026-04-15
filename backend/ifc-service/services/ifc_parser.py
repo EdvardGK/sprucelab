@@ -245,6 +245,14 @@ class IFCParserService:
             result.ifc_schema = ifc_file.schema
             result.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
 
+            # Resolve the file's length unit so LayerThickness values can be
+            # correctly normalized to meters (Revit exports are usually in mm).
+            try:
+                length_unit_scale = float(ifcopenshell.util.unit.calculate_unit_scale(ifc_file))
+            except Exception:
+                length_unit_scale = 1.0
+            print(f"[Parser] Length unit scale (to meters): {length_unit_scale}")
+
             # Count elements for stats (quick scan)
             element_count = 0
             for product in ifc_file.by_type('IfcProduct'):
