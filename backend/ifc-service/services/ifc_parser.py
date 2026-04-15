@@ -889,6 +889,179 @@ class IFCParserService:
         except Exception:
             return ''
 
+    # Representative unit inference for types, used to populate TypeMapping.representative_unit
+    # when the parser creates a mapping. Matches the conventions in the seed command and the
+    # Materials Browser UI. Anything not in this map defaults to 'm2'.
+    _TYPE_UNIT_MAP = {
+        # Area-based (walls, slabs, roofs, plates, curtain walls, stairs)
+        'IfcWallType': 'm2',
+        'IfcWallStandardCaseType': 'm2',
+        'IfcSlabType': 'm2',
+        'IfcRoofType': 'm2',
+        'IfcPlateType': 'm2',
+        'IfcCurtainWallType': 'm2',
+        'IfcStairType': 'm2',
+        'IfcStairFlightType': 'm2',
+        'IfcCoveringType': 'm2',
+        'IfcRampType': 'm2',
+        'IfcRampFlightType': 'm2',
+        # Linear (columns, beams, pipes, ducts, railings, members)
+        'IfcColumnType': 'm',
+        'IfcBeamType': 'm',
+        'IfcMemberType': 'm',
+        'IfcRailingType': 'm',
+        'IfcPipeSegmentType': 'm',
+        'IfcPipeFittingType': 'm',
+        'IfcDuctSegmentType': 'm',
+        'IfcDuctFittingType': 'm',
+        'IfcCableSegmentType': 'm',
+        'IfcCableCarrierSegmentType': 'm',
+        # Piece-count (windows, doors, furniture, equipment, valves, fittings)
+        'IfcWindowType': 'pcs',
+        'IfcWindowStyle': 'pcs',
+        'IfcDoorType': 'pcs',
+        'IfcDoorStyle': 'pcs',
+        'IfcFurnitureType': 'pcs',
+        'IfcSanitaryTerminalType': 'pcs',
+        'IfcLightFixtureType': 'pcs',
+        'IfcFlowTerminalType': 'pcs',
+        'IfcValveType': 'pcs',
+    }
+
+    def _infer_representative_unit(self, ifc_type_class: str) -> str:
+        """Infer TypeMapping.representative_unit from IFC type class."""
+        return self._TYPE_UNIT_MAP.get(ifc_type_class, 'm2')
+
+    def _extract_type_layers(
+        self,
+        type_object,
+        representative_element,
+        representative_unit: str,
+    ) -> List[TypeLayerData]:
+        """
+        Extract material layer stack for a type.
+
+        Checks (in order): the IfcTypeObject's HasAssociations, then the representative
+        element's HasAssociations. Handles all four IFC material attachment forms:
+          - IfcMaterialLayerSet / IfcMaterialLayerSetUsage → layered sandwich
+          - IfcMaterialConstituentSet (IFC4+) → named constituents
+          - IfcMaterialList → legacy list of materials
+          - IfcMaterial → single material, emitted as a single layer
+
+        Thicknesses from IFC are stored in the file's length unit (usually meters);
+        we convert to mm. For area-based types (m²), thickness_m becomes the
+        quantity_per_unit in m³ (volume per m²). For other units we emit a
+        quantity_per_unit of 1.0 in the type's representative unit — still useful
+        for Materials Browser display even if not directly meaningful for LCA.
+
+        Never raises: returns [] on any extraction failure.
+        """
+        layers: List[TypeLayerData] = []
+
+        try:
+            material = None
+
+            # Prefer the type's own material association
+            if type_object is not None:
+                material = self._find_material_association(type_object)
+
+            # Fall back to the representative element (Revit often attaches here)
+            if material is None and representative_element is not None:
+                material = self._find_material_association(representative_element)
+
+            if material is None:
+                return layers
+
+            # Resolve LayerSetUsage → LayerSet
+            if material.is_a('IfcMaterialLayerSetUsage'):
+                layer_set = material.ForLayerSet
+                if not layer_set:
+                    return layers
+                material = layer_set
+
+            is_m2 = representative_unit == 'm2'
+
+            # Case 1: IfcMaterialLayerSet — sandwich with thicknesses
+            if material.is_a('IfcMaterialLayerSet'):
+                for idx, layer in enumerate(material.MaterialLayers or [], start=1):
+                    mat = getattr(layer, 'Material', None)
+                    mat_name = (mat.Name if mat and mat.Name else '') or 'Unknown'
+                    thickness_m = float(getattr(layer, 'LayerThickness', 0) or 0)
+                    thickness_mm = round(thickness_m * 1000.0, 2) if thickness_m else None
+
+                    if is_m2 and thickness_m > 0:
+                        # Volume per m² of wall/slab/roof surface = thickness_m × 1 m² → m³
+                        qty_per_unit = round(thickness_m, 4)
+                        material_unit = 'm3'
+                    else:
+                        qty_per_unit = 1.0
+                        material_unit = representative_unit if representative_unit in ('m', 'm2', 'm3', 'kg', 'pcs') else 'm2'
+
+                    layers.append(TypeLayerData(
+                        layer_order=idx,
+                        material_name=mat_name[:255],
+                        thickness_mm=thickness_mm,
+                        quantity_per_unit=qty_per_unit,
+                        material_unit=material_unit,
+                    ))
+                return layers
+
+            # Case 2: IfcMaterialConstituentSet (IFC4+)
+            if hasattr(material, 'MaterialConstituents') and material.MaterialConstituents:
+                for idx, constituent in enumerate(material.MaterialConstituents, start=1):
+                    mat = getattr(constituent, 'Material', None)
+                    mat_name = (mat.Name if mat and mat.Name else '') or getattr(constituent, 'Name', '') or 'Unknown'
+                    layers.append(TypeLayerData(
+                        layer_order=idx,
+                        material_name=mat_name[:255],
+                        thickness_mm=None,
+                        quantity_per_unit=1.0,
+                        material_unit=representative_unit if representative_unit in ('m', 'm2', 'm3', 'kg', 'pcs') else 'm2',
+                    ))
+                return layers
+
+            # Case 3: IfcMaterialList — legacy flat list
+            if material.is_a('IfcMaterialList'):
+                for idx, mat in enumerate(material.Materials or [], start=1):
+                    mat_name = (mat.Name if mat and mat.Name else '') or 'Unknown'
+                    layers.append(TypeLayerData(
+                        layer_order=idx,
+                        material_name=mat_name[:255],
+                        thickness_mm=None,
+                        quantity_per_unit=1.0,
+                        material_unit=representative_unit if representative_unit in ('m', 'm2', 'm3', 'kg', 'pcs') else 'm2',
+                    ))
+                return layers
+
+            # Case 4: single IfcMaterial
+            if material.is_a('IfcMaterial'):
+                mat_name = material.Name or 'Unknown'
+                layers.append(TypeLayerData(
+                    layer_order=1,
+                    material_name=mat_name[:255],
+                    thickness_mm=None,
+                    quantity_per_unit=1.0,
+                    material_unit=representative_unit if representative_unit in ('m', 'm2', 'm3', 'kg', 'pcs') else 'm2',
+                ))
+                return layers
+
+        except Exception:
+            return []
+
+        return layers
+
+    def _find_material_association(self, ifc_entity):
+        """Return the RelatingMaterial of the first IfcRelAssociatesMaterial on an entity, or None."""
+        try:
+            if not hasattr(ifc_entity, 'HasAssociations'):
+                return None
+            for assoc in ifc_entity.HasAssociations:
+                if assoc.is_a('IfcRelAssociatesMaterial'):
+                    return assoc.RelatingMaterial
+        except Exception:
+            return None
+        return None
+
     def _extract_systems(self, ifc_file) -> Tuple[List[SystemData], List[Dict]]:
         """Extract systems."""
         systems = []
