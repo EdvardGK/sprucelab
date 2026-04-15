@@ -31,6 +31,30 @@ spruce run <pipeline-name> --project <project-id>
 
 ## Commands
 
+### Dev (local, agent workflows)
+
+Runs directly against the local Django install (no API, no auth token).
+Use for development, testing, seeding, introspection.
+
+```bash
+spruce dev env                                            # status of repo + running services
+spruce dev db stats                                       # counts for key tables
+spruce dev db stats --json                                # agent-friendly output
+spruce dev db projects                                    # projects with type/layer counts
+spruce dev db materials --project <uuid> --top 15         # top materials by count
+spruce dev seed materials --project <uuid> --dry-run      # preview seed plan
+spruce dev seed materials --project <uuid>                # seed G55 with synthetic layers
+spruce dev seed materials --project <uuid> --clear        # remove seeded layers
+spruce dev test tsc                                       # TypeScript type check
+spruce dev test smoke                                     # public Playwright smoke tests
+spruce dev test e2e materials --headed                    # run materials-browser E2E
+spruce dev reprocess <model-uuid>                         # trigger IFC reprocess via local API
+```
+
+The `dev` subcommand bypasses the Sprucelab API entirely — it imports Django
+directly via `python manage.py`. Intended for agents and developers on the
+codebase, not for production operators.
+
 ### Configuration
 
 ```bash
