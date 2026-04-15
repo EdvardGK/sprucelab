@@ -63,6 +63,20 @@ class MaterialData:
 
 
 @dataclass
+class TypeLayerData:
+    """Data for a single material layer of a type (TypeDefinitionLayer).
+
+    Produced by the parser when a type has an IfcMaterialLayerSet, IfcMaterialList,
+    IfcMaterialConstituentSet, or a single IfcMaterial association.
+    """
+    layer_order: int
+    material_name: str
+    thickness_mm: Optional[float] = None
+    quantity_per_unit: float = 1.0
+    material_unit: str = 'm2'  # m2 | m | m3 | kg | pcs
+
+
+@dataclass
 class TypeData:
     """Data for an IFC type.
 
@@ -77,6 +91,8 @@ class TypeData:
     properties: Optional[Dict] = None
     instance_count: int = 0  # Number of instances of this type
     has_ifc_type_object: bool = True  # True if backed by IfcTypeObject, False if synthetic from ObjectType
+    representative_unit: Optional[str] = None  # Inferred procurement unit (m2/m/pcs) for TypeMapping
+    definition_layers: List[TypeLayerData] = field(default_factory=list)
 
 
 @dataclass
