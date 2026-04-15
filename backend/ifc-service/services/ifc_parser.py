@@ -372,6 +372,11 @@ class IFCParserService:
                 result.ifc_schema = ifc_file.schema
                 result.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
 
+                try:
+                    length_unit_scale = float(ifcopenshell.util.unit.calculate_unit_scale(ifc_file))
+                except Exception:
+                    length_unit_scale = 1.0
+
                 result.stage_results.append({
                     'stage': 'file_open',
                     'status': 'success',
@@ -382,7 +387,7 @@ class IFCParserService:
                     'duration_ms': int((time.time() - stage_start) * 1000),
                     'message': f'Opened IFC file with schema {result.ifc_schema}'
                 })
-                print(f"[Parser] File opened: {result.ifc_schema}")
+                print(f"[Parser] File opened: {result.ifc_schema} (length unit scale: {length_unit_scale})")
 
             except Exception as e:
                 error_msg = f"Failed to open IFC file: {str(e)}"
