@@ -9,7 +9,7 @@ import uuid
 import json
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from core.database import get_connection, get_transaction
 
