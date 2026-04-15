@@ -16,6 +16,10 @@
 import { test, expect } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const AUTH_FILE = path.join(__dirname, '.auth', 'user.json');
 const G55_PROJECT_ID = '4d9eb7fe-852f-4722-9202-9039bfbfb0d9';
