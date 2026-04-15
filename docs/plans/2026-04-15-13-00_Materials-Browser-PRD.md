@@ -243,6 +243,201 @@ Once v1.1 ships GWP, the following become headline features of the browser:
 
 ---
 
+## V1.5 — Material Balance Sheet (fungible flows)
+
+**Thesis:** the browser stops being a static library and becomes a balance sheet. For every material, every project — where is it in the supply chain right now?
+
+This is the **fungible** view: quantities, totals, flows. No per-unit identity yet.
+
+### State machine
+
+```
+NOT ORDERED  →  ORDERED  →  IN TRANSIT  →  ON SITE  →  INSTALLED
+                                                  ↘
+                                                   WASTE
+```
+
+Each state holds a quantity. The deltas between states are the actionable signal:
+
+| Delta | Meaning | Persona |
+|---|---|---|
+| `demand − estimated` | Planned waste factor | QS, procurement |
+| `estimated − ordered` | Under-ordering risk | Procurement |
+| `ordered − delivered` | Outstanding deliveries | Site manager, logistics |
+| `delivered − installed` | On-site stock (cash + space tied up) | Site manager, CFO |
+| `demand − (installed + waste + stock)` | Reconciliation gap → missing materials? | Everyone |
+
+### Schema additions
+
+- **`MaterialDemand`** — per (project, material_key), required quantity derived from types. Auto-computed from IFC — no manual entry.
+- **`MaterialTransaction`** — immutable event log: `(project, material_key, state_from, state_to, quantity, unit, timestamp, actor, reference_doc)`. Current state = fold over transactions.
+- **`MaterialStockLocation`** — optional: where the material is physically sitting (supplier, warehouse, container, site zone).
+- **`SupplierOrder`** — optional lightweight PO reference (vendor, order number, expected delivery).
+
+**Why an event log, not a state column:** history is load-bearing. Site audits, insurance claims, and waste reconciliation all require provenance. Current state is derivable; event truth is not.
+
+### Browser UI additions
+
+- New **Balance** column on the Materials tab: mini stacked bar showing `ordered | in-transit | on-site | installed | waste` against demand
+- **Status traffic light** per row: on-track / behind / over-ordered / missing
+- New **Balance Sheet tab** (next to Materials / Sets): full table view — one row per material, quantities in each state, deltas, variance from plan
+- **Site view filter**: materials delivered but not installed → daily site manager report
+
+### V1.5 honest ship
+
+Not the whole state machine at once. V1.5 ships:
+- `MaterialDemand` (auto-computed) + `MaterialTransaction` schema
+- Manual entry UI for `delivered` and `installed` events
+- Balance column + Balance Sheet tab
+- Reconciliation view showing gaps
+
+Ordered/in-transit split-out + integrations come in v1.6/v2.
+
+### Inputs — where does the data come from?
+
+- **Demand**: already in the model (types × instance_count × layer recipes). Auto.
+- **Ordered / delivered**: manual at first. CSV import in v1.6. Direct procurement integration (ACC, Cobuilder, WebBBM, SG Armaturen) in v2.
+- **Installed**: ties into the **Field module** — checklist completion updates installed quantity. Spec'd in wireframe 07. Needs verification that the Field schema can feed here.
+- **Waste**: weekly site log entries (v2 waste subsystem).
+
+---
+
+## V2 — Waste Management (the fungible end-state)
+
+### Planned waste factors
+
+Every material carries an industry-standard waste factor that gets applied during procurement. Defaults per L1/L2 family (Norwegian construction averages):
+
+| Material family | Typical waste factor |
+|---|---|
+| Concrete (cast-in-place) | 3–5% |
+| Concrete (precast) | 1–2% |
+| Rebar | 5–10% |
+| Structural steel | 2–5% |
+| Structural timber | 10–15% |
+| Gypsum board | 10–15% |
+| Ceramic tile | 10–20% |
+| Paint | 5–10% |
+| Insulation (mineral wool) | 5–10% |
+| Membrane | 10–15% |
+| Cut-to-size wood finishes | 15–20% |
+
+These are **defaults per family**, overridable per project or per material. Flow: `estimated = demand × (1 + waste_factor)`.
+
+### Actual waste tracking (NS 9431 anchored)
+
+Norwegian regulation (`avfallsforskriften`) requires projects >300 m² to file a waste management plan (`avfallsplan`) and report actual waste against NS 9431 fraksjoner. This is non-negotiable — projects lose their `ferdigattest` (certificate of completion) if they can't file the `sluttrapport med avfallsplan`.
+
+**Every material in the browser already carries an NS 9431 code** (from the crosswalk table). Waste entries auto-route to the correct fraksjon based on the material.
+
+Data sources for actual waste:
+- Weekly waste bin logs (weight per NS 9431 category, per container)
+- Waybills (waybill reconciliation from waste handler — Ragn-Sells, Norsk Gjenvinning, Retura)
+- Site manager manual entry
+- Photos + notes (v2.5+)
+
+### Schema additions
+
+- **`WasteFactor`** — default factor per L1/L2 family, overridable per project
+- **`WasteEvent`** — `(project, ns9431_fraksjon, quantity_kg, timestamp, handler, waybill_ref, material_origin)`. Links back to the source material when known.
+
+### Waste dashboard
+
+A dedicated **Waste tab** on the browser (plus a waste dashboard on the project page) showing:
+
+- **Planned waste total**: Σ across materials of `demand × waste_factor`, in kg and CO₂e
+- **Actual waste total**: Σ of reported `WasteEvent`s
+- **Variance**: actual vs plan, per NS 9431 category
+- **Source-sorting rate**: % of waste routed to specific fraksjoner vs residual (1299 restavfall). Norwegian KPI, mandatory reporting.
+- **Carbon from waste**: EN 15804 A5 module — embodied carbon being thrown away. Feeds the LCA total.
+- **Cost of waste**: wasted material cost + disposal fees
+- **NS 9431 export**: generates DiBK `sluttrapport med avfallsplan` PDF/XML (v2.5)
+
+### Cross-connects
+
+- Waste variance feeds **procurement learning** — "we over-ordered gypsum by 8% for three projects, reduce the factor"
+- Waste carbon feeds the **LCA total** (A5 module becomes real numbers, not assumed factors)
+- Waste events can trigger **passport lookups** — when reusable material is waste-flagged, offer "send to material bank instead"
+
+---
+
+## V2.5 — Material Passports (fungible → non-fungible)
+
+**The conceptual shift:** materials begin life as fungible quantities ("200 m³ concrete") and become non-fungible assets the moment they're installed ("batch B-2026-04-15-001 poured into foundation F.A.01 on 2026-04-16 by crew Z"). The passport is what captures the transition.
+
+Before installation: a material is a number. Interchangeable. Flows through the Balance Sheet.
+After installation: a material is a thing. Unique. Has history, location, condition, reusability class.
+
+This distinction matters because circular economy — and increasingly EU regulation — can only reuse what can be identified. A random chunk from a demolition pile is fungible waste worth nothing. A documented structural element with known provenance is a non-fungible asset worth sourcing.
+
+### The passport
+
+A `MaterialPassport` is a non-fungible record attached to a specific installed quantity. Each passport tracks:
+
+- **Identity**: passport ID, batch reference, origin (virgin / reclaimed / recycled)
+- **Composition**: material L1/L2, NPCR code, grade, spec
+- **Provenance chain**: supplier → delivery batch → installation event → location in building
+- **Location in building**: which type, which model element, which storey, which grid position (`IfcBuildingStorey` + local placement)
+- **Condition at install**: photos, inspection report, structural load history (for structural members)
+- **Reusability class**: can it be deconstructed? Under what conditions? Certified to what standard?
+- **End-of-life plan**: documented intent — reuse / recycle / downcycle / landfill
+- **Chain of custody**: every state transition event log (reuses `MaterialTransaction` from Balance Sheet)
+
+### Schema additions
+
+- **`MaterialPassport`** — non-fungible record; one per installed batch/unit
+- **`MaterialInstance`** — optional: each physical element with a unique identity (for steel beams, windows, doors — anything discretely countable and tracked individually)
+- **`PassportEvent`** — chain-of-custody events (check-in, check-out, inspection, condition update, reuse certification). Same event log as `MaterialTransaction` but with passport FK.
+- **`ReusabilityAssessment`** — structured inspection record against a reusability standard
+
+### Check-in / check-out workflow
+
+The user's framing — "checking materials in/out of sites and buildings and whatever stage they're in" — is the passport event model:
+
+| Event | Meaning | Trigger |
+|---|---|---|
+| **Check in to site** | Material delivered to site, verified against PO | Site receiving |
+| **Check in to building** | Material installed in a specific location | Field module install completion |
+| **Condition update** | Inspection during service life | O&M inspection, scheduled or ad-hoc |
+| **Check out of building** | Material removed during renovation/demolition | Demolition log |
+| **Check out of site** | Material leaves site (reuse bank, recycling, landfill) | Disposal / transfer log |
+| **Check in to another site** | Material reused in a new project | Receiving at new project |
+
+Each event creates an immutable log entry. The current state of a passport is the fold over its events.
+
+### Browser UI additions
+
+- **Fungible view** (default, from v1) shows materials as aggregated quantities
+- **Non-fungible view** (new in v2.5) shows materials as a list of passports, filterable by state, location, reusability class
+- **Toggle** at the top: "Quantities" / "Passports" — same data, different projection
+- **Passport detail panel**: full chain of custody, location on model, photos, reusability certification, end-of-life plan
+- **Reusability dashboard**: what % of the project's installed mass has a reuse plan? What's the certified-for-reuse tonnage? Feeds circular-economy KPIs and EU Taxonomy DNSH compliance.
+
+### Cross-connects
+
+- **EU Taxonomy**: Article 9 circular economy DNSH criteria require reuse/recyclability documentation — passport is the evidence
+- **Madaster**: Dutch material passport registry, commercially operational. Sprucelab passports should export to Madaster format as a reuse destination.
+- **BAMB** (Buildings As Material Banks): EU research framework; passport structure should be BAMB-compatible
+- **Byggherreforskriften**: Norwegian law increasingly pushing reuse planning; passports are the audit trail
+- **Material bank (v3)**: cross-project passports — a material check-out from Project A becomes a check-in to Project B. Sprucelab becomes the registry.
+
+### V2.5 honest ship
+
+- `MaterialPassport` + `PassportEvent` schema
+- Check-in/check-out events for site and building states
+- Passport detail panel in the browser
+- Link from installed quantity → passport list
+- Export to Madaster format
+
+### Deferred to v3
+
+- Live sensor integration (RFID tags, structural health monitoring)
+- Automatic condition updates from inspection apps
+- Cross-project material bank (passport portability)
+- Reusability certification workflow integration (SINTEF, DiBK)
+
+---
+
 ## Technical architecture
 
 ### Backend
