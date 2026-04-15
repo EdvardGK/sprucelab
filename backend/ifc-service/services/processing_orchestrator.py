@@ -202,6 +202,18 @@ class ProcessingOrchestrator:
                   f"{typebank_stats['entries_reused']} reused, "
                   f"{typebank_stats['observations_created']} observations")
 
+            # Step 4c: Write TypeMapping + TypeDefinitionLayer rows from parsed IFC material layers
+            types_with_layers = sum(1 for t in parse_result.types if t.definition_layers)
+            print(f"[Orchestrator] Writing type definition layers ({types_with_layers} types have layers)...")
+            layer_stats = await self.repository.bulk_insert_type_definition_layers(
+                model_id, parse_result.types, type_guid_to_id
+            )
+            print(f"[Orchestrator] Layers: {layer_stats['mappings_created']} new mappings, "
+                  f"{layer_stats['mappings_updated']} updated, "
+                  f"{layer_stats['layers_created']} layers created, "
+                  f"{layer_stats['layers_cleared']} layers cleared, "
+                  f"{layer_stats['types_skipped']} types skipped")
+
             # Step 5: Write systems
             print(f"[Orchestrator] Writing {len(parse_result.systems)} systems...")
             system_guid_to_id = await self.repository.bulk_insert_systems(
