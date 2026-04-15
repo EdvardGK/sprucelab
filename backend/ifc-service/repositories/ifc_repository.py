@@ -617,6 +617,33 @@ class IFCRepository:
 
         async with get_transaction() as conn:
             # Delete in order to respect foreign keys
+            # Type definition layers reference type_mappings, which reference ifc_types.
+            # Delete them explicitly so this method is self-documenting even though
+            # Django declares CASCADE from ifc_types → type_mappings → type_definition_layers.
+            result = await conn.execute(
+                """
+                DELETE FROM type_definition_layers
+                WHERE type_mapping_id IN (
+                    SELECT tm.id FROM type_mappings tm
+                    JOIN ifc_types t ON tm.ifc_type_id = t.id
+                    WHERE t.model_id = $1
+                )
+                """,
+                model_uuid
+            )
+            deleted["type_definition_layers"] = int(result.split()[-1]) if result else 0
+
+            result = await conn.execute(
+                """
+                DELETE FROM type_mappings
+                WHERE ifc_type_id IN (
+                    SELECT id FROM ifc_types WHERE model_id = $1
+                )
+                """,
+                model_uuid
+            )
+            deleted["type_mappings"] = int(result.split()[-1]) if result else 0
+
             # Property sets reference entities
             result = await conn.execute(
                 """
