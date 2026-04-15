@@ -15,6 +15,7 @@ class ModelSerializer(serializers.ModelSerializer):
     is_fork = serializers.BooleanField(read_only=True)
     fork_count = serializers.SerializerMethodField()
     mapped_type_count = serializers.SerializerMethodField()
+    first_version_created_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Model
