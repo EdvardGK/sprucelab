@@ -699,7 +699,7 @@ class IFCParserService:
 
         return materials, errors
 
-    def _extract_types(self, ifc_file) -> Tuple[List[TypeData], List[Dict]]:
+    def _extract_types(self, ifc_file, length_unit_scale: float = 1.0) -> Tuple[List[TypeData], List[Dict]]:
         """
         Extract types by grouping elements by their ObjectType attribute.
 
