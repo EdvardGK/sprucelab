@@ -641,6 +641,168 @@
     "title": "Material Library",
     "comingSoon": "Material library functionality coming soon"
   },
+  "materialBrowser": {
+    "loading": "Loading materials …",
+    "loadError": "Failed to load materials",
+    "emptyTitle": "No materials found",
+    "emptyDescription": "No types in this project have material layers yet. Open the Type Browser and add material layers to types to populate this library.",
+    "search": "Search materials and aliases",
+    "noResults": "No results",
+    "clearFilter": "Clear filter",
+    "aliases": "aliases",
+    "suggested": "Suggested",
+    "unclassified": "Unclassified",
+    "header": {
+      "materials": "materials",
+      "sets": "sets",
+      "classified": "classified",
+      "epdLinked": "EPD linked",
+      "procurementLinked": "product linked",
+      "loadingRemaining": "{{loaded}} models loaded, {{pending}} pending"
+    },
+    "tab": {
+      "materials": "Materials ({{count}})",
+      "sets": "Sets ({{count}})"
+    },
+    "lens": {
+      "all": "All",
+      "lca": "LCA",
+      "procurement": "Procurement"
+    },
+    "column": {
+      "name": "Name",
+      "family": "Family",
+      "quantity": "Quantity",
+      "usedIn": "Used in",
+      "lca": "LCA",
+      "procurement": "Procurement"
+    },
+    "detail": {
+      "material": "Material",
+      "set": "Material set",
+      "aliases": "Aliases (IFC names)",
+      "quantities": "Quantities",
+      "usedIn": "Used in",
+      "types": "types",
+      "instances": "instances",
+      "more": "more",
+      "lcaReadiness": "LCA readiness",
+      "lcaReady": "EPD linked — ready for LCA export",
+      "lcaMissing": "No EPD linked. LCA calculation will be nominal or excluded.",
+      "procurementReadiness": "Procurement readiness",
+      "procurementReady": "Product and supplier linked",
+      "procurementMissing": "No product or supplier. Specification is generic.",
+      "selectPrompt": "Select a material or set to see details",
+      "composition": "Composition"
+    },
+    "set": {
+      "layers": "layers",
+      "types": "types"
+    },
+    "family": {
+      "concrete": "Concrete",
+      "masonry": "Masonry",
+      "metal": "Metal",
+      "wood": "Wood",
+      "boards": "Boards",
+      "insulation": "Insulation",
+      "glass": "Glass",
+      "membrane": "Membrane",
+      "polymer": "Plastic",
+      "finish": "Finish",
+      "composite": "Composite",
+      "technical": "Technical",
+      "other": "Other"
+    },
+    "subtype": {
+      "concrete": {
+        "inSitu": "In-situ",
+        "precast": "Precast",
+        "lightweight": "Lightweight",
+        "fibreReinforced": "Fibre-reinforced",
+        "lowCarbon": "Low-carbon"
+      },
+      "masonry": {
+        "brick": "Brick",
+        "block": "Block",
+        "stone": "Stone"
+      },
+      "metal": {
+        "steelStructural": "Structural steel",
+        "steelRebar": "Rebar",
+        "steelColdFormed": "Cold-formed steel",
+        "stainless": "Stainless",
+        "aluminium": "Aluminium",
+        "copper": "Copper",
+        "zinc": "Zinc"
+      },
+      "wood": {
+        "solid": "Solid",
+        "glulam": "Glulam",
+        "clt": "CLT",
+        "lvl": "LVL",
+        "engineered": "Engineered",
+        "treated": "Treated"
+      },
+      "boards": {
+        "gypsumStandard": "Gypsum board",
+        "gypsumWetroom": "Gypsum wetroom",
+        "gypsumFire": "Gypsum fire",
+        "osb": "OSB",
+        "plywood": "Plywood",
+        "particleboard": "Particleboard",
+        "cementBoard": "Cement board"
+      },
+      "insulation": {
+        "mineralWool": "Mineral wool",
+        "glassWool": "Glass wool",
+        "eps": "EPS",
+        "xps": "XPS",
+        "pir": "PIR",
+        "cellulose": "Cellulose",
+        "woodFibre": "Wood fibre",
+        "aerogel": "Aerogel"
+      },
+      "glass": {
+        "float": "Float",
+        "laminated": "Laminated",
+        "insulatedUnit": "Insulated unit",
+        "tempered": "Tempered"
+      },
+      "membrane": {
+        "vaporBarrier": "Vapor barrier",
+        "wetroom": "Wetroom",
+        "roof": "Roof",
+        "geotextile": "Geotextile"
+      },
+      "polymer": {
+        "pvc": "PVC",
+        "pe": "PE",
+        "pp": "PP",
+        "epoxy": "Epoxy"
+      },
+      "finish": {
+        "paint": "Paint",
+        "tile": "Tile",
+        "parquet": "Parquet",
+        "linoleum": "Linoleum",
+        "vinyl": "Vinyl",
+        "carpet": "Carpet",
+        "screed": "Screed"
+      },
+      "composite": {
+        "window": "Window",
+        "door": "Door",
+        "curtainWall": "Curtain wall"
+      },
+      "technical": {
+        "sealant": "Sealant",
+        "adhesive": "Adhesive",
+        "mortar": "Mortar",
+        "grout": "Grout"
+      }
+    }
+  },
   "semanticTypes": {
     "title": "Semantic Types",
     "description": "PA0802/IFC type normalization for standardized classification",
