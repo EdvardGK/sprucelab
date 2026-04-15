@@ -672,22 +672,22 @@ Each event creates an immutable log entry. The current state of a passport is th
 
 ### Taxonomy / crosswalk questions (from research)
 
-6. **NS 9431 integration depth** — generate DiBK `sluttrapport med avfallsplan` exports, or just use NS 9431 as a tag/filter? If exports are the goal, NS 9431 becomes a hard integration requirement in v2. **Recommendation:** tag/filter in v2, exports in v2.5.
-7. **CPV vs NS 3450 for procurement** — Norwegian public procurement uses CPV directly but Statsbygg and large clients also reference NS 3450. Which matters more for sprucelab's target users? **Needs user input.**
-8. **NPCR granularity** — full NPCR list (~30 sub-PCRs, frequently updated) or stable subset (concrete, steel, wood, insulation, gypsum, glass)? **Recommendation:** stable subset in v1.1, full list when there's demand.
-9. **Composite vs layer-level classification** — for sandwich types, do we classify the assembled type as "Composite" L1, or require each `TypeDefinitionLayer` to have its own L1 family? **Recommendation:** layer-level, with assembled type showing as "Composite (5 layers)". Layer-level is correct for LCA and waste.
-10. **KBOB as seed data** — download KBOB Excel as reference for L1/L2 definitions? License permits reference use. **Recommendation:** yes, stash under `backend/data/reference/`.
-11. **Blast radius of replacing `MATERIAL_CATEGORY_CHOICES`** — is the existing enum locked by populated data? Need a quick check before finalizing.
+6. **NS 9431 integration depth** — generate DiBK `sluttrapport med avfallsplan` exports, or just use NS 9431 as a tag/filter? **Recommendation:** tag/filter in v2, exports in v2.5.
+7. ~~CPV vs NS 3450~~ — **moot.** Standards Workspace (v1.3) handles both agnostically; per-project toggle decides which is primary.
+8. **NPCR granularity** — full NPCR list (~30 sub-PCRs) or stable subset? **Recommendation:** stable subset in v1.1, full list accessible via bsDD lookup in v1.3.
+9. **Composite vs layer-level classification** — for sandwich types, layer-level classification, with assembled type showing as "Composite (5 layers)". **Decided:** layer-level.
+10. **KBOB as seed data** — yes, stash under `backend/data/reference/kbob-baubereich.xlsx`. Used for v1 seed dictionaries and v1.3 crosswalk seeds. **Decided.**
+11. **Blast radius of replacing `MATERIAL_CATEGORY_CHOICES`** — still needs quick code check. **Action item before v1 build starts.**
 
-### Balance Sheet / Waste / Passport questions
+### Balance Sheet / Waste / Passport / Integration questions
 
-12. **Rollout order** — v1.1 (screening LCA) before v1.5 (balance sheet), or flip? Screening LCA needs EPD schema work; balance sheet needs demand/transaction schema. **Recommendation:** LCA first — higher leverage for early-stage design decisions, and the procurement data needed for the balance sheet requires manual-entry or integration work that takes longer to ship.
-13. **Balance Sheet v1.5 scope** — 3 states (on-site / installed / waste) or full 5 states (ordered / in-transit / on-site / installed / waste) from day one? **Recommendation:** 3 states. Ordered/in-transit split comes when integrations exist — manual entry of "ordered" and "in-transit" is friction without value.
-14. **Field module reuse** — does the existing Field module (wireframe 07, construction compliance) already track install progress per type? If yes, the Balance Sheet's "installed" state reads from Field instead of duplicating. **Needs code check before v1.5.**
-15. **Procurement integration target** — for the first integration (v2), which system? ACC, Cobuilder, WebBBM, Byggweb, SG Armaturen, something else? **Needs user input.**
-16. **Madaster compatibility** — design the passport schema now to export cleanly to Madaster format, or build sprucelab-native first and adapt later? **Recommendation:** Madaster-compatible from day one — the schema shape is already published (`madaster.com/en/material-passport-schema`) and diverging later is expensive.
-17. **Instance-level vs batch-level passports** — does every physical piece get its own passport (true NFT — every reinforcing bar, every window), or does a batch get one passport (pragmatic — "this batch of 30 m³ concrete")? **Recommendation:** batch-level by default, instance-level opt-in for discrete countable items (windows, doors, structural steel members).
-18. **RBAC** — procurement owns ordered/delivered, site manager owns installed/waste, LCA lead owns EPD links. None has authority over the other's data. Real in v2. **Needs design.**
+12. **Rollout order** — **decided by Edvard: sprucelab's call.** My choice: v1 (browser) → v1.1 (LCA) → v1.2 (change/proliferation) → v1.3 (Standards Workspace, the architectural refactor) → v1.5 (Balance Sheet) → v2 (Waste) → v2.5 (Passports) → v3 (MaterialBank) → v3+ (Procurement integration).
+13. **Balance Sheet v1.5 scope** — 3 states (on-site / installed / waste). Ordered/in-transit split comes with integrations. **Decided.**
+14. **Field module reuse** — does the existing Field module track install progress per type? **Action item before v1.5 build — 5 min code check.**
+15. **Procurement integration target** — **decided: agnostic.** No first-party integration, no vendor lock-in. V3+ design the integration surface as a neutral layer: CSV import, generic REST webhook, and a connector SDK pattern that a future "ACC connector" or "Cobuilder connector" plugs into without touching core code. The core stays system-neutral.
+16. **Madaster compatibility** — Madaster-compatible passport schema from day one. Schema is published, diverging later is expensive. **Decided.**
+17. **Instance-level vs batch-level passports** — batch-level by default, instance-level opt-in for discrete countable items (windows, doors, structural steel members). **Decided.**
+18. **RBAC** — procurement owns ordered/delivered, site manager owns installed/waste, LCA lead owns EPD links. **Design in v2**, not blocking before that.
 
 ---
 
