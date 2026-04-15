@@ -818,6 +818,7 @@ class IFCParserService:
                     type_object=type_object,
                     representative_element=representative_element,
                     representative_unit=representative_unit,
+                    length_unit_scale=length_unit_scale,
                 )
 
                 # If we got layers but `material` (primary string for TypeBank identity)
