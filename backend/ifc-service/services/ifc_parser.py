@@ -261,6 +261,7 @@ class IFCParserService:
                     # Count instances via IfcRelDefinesByType relationship
                     # IFC2X3 uses 'ObjectTypeOf', IFC4 uses 'Types' as the inverse attribute name
                     instance_count = 0
+                    representative_element = None
                     type_rels = None
                     if hasattr(type_element, 'Types') and type_element.Types:
                         type_rels = type_element.Types
@@ -270,22 +271,42 @@ class IFCParserService:
                         for rel in type_rels:
                             if rel.RelatedObjects:
                                 instance_count += len(rel.RelatedObjects)
+                                if representative_element is None:
+                                    representative_element = rel.RelatedObjects[0]
 
                     # Extract predefined_type if available
                     predefined_type = None
                     if hasattr(type_element, 'PredefinedType') and type_element.PredefinedType:
                         predefined_type = str(type_element.PredefinedType)
 
-                    # Extract material from type's material association
+                    # Extract primary material name (for TypeBank identity tuple)
                     material = self._extract_type_material(type_element)
+
+                    # Extract the full layer stack. Revit exports frequently attach
+                    # IfcRelAssociatesMaterial to elements instead of to the type,
+                    # so the representative_element fallback is essential.
+                    ifc_type_class = type_element.is_a()
+                    representative_unit = self._infer_representative_unit(ifc_type_class)
+                    definition_layers = self._extract_type_layers(
+                        type_object=type_element,
+                        representative_element=representative_element,
+                        representative_unit=representative_unit,
+                    )
+
+                    # If material was missing but layers were found via the element
+                    # fallback, keep TypeBank identity consistent by using the first layer.
+                    if not material and definition_layers:
+                        material = definition_layers[0].material_name
 
                     types.append(TypeData(
                         type_guid=type_element.GlobalId,
                         type_name=type_element.Name or '',
-                        ifc_type=type_element.is_a(),
+                        ifc_type=ifc_type_class,
                         predefined_type=predefined_type or 'NOTDEFINED',
                         material=material,
                         instance_count=instance_count,
+                        representative_unit=representative_unit,
+                        definition_layers=definition_layers,
                     ))
 
                 except Exception as e:
