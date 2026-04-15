@@ -752,6 +752,7 @@ class IFCParserService:
                 type_object = type_object_lookup.get(object_type)
                 instance_count = len(group_data['guids'])
                 ifc_classes = group_data['ifc_classes']
+                representative_element = group_data['first_element']
 
                 # Determine IFC type class (e.g., IfcWallType from IfcWall)
                 if type_object:
@@ -777,6 +778,22 @@ class IFCParserService:
                         predefined_type = str(type_object.PredefinedType)
                     material = self._extract_type_material(type_object)
 
+                # Extract layer stack for Materials Browser / LCA / Balance Sheet.
+                # Prefer the IfcTypeObject's material association; fall back to the
+                # representative element (Revit exports often attach material to
+                # elements, not to the type).
+                representative_unit = self._infer_representative_unit(ifc_type_class)
+                definition_layers = self._extract_type_layers(
+                    type_object=type_object,
+                    representative_element=representative_element,
+                    representative_unit=representative_unit,
+                )
+
+                # If we got layers but `material` (primary string for TypeBank identity)
+                # is still empty, populate it from the first layer for consistency.
+                if not material and definition_layers:
+                    material = definition_layers[0].material_name
+
                 types.append(TypeData(
                     type_guid=type_guid,
                     type_name=object_type,  # Use ObjectType as canonical name
@@ -785,6 +802,8 @@ class IFCParserService:
                     material=material,
                     instance_count=instance_count,
                     has_ifc_type_object=has_ifc_type_object,
+                    representative_unit=representative_unit,
+                    definition_layers=definition_layers,
                 ))
 
             except Exception as e:
