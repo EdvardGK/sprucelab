@@ -98,33 +98,79 @@ The existing `MATERIAL_CATEGORY_CHOICES` leaves (`concrete_cast`, `mineral_wool_
 
 Existing leaves are mapped to new L1/L2 via `LEGACY_LEAF_TO_L2` table. No data migration — just a projection map in Python.
 
-### Crosswalk: five secondary codes per material
+### Crosswalk: standards-agnostic classification
 
-All optional, all nullable, all auto-suggested from L1/L2, all user-confirmable. TypeBank pattern — classify once, reuse across projects.
+**Design principle:** Sprucelab ships with **Norwegian defaults** (NS 9431, NPCR, NS 3451, CPV, HS) because most of the target users are Norwegian, but the schema and the UI are **standards-agnostic**. Every project can load its own selection of standards (v1.3 feature — see Standards Workspace below). Hardcoding Norwegian into the schema would be an immediate regret the moment we want a Swedish, British, or Dutch project.
 
-| Code | Purpose | Source | Required? |
-|---|---|---|---|
-| **NS 9431 fraksjon** | Norwegian waste reporting (mandatory for projects >300m²) | Geonorge "Fraksjoner NS" register | Required for anything that can become waste |
-| **NPCR sub-PCR** | EPD linkage, LCA export anchor | EPD Norge (NPCR parts B) | Required for LCA-ready materials |
-| **CPV 8-digit** | EU procurement alignment (div. 44 primary) | CPV standard | Optional, valuable for public-sector projects |
-| **NS 3451 bygningsdelskode** | Norwegian BIM part table | NS 3451 (already in schema via TypeMapping) | Already in schema |
-| **HS/CN chapter** | Customs/trade, imported products | WCO Harmonized System | Optional, only for imports |
+**The schema is NOT: one column per standard.** ❌ `ns9431_fraksjon, npcr_code, cpv_code, ns3451_code, hs_chapter` — this is Norwegian-hardcoded and doesn't scale.
 
-### Schema work for crosswalks
+**The schema IS: a many-to-many between materials and standards.** ✅
 
-New model `MaterialClassification`:
 ```
-material_library_id FK
-ns9431_fraksjon: char(10) nullable
-npcr_code: char(20) nullable       # e.g., "NPCR 013" for concrete
-cpv_code: char(10) nullable         # 8-digit CPV
-hs_chapter: char(4) nullable        # e.g., "7308" for iron/steel structures
-confidence: enum(suggested, confirmed, expert_verified)
-confirmed_by: FK user nullable
-confirmed_at: timestamp nullable
+Standard:
+  id UUID
+  identifier: char(50)        # 'ns-9431', 'npcr', 'cpv', 'uniclass-2015', 'omniclass'
+  name: char(255)             # 'NS 9431:2011 Classification of waste'
+  provider: char(255)         # 'Standard Norge', 'buildingSMART', 'EU Commission'
+  version: char(50)           # '2011', '2014/24', '2015', etc.
+  language: char(10)          # 'no', 'en', 'sv', etc.
+  scope: enum(materials, parts, waste, procurement, lca, verification, custom)
+  source_type: enum(bsdd, seeded, custom, imported)
+  source_uri: text            # bsDD URI, API endpoint, or null for seeded
+  last_synced_at: timestamp
+
+ClassificationCode:
+  id UUID
+  standard_id FK
+  code: char(50)              # '1611', 'NPCR 013', '44111200', 'Pr_20_93_52'
+  parent_id FK nullable       # hierarchy
+  label: char(255)            # 'Betong', 'Concrete', 'Concrete products'
+  description: text nullable
+  data: jsonb                 # extra attributes from source (bsDD, etc.)
+
+MaterialClassification:
+  id UUID
+  material_library_id FK
+  classification_code_id FK   # which code in which standard
+  confidence: enum(suggested, confirmed, expert_verified)
+  confirmed_by FK user nullable
+  confirmed_at timestamp nullable
+  source: enum(heuristic, bsdd_lookup, user_assigned, imported)
+
+ProjectStandard:
+  project_id FK
+  standard_id FK
+  enabled: bool
+  priority: int               # tie-breaker when multiple standards cover same concept
+  is_default: bool            # loaded from the Norwegian default set
 ```
 
-One row per `MaterialLibrary` entry. Auto-populated by heuristics on creation, confirmed by user.
+One material can have many classifications across many standards. Adding a new standard is data, not schema. Uniclass 2015, CoClass (Swedish), NL-SfB, OmniClass — all treated uniformly.
+
+### Norwegian default standards (seeded at install)
+
+Every new project gets this loadout by default:
+
+| Standard | Scope | Use |
+|---|---|---|
+| NS 9431:2011 | waste | Waste reporting to DiBK |
+| NPCR (EPD Norge) | lca | EPD linkage, LCA export |
+| NS 3451:2009 | parts | Building part classification |
+| NS 3457 | materials | Material classification |
+| NS 3720 | lca | LCA methodology |
+| CPV 2014/24 | procurement | Public procurement (EU alignment) |
+| HS / CN | procurement | Imports (optional) |
+
+Loaded as seed data. Not hardcoded in code.
+
+### V1 crosswalk implementation (Norwegian defaults hardcoded)
+
+For v1 ship speed: the classifier writes classifications against the seeded Norwegian standards only. The Standards Workspace (v1.3) is what unlocks per-project selection + bsDD integration + custom standards. But the **schema is standards-agnostic from day one**, so v1.3 is a UI + API build-out, not a data migration.
+
+**Auto-suggestion rules** (v1, Norwegian-only, heuristic):
+- L1 family → default NS 9431 fraksjon, NPCR code, CPV code
+- Raw IFC name keywords → L1/L2 suggestion
+- TypeBank enrichment: classify once, reuse cross-project
 
 ### Implementation
 
