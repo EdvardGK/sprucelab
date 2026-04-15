@@ -1013,7 +1013,9 @@ class IFCParserService:
                 for idx, layer in enumerate(material.MaterialLayers or [], start=1):
                     mat = getattr(layer, 'Material', None)
                     mat_name = (mat.Name if mat and mat.Name else '') or 'Unknown'
-                    thickness_m = float(getattr(layer, 'LayerThickness', 0) or 0)
+                    # LayerThickness is in the file's length unit; convert to meters first.
+                    raw_thickness = float(getattr(layer, 'LayerThickness', 0) or 0)
+                    thickness_m = raw_thickness * length_unit_scale
                     thickness_mm = round(thickness_m * 1000.0, 2) if thickness_m else None
 
                     if is_m2 and thickness_m > 0:
