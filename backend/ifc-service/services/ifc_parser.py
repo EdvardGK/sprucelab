@@ -300,6 +300,7 @@ class IFCParserService:
                         type_object=type_element,
                         representative_element=representative_element,
                         representative_unit=representative_unit,
+                        length_unit_scale=length_unit_scale,
                     )
 
                     # If material was missing but layers were found via the element
