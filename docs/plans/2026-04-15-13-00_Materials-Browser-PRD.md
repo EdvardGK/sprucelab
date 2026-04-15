@@ -509,13 +509,34 @@ Each event creates an immutable log entry. The current state of a passport is th
 
 ---
 
-## Open questions
+## Open questions (blocking decisions before build)
 
-1. **Dedup granularity for "distinct material":** Today, the key is `(library_id OR normalized_name)`. If two projects use the MaterialLibrary link vs freestanding name, same material appears twice. Good enough for v1; needs TypeBank-style canonical entries eventually.
-2. **Where do raw `Material` records (per-model, unlinked to `TypeDefinitionLayer`) fit?** They exist in the `materials` table but aren't referenced by any type layer. Include them in v1? Decision: **yes**, show them under "Unclassified / Orphan Materials" at the bottom of the family tree. They represent IFC materials that weren't picked up in type mapping — useful for coverage audit.
-3. **Set naming:** Sets have no canonical name. v1 derives one from `"{top-material} + {layer-count} layers"`. Needs user-editable name eventually.
-4. **Performance on large projects:** 20 models × 300 types × 5 layers = 30k rows to walk. Acceptable for v1 with `select_related` + `prefetch_related`; add caching in v1.2 if slow.
-5. **Material classifier false positives:** A wall named "Betong mot bad" matches both Concrete and Wetroom. v1 uses first-match wins. Needs disambiguation rules or ML later.
+### V1 scope questions
+
+1. **Empty columns in v1** — LCA readiness and Procurement readiness lights go red for everything until v1.1/v2 data exists. Honest but ugly. Alternative: hide those columns entirely until data exists. **Recommendation:** show them red. Coverage gap is the spec, not a failure.
+2. **Orphan `Material` records** (per-model, unlinked to `TypeDefinitionLayer`) — include in browser under "Unclassified" bucket, or exclude until someone links them? **Recommendation:** include. They represent IFC-extracted materials that weren't captured in type mapping — useful for coverage audit.
+3. **Set naming** — sets have no canonical name. v1 derives `"{top-material} + {layer-count} layers"`. User-editable naming comes later.
+4. **Classifier false positives** — "Betong mot bad" matches Concrete and Wetroom. v1 uses first-match-wins; disambiguation rules or ML come later.
+5. **Performance** — 20 models × 300 types × 5 layers = 30k rows. `select_related` + `prefetch_related` should be fine for v1; caching in v1.2 if slow.
+
+### Taxonomy / crosswalk questions (from research)
+
+6. **NS 9431 integration depth** — generate DiBK `sluttrapport med avfallsplan` exports, or just use NS 9431 as a tag/filter? If exports are the goal, NS 9431 becomes a hard integration requirement in v2. **Recommendation:** tag/filter in v2, exports in v2.5.
+7. **CPV vs NS 3450 for procurement** — Norwegian public procurement uses CPV directly but Statsbygg and large clients also reference NS 3450. Which matters more for sprucelab's target users? **Needs user input.**
+8. **NPCR granularity** — full NPCR list (~30 sub-PCRs, frequently updated) or stable subset (concrete, steel, wood, insulation, gypsum, glass)? **Recommendation:** stable subset in v1.1, full list when there's demand.
+9. **Composite vs layer-level classification** — for sandwich types, do we classify the assembled type as "Composite" L1, or require each `TypeDefinitionLayer` to have its own L1 family? **Recommendation:** layer-level, with assembled type showing as "Composite (5 layers)". Layer-level is correct for LCA and waste.
+10. **KBOB as seed data** — download KBOB Excel as reference for L1/L2 definitions? License permits reference use. **Recommendation:** yes, stash under `backend/data/reference/`.
+11. **Blast radius of replacing `MATERIAL_CATEGORY_CHOICES`** — is the existing enum locked by populated data? Need a quick check before finalizing.
+
+### Balance Sheet / Waste / Passport questions
+
+12. **Rollout order** — v1.1 (screening LCA) before v1.5 (balance sheet), or flip? Screening LCA needs EPD schema work; balance sheet needs demand/transaction schema. **Recommendation:** LCA first — higher leverage for early-stage design decisions, and the procurement data needed for the balance sheet requires manual-entry or integration work that takes longer to ship.
+13. **Balance Sheet v1.5 scope** — 3 states (on-site / installed / waste) or full 5 states (ordered / in-transit / on-site / installed / waste) from day one? **Recommendation:** 3 states. Ordered/in-transit split comes when integrations exist — manual entry of "ordered" and "in-transit" is friction without value.
+14. **Field module reuse** — does the existing Field module (wireframe 07, construction compliance) already track install progress per type? If yes, the Balance Sheet's "installed" state reads from Field instead of duplicating. **Needs code check before v1.5.**
+15. **Procurement integration target** — for the first integration (v2), which system? ACC, Cobuilder, WebBBM, Byggweb, SG Armaturen, something else? **Needs user input.**
+16. **Madaster compatibility** — design the passport schema now to export cleanly to Madaster format, or build sprucelab-native first and adapt later? **Recommendation:** Madaster-compatible from day one — the schema shape is already published (`madaster.com/en/material-passport-schema`) and diverging later is expensive.
+17. **Instance-level vs batch-level passports** — does every physical piece get its own passport (true NFT — every reinforcing bar, every window), or does a batch get one passport (pragmatic — "this batch of 30 m³ concrete")? **Recommendation:** batch-level by default, instance-level opt-in for discrete countable items (windows, doors, structural steel members).
+18. **RBAC** — procurement owns ordered/delivered, site manager owns installed/waste, LCA lead owns EPD links. None has authority over the other's data. Real in v2. **Needs design.**
 
 ---
 
@@ -534,13 +555,31 @@ Each event creates an immutable log entry. The current state of a passport is th
 - Creating new MaterialLibrary entries
 - Cross-project queries
 - Real-time GWP totals
+- Any data entry (balance sheet, waste, passports)
 
 ---
 
 ## Rollout
 
-1. **v1 (this PR):** Browser, normalization, dedup, where-used, coverage lights
-2. **v1.1:** EPDLibrary + EPDMapping schema, resolution chain, confidence badges, carbon header banner
-3. **v1.2:** Hotspot Pareto, proliferation alerts, change detection
-4. **v2:** Cross-project MaterialBank, substitution suggestions, peer benchmarking
-5. **v2+:** Procurement fields (supplier, price, lead time), approval workflow, integration with procurement tools
+| Phase | Name | Scope | Schema additions | Blocked by |
+|---|---|---|---|---|
+| **v1** | Browser + normalization | L1 family tree, dedup, where-used, coverage lights, Materials/Sets tabs | `MaterialClassification` (crosswalk codes) | Nothing — ships over existing data |
+| **v1.1** | Screening LCA | Resolution chain, confidence badges, carbon header, nominal factors per family | `EPDLibrary`, `EPDMapping`, `NominalFactorLibrary` | EPD data sourcing |
+| **v1.2** | Change + proliferation | Version diff, hotspot Pareto, proliferation alerts, peer benchmarks | None (uses existing) | Version diff engine, cross-project data |
+| **v1.5** | Material Balance Sheet | Demand + 3 states (on-site/installed/waste), balance column, reconciliation | `MaterialDemand`, `MaterialTransaction`, `MaterialStockLocation` | Field module integration check |
+| **v2** | Waste Management | Planned vs actual, NS 9431 categorization, A5 carbon, source-sorting rate | `WasteFactor`, `WasteEvent` | v1.5 transaction log |
+| **v2.5** | Material Passports | Fungible → non-fungible, check-in/out events, passport panel, Madaster export | `MaterialPassport`, `PassportEvent`, `ReusabilityAssessment` | v1.5 transaction log |
+| **v3** | Cross-project MaterialBank | Material bank (passports moving between projects), substitution engine, peer benchmarks | `MaterialBankEntry`, cross-project queries | TypeBank equivalent for materials |
+| **v3+** | Procurement integration | ACC/Cobuilder/WebBBM import, live procurement data, RBAC | `SupplierOrder`, `ProcurementIntegration` | Integration target selection |
+
+---
+
+## One-page summary
+
+**Problem:** ProjectMaterialLibrary is a placeholder. We need a real materials subsystem — not just a list, but the organizing spine for LCA (concept-stage carbon), procurement (demand/consolidation/risk), construction (balance sheet), and circular economy (passports, reuse).
+
+**Principle:** Materials relate to types but are first-class. Fungible in flow, non-fungible on install. One taxonomy (sprucelab-native L1 + designer L2) crosswalked to the standards that matter (NS 9431, NPCR, CPV, NS 3451, HS). Types-first architecture preserved — everything is a projection over existing `TypeDefinitionLayer` data until we need event logs.
+
+**Strategy:** Ship the browser (v1) static over current data. Add LCA (v1.1) with resolution chain. Add balance sheet (v1.5) for supply chain visibility. Add waste (v2) for Norwegian compliance. Add passports (v2.5) for circular economy. Each phase is self-contained and shippable.
+
+**Differentiator:** Every LCA tool is late-stage. Sprucelab gives you defensible carbon numbers at concept stage. Every procurement tool is siloed from design. Sprucelab reconciles them on one screen. Nobody is building passports for Norwegian projects. Sprucelab can own that space.
