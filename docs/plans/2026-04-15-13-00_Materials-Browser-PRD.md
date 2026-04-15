@@ -714,14 +714,15 @@ Each event creates an immutable log entry. The current state of a passport is th
 
 | Phase | Name | Scope | Schema additions | Blocked by |
 |---|---|---|---|---|
-| **v1** | Browser + normalization | L1 family tree, dedup, where-used, coverage lights, Materials/Sets tabs | `MaterialClassification` (crosswalk codes) | Nothing — ships over existing data |
+| **v1** | Browser + normalization (Norwegian defaults) | L1 family tree, dedup, where-used, coverage lights, Materials/Sets tabs. Schema is standards-agnostic from day one but seeded with NO defaults. | `Standard`, `ClassificationCode`, `ProjectStandard`, `MaterialClassification` | Nothing — ships over existing data |
 | **v1.1** | Screening LCA | Resolution chain, confidence badges, carbon header, nominal factors per family | `EPDLibrary`, `EPDMapping`, `NominalFactorLibrary` | EPD data sourcing |
 | **v1.2** | Change + proliferation | Version diff, hotspot Pareto, proliferation alerts, peer benchmarks | None (uses existing) | Version diff engine, cross-project data |
+| **v1.3** | Standards Workspace | ProjectConfig/standards page, bsDD integration, custom standards, per-country loadouts. Retrofits v1 to read from ProjectStandard instead of hardcoded Norwegian. | `StandardImport`, `CustomStandardBuilder`, `StandardCrosswalk` | bsDD API auth, country seed templates |
 | **v1.5** | Material Balance Sheet | Demand + 3 states (on-site/installed/waste), balance column, reconciliation | `MaterialDemand`, `MaterialTransaction`, `MaterialStockLocation` | Field module integration check |
-| **v2** | Waste Management | Planned vs actual, NS 9431 categorization, A5 carbon, source-sorting rate | `WasteFactor`, `WasteEvent` | v1.5 transaction log |
+| **v2** | Waste Management | Planned vs actual, classified against project's active waste standard (NS 9431 for NO projects), A5 carbon, source-sorting rate | `WasteFactor`, `WasteEvent` | v1.3 Standards Workspace, v1.5 transaction log |
 | **v2.5** | Material Passports | Fungible → non-fungible, check-in/out events, passport panel, Madaster export | `MaterialPassport`, `PassportEvent`, `ReusabilityAssessment` | v1.5 transaction log |
 | **v3** | Cross-project MaterialBank | Material bank (passports moving between projects), substitution engine, peer benchmarks | `MaterialBankEntry`, cross-project queries | TypeBank equivalent for materials |
-| **v3+** | Procurement integration | ACC/Cobuilder/WebBBM import, live procurement data, RBAC | `SupplierOrder`, `ProcurementIntegration` | Integration target selection |
+| **v3+** | Procurement integration (agnostic) | Standards-agnostic procurement ingestion layer (CSV import, generic REST webhook, future connector SDK). No first-party integration target picked — design integration surface as system-neutral. | `SupplierOrder`, `ProcurementIntegration`, `IntegrationConnector` | Integration SDK design |
 
 ---
 
