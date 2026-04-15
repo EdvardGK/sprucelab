@@ -289,6 +289,111 @@ Once v1.1 ships GWP, the following become headline features of the browser:
 
 ---
 
+## V1.3 — Standards Workspace (project-configurable standards)
+
+**Problem:** Sprucelab is currently Norwegian-hardcoded. NS 3451, NS 3457, NS 9431, NPCR — these are baked into TypeMapping, the Enova comment, the verification engine. That's fine for the Norwegian market. It's a hard wall the moment a Swedish firm, a British firm, or a Norwegian firm with a Dutch project tries to use the platform.
+
+**Vision:** Every project loads its own standards. Default loadout per country. bsDD integration for on-demand standards import. User-created custom classifications for firm-internal codes. Materials browser, type browser, verification engine, and LCA export all read from the project's selected standards — they don't hardcode anything.
+
+### Where it lives
+
+New page: **Project Config → Standards**. Sits alongside the existing BEP/EIR config and verification rules configuration. URL: `/projects/:id/config/standards`.
+
+This is one of the most foundational project config pages. It gates what classifications, codes, and rules apply everywhere else.
+
+### What it does
+
+- **Browse standards**: list of all available standards (seeded Norwegian defaults + any imported from bsDD + custom)
+- **Toggle per project**: which standards are active for this project, with priority ordering
+- **bsDD integration**: search and import classifications directly from the buildingSMART Data Dictionary API (`api.bsdd.buildingsmart.org`). Adds the standard as a new row in `Standard` + `ClassificationCode`, refreshable on demand.
+- **Custom classifications**: user can create a custom `Standard` (e.g., "Skiplum Internal Part Codes", "Client X Material Spec 2026") and define codes through the UI. Stored in the same schema as imported standards.
+- **Import from file**: upload a spreadsheet of codes (CSV/XLSX), map columns, create as a custom standard
+- **Priority resolution**: when multiple standards cover the same concept ("is this material a structural element?"), the priority order decides which one is consulted first
+
+### Default loadouts
+
+Per-country seeded templates, loaded when a project is created:
+
+- **Norway (default)**: NS 9431, NPCR, NS 3451, NS 3457, NS 3720, CPV (+ optionally HS/CN)
+- **Sweden**: CoClass, BSAB 96, CEEQUAL, ... (via bsDD)
+- **UK**: Uniclass 2015, NRM1-3, BREEAM, ... (via bsDD)
+- **Netherlands**: NL-SfB, STABU, ... (via bsDD)
+- **US**: OmniClass, MasterFormat, LEED, ... (via bsDD)
+- **Custom**: empty loadout, user picks everything
+
+Switching country loadout on an existing project requires a confirmation + shows which existing classifications will be unmapped.
+
+### bsDD integration
+
+[buildingSMART Data Dictionary](https://bsdd.buildingsmart.org/) is the international registry of construction classification systems. Offers a public REST API at `api.bsdd.buildingsmart.org` with:
+
+- **Dictionaries** — the standards themselves (Uniclass 2015, OmniClass, NL-SfB, ...)
+- **Classes** — the codes within each dictionary
+- **Properties** — attributes attached to classes
+- **Relations** — mappings between classes across dictionaries
+
+Sprucelab's bsDD client:
+
+- On standard search → call bsDD `/Dictionary` endpoint, filter by country/domain, present results
+- On standard import → call bsDD `/Dictionary/{uri}/Classes` (paginated), persist as `ClassificationCode` rows under a new `Standard` with `source_type='bsdd'`
+- On refresh → re-fetch changed classes by `modifiedAt` timestamp
+- Cache aggressively — bsDD data is slow-moving
+
+Sprucelab doesn't need to replicate the entire bsDD contents — only the standards the user actually imports.
+
+### Custom classifications workflow
+
+1. User creates a new Standard (name, provider, scope: waste/materials/parts/custom, language)
+2. Adds codes manually or by CSV upload
+3. Optionally defines a hierarchy (parent → child codes)
+4. Optionally defines crosswalks to other standards ("this custom code = NS 3451 234")
+5. Enables for the project
+6. Classifier starts suggesting codes from the custom standard alongside the seeded ones
+
+Custom standards are **org-scoped by default** (shared across all projects in the org) but can be project-scoped for client-specific codes.
+
+### Export to bsDD
+
+If the org wants to publish a custom classification to bsDD for broader use, sprucelab exports it in bsDD import format. One-click publish to bsDD as a new Dictionary (requires bsDD API credentials from the user).
+
+### Cross-cutting impact
+
+The Standards Workspace is not just for the Materials Browser. It feeds:
+
+- **Materials browser** — NS 9431, NPCR, CPV codes become configurable
+- **Type browser** — NS 3451 part codes become configurable (supports Uniclass, OmniClass, etc.)
+- **Verification engine** — rules can reference "any material classified as Insulation in the project's primary classification standard" without hardcoding NS 3451 codes
+- **LCA export** — NPCR codes for Reduzer, but also Uniclass codes for UK equivalents
+- **Waste module** — NS 9431 is the default, but a UK project would use the HMRC waste classification or List of Waste (LoW) codes
+- **Field/compliance** — checklists can reference the project's active standards
+
+### Schema additions
+
+Already defined above under the standards-agnostic crosswalk schema (`Standard`, `ClassificationCode`, `ProjectStandard`, `MaterialClassification`). V1.3 adds:
+
+- **`StandardImport`** — tracks bsDD sync jobs (status, timestamps, error logs)
+- **`CustomStandardBuilder`** — UI state for in-progress custom standards
+- **`StandardCrosswalk`** — cross-references between codes in different standards (e.g., NS 3451 234 = Uniclass Pr_20_93_52)
+
+### V1.3 honest ship
+
+- Standards list + toggle per project
+- Seeded Norwegian default loadout (no schema refactor — just seed data)
+- bsDD search + import (read-only, no publishing)
+- Custom standard creation via CSV import
+- Retrofit the v1 Materials Browser crosswalks to read from `ProjectStandard` + `MaterialClassification` instead of hardcoded NS codes
+- Country loadout templates (Norway + one other — probably UK or Sweden for proof of concept)
+
+### Deferred to v1.4+
+
+- Full bsDD publishing workflow (upload custom standards to bsDD)
+- Per-user standard preferences
+- Standard version upgrade handling (NS 9431:2011 → NS 9431:2025)
+- ML-assisted code suggestion from raw text
+- Multi-language UI switching based on project primary standard language
+
+---
+
 ## V1.5 — Material Balance Sheet (fungible flows)
 
 **Thesis:** the browser stops being a static library and becomes a balance sheet. For every material, every project — where is it in the supply chain right now?
