@@ -28,5 +28,6 @@ Built a complete drill-down modal system for both the model workspace and projec
 
 ## Notes
 - The skiplum-reports dashboards are auto-generated static HTML with embedded JSON for drill data. They've become the de facto design reference for how Sprucelab dashboards should look and behave.
-- User feedback on layout changes: don't rearrange grid proportions when only moving components. The viewer height should match the chart column, not stretch or shrink.
-- Stable Vercel branch URL for dev: `sprucelab-git-dev-skiplum.vercel.app` — bookmark this instead of per-commit preview links.
+- **Layout rule (hard-won)**: Cards have fixed heights. No viewport locking. No flex-1 compression. Page scrolls. This is now in CLAUDE.md.
+- **Don't rearrange** grid proportions when only moving components. Change one thing at a time.
+- Stable Vercel dev URL: `sprucelab-git-dev-skiplum.vercel.app` — same origin every deploy, session persists.
