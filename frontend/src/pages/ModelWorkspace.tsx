@@ -493,8 +493,8 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
           {/* Row 2: Storeys + Treemap (left) | Viewer (right) — matched height */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
-            <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
-              <CardContent className="p-3 min-h-0 overflow-y-auto">
+            <Card className="overflow-hidden flex flex-col card-accent-forest flex-shrink-0">
+              <CardContent className="p-3 overflow-y-auto max-h-[40%]">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
                 <StoreyChart storeys={analysis.storeys} onBarClick={(name) => openDrill({ type: 'storeys', storeyName: name })} />
               </CardContent>
