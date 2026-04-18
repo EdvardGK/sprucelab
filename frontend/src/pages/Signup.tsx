@@ -13,7 +13,6 @@ export default function Signup() {
   const [companyName, setCompanyName] = useState('');
   const [pending, setPending] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   if (loading) {
     return (
@@ -45,39 +44,18 @@ export default function Signup() {
         lastName,
         companyName,
       });
-      if (result.needsConfirmation) {
-        setNeedsConfirmation(true);
-      } else {
-        navigate('/welcome', { replace: true });
-      }
+      navigate('/welcome', {
+        replace: true,
+        state: result.needsConfirmation
+          ? { awaitingConfirmationEmail: email }
+          : undefined,
+      });
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Sign-up failed');
     } finally {
       setPending(false);
     }
   };
-
-  if (needsConfirmation) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-semibold text-slate-900">
-            Confirm your email
-          </h1>
-          <p className="mt-3 text-sm text-slate-500">
-            We sent a confirmation link to <strong>{email}</strong>. Click the
-            link to finish signing up.
-          </p>
-          <Link
-            to="/login"
-            className="mt-6 inline-block text-xs font-medium text-slate-900 underline"
-          >
-            Back to sign in
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">

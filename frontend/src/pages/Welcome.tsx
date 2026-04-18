@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { fetchMe, updateMyProfile } from '../lib/me';
 import { useAuth } from '../contexts/AuthContext';
@@ -46,6 +46,10 @@ export default function Welcome() {
   const { user: realUser, loading: realAuthLoading, signOut } = useAuth();
   const user = DEV_PREVIEW ? DEV_PREVIEW_USER : realUser;
   const authLoading = DEV_PREVIEW ? false : realAuthLoading;
+  const location = useLocation();
+  const awaitingConfirmationEmail =
+    (location.state as { awaitingConfirmationEmail?: string } | null)
+      ?.awaitingConfirmationEmail ?? null;
   const queryClient = useQueryClient();
   const sceneContainerRef = useRef<HTMLDivElement>(null);
 
@@ -105,18 +109,19 @@ export default function Welcome() {
     );
   }
 
-  if (!user) {
+  if (!user && !awaitingConfirmationEmail) {
     return <Navigate to="/login" replace />;
   }
 
-  if (me?.profile?.approval_status === 'approved') {
+  if (user && me?.profile?.approval_status === 'approved') {
     return <Navigate to="/" replace />;
   }
 
   const isRejected = me?.profile?.approval_status === 'rejected';
-  const fornavn = firstNameFrom(user.email, me?.profile?.display_name);
+  const isAwaitingConfirmation = !user && !!awaitingConfirmationEmail;
+  const fornavn = firstNameFrom(user?.email, me?.profile?.display_name);
   const registeredAt = me?.profile?.created_at ?? null;
-  const emailDisplay = user.email ?? '';
+  const emailDisplay = user?.email ?? awaitingConfirmationEmail ?? '';
 
   const handleSave = (e: FormEvent) => {
     e.preventDefault();
@@ -133,17 +138,52 @@ export default function Welcome() {
       <div className="welcome-frame">
         <header className="welcome-header">
           <div className="welcome-wordmark">Sprucelab</div>
-          <button
-            type="button"
-            className="welcome-signout"
-            onClick={() => signOut()}
-          >
-            Sign out
-          </button>
+          {!isAwaitingConfirmation && (
+            <button
+              type="button"
+              className="welcome-signout"
+              onClick={() => signOut()}
+            >
+              Sign out
+            </button>
+          )}
         </header>
 
         <main className="welcome-main">
-          {isRejected ? (
+          {isAwaitingConfirmation ? (
+            <section className="welcome-panel">
+              <div className="welcome-tag">Beta · Confirm your email</div>
+              <h1 className="welcome-heading">Thanks. Check your inbox.</h1>
+              <p className="welcome-lede">
+                We sent a confirmation link to <em>{awaitingConfirmationEmail}</em>.
+                Click it to finish signing up — your waitlist spot is held until
+                you do.
+              </p>
+
+              <ol className="welcome-timeline">
+                <li className="welcome-step done">
+                  <span className="welcome-step-dot" aria-hidden="true" />
+                  <span className="welcome-step-label">Application sent</span>
+                  <span className="welcome-step-meta">{formatTimestamp(new Date().toISOString())}</span>
+                </li>
+                <li className="welcome-step current">
+                  <span className="welcome-step-dot" aria-hidden="true" />
+                  <span className="welcome-step-label">Confirm email</span>
+                  <span className="welcome-step-meta">Check your inbox</span>
+                </li>
+                <li className="welcome-step">
+                  <span className="welcome-step-dot" aria-hidden="true" />
+                  <span className="welcome-step-label">Under review</span>
+                  <span className="welcome-step-meta">We read every application</span>
+                </li>
+                <li className="welcome-step">
+                  <span className="welcome-step-dot" aria-hidden="true" />
+                  <span className="welcome-step-label">Access granted</span>
+                  <span className="welcome-step-meta">Get started</span>
+                </li>
+              </ol>
+            </section>
+          ) : isRejected ? (
             <section className="welcome-panel">
               <div className="welcome-tag">Application · Not approved</div>
               <h1 className="welcome-heading">Your application wasn't approved</h1>
