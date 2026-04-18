@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -5,50 +6,56 @@ import {
   Layers,
   Box,
   Package,
-  Database,
-  MapPin,
-  BarChart3,
+  AlertCircle,
   CheckCircle2,
   Clock,
-  AlertCircle,
   Eye,
-  Home,
-  Wrench,
 } from 'lucide-react';
-import { Card, DonutChart, ProgressBar } from '@tremor/react';
 import { useProject } from '@/hooks/use-projects';
 import { useProjectStatistics } from '@/hooks/use-project-stats';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { TypeDashboard } from '@/components/features/warehouse/TypeDashboard';
+import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
+import {
+  useDashboardMetrics,
+  type ModelHealthMetrics,
+  type DisciplineMetrics,
+} from '@/hooks/use-warehouse';
 
-// Helper to format unit labels
-function formatUnit(unit: string): string {
-  switch (unit) {
-    case 'm3':
-      return 'm³';
-    case 'm2':
-      return 'm²';
-    case 'm':
-      return 'm';
-    case 'pcs':
-      return 'pcs';
-    default:
-      return unit;
-  }
+// ── Discipline colors (from design system) ──
+
+const DISCIPLINE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  ARK: { bg: 'bg-[#f3f5fa]', text: 'text-[#4a5280]', border: 'border-t-[#4a5280]' },
+  RIB: { bg: 'bg-[#f7f8e4]', text: 'text-[#5a5c15]', border: 'border-t-[#5a5c15]' },
+  RIV: { bg: 'bg-[#e8f2ee]', text: 'text-[#157954]', border: 'border-t-[#157954]' },
+  RIE: { bg: 'bg-[#e9e9eb]', text: 'text-[#21263A]', border: 'border-t-[#21263A]' },
+};
+
+const DEFAULT_DISC = { bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-t-muted-foreground' };
+
+function discColor(disc: string | null) {
+  if (!disc) return DEFAULT_DISC;
+  const key = disc.toUpperCase();
+  return DISCIPLINE_COLORS[key] ?? DEFAULT_DISC;
 }
 
-// Helper to format large numbers
-function formatNumber(num: number): string {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(1)}M`;
-  }
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}K`;
-  }
-  return num.toLocaleString();
+// ── Health bar color ──
+
+function healthColor(score: number): string {
+  if (score >= 80) return 'bg-green-500';
+  if (score >= 50) return 'bg-yellow-500';
+  return 'bg-red-500';
 }
+
+function healthTextColor(score: number): string {
+  if (score >= 80) return 'text-green-700';
+  if (score >= 50) return 'text-yellow-700';
+  return 'text-red-700';
+}
+
+// ── Main Component ──
 
 export default function ProjectDashboard() {
   const { t } = useTranslation();
@@ -57,12 +64,13 @@ export default function ProjectDashboard() {
 
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
   const { data: stats, isLoading: statsLoading, error: statsError } = useProjectStatistics(id!);
+  const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics({ projectId: id! });
 
   if (projectLoading) {
     return (
       <AppLayout>
         <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
-          <div className="text-text-secondary">Loading project...</div>
+          <div className="text-text-secondary">{t('common.loading')}</div>
         </div>
       </AppLayout>
     );
@@ -75,14 +83,13 @@ export default function ProjectDashboard() {
           <div className="w-full">
             <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Projects
+              {t('common.back')}
             </Button>
             <div className="rounded-lg border border-error bg-error/10 p-4 text-error">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-5 w-5" />
-                <h3 className="font-semibold">Project not found</h3>
+                <h3 className="font-semibold">{t('dashboard.projectNotFound')}</h3>
               </div>
-              <p className="text-sm">The project doesn't exist or has been deleted.</p>
             </div>
           </div>
         </div>
@@ -113,31 +120,26 @@ export default function ProjectDashboard() {
           {/* Tabbed Dashboard */}
           <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
             <TabsList className="flex-shrink-0 w-fit">
-              <TabsTrigger value="overview">
-                <Home className="mr-1.5 h-4 w-4" />
-                {t('dashboard.tabs.overview')}
-              </TabsTrigger>
-              <TabsTrigger value="project">
-                <Layers className="mr-1.5 h-4 w-4" />
-                {t('dashboard.tabs.project')}
-              </TabsTrigger>
-              <TabsTrigger value="bim">
-                <Package className="mr-1.5 h-4 w-4" />
-                {t('dashboard.tabs.bim')}
-              </TabsTrigger>
+              <TabsTrigger value="overview">{t('dashboard.tabs.overview')}</TabsTrigger>
+              <TabsTrigger value="models">{t('nav.models')}</TabsTrigger>
+              <TabsTrigger value="bim">{t('dashboard.tabs.bim')}</TabsTrigger>
             </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="flex-1 min-h-0 overflow-hidden">
-              <OverviewTab projectId={id!} stats={stats} statsLoading={statsLoading} statsError={statsError} />
+            <TabsContent value="overview" className="flex-1 min-h-0 overflow-y-auto">
+              <OverviewTab
+                projectId={id!}
+                stats={stats}
+                statsLoading={statsLoading}
+                statsError={statsError}
+                metrics={metrics}
+                metricsLoading={metricsLoading}
+              />
             </TabsContent>
 
-            {/* Project Tab */}
-            <TabsContent value="project" className="flex-1 min-h-0 overflow-hidden">
-              <ProjectStatsTab stats={stats} statsLoading={statsLoading} />
+            <TabsContent value="models" className="flex-1 min-h-0 overflow-y-auto">
+              <ModelsTab projectId={id!} metrics={metrics} metricsLoading={metricsLoading} />
             </TabsContent>
 
-            {/* BIM Tab */}
             <TabsContent value="bim" className="flex-1 min-h-0 overflow-hidden">
               <TypeDashboard projectId={id!} />
             </TabsContent>
@@ -148,22 +150,139 @@ export default function ProjectDashboard() {
   );
 }
 
-// Overview Tab - Quick summary and navigation
+// ── Overview Tab ──
+
+type DrillSource =
+  | { type: 'models' }
+  | { type: 'types' }
+  | { type: 'materials' }
+  | { type: 'discipline'; code: string }
+  | null;
+
 function OverviewTab({
   projectId,
   stats,
   statsLoading,
   statsError,
+  metrics,
+  metricsLoading,
 }: {
   projectId: string;
   stats: ReturnType<typeof useProjectStatistics>['data'];
   statsLoading: boolean;
   statsError: Error | null;
+  metrics: ReturnType<typeof useDashboardMetrics>['data'];
+  metricsLoading: boolean;
 }) {
   const { t } = useTranslation();
+  const [drillSource, setDrillSource] = useState<DrillSource>(null);
+
+  const drillConfig = useMemo(() => {
+    if (!drillSource) return null;
+
+    switch (drillSource.type) {
+      case 'models': {
+        const rows = (metrics?.models ?? []).map((m) => ({
+          name: m.name,
+          discipline: m.discipline ?? '—',
+          total_types: m.total_types,
+          mapped: m.mapped,
+          health_score: m.health_score,
+          status: m.status,
+        }));
+        return {
+          title: t('dashboard.models'),
+          subtitle: `${rows.length} ${t('nav.models').toLowerCase()}`,
+          tabs: [{
+            id: 'models', label: t('nav.models'), count: rows.length,
+            columns: [
+              { key: 'name', label: t('dashboard.modelName'), sortable: true },
+              { key: 'discipline', label: t('dashboard.discipline'), sortable: true },
+              { key: 'total_types', label: t('drill.types'), align: 'right' as const, sortable: true },
+              { key: 'mapped', label: t('common.mapped'), align: 'right' as const, sortable: true },
+              { key: 'health_score', label: 'Score', align: 'right' as const, sortable: true },
+            ],
+            data: rows,
+          }] as DrillTab[],
+        };
+      }
+      case 'types': {
+        const rows = (stats?.top_types ?? []).map((t) => ({
+          name: t.name,
+          ifc_type: t.ifc_type,
+          count: t.count,
+          quantity: t.quantity,
+          unit: t.unit,
+        }));
+        return {
+          title: t('drill.types'),
+          subtitle: `${stats?.type_count ?? 0} ${t('drill.types').toLowerCase()}, ${stats?.type_mapped_count ?? 0} ${t('common.mapped').toLowerCase()}`,
+          tabs: [{
+            id: 'types', label: t('drill.types'), count: rows.length,
+            columns: [
+              { key: 'name', label: 'Type', sortable: true },
+              { key: 'ifc_type', label: 'IFC Class', sortable: true },
+              { key: 'count', label: t('drill.instances'), align: 'right' as const, sortable: true },
+              { key: 'quantity', label: 'Qty', align: 'right' as const, sortable: true },
+              { key: 'unit', label: 'Unit', sortable: true },
+            ],
+            data: rows,
+          }] as DrillTab[],
+        };
+      }
+      case 'materials': {
+        const rows = (stats?.top_materials ?? []).map((m) => ({
+          name: m.name,
+          category: m.category ?? '—',
+          count: m.count,
+        }));
+        return {
+          title: t('dashboard.materials'),
+          subtitle: `${stats?.material_count ?? 0} total`,
+          tabs: [{
+            id: 'materials', label: t('dashboard.materials'), count: rows.length,
+            columns: [
+              { key: 'name', label: 'Material', sortable: true },
+              { key: 'category', label: 'Category', sortable: true },
+              { key: 'count', label: t('drill.instances'), align: 'right' as const, sortable: true },
+            ],
+            data: rows,
+          }] as DrillTab[],
+        };
+      }
+      case 'discipline': {
+        const disc = drillSource.code;
+        const models = (metrics?.models ?? []).filter(
+          (m) => m.discipline?.toUpperCase() === disc.toUpperCase()
+        );
+        const rows = models.map((m) => ({
+          name: m.name,
+          total_types: m.total_types,
+          mapped: m.mapped,
+          health_score: m.health_score,
+        }));
+        return {
+          title: disc,
+          subtitle: `${rows.length} ${t('nav.models').toLowerCase()}`,
+          tabs: [{
+            id: 'models', label: t('nav.models'), count: rows.length,
+            columns: [
+              { key: 'name', label: t('dashboard.modelName'), sortable: true },
+              { key: 'total_types', label: t('drill.types'), align: 'right' as const, sortable: true },
+              { key: 'mapped', label: t('common.mapped'), align: 'right' as const, sortable: true },
+              { key: 'health_score', label: 'Score', align: 'right' as const, sortable: true },
+            ],
+            data: rows,
+          }] as DrillTab[],
+        };
+      }
+    }
+  }, [drillSource, metrics, stats, t]);
+
+  const loading = statsLoading || metricsLoading;
 
   return (
-    <div className="h-full flex flex-col gap-4 pt-2">
+    <div className="flex flex-col gap-[clamp(0.5rem,1vw,0.75rem)] pt-2">
       {/* Stats error banner */}
       {statsError && !statsLoading && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex-shrink-0">
@@ -174,343 +293,318 @@ function OverviewTab({
         </div>
       )}
 
-      {/* Quick Stats Row */}
-      <div className="grid grid-cols-4 gap-4 flex-shrink-0">
-        <Card decoration="top" decorationColor="blue" className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Layers className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">{t('dashboard.models')}</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {statsLoading ? '...' : stats?.model_count ?? 0}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card decoration="top" decorationColor="emerald" className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <Box className="h-5 w-5 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">{t('dashboard.elements')}</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {statsLoading ? '...' : formatNumber(stats?.element_count ?? 0)}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card decoration="top" decorationColor="amber" className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-lg">
-              <Package className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">{t('dashboard.types')}</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {statsLoading ? '...' : `${stats?.type_mapped_count ?? 0}/${stats?.type_count ?? 0}`}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card decoration="top" decorationColor="violet" className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-violet-500/10 rounded-lg">
-              <Database className="h-5 w-5 text-violet-500" />
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">{t('dashboard.materials')}</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {statsLoading ? '...' : `${stats?.material_mapped_count ?? 0}/${stats?.material_count ?? 0}`}
-              </p>
-            </div>
-          </div>
-        </Card>
+      {/* Row 1: KPI Cards */}
+      <div className="grid grid-cols-4 gap-[clamp(0.4rem,0.8vw,0.6rem)] flex-shrink-0">
+        <KpiCard
+          label={t('dashboard.models')}
+          value={loading ? '...' : String(stats?.model_count ?? 0)}
+          icon={<Layers className="h-4 w-4" />}
+          onClick={() => setDrillSource({ type: 'models' })}
+        />
+        <KpiCard
+          label={t('dashboard.elements')}
+          value={loading ? '...' : (stats?.element_count ?? 0).toLocaleString()}
+          icon={<Box className="h-4 w-4" />}
+        />
+        <KpiCard
+          label={t('drill.types')}
+          value={loading ? '...' : `${stats?.type_mapped_count ?? 0}/${stats?.type_count ?? 0}`}
+          sub={stats?.type_count ? `${Math.round(((stats.type_mapped_count ?? 0) / stats.type_count) * 100)}%` : undefined}
+          icon={<Package className="h-4 w-4" />}
+          onClick={() => setDrillSource({ type: 'types' })}
+        />
+        <KpiCard
+          label={t('dashboard.materials')}
+          value={loading ? '...' : `${stats?.material_mapped_count ?? 0}/${stats?.material_count ?? 0}`}
+          icon={<Eye className="h-4 w-4" />}
+          onClick={() => setDrillSource({ type: 'materials' })}
+        />
       </div>
 
-      {/* Navigation Cards */}
-      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
-        <Link to={`/projects/${projectId}/models`} className="block">
-          <Card className="h-full hover:bg-surface-hover transition-colors cursor-pointer !p-6 flex flex-col items-center justify-center text-center">
-            <div className="p-4 bg-blue-500/10 rounded-full mb-4">
-              <Layers className="h-8 w-8 text-blue-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">{t('nav.models')}</h3>
-            <p className="text-sm text-text-secondary">{t('dashboard.navCards.models')}</p>
-          </Card>
-        </Link>
+      {/* Row 2: Discipline Breakdown + NS3451 Coverage + Classification Progress */}
+      <div className="grid grid-cols-3 gap-[clamp(0.4rem,0.8vw,0.6rem)]">
+        {/* Discipline Breakdown */}
+        <DashCard title={t('dashboard.disciplines')}>
+          {loading ? (
+            <div className="text-xs text-text-secondary">{t('common.loading')}</div>
+          ) : metrics?.by_discipline ? (
+            <DisciplineBreakdown
+              byDiscipline={metrics.by_discipline}
+              onBarClick={(code) => setDrillSource({ type: 'discipline', code })}
+            />
+          ) : (
+            <div className="text-xs text-text-tertiary">{t('drill.noData')}</div>
+          )}
+        </DashCard>
 
-        <Link to={`/projects/${projectId}/viewer-groups`} className="block">
-          <Card className="h-full hover:bg-surface-hover transition-colors cursor-pointer !p-6 flex flex-col items-center justify-center text-center">
-            <div className="p-4 bg-emerald-500/10 rounded-full mb-4">
-              <Eye className="h-8 w-8 text-emerald-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">{t('nav.viewer')}</h3>
-            <p className="text-sm text-text-secondary">{t('dashboard.navCards.viewer')}</p>
-          </Card>
-        </Link>
+        {/* NS3451 Coverage */}
+        <DashCard title={t('dashboard.ns3451Mapping')}>
+          {loading ? (
+            <div className="text-xs text-text-secondary">{t('common.loading')}</div>
+          ) : stats?.ns3451_coverage ? (
+            <NS3451Card coverage={stats.ns3451_coverage} />
+          ) : null}
+        </DashCard>
 
-        <Link to={`/projects/${projectId}/workbench`} className="block">
-          <Card className="h-full hover:bg-surface-hover transition-colors cursor-pointer !p-6 flex flex-col items-center justify-center text-center">
-            <div className="p-4 bg-amber-500/10 rounded-full mb-4">
-              <Wrench className="h-8 w-8 text-amber-500" />
+        {/* Classification Progress */}
+        <DashCard title={t('dashboard.classificationProgress', 'Classification Progress')}>
+          {loading ? (
+            <div className="text-xs text-text-secondary">{t('common.loading')}</div>
+          ) : metrics?.project_summary ? (
+            <div className="space-y-3">
+              <ProgressRow label={t('dashboard.typeClassification', 'Type classification')} pct={metrics.project_summary.classification_percent} />
+              <ProgressRow label={t('dashboard.unitAssignment', 'Unit assignment')} pct={metrics.project_summary.unit_percent} />
+              <ProgressRow label={t('dashboard.materialMapping', 'Material mapping')} pct={metrics.project_summary.material_percent} />
             </div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">{t('nav.workbench')}</h3>
-            <p className="text-sm text-text-secondary">{t('dashboard.navCards.workbench')}</p>
-          </Card>
-        </Link>
+          ) : null}
+        </DashCard>
+      </div>
+
+      {/* Row 3: Model cards */}
+      <DashCard title={`${t('nav.models')} (${metrics?.models?.length ?? 0})`}>
+        {loading ? (
+          <div className="text-xs text-text-secondary">{t('common.loading')}</div>
+        ) : metrics?.models && metrics.models.length > 0 ? (
+          <div className="grid grid-cols-4 gap-[clamp(0.4rem,0.8vw,0.6rem)]">
+            {metrics.models.map((m) => (
+              <ModelMiniCard key={m.id} model={m} projectId={projectId} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-text-tertiary">{t('dashboard.noModels', 'No models yet')}</div>
+        )}
+      </DashCard>
+
+      {/* Drill modal */}
+      {drillConfig && (
+        <DrillModal
+          open={drillSource !== null}
+          onOpenChange={(open) => { if (!open) setDrillSource(null); }}
+          title={drillConfig.title}
+          subtitle={drillConfig.subtitle}
+          tabs={drillConfig.tabs}
+          exportFilename={`project_${projectId}`}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Models Tab ──
+
+function ModelsTab({
+  projectId,
+  metrics,
+  metricsLoading,
+}: {
+  projectId: string;
+  metrics: ReturnType<typeof useDashboardMetrics>['data'];
+  metricsLoading: boolean;
+}) {
+  const { t } = useTranslation();
+
+  if (metricsLoading) {
+    return <div className="pt-4 text-text-secondary text-sm">{t('common.loading')}</div>;
+  }
+
+  const models = metrics?.models ?? [];
+
+  if (!models.length) {
+    return (
+      <div className="pt-8 text-center text-text-tertiary text-sm">
+        {t('dashboard.noModels', 'No models uploaded yet')}
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-2">
+      <div className="grid grid-cols-4 gap-[clamp(0.5rem,1vw,0.75rem)]">
+        {models.map((m) => (
+          <ModelMiniCard key={m.id} model={m} projectId={projectId} />
+        ))}
       </div>
     </div>
   );
 }
 
-// Project Stats Tab - KPIs, charts, coverage
-function ProjectStatsTab({
-  stats,
-  statsLoading,
+// ── Shared Sub-components ──
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  icon,
+  onClick,
 }: {
-  stats: ReturnType<typeof useProjectStatistics>['data'];
-  statsLoading: boolean;
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
 }) {
-  const { t } = useTranslation();
+  return (
+    <div
+      className={`rounded-lg border border-border bg-background p-[clamp(0.5rem,1vw,0.75rem)] ${onClick ? 'cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all' : ''}`}
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-text-tertiary">{icon}</span>
+        <span className="text-[clamp(0.55rem,0.9vw,0.65rem)] text-text-secondary font-medium uppercase tracking-wider">
+          {label}
+        </span>
+      </div>
+      <div className="text-[clamp(1.2rem,3vw,1.75rem)] font-bold text-text-primary tabular-nums leading-none">
+        {value}
+      </div>
+      {sub && (
+        <div className="text-[clamp(0.5rem,0.8vw,0.6rem)] text-text-tertiary mt-0.5">{sub}</div>
+      )}
+    </div>
+  );
+}
+
+function DashCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-background p-[clamp(0.5rem,1vw,0.75rem)]">
+      <div className="text-[clamp(0.55rem,0.9vw,0.65rem)] font-semibold text-text-secondary uppercase tracking-wider mb-[clamp(0.3rem,0.6vw,0.5rem)]">
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function DisciplineBreakdown({
+  byDiscipline,
+  onBarClick,
+}: {
+  byDiscipline: Record<string, DisciplineMetrics>;
+  onBarClick: (code: string) => void;
+}) {
+  const entries = Object.entries(byDiscipline).sort((a, b) => b[1].total - a[1].total);
 
   return (
-    <div className="h-full flex flex-col gap-4 pt-2">
-      {/* Row 1: KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 flex-shrink-0">
-        <Card decoration="top" decorationColor="blue" className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Layers className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">{t('dashboard.models')}</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {statsLoading ? '...' : stats?.model_count ?? 0}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card decoration="top" decorationColor="emerald" className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <Box className="h-5 w-5 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">{t('dashboard.elements')}</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {statsLoading ? '...' : formatNumber(stats?.element_count ?? 0)}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card decoration="top" decorationColor="amber" className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-lg">
-              <Package className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">{t('dashboard.types')}</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {statsLoading ? '...' : `${stats?.type_mapped_count ?? 0}/${stats?.type_count ?? 0}`}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card decoration="top" decorationColor="violet" className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-violet-500/10 rounded-lg">
-              <Database className="h-5 w-5 text-violet-500" />
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">{t('dashboard.materials')}</p>
-              <p className="text-2xl font-bold text-text-primary">
-                {statsLoading ? '...' : `${stats?.material_mapped_count ?? 0}/${stats?.material_count ?? 0}`}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Row 2: Top Types and Materials */}
-      <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
-        <Card className="flex flex-col overflow-hidden !p-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-2 flex-shrink-0">{t('dashboard.topTypes')}</h3>
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {statsLoading ? (
-              <p className="text-sm text-text-secondary">{t('common.loading')}</p>
-            ) : stats?.top_types && stats.top_types.length > 0 ? (
-              <div className="space-y-3">
-                {stats.top_types.map((type, i) => (
-                  <div key={i}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="truncate pr-2 text-text-primary">{type.name}</span>
-                      <span className="text-text-secondary flex-shrink-0">
-                        {type.quantity.toLocaleString()} {formatUnit(type.unit)}
-                      </span>
-                    </div>
-                    <ProgressBar
-                      value={(type.quantity / Math.max(...stats.top_types.map((t) => t.quantity))) * 100}
-                      color="blue"
-                      className="h-1"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">{t('dashboard.noTypeData')}</p>
-            )}
-          </div>
-        </Card>
-
-        <Card className="flex flex-col overflow-hidden !p-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-2 flex-shrink-0">{t('dashboard.topMaterials')}</h3>
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {statsLoading ? (
-              <p className="text-sm text-text-secondary">{t('common.loading')}</p>
-            ) : stats?.top_materials && stats.top_materials.length > 0 ? (
-              <div className="space-y-3">
-                {stats.top_materials.map((mat, i) => (
-                  <div key={i}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="truncate pr-2 text-text-primary">{mat.name}</span>
-                      <span className="text-text-secondary flex-shrink-0">
-                        {mat.count.toLocaleString()} {t('dashboard.elements')}
-                      </span>
-                    </div>
-                    <ProgressBar
-                      value={(mat.count / Math.max(...stats.top_materials.map((m) => m.count))) * 100}
-                      color="emerald"
-                      className="h-1"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">{t('dashboard.noMaterialData')}</p>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {/* Row 3: NS3451, MMI, Basepoint */}
-      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
-        <Card className="flex flex-col overflow-hidden !p-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-2 flex-shrink-0">{t('dashboard.ns3451Mapping')}</h3>
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {statsLoading ? (
-              <p className="text-sm text-text-secondary">{t('common.loading')}</p>
-            ) : stats?.ns3451_coverage ? (
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-text-secondary">{t('dashboard.coverage')}</span>
-                    <span className="text-text-primary font-semibold">{stats.ns3451_coverage.percentage}%</span>
-                  </div>
-                  <ProgressBar value={stats.ns3451_coverage.percentage} color="blue" className="h-2" />
-                </div>
-                <div className="space-y-1.5 pt-2 border-t border-border text-xs">
-                  <div className="flex justify-between">
-                    <span className="flex items-center gap-1.5 text-text-secondary">
-                      <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {t('dashboard.mapped')}
-                    </span>
-                    <span className="text-text-primary">{stats.ns3451_coverage.mapped}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="flex items-center gap-1.5 text-text-secondary">
-                      <Clock className="h-3 w-3 text-amber-500" /> {t('dashboard.pending')}
-                    </span>
-                    <span className="text-text-primary">{stats.ns3451_coverage.pending}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="flex items-center gap-1.5 text-text-secondary">
-                      <Eye className="h-3 w-3 text-orange-500" /> {t('dashboard.review')}
-                    </span>
-                    <span className="text-text-primary">{stats.ns3451_coverage.review}</span>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card className="flex flex-col overflow-hidden !p-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-2 flex-shrink-0">{t('dashboard.mmiDistribution')}</h3>
-          <div className="flex-1 flex items-center justify-center min-h-0">
-            {statsLoading ? (
-              <p className="text-sm text-text-secondary">{t('common.loading')}</p>
-            ) : stats?.mmi_distribution && stats.mmi_distribution.length > 0 ? (
-              <DonutChart
-                className="h-full w-full max-h-32"
-                data={stats.mmi_distribution.map((item) => ({
-                  name: `MMI ${item.mmi_level}`,
-                  value: item.count,
-                }))}
-                category="value"
-                index="name"
-                colors={['slate', 'violet', 'indigo', 'rose', 'cyan', 'amber']}
-                showLabel={true}
+    <div className="space-y-[clamp(0.3rem,0.5vw,0.4rem)]">
+      {entries.map(([code, m]) => {
+        const pct = m.total > 0 ? Math.round((m.mapped / m.total) * 100) : 0;
+        const dc = discColor(code);
+        return (
+          <div
+            key={code}
+            className="flex items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] cursor-pointer hover:bg-muted/30 rounded px-1 -mx-1 transition-colors"
+            onClick={() => onBarClick(code)}
+          >
+            <span className={`text-[clamp(0.5rem,0.8vw,0.6rem)] font-semibold px-1.5 py-0.5 rounded ${dc.bg} ${dc.text} w-10 text-center flex-shrink-0`}>
+              {code}
+            </span>
+            <div className="flex-1 h-[clamp(0.4rem,0.7vw,0.5rem)] bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${healthColor(pct)}`}
+                style={{ width: `${pct}%` }}
               />
-            ) : (
-              <div className="text-center">
-                <BarChart3 className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                <p className="text-xs text-gray-400">{t('dashboard.noMmiData')}</p>
-                <p className="text-xs text-gray-500">{t('dashboard.configureBep')}</p>
-              </div>
-            )}
+            </div>
+            <span className="text-[clamp(0.5rem,0.8vw,0.6rem)] font-semibold tabular-nums text-text-primary w-16 text-right flex-shrink-0">
+              {m.mapped}/{m.total}
+            </span>
           </div>
-        </Card>
+        );
+      })}
+    </div>
+  );
+}
 
-        <Card className="flex flex-col overflow-hidden !p-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-2 flex-shrink-0">{t('dashboard.projectBasepoint')}</h3>
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {statsLoading ? (
-              <p className="text-sm text-text-secondary">{t('common.loading')}</p>
-            ) : stats?.basepoint ? (
-              <div className="space-y-3">
-                <div className="p-2 bg-surface rounded border border-border">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-[10px] text-gray-400">X</p>
-                      <p className="font-mono text-xs text-text-primary">{stats.basepoint.gis_x.toFixed(1)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400">Y</p>
-                      <p className="font-mono text-xs text-text-primary">{stats.basepoint.gis_y.toFixed(1)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400">Z</p>
-                      <p className="font-mono text-xs text-text-primary">{stats.basepoint.gis_z?.toFixed(1) || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400">CRS</span>
-                  <span className="bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded text-[10px]">
-                    {stats.basepoint.crs || 'Unknown'}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <MapPin className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                  <p className="text-xs text-gray-400">{t('dashboard.noBasepoint')}</p>
-                  <p className="text-xs text-gray-500">{t('dashboard.uploadWithGis')}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
+function NS3451Card({ coverage }: { coverage: { total: number; mapped: number; pending: number; review: number; percentage: number } }) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <span className="text-[clamp(1rem,2.5vw,1.5rem)] font-bold text-text-primary tabular-nums">{coverage.percentage}%</span>
+        <span className="text-[clamp(0.5rem,0.8vw,0.6rem)] text-text-tertiary">{coverage.mapped}/{coverage.total}</span>
+      </div>
+      <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${healthColor(coverage.percentage)}`} style={{ width: `${coverage.percentage}%` }} />
+      </div>
+      <div className="space-y-1 pt-1 border-t border-border text-[clamp(0.5rem,0.8vw,0.6rem)]">
+        <div className="flex justify-between">
+          <span className="flex items-center gap-1 text-text-secondary">
+            <CheckCircle2 className="h-3 w-3 text-green-500" /> {t('common.mapped')}
+          </span>
+          <span className="text-text-primary tabular-nums">{coverage.mapped}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="flex items-center gap-1 text-text-secondary">
+            <Clock className="h-3 w-3 text-yellow-500" /> {t('common.pending')}
+          </span>
+          <span className="text-text-primary tabular-nums">{coverage.pending}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="flex items-center gap-1 text-text-secondary">
+            <Eye className="h-3 w-3 text-orange-500" /> {t('dashboard.review')}
+          </span>
+          <span className="text-text-primary tabular-nums">{coverage.review}</span>
+        </div>
       </div>
     </div>
+  );
+}
+
+function ProgressRow({ label, pct }: { label: string; pct: number }) {
+  const rounded = Math.round(pct);
+  return (
+    <div>
+      <div className="flex justify-between text-[clamp(0.5rem,0.8vw,0.6rem)] mb-1">
+        <span className="text-text-secondary">{label}</span>
+        <span className={`font-semibold tabular-nums ${healthTextColor(rounded)}`}>{rounded}%</span>
+      </div>
+      <div className="h-[clamp(0.3rem,0.5vw,0.4rem)] bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${healthColor(rounded)}`} style={{ width: `${rounded}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function ModelMiniCard({ model, projectId }: { model: ModelHealthMetrics; projectId: string }) {
+  const dc = discColor(model.discipline);
+  const pct = model.total_types > 0 ? Math.round((model.mapped / model.total_types) * 100) : 0;
+
+  return (
+    <Link
+      to={`/projects/${projectId}/models/${model.id}`}
+      className={`block rounded-lg border border-border bg-background p-[clamp(0.4rem,0.8vw,0.6rem)] border-t-[3px] ${dc.border} hover:ring-1 hover:ring-primary/20 transition-all`}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="min-w-0">
+          <div className="text-[clamp(0.6rem,1vw,0.75rem)] font-semibold text-text-primary truncate">
+            {model.name}
+          </div>
+        </div>
+        {model.discipline && (
+          <span className={`text-[clamp(0.45rem,0.7vw,0.55rem)] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ml-2 ${dc.bg} ${dc.text}`}>
+            {model.discipline}
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[clamp(0.5rem,0.8vw,0.6rem)] mb-2">
+        <div>
+          <span className="text-text-tertiary">Typer</span>
+          <br />
+          <strong className="text-text-primary tabular-nums">{model.total_types}</strong>
+        </div>
+        <div>
+          <span className="text-text-tertiary">Mapped</span>
+          <br />
+          <strong className="text-text-primary tabular-nums">{model.mapped}</strong>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-[clamp(0.3rem,0.5vw,0.4rem)] bg-muted rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${healthColor(pct)}`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className={`text-[clamp(0.5rem,0.8vw,0.6rem)] font-semibold tabular-nums ${healthTextColor(pct)}`}>
+          {pct}%
+        </span>
+      </div>
+    </Link>
   );
 }
