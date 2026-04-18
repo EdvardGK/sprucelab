@@ -160,7 +160,7 @@ function OverviewTab({ model }: { model: Model }) {
 
   if (isLoading) {
     return (
-      <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto grid grid-cols-5 grid-rows-[auto_1fr_1fr_auto] gap-[clamp(0.5rem,1vw,0.75rem)]">
+      <div className="p-[clamp(1rem,2vw,1.5rem)] grid grid-cols-5 grid-rows-[auto_1fr_1fr_auto] gap-[clamp(0.5rem,1vw,0.75rem)]">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-lg" />
         ))}
@@ -201,7 +201,7 @@ function OverviewTab({ model }: { model: Model }) {
   return (
     <div>
       {/* Sub-tab navigation */}
-      <div className="border-b border-border/50 bg-background px-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto">
+      <div className="border-b border-border/50 bg-background px-[clamp(1rem,2vw,1.5rem)]">
         <nav className="flex space-x-1">
           {OVERVIEW_SUBTABS.map((tab) => (
             <button
@@ -257,7 +257,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
   return (
     <>
-      <div className="p-[clamp(0.75rem,1.5vw,1rem)] max-w-[1440px] mx-auto w-full min-h-full">
+      <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full min-h-full">
         <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-full grid-rows-[auto_1fr]">
           {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
           <div className="col-span-2">
