@@ -238,12 +238,182 @@ function OverviewTab({ model }: { model: Model }) {
 
 type OverlayType = 'quality' | 'storeys' | 'elements' | 'geometry' | 'viewer' | null;
 
+type DrillSource =
+  | { type: 'quality' }
+  | { type: 'types' }
+  | { type: 'instances' }
+  | { type: 'storeys'; storeyName?: string }
+  | { type: 'treemap'; ifcClass: string }
+  | { type: 'geometry'; representation: string }
+  | null;
+
+function buildDrillTabs(source: DrillSource, analysis: ModelAnalysis, stats: AnalysisStats): { title: string; subtitle?: string; tabs: DrillTab[] } | null {
+  if (!source) return null;
+
+  const typeCol = { key: 'type_name', label: 'Type', sortable: true };
+  const classCol = { key: 'ifc_class', label: 'IFC Class', sortable: true };
+  const countCol = { key: 'instance_count', label: 'Instances', align: 'right' as const, sortable: true };
+
+  switch (source.type) {
+    case 'quality': {
+      const rows = analysis.types
+        .filter(t => t.is_proxy || t.is_external_unset > 0 || t.loadbearing_unset > 0 || t.fire_rating_unset > 0)
+        .map(t => ({
+          type_name: t.type_class.replace('Type', ''),
+          ifc_class: t.element_class || t.type_class,
+          instance_count: t.instance_count,
+          proxy: t.is_proxy ? 'Yes' : '',
+          ext_unset: t.is_external_unset,
+          lb_unset: t.loadbearing_unset,
+          fr_unset: t.fire_rating_unset,
+        }));
+      return {
+        title: 'Quality Issues',
+        subtitle: `${rows.length} types with issues`,
+        tabs: [{
+          id: 'issues', label: 'Types with issues', count: rows.length,
+          columns: [
+            typeCol, classCol, countCol,
+            { key: 'proxy', label: 'Proxy', align: 'center' },
+            { key: 'ext_unset', label: 'ExtUnset', align: 'right' },
+            { key: 'lb_unset', label: 'LBUnset', align: 'right' },
+            { key: 'fr_unset', label: 'FRUnset', align: 'right' },
+          ],
+          data: rows,
+        }],
+      };
+    }
+    case 'types': {
+      const rows = analysis.types.map(t => ({
+        type_name: t.type_class.replace('Type', ''),
+        ifc_class: t.element_class || t.type_class,
+        instance_count: t.instance_count,
+        empty: t.is_empty ? 'Yes' : '',
+        proxy: t.is_proxy ? 'Yes' : '',
+        untyped: t.is_untyped ? 'Yes' : '',
+      }));
+      return {
+        title: 'Types',
+        subtitle: `${analysis.total_types} types, ${stats.totalInstances.toLocaleString()} instances`,
+        tabs: [{
+          id: 'all', label: 'All types', count: rows.length,
+          columns: [
+            typeCol, classCol, countCol,
+            { key: 'empty', label: 'Empty', align: 'center' },
+            { key: 'proxy', label: 'Proxy', align: 'center' },
+            { key: 'untyped', label: 'Untyped', align: 'center' },
+          ],
+          data: rows,
+        }],
+      };
+    }
+    case 'instances': {
+      const byClass: Record<string, number> = {};
+      for (const t of analysis.types) {
+        const cls = t.element_class || t.type_class;
+        byClass[cls] = (byClass[cls] || 0) + t.instance_count;
+      }
+      const rows = Object.entries(byClass)
+        .map(([ifc_class, instance_count]) => ({ ifc_class, instance_count }))
+        .sort((a, b) => b.instance_count - a.instance_count);
+      return {
+        title: 'Instances by IFC Class',
+        subtitle: `${stats.totalInstances.toLocaleString()} total instances`,
+        tabs: [{
+          id: 'byclass', label: 'By class', count: rows.length,
+          columns: [
+            { key: 'ifc_class', label: 'IFC Class', sortable: true },
+            { key: 'instance_count', label: 'Instances', align: 'right', sortable: true },
+          ],
+          data: rows,
+        }],
+      };
+    }
+    case 'storeys': {
+      if (source.storeyName) {
+        // Drill into a specific storey — show types on that storey
+        const rows = analysis.types
+          .filter(t => t.storey_distribution?.some(sd => sd.storey_name === source.storeyName))
+          .map(t => {
+            const sd = t.storey_distribution?.find(sd => sd.storey_name === source.storeyName);
+            return {
+              type_name: t.type_class.replace('Type', ''),
+              ifc_class: t.element_class || t.type_class,
+              instance_count: sd?.count ?? 0,
+            };
+          })
+          .sort((a, b) => b.instance_count - a.instance_count);
+        return {
+          title: source.storeyName,
+          subtitle: `${rows.length} types on this storey`,
+          tabs: [{ id: 'types', label: 'Types', count: rows.length, columns: [typeCol, classCol, countCol], data: rows }],
+        };
+      }
+      // All storeys overview
+      const rows = analysis.storeys.map(s => ({
+        name: s.name,
+        elevation: s.elevation != null ? `${s.elevation.toFixed(1)} m` : '—',
+        element_count: s.element_count,
+      }));
+      return {
+        title: 'Storeys',
+        subtitle: `${analysis.total_storeys} storeys`,
+        tabs: [{
+          id: 'storeys', label: 'All storeys', count: rows.length,
+          columns: [
+            { key: 'name', label: 'Storey', sortable: true },
+            { key: 'elevation', label: 'Elevation', align: 'right', sortable: true },
+            { key: 'element_count', label: 'Elements', align: 'right', sortable: true },
+          ],
+          data: rows,
+        }],
+      };
+    }
+    case 'treemap': {
+      const cls = source.ifcClass;
+      const matchingTypes = analysis.types.filter(t => {
+        const typeLabel = (t.element_class || t.type_class.replace('Type', '')).replace('Ifc', '');
+        return typeLabel === cls;
+      });
+      const rows = matchingTypes.map(t => ({
+        type_name: t.type_class.replace('Type', ''),
+        ifc_class: t.element_class || t.type_class,
+        instance_count: t.instance_count,
+      }));
+      const total = rows.reduce((s, r) => s + (r.instance_count as number), 0);
+      return {
+        title: cls,
+        subtitle: `${rows.length} types, ${total.toLocaleString()} instances`,
+        tabs: [{ id: 'types', label: 'Types', count: rows.length, columns: [typeCol, classCol, countCol], data: rows }],
+      };
+    }
+    case 'geometry': {
+      const rep = source.representation;
+      const matchingTypes = analysis.types.filter(t => t.primary_representation === rep && t.instance_count > 0);
+      const rows = matchingTypes.map(t => ({
+        type_name: t.type_class.replace('Type', ''),
+        ifc_class: t.element_class || t.type_class,
+        instance_count: t.instance_count,
+      }));
+      const total = rows.reduce((s, r) => s + (r.instance_count as number), 0);
+      return {
+        title: rep,
+        subtitle: `${rows.length} types, ${total.toLocaleString()} instances`,
+        tabs: [{ id: 'types', label: 'Types', count: rows.length, columns: [typeCol, classCol, countCol], data: rows }],
+      };
+    }
+  }
+}
+
 function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model: Model }) {
   const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
   const [overlay, setOverlay] = useState<OverlayType>(null);
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [viewerMode, setViewerMode] = useState<'3d' | 'footprint'>('3d');
+  const [drillSource, setDrillSource] = useState<DrillSource>(null);
   const hasFile = !!model.file_url;
+
+  const drillConfig = useMemo(() => buildDrillTabs(drillSource, analysis, stats), [drillSource, analysis, stats]);
 
   // Build class → color map matching treemap ordering (sorted by instance count desc)
   const classColorMap = useMemo(() => {
