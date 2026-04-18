@@ -541,6 +541,18 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           </div>
         </DashboardOverlay>
       )}
+
+      {/* Drill modal */}
+      {drillConfig && (
+        <DrillModal
+          open={drillSource !== null}
+          onOpenChange={(open) => { if (!open) setDrillSource(null); }}
+          title={drillConfig.title}
+          subtitle={drillConfig.subtitle}
+          tabs={drillConfig.tabs}
+          exportFilename={model.name ?? 'model'}
+        />
+      )}
     </>
   );
 }
