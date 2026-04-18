@@ -493,7 +493,7 @@ function QualityCard({ analysis, stats, onExpand, onClick }: { analysis: ModelAn
 
 // ─── Storey Chart ───────────────────────────────────────────────────────────
 
-function StoreyChart({ storeys }: { storeys: AnalysisStorey[] }) {
+function StoreyChart({ storeys, onBarClick }: { storeys: AnalysisStorey[]; onBarClick?: (storeyName: string) => void }) {
   if (!storeys.length) return <div className="text-text-tertiary text-xs">No storeys</div>;
 
   const sorted = [...storeys].sort((a, b) => (b.elevation ?? 0) - (a.elevation ?? 0));
@@ -502,8 +502,10 @@ function StoreyChart({ storeys }: { storeys: AnalysisStorey[] }) {
   return (
     <div className="space-y-[clamp(0.1rem,0.3vw,0.2rem)]">
       {sorted.map((s) => (
-        <div key={s.name} className="grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)]"
-             style={{ gridTemplateColumns: 'minmax(0, 5rem) auto 1fr auto' }}>
+        <div key={s.name}
+             className={`grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)] ${onBarClick ? 'cursor-pointer hover:bg-white/5 rounded transition-colors' : ''}`}
+             style={{ gridTemplateColumns: 'minmax(0, 5rem) auto 1fr auto' }}
+             onClick={onBarClick ? () => onBarClick(s.name) : undefined}>
           <span className="text-text-secondary truncate" title={s.name}>{s.name}</span>
           <span className="text-text-tertiary tabular-nums w-[3.5em] text-right">
             {s.elevation != null ? `${s.elevation.toFixed(1)}m` : '—'}
