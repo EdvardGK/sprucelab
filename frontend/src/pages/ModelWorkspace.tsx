@@ -627,6 +627,8 @@ function GeometryDonut({ types, onSliceClick }: { types: AnalysisTypeRecord[]; o
         d={`M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${large} 0 ${ix2},${iy2} Z`}
         fill={DONUT_COLORS[i % DONUT_COLORS.length]}
         opacity={0.85}
+        className={onSliceClick ? 'cursor-pointer hover:opacity-100 transition-opacity' : ''}
+        onClick={onSliceClick ? () => onSliceClick(label) : undefined}
       >
         <title>{`${label}: ${value.toLocaleString()} (${((value / total) * 100).toFixed(1)}%)`}</title>
       </path>
