@@ -190,12 +190,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // Stores each type's FragmentIdMap directly so the Hider can be driven without
   // converting back through GUID arrays every toggle.
   const [typeInfo, setTypeInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
+  const [storeyInfo, setStoreyInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
   const cullerRef = useRef<OBC.MeshCullerRenderer | null>(null);
   // Previous applied visibility state, so the effect below can do delta updates
   // instead of rebuilding and re-applying the full scene visibility every toggle.
   const prevTypeVisibilityRef = useRef<Record<string, boolean>>({});
+  const prevStoreyFilterRef = useRef<string | null | undefined>(undefined);
 
   // View mode: store original materials so we can restore them
   const originalMaterialsRef = useRef<Map<number, THREE.Material | THREE.Material[]>>(new Map());
