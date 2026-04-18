@@ -1382,6 +1382,47 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     prevTypeVisibilityRef.current = next;
   }, [typeInfo]);
 
+  // Apply storey filter — show only elements on the selected storey.
+  // When storeyFilter is null/undefined, show all (reset).
+  useEffect(() => {
+    if (!hiderRef.current || storeyInfo.size === 0) return;
+
+    const prev = prevStoreyFilterRef.current;
+    // Skip if nothing changed
+    if (storeyFilter === prev) return;
+
+    const rafId = requestAnimationFrame(() => {
+      const hider = hiderRef.current;
+      if (!hider) return;
+
+      try {
+        if (storeyFilter == null) {
+          // Show everything
+          hider.set(true);
+        } else {
+          // Hide all, then show only the selected storey
+          hider.set(false);
+          const storeyData = storeyInfo.get(storeyFilter);
+          if (storeyData) {
+            hider.set(true, storeyData.map);
+          }
+        }
+      } catch (err) {
+        console.error('[Viewer] Storey filter failed:', err);
+        hider.set(true);
+      }
+
+      prevStoreyFilterRef.current = storeyFilter;
+
+      // Poke culler after visibility change
+      if (cullerRef.current) {
+        cullerRef.current.needsUpdate = true;
+      }
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [storeyFilter, storeyInfo]);
+
   // Apply class-based coloring when classColorMap is provided.
   // Uses the FragmentIdMap stored directly in typeInfo — no GUID round-trip.
   useEffect(() => {
