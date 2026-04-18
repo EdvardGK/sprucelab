@@ -533,7 +533,7 @@ const TREEMAP_COLORS = [
 
 // treemapLayout imported from @/lib/treemap
 
-function Treemap({ types }: { types: AnalysisTypeRecord[] }) {
+function Treemap({ types, onTileClick }: { types: AnalysisTypeRecord[]; onTileClick?: (ifcClass: string) => void }) {
   const items = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const t of types) {
