@@ -559,11 +559,11 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             )}
           </div>
 
-          {/* Row 3: Model info + Geometry bar (below charts and viewer) */}
-          <div className="col-span-4">
+          {/* Row 3: Model info (under charts) + Geometry bar (under viewer) */}
+          <div className="col-span-3">
             <ModelInfoCard analysis={analysis} />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-3">
             <Card className="overflow-hidden card-accent-forest h-full">
               <CardContent className="p-3 flex flex-col h-full">
                 <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
