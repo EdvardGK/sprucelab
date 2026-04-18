@@ -419,14 +419,14 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
 
 // ─── KPI Card ───────────────────────────────────────────────────────────────
 
-function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio }: {
+function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio, onClick }: {
   value: number | string; label: string; subValue?: number | string; subLabel?: string; accent?: boolean; warn?: boolean;
-  ratio?: string;
+  ratio?: string; onClick?: () => void;
 }) {
   const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
   const displaySubValue = typeof subValue === 'number' ? subValue.toLocaleString() : (subValue ?? '');
   return (
-    <Card className={`h-full ${accent ? 'bg-forest text-white' : ''}`}>
+    <Card className={`h-full ${accent ? 'bg-forest text-white' : ''} ${onClick ? 'cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all' : ''}`} onClick={onClick}>
       <CardContent className="p-3 flex flex-col justify-between h-full">
         <div className={`text-[clamp(0.55rem,0.9vw,0.7rem)] font-semibold uppercase tracking-wide ${accent ? 'text-white/70' : 'text-text-tertiary'}`}>
           {label}
