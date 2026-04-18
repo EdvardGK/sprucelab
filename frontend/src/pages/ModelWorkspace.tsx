@@ -920,41 +920,7 @@ function CardHeader({ title, onExpand }: { title: string; onExpand?: () => void 
 
 // ─── Viewer Card Header with 3D/Footprint toggle ────────────────────────────
 
-function ViewerCardHeader({ mode, onToggle, onExpand, hasSpatialData }: {
-  mode: '3d' | 'footprint';
-  onToggle: () => void;
-  onExpand: () => void;
-  hasSpatialData: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between mb-[clamp(0.25rem,0.5vw,0.4rem)]">
-      <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary">
-        {mode === '3d' ? '3D Viewer' : 'Footprint'}
-      </h3>
-      <div className="flex items-center gap-1">
-        {hasSpatialData && (
-          <button
-            onClick={onToggle}
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
-                       bg-forest/15 border border-forest/30 text-lime
-                       hover:bg-forest hover:text-white hover:border-forest transition-all"
-            title={mode === '3d' ? 'Show footprint' : 'Show 3D'}
-          >
-            {mode === '3d' ? <Grid3x3 className="h-3 w-3" /> : <Box className="h-3 w-3" />}
-          </button>
-        )}
-        <button
-          onClick={onExpand}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
-                     bg-forest/15 border border-forest/30 text-lime
-                     hover:bg-forest hover:text-white hover:border-forest transition-all"
-        >
-          <Maximize2 className="h-3 w-3" />
-        </button>
-      </div>
-    </div>
-  );
-}
+// ViewerCardHeader removed — controls are now floating overlays on the viewer
 
 // ─── Footprint View (Canvas 2D) ─────────────────────────────────────────────
 
