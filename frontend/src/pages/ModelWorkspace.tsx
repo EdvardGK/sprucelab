@@ -461,7 +461,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <CardContent className="p-3 flex flex-col flex-1 min-h-0">
                   <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
                   <div className="flex-1 min-h-0 flex items-center justify-center">
-                    <GeometryDonut types={analysis.types} />
+                    <GeometryDonut types={analysis.types} onSliceClick={(rep) => setDrillSource({ type: 'geometry', representation: rep })} />
                   </div>
                 </CardContent>
               </Card>
