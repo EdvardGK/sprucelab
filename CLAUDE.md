@@ -647,11 +647,11 @@ const distance = Math.max(maxDim * 2.0, 5);         // At least 5m away
 - **Bundle Size**: ~1.2MB is expected for BIM platform (Three.js, graph libs)
 - **Optimization**: Use dynamic imports for heavy features
 - **Dev Server**: `yarn dev` (Vite), builds in ~9s with `yarn build`
-- **Dashboard Layout**: All dashboards MUST fit dynamically within the viewport - users should not need to scroll to see the complete UI.
+- **Dashboard Layout**: Content dictates layout. Page scrolls naturally.
   - **No max-width caps**: NEVER use `max-w-7xl`, `max-w-[1440px]`, or similar width constraints with `mx-auto` on page content. Content fills the available space. Padding alone provides margins.
-  - **Container**: `h-[calc(100vh-X)]` for height (X = header/nav), `overflow-hidden`, `p-[clamp(0.5rem,2vw,1.5rem)]`
-  - **Grid**: `flex-1` with `min-h-0`, CSS Grid with `fr` units for proportional rows
-  - **Cards**: `flex flex-col overflow-hidden`, `flex-1 overflow-y-auto min-h-0` for content
+  - **No viewport locking**: Do NOT use `h-[calc(100vh-X)]` with `overflow-hidden` to force dashboards into the viewport. Cards have fixed heights and scroll internally if content overflows. The page itself scrolls.
+  - **Cards**: Fixed heights (e.g. `h-[220px]`), `overflow-y-auto` for content that exceeds the card. Do NOT use `flex-1` to compress cards into available space.
+  - **Grid**: CSS Grid with `gap-[clamp()]`. No `1fr` rows that force content compression.
   - **Content sizing with clamp()**: ALL text, icons, spacing, and padding MUST use `clamp(min, preferred, max)` for dynamic scaling:
     - Headings: `text-[clamp(1rem,3vw,1.5rem)]`
     - Body text: `text-[clamp(0.625rem,1.2vw,0.75rem)]`
