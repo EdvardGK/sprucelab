@@ -518,6 +518,8 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                         modelId={model.id}
                         showPropertiesPanel={false}
                         classColorMap={classColorMap}
+                        storeyFilter={viewerStoreyFilter}
+                        typeVisibility={viewerTypeVisibility}
                       />
                     ) : (
                       <FootprintView
