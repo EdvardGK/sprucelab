@@ -466,7 +466,7 @@ function QualityCard({ analysis, stats, onExpand, onClick }: { analysis: ModelAn
   ];
 
   return (
-    <Card className="h-full flex flex-col card-accent-lime">
+    <Card className={`h-full flex flex-col card-accent-lime ${onClick ? 'cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all' : ''}`} onClick={onClick}>
       <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
         <CardHeader title="Quality" onExpand={onExpand} />
         <div className="space-y-[clamp(0.2rem,0.4vw,0.3rem)] flex-1">
