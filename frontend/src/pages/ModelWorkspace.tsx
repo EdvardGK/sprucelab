@@ -492,23 +492,23 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
           {/* Row 2: Storeys + Treemap (left) | Viewer (right) */}
-          <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)]">
-            <Card className="overflow-hidden card-accent-forest">
-              <CardContent className="p-3">
+          <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-[300px] max-h-[70vh]">
+            <Card className="overflow-hidden card-accent-forest flex-shrink-0">
+              <CardContent className="p-3 overflow-y-auto max-h-[250px]">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
                 <StoreyChart storeys={analysis.storeys} onBarClick={(name) => openDrill({ type: 'storeys', storeyName: name })} />
               </CardContent>
             </Card>
-            <Card className="overflow-hidden card-accent-forest">
-              <CardContent className="p-3">
+            <Card className="overflow-hidden card-accent-forest flex-1 min-h-[200px] flex flex-col">
+              <CardContent className="p-3 flex flex-col flex-1 min-h-0">
                 <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
-                <div className="relative" style={{ aspectRatio: '16/10' }}>
+                <div className="flex-1 min-h-0 relative">
                   <Treemap types={analysis.types} onTileClick={(cls) => openDrill({ type: 'treemap', ifcClass: cls })} />
                 </div>
               </CardContent>
             </Card>
           </div>
-          <div className="col-span-3">
+          <div className="col-span-3 min-h-[300px] max-h-[70vh]">
             {hasFile ? (
               <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
                 <CardContent className="p-0 flex flex-col flex-1 min-h-0">
