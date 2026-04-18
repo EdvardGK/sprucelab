@@ -107,6 +107,9 @@ interface UnifiedBIMViewerProps {
   // Type Filtering (controlled by parent)
   typeVisibility?: Record<string, boolean>;   // { 'IfcWall': true, 'IfcDoor': false }
 
+  // Storey Filtering — show only elements on this storey (null = show all)
+  storeyFilter?: string | null;
+
   // Section Planes
   enableSectionPlanes?: boolean;    // Default: true
 
