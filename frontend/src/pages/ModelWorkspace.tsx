@@ -448,24 +448,14 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <StoreyChart storeys={analysis.storeys} onBarClick={(name) => setDrillSource({ type: 'storeys', storeyName: name })} />
               </CardContent>
             </Card>
-            <div className="grid grid-cols-2 gap-[clamp(0.3rem,0.6vw,0.5rem)] flex-1 min-h-0">
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
-                  <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
-                  <div className="flex-1 min-h-0 relative">
-                    <Treemap types={analysis.types} onTileClick={(cls) => setDrillSource({ type: 'treemap', ifcClass: cls })} />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
-                  <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
-                  <div className="flex-1 min-h-0 flex items-center justify-center">
-                    <GeometryDonut types={analysis.types} onSliceClick={(rep) => setDrillSource({ type: 'geometry', representation: rep })} />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+              <CardContent className="p-3 flex flex-col flex-1 min-h-0">
+                <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
+                <div className="flex-1 min-h-0 relative">
+                  <Treemap types={analysis.types} onTileClick={(cls) => setDrillSource({ type: 'treemap', ifcClass: cls })} />
+                </div>
+              </CardContent>
+            </Card>
           </div>
           <div className="col-span-3 min-h-0">
             {hasFile ? (
