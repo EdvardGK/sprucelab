@@ -496,7 +496,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
               <CardContent className="p-3 min-h-0 overflow-y-auto">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
-                <StoreyChart storeys={analysis.storeys} onBarClick={(name) => setDrillSource({ type: 'storeys', storeyName: name })} />
+                <StoreyChart storeys={analysis.storeys} onBarClick={(name) => openDrill({ type: 'storeys', storeyName: name })} />
               </CardContent>
             </Card>
             <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
