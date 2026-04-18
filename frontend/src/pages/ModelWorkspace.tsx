@@ -440,7 +440,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => setDrillSource({ type: 'storeys' })} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
-          {/* Row 2: Charts stacked (left) | Viewer (right) */}
+          {/* Row 2: Charts (left) | Viewer (right) — same height */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
             <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
               <CardContent className="p-3 min-h-0 overflow-y-auto">
@@ -466,13 +466,12 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </CardContent>
               </Card>
             </div>
-            <ModelInfoCard analysis={analysis} />
           </div>
-          <div className="col-span-3 flex flex-col min-h-0">
+          <div className="col-span-3 min-h-0">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
                 <CardContent className="p-0 flex flex-col flex-1 min-h-0">
-                  <div className="flex-1 min-h-0 relative overflow-hidden bg-black/20">
+                  <div className="flex-1 min-h-0 relative overflow-hidden bg-black/20 rounded-lg">
                     {viewerMode === '3d' ? (
                       <UnifiedBIMViewer
                         modelId={model.id}
@@ -509,12 +508,16 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </CardContent>
               </Card>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
                 <CardContent className="p-3 flex-1 flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
             )}
+          </div>
+          {/* Row 3: Model info (full width) */}
+          <div className="col-span-6">
+            <ModelInfoCard analysis={analysis} />
           </div>
         </div>
       </div>
