@@ -453,7 +453,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <CardContent className="p-3 flex flex-col flex-1 min-h-0">
                   <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
                   <div className="flex-1 min-h-0 relative">
-                    <Treemap types={analysis.types} />
+                    <Treemap types={analysis.types} onTileClick={(cls) => setDrillSource({ type: 'treemap', ifcClass: cls })} />
                   </div>
                 </CardContent>
               </Card>
