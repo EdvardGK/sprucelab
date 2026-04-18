@@ -635,7 +635,16 @@
       "models": "View and manage IFC models",
       "viewer": "Explore models in 3D",
       "workbench": "Classify types and edit data"
-    }
+    },
+    "disciplines": "Disciplines",
+    "classificationProgress": "Classification Progress",
+    "typeClassification": "Type classification",
+    "unitAssignment": "Unit assignment",
+    "materialMapping": "Material mapping",
+    "modelName": "Model",
+    "discipline": "Discipline",
+    "noModels": "No models yet",
+    "projectNotFound": "Project not found"
   },
   "materialLibrary": {
     "title": "Material Library",

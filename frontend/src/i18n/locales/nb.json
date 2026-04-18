@@ -635,7 +635,16 @@
       "models": "Se og administrer IFC-modeller",
       "viewer": "Utforsk modeller i 3D",
       "workbench": "Klassifiser typer og rediger data"
-    }
+    },
+    "disciplines": "Disipliner",
+    "classificationProgress": "Klassifiseringsfremdrift",
+    "typeClassification": "Typeklassifisering",
+    "unitAssignment": "Enhetstilordning",
+    "materialMapping": "Materialkartlegging",
+    "modelName": "Modell",
+    "discipline": "Disiplin",
+    "noModels": "Ingen modeller ennå",
+    "projectNotFound": "Prosjekt ikke funnet"
   },
   "materialLibrary": {
     "title": "Materialbibliotek",
