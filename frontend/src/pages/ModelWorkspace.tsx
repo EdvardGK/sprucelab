@@ -471,14 +471,8 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <div className="col-span-3 flex flex-col min-h-0">
             {hasFile ? (
               <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
-                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
-                  <ViewerCardHeader
-                    mode={viewerMode}
-                    onToggle={() => setViewerMode(v => v === '3d' ? 'footprint' : '3d')}
-                    onExpand={() => setOverlay('viewer')}
-                    hasSpatialData={!!analysis.spatial_data?.bounding_box}
-                  />
-                  <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/20">
+                <CardContent className="p-0 flex flex-col flex-1 min-h-0">
+                  <div className="flex-1 min-h-0 relative overflow-hidden bg-black/20">
                     {viewerMode === '3d' ? (
                       <UnifiedBIMViewer
                         modelId={model.id}
@@ -492,6 +486,25 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                         units={analysis.units}
                       />
                     )}
+                    {/* Floating controls */}
+                    <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
+                      {analysis.spatial_data?.bounding_box && (
+                        <button
+                          onClick={() => setViewerMode(v => v === '3d' ? 'footprint' : '3d')}
+                          className="bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg px-2 py-1 text-[0.6rem] font-medium text-white/60 hover:text-white/90 transition-colors flex items-center gap-1"
+                          title={viewerMode === '3d' ? 'Show footprint' : 'Show 3D'}
+                        >
+                          {viewerMode === '3d' ? <Grid3x3 className="h-3 w-3" /> : <Box className="h-3 w-3" />}
+                          {viewerMode === '3d' ? '2D' : '3D'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setOverlay('viewer')}
+                        className="bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg px-2 py-1 text-white/60 hover:text-white/90 transition-colors"
+                      >
+                        <Maximize2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
