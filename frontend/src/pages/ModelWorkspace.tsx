@@ -505,9 +505,19 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               </Card>
             )}
           </div>
-          {/* Row 3: Model info (full width) */}
-          <div className="col-span-6">
+          {/* Row 3: Model info + Geometry (below charts and viewer) */}
+          <div className="col-span-4">
             <ModelInfoCard analysis={analysis} />
+          </div>
+          <div className="col-span-2">
+            <Card className="overflow-hidden card-accent-forest h-full">
+              <CardContent className="p-3 flex flex-col h-full">
+                <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
+                <div className="flex-1 flex items-center justify-center">
+                  <GeometryDonut types={analysis.types} onSliceClick={(rep) => setDrillSource({ type: 'geometry', representation: rep })} />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
