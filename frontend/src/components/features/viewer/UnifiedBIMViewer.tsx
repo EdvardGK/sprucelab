@@ -153,6 +153,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   modelId: singleModelId,
   modelVisibility,
   typeVisibility: typeVisibilityProp,  // Controlled type filtering from parent
+  storeyFilter,
   enableSectionPlanes = true,
   showPropertiesPanel = true,
   showModelInfo = false,    // Minimal by default
