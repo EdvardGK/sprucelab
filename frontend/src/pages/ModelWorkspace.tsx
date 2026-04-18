@@ -1100,7 +1100,7 @@ const ADVISORY_ROLES = [
 
 function MetadataTab({ model }: { model: Model }) {
   return (
-    <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto space-y-[clamp(0.5rem,1vw,0.75rem)]">
+    <div className="p-[clamp(1rem,2vw,1.5rem)] space-y-[clamp(0.5rem,1vw,0.75rem)]">
       <div className="grid grid-cols-2 gap-[clamp(0.5rem,1vw,0.75rem)]">
         {/* Platform Info */}
         <Card className="card-accent-lavender">
