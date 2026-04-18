@@ -433,11 +433,11 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-full grid-rows-[auto_1fr]">
           {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
           <div className="col-span-2">
-            <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} />
+            <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} onClick={() => setDrillSource({ type: 'quality' })} />
           </div>
-          <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent />
-          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} />
-          <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" />
+          <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent onClick={() => setDrillSource({ type: 'types' })} />
+          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} onClick={() => setDrillSource({ type: 'instances' })} />
+          <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => setDrillSource({ type: 'storeys' })} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
           {/* Row 2: Charts stacked (left) | Viewer (right) */}
