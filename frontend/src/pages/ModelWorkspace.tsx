@@ -487,7 +487,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} onClick={() => openDrill({ type: 'quality' })} />
           </div>
           <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent onClick={() => openDrill({ type: 'types' })} />
-          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} onClick={() => setDrillSource({ type: 'instances' })} />
+          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} onClick={() => openDrill({ type: 'instances' })} />
           <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => setDrillSource({ type: 'storeys' })} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
