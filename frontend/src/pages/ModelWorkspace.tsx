@@ -491,7 +491,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => openDrill({ type: 'storeys' })} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
-          {/* Row 2: Charts stacked (left) | Viewer (right) */}
+          {/* Row 2: Storeys + Treemap (left) | Viewer (right) — matched height */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
             <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
               <CardContent className="p-3 min-h-0 overflow-y-auto">
@@ -499,29 +499,18 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <StoreyChart storeys={analysis.storeys} onBarClick={(name) => openDrill({ type: 'storeys', storeyName: name })} />
               </CardContent>
             </Card>
-            <div className="grid grid-cols-2 gap-[clamp(0.3rem,0.6vw,0.5rem)] flex-1 min-h-0">
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
-                  <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
-                  <div className="flex-1 min-h-0 relative">
-                    <Treemap types={analysis.types} onTileClick={(cls) => openDrill({ type: 'treemap', ifcClass: cls })} />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
-                  <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
-                  <div className="flex-1 min-h-0 flex flex-col justify-center">
-                    <GeometryBar types={analysis.types} onSegmentClick={(rep) => openDrill({ type: 'geometry', representation: rep })} />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <ModelInfoCard analysis={analysis} />
+            <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+              <CardContent className="p-3 flex flex-col flex-1 min-h-0">
+                <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
+                <div className="flex-1 min-h-0 relative">
+                  <Treemap types={analysis.types} onTileClick={(cls) => openDrill({ type: 'treemap', ifcClass: cls })} />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <div className="col-span-3 flex flex-col min-h-0">
+          <div className="col-span-3 min-h-0">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
                 <CardContent className="p-0 flex flex-col flex-1 min-h-0">
                   <div className="flex-1 min-h-0 relative overflow-hidden bg-black/20 rounded-lg">
                     {viewerMode === '3d' ? (
@@ -562,12 +551,27 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </CardContent>
               </Card>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
                 <CardContent className="p-3 flex-1 flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
             )}
+          </div>
+
+          {/* Row 3: Model info + Geometry bar (below charts and viewer) */}
+          <div className="col-span-4">
+            <ModelInfoCard analysis={analysis} />
+          </div>
+          <div className="col-span-2">
+            <Card className="overflow-hidden card-accent-forest h-full">
+              <CardContent className="p-3 flex flex-col h-full">
+                <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
+                <div className="flex-1 flex flex-col justify-center">
+                  <GeometryBar types={analysis.types} onSegmentClick={(rep) => openDrill({ type: 'geometry', representation: rep })} />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
