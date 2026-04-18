@@ -491,15 +491,15 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => openDrill({ type: 'storeys' })} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
-          {/* Row 2: Storeys + Treemap (left) | Viewer (right) */}
-          <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-[300px] max-h-[70vh]">
+          {/* Row 2: Storeys + Treemap (left) | Viewer (right) — fixed height row */}
+          <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] h-[clamp(400px,50vh,600px)]">
             <Card className="overflow-hidden card-accent-forest flex-shrink-0">
-              <CardContent className="p-3 overflow-y-auto max-h-[250px]">
+              <CardContent className="p-3 overflow-y-auto max-h-[45%]">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
                 <StoreyChart storeys={analysis.storeys} onBarClick={(name) => openDrill({ type: 'storeys', storeyName: name })} />
               </CardContent>
             </Card>
-            <Card className="overflow-hidden card-accent-forest flex-1 min-h-[200px] flex flex-col">
+            <Card className="overflow-hidden card-accent-forest flex-1 min-h-0 flex flex-col">
               <CardContent className="p-3 flex flex-col flex-1 min-h-0">
                 <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
                 <div className="flex-1 min-h-0 relative">
@@ -508,7 +508,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               </CardContent>
             </Card>
           </div>
-          <div className="col-span-3 min-h-[300px] max-h-[70vh]">
+          <div className="col-span-3 h-[clamp(400px,50vh,600px)]">
             {hasFile ? (
               <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
                 <CardContent className="p-0 flex flex-col flex-1 min-h-0">
