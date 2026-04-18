@@ -562,13 +562,14 @@ function Treemap({ types, onTileClick }: { types: AnalysisTypeRecord[]; onTileCl
           return (
             <div
               key={r.label}
-              className="absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px"
+              className={`absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px ${onTileClick ? 'cursor-pointer hover:brightness-110 transition-all' : ''}`}
               style={{
                 left: `${pctX}%`, top: `${pctY}%`,
                 width: `${pctW}%`, height: `${pctH}%`,
                 background: color, opacity: 0.85,
               }}
               title={`${r.label}: ${r.value.toLocaleString()}`}
+              onClick={onTileClick ? () => onTileClick(r.label) : undefined}
             >
               {showLabel && (
                 <>
