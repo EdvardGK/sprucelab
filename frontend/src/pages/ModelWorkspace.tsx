@@ -456,7 +456,7 @@ function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio, onClic
 
 // ─── Quality Checks Card ────────────────────────────────────────────────────
 
-function QualityCard({ analysis, stats, onExpand }: { analysis: ModelAnalysis; stats: AnalysisStats; onExpand?: () => void }) {
+function QualityCard({ analysis, stats, onExpand, onClick }: { analysis: ModelAnalysis; stats: AnalysisStats; onExpand?: () => void; onClick?: () => void }) {
   const checks = [
     { label: 'Duplicate GUIDs', value: analysis.duplicate_guid_count, ok: analysis.duplicate_guid_count === 0 },
     { label: 'Proxy-typed', value: stats.proxyCount, ok: stats.proxyCount === 0 },
