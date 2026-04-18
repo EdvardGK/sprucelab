@@ -14,6 +14,7 @@ import { ElementPropertiesPanel, ElementProperties } from '@/components/features
 import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
 import { treemapLayout } from '@/lib/treemap';
+import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
 
 // Tab definitions
 const TABS = [
