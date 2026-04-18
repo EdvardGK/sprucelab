@@ -613,7 +613,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
       {drillConfig && (
         <DrillModal
           open={drillSource !== null}
-          onOpenChange={(open) => { if (!open) setDrillSource(null); }}
+          onOpenChange={(open) => { if (!open) closeDrill(); }}
           title={drillConfig.title}
           subtitle={drillConfig.subtitle}
           tabs={drillConfig.tabs}
