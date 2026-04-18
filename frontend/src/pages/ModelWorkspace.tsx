@@ -411,9 +411,60 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [viewerMode, setViewerMode] = useState<'3d' | 'footprint'>('3d');
   const [drillSource, setDrillSource] = useState<DrillSource>(null);
+  const [viewerStoreyFilter, setViewerStoreyFilter] = useState<string | null>(null);
+  const [viewerTypeVisibility, setViewerTypeVisibility] = useState<Record<string, boolean> | undefined>(undefined);
   const hasFile = !!model.file_url;
 
   const drillConfig = useMemo(() => buildDrillTabs(drillSource, analysis, stats), [drillSource, analysis, stats]);
+
+  // When drill opens, also filter the viewer. When drill closes, reset.
+  const openDrill = (source: DrillSource) => {
+    setDrillSource(source);
+    if (!source) {
+      setViewerStoreyFilter(null);
+      setViewerTypeVisibility(undefined);
+      return;
+    }
+    switch (source.type) {
+      case 'storeys':
+        setViewerStoreyFilter(source.storeyName ?? null);
+        setViewerTypeVisibility(undefined);
+        break;
+      case 'treemap': {
+        // Show only the selected IFC class
+        const vis: Record<string, boolean> = {};
+        for (const cls of Object.keys(stats.classCounts)) {
+          vis['Ifc' + cls] = cls === source.ifcClass;
+        }
+        setViewerTypeVisibility(vis);
+        setViewerStoreyFilter(null);
+        break;
+      }
+      case 'quality': {
+        // Show only proxy/problem types by hiding well-behaved ones
+        const vis: Record<string, boolean> = {};
+        for (const t of analysis.types) {
+          const cls = t.element_class || t.type_class;
+          const hasIssue = t.is_proxy || t.is_external_unset > 0 || t.loadbearing_unset > 0 || t.fire_rating_unset > 0;
+          if (hasIssue) vis[cls] = true;
+        }
+        // Only set if we found issues, otherwise show all
+        setViewerTypeVisibility(Object.keys(vis).length > 0 ? vis : undefined);
+        setViewerStoreyFilter(null);
+        break;
+      }
+      default:
+        setViewerStoreyFilter(null);
+        setViewerTypeVisibility(undefined);
+        break;
+    }
+  };
+
+  const closeDrill = () => {
+    setDrillSource(null);
+    setViewerStoreyFilter(null);
+    setViewerTypeVisibility(undefined);
+  };
 
   // Build class → color map matching treemap ordering (sorted by instance count desc)
   const classColorMap = useMemo(() => {
