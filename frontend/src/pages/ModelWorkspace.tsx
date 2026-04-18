@@ -480,8 +480,8 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
   return (
     <>
-      <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full min-h-full">
-        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)] grid-rows-[auto_1fr_auto]">
+      <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full">
+        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
           {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
           <div className="col-span-2">
             <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} onClick={() => openDrill({ type: 'quality' })} />
