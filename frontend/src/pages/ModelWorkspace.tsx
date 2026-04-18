@@ -790,11 +790,11 @@ function Treemap({ types, onTileClick }: { types: AnalysisTypeRecord[]; onTileCl
   );
 }
 
-// ─── Geometry Donut ─────────────────────────────────────────────────────────
+// ─── Geometry Bar ──────────────────────────────────────────────────────────
 
-const DONUT_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#94a3b8', '#64748b', '#475569', '#cbd5e1'];
+const GEOM_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#94a3b8', '#64748b', '#475569', '#cbd5e1'];
 
-function GeometryDonut({ types, onSliceClick }: { types: AnalysisTypeRecord[]; onSliceClick?: (representation: string) => void }) {
+function GeometryBar({ types, onSegmentClick }: { types: AnalysisTypeRecord[]; onSegmentClick?: (representation: string) => void }) {
   const data = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const t of types) {
@@ -807,40 +807,39 @@ function GeometryDonut({ types, onSliceClick }: { types: AnalysisTypeRecord[]; o
   if (!data.length) return <div className="text-text-tertiary text-xs">No geometry data</div>;
 
   const total = data.reduce((s, [, v]) => s + v, 0);
-  const size = 130;
-  const cx = size / 2, cy = size / 2, r = size / 2 - 2, ir = r * 0.55;
-
-  let angle = -Math.PI / 2;
-  const paths: JSX.Element[] = [];
-
-  for (let i = 0; i < data.length; i++) {
-    const [label, value] = data[i];
-    const sweep = (value / total) * Math.PI * 2;
-    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
-    const x2 = cx + r * Math.cos(angle + sweep), y2 = cy + r * Math.sin(angle + sweep);
-    const ix1 = cx + ir * Math.cos(angle + sweep), iy1 = cy + ir * Math.sin(angle + sweep);
-    const ix2 = cx + ir * Math.cos(angle), iy2 = cy + ir * Math.sin(angle);
-    const large = sweep > Math.PI ? 1 : 0;
-
-    paths.push(
-      <path
-        key={label}
-        d={`M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${large} 0 ${ix2},${iy2} Z`}
-        fill={DONUT_COLORS[i % DONUT_COLORS.length]}
-        opacity={0.85}
-        className={onSliceClick ? 'cursor-pointer hover:opacity-100 transition-opacity' : ''}
-        onClick={onSliceClick ? () => onSliceClick(label) : undefined}
-      >
-        <title>{`${label}: ${value.toLocaleString()} (${((value / total) * 100).toFixed(1)}%)`}</title>
-      </path>
-    );
-    angle += sweep;
-  }
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-full max-h-full">
-      {paths}
-    </svg>
+    <div>
+      {/* Stacked bar */}
+      <div className="h-[clamp(0.6rem,1vw,0.8rem)] rounded-full overflow-hidden flex">
+        {data.map(([label, value], i) => {
+          const pct = (value / total) * 100;
+          return (
+            <div
+              key={label}
+              className={`h-full ${onSegmentClick ? 'cursor-pointer hover:brightness-110' : ''} transition-all`}
+              style={{ width: `${pct}%`, background: GEOM_COLORS[i % GEOM_COLORS.length] }}
+              title={`${label}: ${value.toLocaleString()} (${pct.toFixed(1)}%)`}
+              onClick={onSegmentClick ? () => onSegmentClick(label) : undefined}
+            />
+          );
+        })}
+      </div>
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-[clamp(0.3rem,0.5vw,0.4rem)]">
+        {data.map(([label, value], i) => (
+          <div
+            key={label}
+            className={`flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)] ${onSegmentClick ? 'cursor-pointer hover:text-text-primary' : ''}`}
+            onClick={onSegmentClick ? () => onSegmentClick(label) : undefined}
+          >
+            <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: GEOM_COLORS[i % GEOM_COLORS.length] }} />
+            <span className="text-text-secondary">{label}</span>
+            <span className="text-text-primary font-semibold tabular-nums">{value.toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
