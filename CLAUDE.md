@@ -648,6 +648,7 @@ const distance = Math.max(maxDim * 2.0, 5);         // At least 5m away
 - **Optimization**: Use dynamic imports for heavy features
 - **Dev Server**: `yarn dev` (Vite), builds in ~9s with `yarn build`
 - **Dashboard Layout**: All dashboards MUST fit dynamically within the viewport - users should not need to scroll to see the complete UI.
+  - **No max-width caps**: NEVER use `max-w-7xl`, `max-w-[1440px]`, or similar width constraints with `mx-auto` on page content. Content fills the available space. Padding alone provides margins.
   - **Container**: `h-[calc(100vh-X)]` for height (X = header/nav), `overflow-hidden`, `p-[clamp(0.5rem,2vw,1.5rem)]`
   - **Grid**: `flex-1` with `min-h-0`, CSS Grid with `fr` units for proportional rows
   - **Cards**: `flex flex-col overflow-hidden`, `flex-1 overflow-y-auto min-h-0` for content

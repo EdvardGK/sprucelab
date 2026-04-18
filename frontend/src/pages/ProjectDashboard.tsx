@@ -72,7 +72,7 @@ export default function ProjectDashboard() {
     return (
       <AppLayout>
         <div className="h-[calc(100vh-4rem)] p-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="w-full">
             <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Projects
@@ -93,7 +93,7 @@ export default function ProjectDashboard() {
   return (
     <AppLayout>
       <div className="h-[calc(100vh-4rem)] overflow-hidden p-6">
-        <div className="max-w-7xl mx-auto h-full flex flex-col gap-4">
+        <div className="w-full h-full flex flex-col gap-4">
           {/* Header */}
           <header className="flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-4">

@@ -333,13 +333,13 @@ function buildDrillTabs(source: DrillSource, analysis: ModelAnalysis, stats: Ana
       if (source.storeyName) {
         // Drill into a specific storey — show types on that storey
         const rows = analysis.types
-          .filter(t => t.storey_distribution?.some(sd => sd.storey_name === source.storeyName))
+          .filter(t => t.storey_distribution?.some(sd => sd.storey === source.storeyName))
           .map(t => {
-            const sd = t.storey_distribution?.find(sd => sd.storey_name === source.storeyName);
+            const sd = t.storey_distribution?.find(sd => sd.storey === source.storeyName);
             return {
               type_name: t.type_class.replace('Type', ''),
               ifc_class: t.element_class || t.type_class,
-              instance_count: sd?.count ?? 0,
+              instance_count: sd?.instance_count ?? 0,
             };
           })
           .sort((a, b) => b.instance_count - a.instance_count);

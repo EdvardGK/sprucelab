@@ -24,7 +24,7 @@ export default function ViewerGroups() {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="max-w-7xl w-full mx-auto">
+          <div className="w-full">
             <div className="text-text-secondary">Loading...</div>
           </div>
         </div>
@@ -35,7 +35,7 @@ export default function ViewerGroups() {
   return (
     <AppLayout>
       <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-        <div className="max-w-7xl w-full mx-auto">
+        <div className="w-full">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-text-primary mb-2">3D Viewer Groups</h1>

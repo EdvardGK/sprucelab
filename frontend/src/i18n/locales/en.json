@@ -1069,5 +1069,17 @@
     "checked": "checked",
     "deviations": "deviations",
     "remaining": "remaining"
+  },
+  "drill": {
+    "noData": "No data",
+    "exportCsv": "CSV",
+    "types": "Types",
+    "instances": "Instances",
+    "allTypes": "All types",
+    "byClass": "By class",
+    "storeys": "Storeys",
+    "quality": "Quality Issues",
+    "typesWithIssues": "Types with issues",
+    "typesOnStorey": "types on this storey"
   }
 }

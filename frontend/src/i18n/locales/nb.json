@@ -1069,5 +1069,17 @@
     "checked": "kontrollert",
     "deviations": "avvik",
     "remaining": "gjenstår"
+  },
+  "drill": {
+    "noData": "Ingen data",
+    "exportCsv": "CSV",
+    "types": "Typer",
+    "instances": "Instanser",
+    "allTypes": "Alle typer",
+    "byClass": "Etter klasse",
+    "storeys": "Etasjer",
+    "quality": "Kvalitetsfunn",
+    "typesWithIssues": "Typer med funn",
+    "typesOnStorey": "typer på denne etasjen"
   }
 }
