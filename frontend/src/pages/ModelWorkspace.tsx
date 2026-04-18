@@ -593,7 +593,7 @@ function Treemap({ types, onTileClick }: { types: AnalysisTypeRecord[]; onTileCl
 
 const DONUT_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#94a3b8', '#64748b', '#475569', '#cbd5e1'];
 
-function GeometryDonut({ types }: { types: AnalysisTypeRecord[] }) {
+function GeometryDonut({ types, onSliceClick }: { types: AnalysisTypeRecord[]; onSliceClick?: (representation: string) => void }) {
   const data = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const t of types) {
