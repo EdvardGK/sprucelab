@@ -13,6 +13,7 @@ import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer'
 import { ElementPropertiesPanel, ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
+import { treemapLayout } from '@/lib/treemap';
 
 // Tab definitions
 const TABS = [
