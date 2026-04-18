@@ -535,7 +535,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         </div>
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'geometry'} onClose={() => setOverlay(null)} title="Geometry">
-        <GeometryDonut types={analysis.types} />
+        <GeometryBar types={analysis.types} />
       </DashboardOverlay>
       {hasFile && (
         <DashboardOverlay open={overlay === 'viewer'} onClose={() => { setOverlay(null); setSelectedElement(null); }} title="3D Viewer" fullscreen>
