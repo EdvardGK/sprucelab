@@ -1191,6 +1191,30 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             console.warn('[Viewer] Local type extraction failed:', err);
           }
 
+          // Index relations and classify by spatial structure (storey grouping).
+          // This enables storey-based filtering from the dashboard.
+          try {
+            const indexer = components.get(OBC.IfcRelationsIndexer);
+            await indexer.process(group);
+            const classifier = components.get(OBC.Classifier);
+            await classifier.bySpatialStructure(group);
+            const spatialStructures = classifier.list.spatialStructures || {};
+            const newStoreyMap = new Map<string, { map: FragmentIdMap; count: number }>();
+            for (const [storeyName, storeyData] of Object.entries(spatialStructures)) {
+              let count = 0;
+              for (const ids of Object.values(storeyData.map)) count += ids.size;
+              if (count > 0) {
+                newStoreyMap.set(storeyName, { map: storeyData.map, count });
+              }
+            }
+            if (newStoreyMap.size > 0) {
+              setStoreyInfo(newStoreyMap);
+              console.log('[Viewer] Storey classification:', newStoreyMap.size, 'storeys');
+            }
+          } catch (err) {
+            console.warn('[Viewer] Spatial structure classification failed:', err);
+          }
+
           // Fire-and-forget FastAPI open so click-to-inspect can resolve element props later.
           if (modelData.file_url) {
             const absoluteUrl = toAbsoluteUrl(modelData.file_url);
