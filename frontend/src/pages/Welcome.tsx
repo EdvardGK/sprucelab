@@ -78,10 +78,7 @@ export default function Welcome() {
       typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('scene')
         : null;
-    const cleanup =
-      sceneParam === 'city'
-        ? initBlueprintCity(container)
-        : initDioramaScene(container);
+    const cleanup = initDioramaScene(container);
     return cleanup;
   }, []);
 
