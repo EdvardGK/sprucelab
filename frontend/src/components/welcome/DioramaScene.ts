@@ -1856,14 +1856,14 @@ function planCrane(
   top.add(cabin);
 
   // Flag pole on top of the cabin
-  const poleH = 1.0;
+  const poleH = 1.5;
   const poleGeom = ctx.tracker.track(new THREE.CylinderGeometry(0.035, 0.035, poleH, 6));
   const pole = new THREE.Mesh(poleGeom, poleMat);
   pole.position.set(0.85 + cabW / 2 - 0.1, cabH / 2 - 0.05 + poleH / 2, 0);
   pole.castShadow = true;
   top.add(pole);
 
-  // Norwegian flag — small plane with flag texture, two-sided
+  // Norwegian flag — plane with flag texture, two-sided
   const flagTex = ctx.tracker.track(makeNorwegianFlagTexture());
   const flagMat = ctx.tracker.track(
     new THREE.MeshStandardMaterial({
@@ -1875,10 +1875,11 @@ function planCrane(
   );
   const flagW = 1.0;
   const flagH = 0.68;
+  const poleX = 0.85 + cabW / 2 - 0.1;
   const flagGeom = ctx.tracker.track(new THREE.PlaneGeometry(flagW, flagH));
   const flag = new THREE.Mesh(flagGeom, flagMat);
   flag.position.set(
-    0.85 + cabW / 2 - 0.1 + flagW / 2,
+    poleX + flagW / 2,
     cabH / 2 - 0.05 + poleH - flagH / 2 - 0.06,
     0,
   );
