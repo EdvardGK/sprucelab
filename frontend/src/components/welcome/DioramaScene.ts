@@ -1887,6 +1887,7 @@ function planCrane(
   flag.rotation.y = 0;
   flag.castShadow = true;
   group.add(flag);
+  ctx.flag = flag;
 
   // Cable — thin cylinder oriented each frame from jib end to box. Unit
   // height; the animate loop sets position/rotation/scale. Lives in the
