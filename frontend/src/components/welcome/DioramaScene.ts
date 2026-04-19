@@ -2362,7 +2362,7 @@ export function initDioramaScene(container: HTMLElement): () => void {
 
   // Construction time runs at 0.2x real time — lazy background pacing,
   // full reveal completes in ~20 seconds. Camera and water stay at real speed.
-  const ANIM_SPEED = 0.2;
+  const ANIM_SPEED = 0.1;
 
   const animate = (): void => {
     if (!running) return;
