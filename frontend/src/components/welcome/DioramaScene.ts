@@ -2172,33 +2172,65 @@ function planPlaza(
     }),
   );
 
-  // --- Paving bands: alternating light/dark stripes along X ---
+  // --- Reflecting pool dimensions (centered) ---
+  const poolW = w * 0.35;
+  const poolD = d * 0.22;
+  const poolH = 0.06;
+  const poolX = 0;
+  const poolZ = 0;
+  const rimThick = 0.06;
+  const poolLeft = poolX - poolW / 2 - rimThick;
+  const poolRight = poolX + poolW / 2 + rimThick;
+
+  // --- Paving bands: alternating light/dark stripes along X, gap for pool ---
   const stripeCount = 9;
   const stripeW = w / stripeCount;
   for (let i = 0; i < stripeCount; i++) {
     const mat = i % 2 === 0 ? lightPaveMat : darkPaveMat;
+    const sx = -w / 2 + stripeW / 2 + i * stripeW;
+    const sLeft = sx - stripeW / 2;
+    const sRight = sx + stripeW / 2;
+
+    // Skip stripes fully inside pool zone
+    if (sLeft >= poolLeft && sRight <= poolRight) continue;
+
+    // Clip stripes that partially overlap the pool
+    if (sRight > poolLeft && sLeft < poolRight) {
+      // Left fragment
+      if (sLeft < poolLeft) {
+        const fragW = poolLeft - sLeft;
+        const geom = ctx.tracker.track(new THREE.BoxGeometry(fragW, 0.02, d));
+        const frag = new THREE.Mesh(geom, mat);
+        frag.position.set(sLeft + fragW / 2, y0 + 0.01, 0);
+        frag.receiveShadow = true;
+        group.add(frag);
+      }
+      // Right fragment
+      if (sRight > poolRight) {
+        const fragW = sRight - poolRight;
+        const geom = ctx.tracker.track(new THREE.BoxGeometry(fragW, 0.02, d));
+        const frag = new THREE.Mesh(geom, mat);
+        frag.position.set(poolRight + fragW / 2, y0 + 0.01, 0);
+        frag.receiveShadow = true;
+        group.add(frag);
+      }
+      continue;
+    }
+
     const geom = ctx.tracker.track(new THREE.BoxGeometry(stripeW, 0.02, d));
     const stripe = new THREE.Mesh(geom, mat);
-    stripe.position.set(
-      -w / 2 + stripeW / 2 + i * stripeW,
-      y0 + 0.01,
-      0,
-    );
+    stripe.position.set(sx, y0 + 0.01, 0);
     stripe.receiveShadow = true;
     group.add(stripe);
   }
 
-  // --- Reflecting pool: slim rectangle off-center ---
-  const poolW = w * 0.35;
-  const poolD = d * 0.2;
-  const poolH = 0.06;
+  // --- Reflecting pool: centered ---
   const poolGeom = ctx.tracker.track(new THREE.BoxGeometry(poolW, poolH, poolD));
   const pool = new THREE.Mesh(poolGeom, waterMat);
-  pool.position.set(w * 0.08, y0 + poolH / 2 + 0.02, -d * 0.15);
+  pool.position.set(poolX, y0 + poolH / 2 + 0.03, poolZ);
   pool.receiveShadow = true;
   group.add(pool);
   // Pool rim — thin stone border
-  const rimThick = 0.06;
   const rimH = 0.08;
   const rimParts: [number, number, number, number][] = [
     [poolW + rimThick * 2, rimThick, 0, -poolD / 2 - rimThick / 2],  // south
@@ -2209,11 +2241,7 @@ function planPlaza(
   for (const [rw, rd, rx, rz] of rimParts) {
     const rGeom = ctx.tracker.track(new THREE.BoxGeometry(rw, rimH, rd));
     const rim = new THREE.Mesh(rGeom, darkPaveMat);
-    rim.position.set(
-      pool.position.x + rx,
-      y0 + rimH / 2 + 0.02,
-      pool.position.z + rz,
-    );
+    rim.position.set(poolX + rx, y0 + rimH / 2 + 0.03, poolZ + rz);
     rim.receiveShadow = true;
     rim.castShadow = true;
     group.add(rim);
