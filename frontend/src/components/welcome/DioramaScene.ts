@@ -2355,7 +2355,7 @@ function buildBuildings(ctx: SceneCtx): THREE.Group {
   // === Towers — rows 1-2, cols 4-5 ===
   add(planTower(ctx, 526, 166, 108, 108, H.towerA, 0.45));              // D2 — plain modular tower
   add(planOasiaTower(ctx, 646, 166, 114, 108, H.towerB, 0.55));         // E2 — Oasia-inspired plant tower
-  add(planWillisTower(ctx, 526, 286, 108,  94, H.towerTall, 0.65));     // D3 — Willis-style stepped tallest
+  add(planWillisTower(ctx, 526, 286, 108,  94, H.towerTall, 1.20));     // D3 — Willis-style stepped tallest (delayed)
 
   // === Row 2 waterfront landmarks ===
   // Black gate spanning the opera + concert cells — one continuous mass
