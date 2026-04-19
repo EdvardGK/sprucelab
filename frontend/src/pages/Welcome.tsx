@@ -80,9 +80,9 @@ export default function Welcome() {
         ? new URLSearchParams(window.location.search).get('scene')
         : null;
     const cleanup =
-      sceneParam === 'diorama'
-        ? initDioramaScene(container)
-        : initBlueprintCity(container);
+      sceneParam === 'city'
+        ? initBlueprintCity(container)
+        : initDioramaScene(container);
     return cleanup;
   }, []);
 
