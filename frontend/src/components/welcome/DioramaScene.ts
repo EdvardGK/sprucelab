@@ -1855,13 +1855,14 @@ function planCrane(
   attachOutline(cabin, ctx, 1.1);
   top.add(cabin);
 
-  // Flag pole on top of the cabin
+  // Flag pole — parented to static group (not rotating top) so the flag
+  // follows the wind, not the jib.
   const poleH = 1.5;
   const poleGeom = ctx.tracker.track(new THREE.CylinderGeometry(0.035, 0.035, poleH, 6));
   const pole = new THREE.Mesh(poleGeom, poleMat);
-  pole.position.set(0.85 + cabW / 2 - 0.1, cabH / 2 - 0.05 + poleH / 2, 0);
+  pole.position.set(0, mastTopY + poleH / 2, 0);
   pole.castShadow = true;
-  top.add(pole);
+  group.add(pole);
 
   // Norwegian flag — plane with flag texture, two-sided
   const flagTex = ctx.tracker.track(makeNorwegianFlagTexture());
@@ -1875,17 +1876,16 @@ function planCrane(
   );
   const flagW = 1.0;
   const flagH = 0.68;
-  const poleX = 0.85 + cabW / 2 - 0.1;
   const flagGeom = ctx.tracker.track(new THREE.PlaneGeometry(flagW, flagH));
   const flag = new THREE.Mesh(flagGeom, flagMat);
   flag.position.set(
-    poleX,
-    cabH / 2 - 0.05 + poleH - flagH / 2 - 0.06,
+    0,
+    mastTopY + poleH - flagH / 2 - 0.06,
     flagW / 2,
   );
   flag.rotation.y = -Math.PI / 2;
   flag.castShadow = true;
-  top.add(flag);
+  group.add(flag);
 
   // Cable — thin cylinder oriented each frame from jib end to box. Unit
   // height; the animate loop sets position/rotation/scale. Lives in the
