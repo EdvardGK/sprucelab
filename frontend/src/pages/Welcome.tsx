@@ -74,10 +74,6 @@ export default function Welcome() {
   useEffect(() => {
     const container = sceneContainerRef.current;
     if (!container) return;
-    const sceneParam =
-      typeof window !== 'undefined'
-        ? new URLSearchParams(window.location.search).get('scene')
-        : null;
     const cleanup = initDioramaScene(container);
     return cleanup;
   }, []);

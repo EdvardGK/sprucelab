@@ -31,3 +31,4 @@ Built a complete drill-down modal system for both the model workspace and projec
 - **Layout rule (hard-won)**: Cards have fixed heights. No viewport locking. No flex-1 compression. Page scrolls. This is now in CLAUDE.md.
 - **Don't rearrange** grid proportions when only moving components. Change one thing at a time.
 - Stable Vercel dev URL: `sprucelab-git-dev-skiplum.vercel.app` — same origin every deploy, session persists.
+- **Vercel build filter**: Added `ignoreCommand` to `frontend/vercel.json` — skips builds when only non-frontend files changed (CLAUDE.md, backend, docs). Saves build minutes.
