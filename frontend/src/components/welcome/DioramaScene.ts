@@ -206,6 +206,7 @@ interface SceneCtx {
   revealed: RevealedBuilding[];
   windowTex: THREE.Texture | null;
   crane: CraneState | null;
+  flag: THREE.Mesh | null;
 }
 
 // Procedural window-grid texture — dark punched windows on a white base so
