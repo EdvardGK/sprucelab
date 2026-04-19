@@ -1873,8 +1873,8 @@ function planCrane(
       metalness: 0,
     }),
   );
-  const flagW = 0.5;
-  const flagH = 0.34;
+  const flagW = 1.0;
+  const flagH = 0.68;
   const flagGeom = ctx.tracker.track(new THREE.PlaneGeometry(flagW, flagH));
   const flag = new THREE.Mesh(flagGeom, flagMat);
   flag.position.set(
