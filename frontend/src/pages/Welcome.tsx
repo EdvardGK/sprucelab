@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { fetchMe, updateMyProfile } from '../lib/me';
 import { useAuth } from '../contexts/AuthContext';
-import { initBlueprintCity } from '../components/welcome/BlueprintCityScene';
 import { initDioramaScene } from '../components/welcome/DioramaScene';
 import './Welcome.css';
 
