@@ -1883,7 +1883,7 @@ function planCrane(
     cabH / 2 - 0.05 + poleH - flagH / 2 - 0.06,
     flagW / 2,
   );
-  flag.rotation.y = Math.PI / 2;
+  flag.rotation.y = -Math.PI / 2;
   flag.castShadow = true;
   top.add(flag);
 
