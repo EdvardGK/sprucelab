@@ -2785,6 +2785,12 @@ export function initDioramaScene(container: HTMLElement): () => void {
       }
     }
 
+    // Flag — gentle sway back and forth ±15° around base orientation
+    if (ctx.flag) {
+      const swing = Math.sin(t * 1.2) * (Math.PI / 12);
+      ctx.flag.rotation.y = swing;
+    }
+
     renderer.render(scene, camera);
     raf = requestAnimationFrame(animate);
   };
