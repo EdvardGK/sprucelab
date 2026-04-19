@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { fetchMe, updateMyProfile } from '../lib/me';
 import { useAuth } from '../contexts/AuthContext';
-import { initBlueprintCity } from '../components/welcome/BlueprintCityScene';
 import { initDioramaScene } from '../components/welcome/DioramaScene';
 import './Welcome.css';
 
@@ -75,14 +74,7 @@ export default function Welcome() {
   useEffect(() => {
     const container = sceneContainerRef.current;
     if (!container) return;
-    const sceneParam =
-      typeof window !== 'undefined'
-        ? new URLSearchParams(window.location.search).get('scene')
-        : null;
-    const cleanup =
-      sceneParam === 'diorama'
-        ? initDioramaScene(container)
-        : initBlueprintCity(container);
+    const cleanup = initDioramaScene(container);
     return cleanup;
   }, []);
 

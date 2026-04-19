@@ -80,7 +80,7 @@ export default function ProjectModels() {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="max-w-7xl w-full mx-auto">
+          <div className="w-full">
             <div className="text-text-secondary">Loading project... (Project: {projectLoading ? 'loading' : 'done'}, Models: {modelsLoading ? 'loading' : 'done'})</div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function ProjectModels() {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="max-w-7xl w-full mx-auto">
+          <div className="w-full">
           <Button
             variant="ghost"
             size="sm"
@@ -123,7 +123,7 @@ export default function ProjectModels() {
     <AppLayout>
       <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
         {/* Header */}
-        <div className="mb-8 max-w-7xl w-full mx-auto">
+        <div className="mb-8 w-full">
           <Button
             variant="ghost"
             size="sm"
@@ -160,7 +160,7 @@ export default function ProjectModels() {
         </div>
 
         {/* Models section */}
-        <div className="max-w-7xl w-full mx-auto">
+        <div className="w-full">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold text-text-primary">IFC Models</h2>
 

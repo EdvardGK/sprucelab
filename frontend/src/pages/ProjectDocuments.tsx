@@ -14,7 +14,7 @@ export default function ProjectDocuments() {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="max-w-7xl w-full mx-auto">
+          <div className="w-full">
             <div className="text-text-secondary">Loading project...</div>
           </div>
         </div>
@@ -26,7 +26,7 @@ export default function ProjectDocuments() {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="max-w-7xl w-full mx-auto">
+          <div className="w-full">
             <div className="text-error">Project not found</div>
           </div>
         </div>
@@ -38,7 +38,7 @@ export default function ProjectDocuments() {
     <AppLayout>
       <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
         {/* Header */}
-        <div className="mb-8 max-w-7xl w-full mx-auto">
+        <div className="mb-8 w-full">
           <Button
             variant="ghost"
             size="sm"
@@ -63,7 +63,7 @@ export default function ProjectDocuments() {
         </div>
 
         {/* Documents section */}
-        <div className="max-w-7xl w-full mx-auto">
+        <div className="w-full">
           <Card className="text-center py-12">
             <CardContent className="pt-6">
               <FileStack className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

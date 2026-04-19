@@ -13,6 +13,8 @@ import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer'
 import { ElementPropertiesPanel, ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
+import { treemapLayout } from '@/lib/treemap';
+import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
 
 // Tab definitions
 const TABS = [
@@ -160,7 +162,7 @@ function OverviewTab({ model }: { model: Model }) {
 
   if (isLoading) {
     return (
-      <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto grid grid-cols-5 grid-rows-[auto_1fr_1fr_auto] gap-[clamp(0.5rem,1vw,0.75rem)]">
+      <div className="p-[clamp(1rem,2vw,1.5rem)] grid grid-cols-5 grid-rows-[auto_1fr_1fr_auto] gap-[clamp(0.5rem,1vw,0.75rem)]">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-lg" />
         ))}
@@ -201,7 +203,7 @@ function OverviewTab({ model }: { model: Model }) {
   return (
     <div>
       {/* Sub-tab navigation */}
-      <div className="border-b border-border/50 bg-background px-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto">
+      <div className="border-b border-border/50 bg-background px-[clamp(1rem,2vw,1.5rem)]">
         <nav className="flex space-x-1">
           {OVERVIEW_SUBTABS.map((tab) => (
             <button
@@ -236,12 +238,233 @@ function OverviewTab({ model }: { model: Model }) {
 
 type OverlayType = 'quality' | 'storeys' | 'elements' | 'geometry' | 'viewer' | null;
 
+type DrillSource =
+  | { type: 'quality' }
+  | { type: 'types' }
+  | { type: 'instances' }
+  | { type: 'storeys'; storeyName?: string }
+  | { type: 'treemap'; ifcClass: string }
+  | { type: 'geometry'; representation: string }
+  | null;
+
+function buildDrillTabs(source: DrillSource, analysis: ModelAnalysis, stats: AnalysisStats): { title: string; subtitle?: string; tabs: DrillTab[] } | null {
+  if (!source) return null;
+
+  const typeCol = { key: 'type_name', label: 'Type', sortable: true };
+  const classCol = { key: 'ifc_class', label: 'IFC Class', sortable: true };
+  const countCol = { key: 'instance_count', label: 'Instances', align: 'right' as const, sortable: true };
+
+  switch (source.type) {
+    case 'quality': {
+      const rows = analysis.types
+        .filter(t => t.is_proxy || t.is_external_unset > 0 || t.loadbearing_unset > 0 || t.fire_rating_unset > 0)
+        .map(t => ({
+          type_name: t.type_class.replace('Type', ''),
+          ifc_class: t.element_class || t.type_class,
+          instance_count: t.instance_count,
+          proxy: t.is_proxy ? 'Yes' : '',
+          ext_unset: t.is_external_unset,
+          lb_unset: t.loadbearing_unset,
+          fr_unset: t.fire_rating_unset,
+        }));
+      return {
+        title: 'Quality Issues',
+        subtitle: `${rows.length} types with issues`,
+        tabs: [{
+          id: 'issues', label: 'Types with issues', count: rows.length,
+          columns: [
+            typeCol, classCol, countCol,
+            { key: 'proxy', label: 'Proxy', align: 'center' },
+            { key: 'ext_unset', label: 'ExtUnset', align: 'right' },
+            { key: 'lb_unset', label: 'LBUnset', align: 'right' },
+            { key: 'fr_unset', label: 'FRUnset', align: 'right' },
+          ],
+          data: rows,
+        }],
+      };
+    }
+    case 'types': {
+      const rows = analysis.types.map(t => ({
+        type_name: t.type_class.replace('Type', ''),
+        ifc_class: t.element_class || t.type_class,
+        instance_count: t.instance_count,
+        empty: t.is_empty ? 'Yes' : '',
+        proxy: t.is_proxy ? 'Yes' : '',
+        untyped: t.is_untyped ? 'Yes' : '',
+      }));
+      return {
+        title: 'Types',
+        subtitle: `${analysis.total_types} types, ${stats.totalInstances.toLocaleString()} instances`,
+        tabs: [{
+          id: 'all', label: 'All types', count: rows.length,
+          columns: [
+            typeCol, classCol, countCol,
+            { key: 'empty', label: 'Empty', align: 'center' },
+            { key: 'proxy', label: 'Proxy', align: 'center' },
+            { key: 'untyped', label: 'Untyped', align: 'center' },
+          ],
+          data: rows,
+        }],
+      };
+    }
+    case 'instances': {
+      const byClass: Record<string, number> = {};
+      for (const t of analysis.types) {
+        const cls = t.element_class || t.type_class;
+        byClass[cls] = (byClass[cls] || 0) + t.instance_count;
+      }
+      const rows = Object.entries(byClass)
+        .map(([ifc_class, instance_count]) => ({ ifc_class, instance_count }))
+        .sort((a, b) => b.instance_count - a.instance_count);
+      return {
+        title: 'Instances by IFC Class',
+        subtitle: `${stats.totalInstances.toLocaleString()} total instances`,
+        tabs: [{
+          id: 'byclass', label: 'By class', count: rows.length,
+          columns: [
+            { key: 'ifc_class', label: 'IFC Class', sortable: true },
+            { key: 'instance_count', label: 'Instances', align: 'right', sortable: true },
+          ],
+          data: rows,
+        }],
+      };
+    }
+    case 'storeys': {
+      if (source.storeyName) {
+        // Drill into a specific storey — show types on that storey
+        const rows = analysis.types
+          .filter(t => t.storey_distribution?.some(sd => sd.storey === source.storeyName))
+          .map(t => {
+            const sd = t.storey_distribution?.find(sd => sd.storey === source.storeyName);
+            return {
+              type_name: t.type_class.replace('Type', ''),
+              ifc_class: t.element_class || t.type_class,
+              instance_count: sd?.instance_count ?? 0,
+            };
+          })
+          .sort((a, b) => b.instance_count - a.instance_count);
+        return {
+          title: source.storeyName,
+          subtitle: `${rows.length} types on this storey`,
+          tabs: [{ id: 'types', label: 'Types', count: rows.length, columns: [typeCol, classCol, countCol], data: rows }],
+        };
+      }
+      // All storeys overview
+      const rows = analysis.storeys.map(s => ({
+        name: s.name,
+        elevation: s.elevation != null ? `${s.elevation.toFixed(1)} m` : '—',
+        element_count: s.element_count,
+      }));
+      return {
+        title: 'Storeys',
+        subtitle: `${analysis.total_storeys} storeys`,
+        tabs: [{
+          id: 'storeys', label: 'All storeys', count: rows.length,
+          columns: [
+            { key: 'name', label: 'Storey', sortable: true },
+            { key: 'elevation', label: 'Elevation', align: 'right', sortable: true },
+            { key: 'element_count', label: 'Elements', align: 'right', sortable: true },
+          ],
+          data: rows,
+        }],
+      };
+    }
+    case 'treemap': {
+      const cls = source.ifcClass;
+      const matchingTypes = analysis.types.filter(t => {
+        const typeLabel = (t.element_class || t.type_class.replace('Type', '')).replace('Ifc', '');
+        return typeLabel === cls;
+      });
+      const rows = matchingTypes.map(t => ({
+        type_name: t.type_class.replace('Type', ''),
+        ifc_class: t.element_class || t.type_class,
+        instance_count: t.instance_count,
+      }));
+      const total = rows.reduce((s, r) => s + (r.instance_count as number), 0);
+      return {
+        title: cls,
+        subtitle: `${rows.length} types, ${total.toLocaleString()} instances`,
+        tabs: [{ id: 'types', label: 'Types', count: rows.length, columns: [typeCol, classCol, countCol], data: rows }],
+      };
+    }
+    case 'geometry': {
+      const rep = source.representation;
+      const matchingTypes = analysis.types.filter(t => t.primary_representation === rep && t.instance_count > 0);
+      const rows = matchingTypes.map(t => ({
+        type_name: t.type_class.replace('Type', ''),
+        ifc_class: t.element_class || t.type_class,
+        instance_count: t.instance_count,
+      }));
+      const total = rows.reduce((s, r) => s + (r.instance_count as number), 0);
+      return {
+        title: rep,
+        subtitle: `${rows.length} types, ${total.toLocaleString()} instances`,
+        tabs: [{ id: 'types', label: 'Types', count: rows.length, columns: [typeCol, classCol, countCol], data: rows }],
+      };
+    }
+  }
+}
+
 function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model: Model }) {
   const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
   const [overlay, setOverlay] = useState<OverlayType>(null);
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [viewerMode, setViewerMode] = useState<'3d' | 'footprint'>('3d');
+  const [drillSource, setDrillSource] = useState<DrillSource>(null);
+  const [viewerStoreyFilter, setViewerStoreyFilter] = useState<string | null>(null);
+  const [viewerTypeVisibility, setViewerTypeVisibility] = useState<Record<string, boolean> | undefined>(undefined);
   const hasFile = !!model.file_url;
+
+  const drillConfig = useMemo(() => buildDrillTabs(drillSource, analysis, stats), [drillSource, analysis, stats]);
+
+  // When drill opens, also filter the viewer. When drill closes, reset.
+  const openDrill = (source: DrillSource) => {
+    setDrillSource(source);
+    if (!source) {
+      setViewerStoreyFilter(null);
+      setViewerTypeVisibility(undefined);
+      return;
+    }
+    switch (source.type) {
+      case 'storeys':
+        setViewerStoreyFilter(source.storeyName ?? null);
+        setViewerTypeVisibility(undefined);
+        break;
+      case 'treemap': {
+        // Show only the selected IFC class
+        const vis: Record<string, boolean> = {};
+        for (const cls of Object.keys(stats.classCounts)) {
+          vis['Ifc' + cls] = cls === source.ifcClass;
+        }
+        setViewerTypeVisibility(vis);
+        setViewerStoreyFilter(null);
+        break;
+      }
+      case 'quality': {
+        // Show only proxy/problem types by hiding well-behaved ones
+        const vis: Record<string, boolean> = {};
+        for (const t of analysis.types) {
+          const cls = t.element_class || t.type_class;
+          const hasIssue = t.is_proxy || t.is_external_unset > 0 || t.loadbearing_unset > 0 || t.fire_rating_unset > 0;
+          if (hasIssue) vis[cls] = true;
+        }
+        // Only set if we found issues, otherwise show all
+        setViewerTypeVisibility(Object.keys(vis).length > 0 ? vis : undefined);
+        setViewerStoreyFilter(null);
+        break;
+      }
+      default:
+        setViewerStoreyFilter(null);
+        setViewerTypeVisibility(undefined);
+        break;
+    }
+  };
+
+  const closeDrill = () => {
+    setDrillSource(null);
+    setViewerStoreyFilter(null);
+    setViewerTypeVisibility(undefined);
+  };
 
   // Build class → color map matching treemap ordering (sorted by instance count desc)
   const classColorMap = useMemo(() => {
@@ -257,61 +480,46 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
   return (
     <>
-      <div className="p-[clamp(0.75rem,1.5vw,1rem)] max-w-[1440px] mx-auto w-full min-h-full">
-        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-full grid-rows-[auto_1fr]">
+      <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full">
+        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
           {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
           <div className="col-span-2">
-            <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} />
+            <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} onClick={() => openDrill({ type: 'quality' })} />
           </div>
-          <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent />
-          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} />
-          <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" />
+          <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent onClick={() => openDrill({ type: 'types' })} />
+          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} onClick={() => openDrill({ type: 'instances' })} />
+          <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => openDrill({ type: 'storeys' })} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
-          {/* Row 2: Charts stacked (left) | Viewer (right) */}
-          <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
-            <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
-              <CardContent className="p-3 min-h-0 overflow-y-auto">
+          {/* Row 2: Storeys + Treemap (left) | Viewer (right) */}
+          <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)]">
+            <Card className="overflow-hidden card-accent-forest h-[220px]">
+              <CardContent className="p-3 h-full overflow-y-auto">
                 <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
-                <StoreyChart storeys={analysis.storeys} />
+                <StoreyChart storeys={analysis.storeys} onBarClick={(name) => openDrill({ type: 'storeys', storeyName: name })} />
               </CardContent>
             </Card>
-            <div className="grid grid-cols-2 gap-[clamp(0.3rem,0.6vw,0.5rem)] flex-1 min-h-0">
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
-                  <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
-                  <div className="flex-1 min-h-0 relative">
-                    <Treemap types={analysis.types} />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="overflow-hidden flex flex-col card-accent-forest">
-                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
-                  <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
-                  <div className="flex-1 min-h-0 flex items-center justify-center">
-                    <GeometryDonut types={analysis.types} />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <ModelInfoCard analysis={analysis} />
+            <Card className="overflow-hidden card-accent-forest h-[280px]">
+              <CardContent className="p-3 h-full flex flex-col">
+                <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
+                <div className="flex-1 relative">
+                  <Treemap types={analysis.types} onTileClick={(cls) => openDrill({ type: 'treemap', ifcClass: cls })} />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <div className="col-span-3 flex flex-col min-h-0">
+          <div className="col-span-3">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
-                <CardContent className="p-3 flex flex-col flex-1 min-h-0">
-                  <ViewerCardHeader
-                    mode={viewerMode}
-                    onToggle={() => setViewerMode(v => v === '3d' ? 'footprint' : '3d')}
-                    onExpand={() => setOverlay('viewer')}
-                    hasSpatialData={!!analysis.spatial_data?.bounding_box}
-                  />
-                  <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/20">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
+                <CardContent className="p-0 flex flex-col flex-1 min-h-0">
+                  <div className="flex-1 min-h-0 relative overflow-hidden bg-black/20 rounded-lg">
                     {viewerMode === '3d' ? (
                       <UnifiedBIMViewer
                         modelId={model.id}
                         showPropertiesPanel={false}
                         classColorMap={classColorMap}
+                        storeyFilter={viewerStoreyFilter}
+                        typeVisibility={viewerTypeVisibility}
                       />
                     ) : (
                       <FootprintView
@@ -320,16 +528,50 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                         units={analysis.units}
                       />
                     )}
+                    {/* Floating controls */}
+                    <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
+                      {analysis.spatial_data?.bounding_box && (
+                        <button
+                          onClick={() => setViewerMode(v => v === '3d' ? 'footprint' : '3d')}
+                          className="bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg px-2 py-1 text-[0.6rem] font-medium text-white/60 hover:text-white/90 transition-colors flex items-center gap-1"
+                          title={viewerMode === '3d' ? 'Show footprint' : 'Show 3D'}
+                        >
+                          {viewerMode === '3d' ? <Grid3x3 className="h-3 w-3" /> : <Box className="h-3 w-3" />}
+                          {viewerMode === '3d' ? '2D' : '3D'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setOverlay('viewer')}
+                        className="bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg px-2 py-1 text-white/60 hover:text-white/90 transition-colors"
+                      >
+                        <Maximize2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-h-0">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
                 <CardContent className="p-3 flex-1 flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
             )}
+          </div>
+
+          {/* Row 3: Model info (under charts) + Geometry bar (under viewer) */}
+          <div className="col-span-3">
+            <ModelInfoCard analysis={analysis} />
+          </div>
+          <div className="col-span-3">
+            <Card className="overflow-hidden card-accent-forest h-full">
+              <CardContent className="p-3 flex flex-col h-full">
+                <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
+                <div className="flex-1 flex flex-col justify-center">
+                  <GeometryBar types={analysis.types} onSegmentClick={(rep) => openDrill({ type: 'geometry', representation: rep })} />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -347,7 +589,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         </div>
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'geometry'} onClose={() => setOverlay(null)} title="Geometry">
-        <GeometryDonut types={analysis.types} />
+        <GeometryBar types={analysis.types} />
       </DashboardOverlay>
       {hasFile && (
         <DashboardOverlay open={overlay === 'viewer'} onClose={() => { setOverlay(null); setSelectedElement(null); }} title="3D Viewer" fullscreen>
@@ -368,6 +610,18 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             </aside>
           </div>
         </DashboardOverlay>
+      )}
+
+      {/* Drill modal */}
+      {drillConfig && (
+        <DrillModal
+          open={drillSource !== null}
+          onOpenChange={(open) => { if (!open) closeDrill(); }}
+          title={drillConfig.title}
+          subtitle={drillConfig.subtitle}
+          tabs={drillConfig.tabs}
+          exportFilename={model.name ?? 'model'}
+        />
       )}
     </>
   );
@@ -418,14 +672,14 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
 
 // ─── KPI Card ───────────────────────────────────────────────────────────────
 
-function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio }: {
+function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio, onClick }: {
   value: number | string; label: string; subValue?: number | string; subLabel?: string; accent?: boolean; warn?: boolean;
-  ratio?: string;
+  ratio?: string; onClick?: () => void;
 }) {
   const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
   const displaySubValue = typeof subValue === 'number' ? subValue.toLocaleString() : (subValue ?? '');
   return (
-    <Card className={`h-full ${accent ? 'bg-forest text-white' : ''}`}>
+    <Card className={`h-full ${accent ? 'bg-forest text-white' : ''} ${onClick ? 'cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all' : ''}`} onClick={onClick}>
       <CardContent className="p-3 flex flex-col justify-between h-full">
         <div className={`text-[clamp(0.55rem,0.9vw,0.7rem)] font-semibold uppercase tracking-wide ${accent ? 'text-white/70' : 'text-text-tertiary'}`}>
           {label}
@@ -455,7 +709,7 @@ function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio }: {
 
 // ─── Quality Checks Card ────────────────────────────────────────────────────
 
-function QualityCard({ analysis, stats, onExpand }: { analysis: ModelAnalysis; stats: AnalysisStats; onExpand?: () => void }) {
+function QualityCard({ analysis, stats, onExpand, onClick }: { analysis: ModelAnalysis; stats: AnalysisStats; onExpand?: () => void; onClick?: () => void }) {
   const checks = [
     { label: 'Duplicate GUIDs', value: analysis.duplicate_guid_count, ok: analysis.duplicate_guid_count === 0 },
     { label: 'Proxy-typed', value: stats.proxyCount, ok: stats.proxyCount === 0 },
@@ -465,7 +719,7 @@ function QualityCard({ analysis, stats, onExpand }: { analysis: ModelAnalysis; s
   ];
 
   return (
-    <Card className="h-full flex flex-col card-accent-lime">
+    <Card className={`h-full flex flex-col card-accent-lime ${onClick ? 'cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all' : ''}`} onClick={onClick}>
       <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
         <CardHeader title="Quality" onExpand={onExpand} />
         <div className="space-y-[clamp(0.2rem,0.4vw,0.3rem)] flex-1">
@@ -492,7 +746,7 @@ function QualityCard({ analysis, stats, onExpand }: { analysis: ModelAnalysis; s
 
 // ─── Storey Chart ───────────────────────────────────────────────────────────
 
-function StoreyChart({ storeys }: { storeys: AnalysisStorey[] }) {
+function StoreyChart({ storeys, onBarClick }: { storeys: AnalysisStorey[]; onBarClick?: (storeyName: string) => void }) {
   if (!storeys.length) return <div className="text-text-tertiary text-xs">No storeys</div>;
 
   const sorted = [...storeys].sort((a, b) => (b.elevation ?? 0) - (a.elevation ?? 0));
@@ -501,8 +755,10 @@ function StoreyChart({ storeys }: { storeys: AnalysisStorey[] }) {
   return (
     <div className="space-y-[clamp(0.1rem,0.3vw,0.2rem)]">
       {sorted.map((s) => (
-        <div key={s.name} className="grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)]"
-             style={{ gridTemplateColumns: 'minmax(0, 5rem) auto 1fr auto' }}>
+        <div key={s.name}
+             className={`grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)] ${onBarClick ? 'cursor-pointer hover:bg-white/5 rounded transition-colors' : ''}`}
+             style={{ gridTemplateColumns: 'minmax(0, 5rem) auto 1fr auto' }}
+             onClick={onBarClick ? () => onBarClick(s.name) : undefined}>
           <span className="text-text-secondary truncate" title={s.name}>{s.name}</span>
           <span className="text-text-tertiary tabular-nums w-[3.5em] text-right">
             {s.elevation != null ? `${s.elevation.toFixed(1)}m` : '—'}
@@ -530,77 +786,9 @@ const TREEMAP_COLORS = [
   '#34d399', '#fbbf24',
 ];
 
-function treemapLayout(items: { label: string; value: number }[], W: number, H: number) {
-  const total = items.reduce((s, i) => s + i.value, 0);
-  if (!total) return [];
+// treemapLayout imported from @/lib/treemap
 
-  const sorted = [...items].sort((a, b) => b.value - a.value);
-  const rects: { x: number; y: number; w: number; h: number; label: string; value: number }[] = [];
-  let x = 0, y = 0, w = W, h = H;
-
-  function layoutRow(row: typeof sorted, rowArea: number) {
-    const rowSum = row.reduce((s, i) => s + i.value, 0);
-
-    if (w >= h) {
-      // Cut a column from the left; items stack top-to-bottom
-      const colWidth = rowArea / h;
-      let offsetY = y;
-      for (const item of row) {
-        const itemH = (item.value / rowSum) * h;
-        rects.push({ x, y: offsetY, w: colWidth, h: itemH, label: item.label, value: item.value });
-        offsetY += itemH;
-      }
-      x += colWidth;
-      w -= colWidth;
-    } else {
-      // Cut a row from the top; items go left-to-right
-      const rowHeight = rowArea / w;
-      let offsetX = x;
-      for (const item of row) {
-        const itemW = (item.value / rowSum) * w;
-        rects.push({ x: offsetX, y, w: itemW, h: rowHeight, label: item.label, value: item.value });
-        offsetX += itemW;
-      }
-      y += rowHeight;
-      h -= rowHeight;
-    }
-  }
-
-  function worst(row: typeof sorted, side: number) {
-    const rowSum = row.reduce((s, i) => s + i.value, 0);
-    const rowArea = (rowSum / total) * W * H;
-    const stripSize = rowArea / side;
-    let mx = 0;
-    for (const item of row) {
-      const itemSide = (item.value / rowSum) * side;
-      const r = Math.max(stripSize / itemSide, itemSide / stripSize);
-      mx = Math.max(mx, r);
-    }
-    return mx;
-  }
-
-  let remaining = [...sorted];
-  while (remaining.length > 0) {
-    const side = Math.min(w, h);
-    const row = [remaining[0]];
-    remaining = remaining.slice(1);
-
-    while (remaining.length > 0) {
-      const candidate = [...row, remaining[0]];
-      if (worst(candidate, side) <= worst(row, side)) {
-        row.push(remaining[0]);
-        remaining = remaining.slice(1);
-      } else break;
-    }
-
-    const rowArea = row.reduce((s, i) => s + (i.value / total) * W * H, 0);
-    layoutRow(row, rowArea);
-  }
-
-  return rects;
-}
-
-function Treemap({ types }: { types: AnalysisTypeRecord[] }) {
+function Treemap({ types, onTileClick }: { types: AnalysisTypeRecord[]; onTileClick?: (ifcClass: string) => void }) {
   const items = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const t of types) {
@@ -629,13 +817,14 @@ function Treemap({ types }: { types: AnalysisTypeRecord[] }) {
           return (
             <div
               key={r.label}
-              className="absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px"
+              className={`absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px ${onTileClick ? 'cursor-pointer hover:brightness-110 transition-all' : ''}`}
               style={{
                 left: `${pctX}%`, top: `${pctY}%`,
                 width: `${pctW}%`, height: `${pctH}%`,
                 background: color, opacity: 0.85,
               }}
               title={`${r.label}: ${r.value.toLocaleString()}`}
+              onClick={onTileClick ? () => onTileClick(r.label) : undefined}
             >
               {showLabel && (
                 <>
@@ -655,11 +844,11 @@ function Treemap({ types }: { types: AnalysisTypeRecord[] }) {
   );
 }
 
-// ─── Geometry Donut ─────────────────────────────────────────────────────────
+// ─── Geometry Bar ──────────────────────────────────────────────────────────
 
-const DONUT_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#94a3b8', '#64748b', '#475569', '#cbd5e1'];
+const GEOM_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#94a3b8', '#64748b', '#475569', '#cbd5e1'];
 
-function GeometryDonut({ types }: { types: AnalysisTypeRecord[] }) {
+function GeometryBar({ types, onSegmentClick }: { types: AnalysisTypeRecord[]; onSegmentClick?: (representation: string) => void }) {
   const data = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const t of types) {
@@ -672,38 +861,39 @@ function GeometryDonut({ types }: { types: AnalysisTypeRecord[] }) {
   if (!data.length) return <div className="text-text-tertiary text-xs">No geometry data</div>;
 
   const total = data.reduce((s, [, v]) => s + v, 0);
-  const size = 130;
-  const cx = size / 2, cy = size / 2, r = size / 2 - 2, ir = r * 0.55;
-
-  let angle = -Math.PI / 2;
-  const paths: JSX.Element[] = [];
-
-  for (let i = 0; i < data.length; i++) {
-    const [label, value] = data[i];
-    const sweep = (value / total) * Math.PI * 2;
-    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
-    const x2 = cx + r * Math.cos(angle + sweep), y2 = cy + r * Math.sin(angle + sweep);
-    const ix1 = cx + ir * Math.cos(angle + sweep), iy1 = cy + ir * Math.sin(angle + sweep);
-    const ix2 = cx + ir * Math.cos(angle), iy2 = cy + ir * Math.sin(angle);
-    const large = sweep > Math.PI ? 1 : 0;
-
-    paths.push(
-      <path
-        key={label}
-        d={`M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} L${ix1},${iy1} A${ir},${ir} 0 ${large} 0 ${ix2},${iy2} Z`}
-        fill={DONUT_COLORS[i % DONUT_COLORS.length]}
-        opacity={0.85}
-      >
-        <title>{`${label}: ${value.toLocaleString()} (${((value / total) * 100).toFixed(1)}%)`}</title>
-      </path>
-    );
-    angle += sweep;
-  }
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full max-w-full max-h-full">
-      {paths}
-    </svg>
+    <div>
+      {/* Stacked bar */}
+      <div className="h-[clamp(0.6rem,1vw,0.8rem)] rounded-full overflow-hidden flex">
+        {data.map(([label, value], i) => {
+          const pct = (value / total) * 100;
+          return (
+            <div
+              key={label}
+              className={`h-full ${onSegmentClick ? 'cursor-pointer hover:brightness-110' : ''} transition-all`}
+              style={{ width: `${pct}%`, background: GEOM_COLORS[i % GEOM_COLORS.length] }}
+              title={`${label}: ${value.toLocaleString()} (${pct.toFixed(1)}%)`}
+              onClick={onSegmentClick ? () => onSegmentClick(label) : undefined}
+            />
+          );
+        })}
+      </div>
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-[clamp(0.3rem,0.5vw,0.4rem)]">
+        {data.map(([label, value], i) => (
+          <div
+            key={label}
+            className={`flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)] ${onSegmentClick ? 'cursor-pointer hover:text-text-primary' : ''}`}
+            onClick={onSegmentClick ? () => onSegmentClick(label) : undefined}
+          >
+            <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: GEOM_COLORS[i % GEOM_COLORS.length] }} />
+            <span className="text-text-secondary">{label}</span>
+            <span className="text-text-primary font-semibold tabular-nums">{value.toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -786,41 +976,7 @@ function CardHeader({ title, onExpand }: { title: string; onExpand?: () => void 
 
 // ─── Viewer Card Header with 3D/Footprint toggle ────────────────────────────
 
-function ViewerCardHeader({ mode, onToggle, onExpand, hasSpatialData }: {
-  mode: '3d' | 'footprint';
-  onToggle: () => void;
-  onExpand: () => void;
-  hasSpatialData: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between mb-[clamp(0.25rem,0.5vw,0.4rem)]">
-      <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary">
-        {mode === '3d' ? '3D Viewer' : 'Footprint'}
-      </h3>
-      <div className="flex items-center gap-1">
-        {hasSpatialData && (
-          <button
-            onClick={onToggle}
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
-                       bg-forest/15 border border-forest/30 text-lime
-                       hover:bg-forest hover:text-white hover:border-forest transition-all"
-            title={mode === '3d' ? 'Show footprint' : 'Show 3D'}
-          >
-            {mode === '3d' ? <Grid3x3 className="h-3 w-3" /> : <Box className="h-3 w-3" />}
-          </button>
-        )}
-        <button
-          onClick={onExpand}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
-                     bg-forest/15 border border-forest/30 text-lime
-                     hover:bg-forest hover:text-white hover:border-forest transition-all"
-        >
-          <Maximize2 className="h-3 w-3" />
-        </button>
-      </div>
-    </div>
-  );
-}
+// ViewerCardHeader removed — controls are now floating overlays on the viewer
 
 // ─── Footprint View (Canvas 2D) ─────────────────────────────────────────────
 
@@ -1100,7 +1256,7 @@ const ADVISORY_ROLES = [
 
 function MetadataTab({ model }: { model: Model }) {
   return (
-    <div className="p-[clamp(1rem,2vw,1.5rem)] max-w-[1440px] mx-auto space-y-[clamp(0.5rem,1vw,0.75rem)]">
+    <div className="p-[clamp(1rem,2vw,1.5rem)] space-y-[clamp(0.5rem,1vw,0.75rem)]">
       <div className="grid grid-cols-2 gap-[clamp(0.5rem,1vw,0.75rem)]">
         {/* Platform Info */}
         <Card className="card-accent-lavender">

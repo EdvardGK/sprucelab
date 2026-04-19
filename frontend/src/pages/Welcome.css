@@ -31,6 +31,7 @@
 .welcome-scene {
   position: fixed;
   inset: 0;
+  left: 20%;
   z-index: 0;
   pointer-events: none;
   opacity: 0;

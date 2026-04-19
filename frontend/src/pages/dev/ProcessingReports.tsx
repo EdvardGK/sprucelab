@@ -43,7 +43,7 @@ export default function ProcessingReports() {
   return (
     <AppLayout>
       <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-        <div className="max-w-7xl w-full mx-auto">
+        <div className="w-full">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-text-primary">Processing Reports</h1>

@@ -8,7 +8,7 @@ export default function MyPage() {
     <AppLayout>
       <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
         {/* Header */}
-        <div className="mb-8 max-w-7xl w-full mx-auto">
+        <div className="mb-8 w-full">
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-4xl font-bold text-text-primary">My Page</h1>
@@ -23,7 +23,7 @@ export default function MyPage() {
         </div>
 
         {/* Content */}
-        <div className="max-w-7xl w-full mx-auto">
+        <div className="w-full">
           <div className="grid gap-6 md:grid-cols-2">
             {/* My Activity */}
             <Card>

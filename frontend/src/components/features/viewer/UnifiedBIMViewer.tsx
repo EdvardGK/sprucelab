@@ -107,6 +107,9 @@ interface UnifiedBIMViewerProps {
   // Type Filtering (controlled by parent)
   typeVisibility?: Record<string, boolean>;   // { 'IfcWall': true, 'IfcDoor': false }
 
+  // Storey Filtering — show only elements on this storey (null = show all)
+  storeyFilter?: string | null;
+
   // Section Planes
   enableSectionPlanes?: boolean;    // Default: true
 
@@ -150,6 +153,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   modelId: singleModelId,
   modelVisibility,
   typeVisibility: typeVisibilityProp,  // Controlled type filtering from parent
+  storeyFilter,
   enableSectionPlanes = true,
   showPropertiesPanel = true,
   showModelInfo = false,    // Minimal by default
@@ -186,12 +190,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // Stores each type's FragmentIdMap directly so the Hider can be driven without
   // converting back through GUID arrays every toggle.
   const [typeInfo, setTypeInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
+  const [storeyInfo, setStoreyInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
   const cullerRef = useRef<OBC.MeshCullerRenderer | null>(null);
   // Previous applied visibility state, so the effect below can do delta updates
   // instead of rebuilding and re-applying the full scene visibility every toggle.
   const prevTypeVisibilityRef = useRef<Record<string, boolean>>({});
+  const prevStoreyFilterRef = useRef<string | null | undefined>(undefined);
 
   // View mode: store original materials so we can restore them
   const originalMaterialsRef = useRef<Map<number, THREE.Material | THREE.Material[]>>(new Map());
@@ -1185,6 +1191,34 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             console.warn('[Viewer] Local type extraction failed:', err);
           }
 
+          // Fire-and-forget: index relations and classify by spatial structure.
+          // Populates storeyInfo for storey-based filtering from the dashboard.
+          {
+            const indexer = components.get(OBC.IfcRelationsIndexer);
+            indexer.process(group)
+              .then(() => {
+                const cls = components.get(OBC.Classifier);
+                return cls.bySpatialStructure(group);
+              })
+              .then(() => {
+                const cls = components.get(OBC.Classifier);
+                const spatialStructures = cls.list.spatialStructures || {};
+                const newStoreyMap = new Map<string, { map: FragmentIdMap; count: number }>();
+                for (const [storeyName, storeyData] of Object.entries(spatialStructures)) {
+                  let count = 0;
+                  for (const ids of Object.values(storeyData.map)) count += ids.size;
+                  if (count > 0) {
+                    newStoreyMap.set(storeyName, { map: storeyData.map, count });
+                  }
+                }
+                if (newStoreyMap.size > 0) {
+                  setStoreyInfo(newStoreyMap);
+                  console.log('[Viewer] Storey classification:', newStoreyMap.size, 'storeys');
+                }
+              })
+              .catch(err => console.warn('[Viewer] Spatial structure classification failed:', err));
+          }
+
           // Fire-and-forget FastAPI open so click-to-inspect can resolve element props later.
           if (modelData.file_url) {
             const absoluteUrl = toAbsoluteUrl(modelData.file_url);
@@ -1351,6 +1385,47 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     }
     prevTypeVisibilityRef.current = next;
   }, [typeInfo]);
+
+  // Apply storey filter — show only elements on the selected storey.
+  // When storeyFilter is null/undefined, show all (reset).
+  useEffect(() => {
+    if (!hiderRef.current || storeyInfo.size === 0) return;
+
+    const prev = prevStoreyFilterRef.current;
+    // Skip if nothing changed
+    if (storeyFilter === prev) return;
+
+    const rafId = requestAnimationFrame(() => {
+      const hider = hiderRef.current;
+      if (!hider) return;
+
+      try {
+        if (storeyFilter == null) {
+          // Show everything
+          hider.set(true);
+        } else {
+          // Hide all, then show only the selected storey
+          hider.set(false);
+          const storeyData = storeyInfo.get(storeyFilter);
+          if (storeyData) {
+            hider.set(true, storeyData.map);
+          }
+        }
+      } catch (err) {
+        console.error('[Viewer] Storey filter failed:', err);
+        hider.set(true);
+      }
+
+      prevStoreyFilterRef.current = storeyFilter;
+
+      // Poke culler after visibility change
+      if (cullerRef.current) {
+        cullerRef.current.needsUpdate = true;
+      }
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [storeyFilter, storeyInfo]);
 
   // Apply class-based coloring when classColorMap is provided.
   // Uses the FragmentIdMap stored directly in typeInfo — no GUID round-trip.

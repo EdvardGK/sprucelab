@@ -49,7 +49,7 @@ export default function ProcessingReportDetail() {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="max-w-7xl w-full mx-auto">
+          <div className="w-full">
             <div className="text-text-secondary">Loading processing report...</div>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default function ProcessingReportDetail() {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="max-w-7xl w-full mx-auto">
+          <div className="w-full">
             <Button variant="ghost" size="sm" onClick={() => navigate('/dev/processing-reports')} className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Reports
@@ -88,7 +88,7 @@ export default function ProcessingReportDetail() {
   return (
     <AppLayout>
       <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-        <div className="max-w-7xl w-full mx-auto">
+        <div className="w-full">
           {/* Header */}
           <Button variant="ghost" size="sm" onClick={() => navigate('/dev/processing-reports')} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />

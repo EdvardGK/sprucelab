@@ -206,6 +206,7 @@ interface SceneCtx {
   revealed: RevealedBuilding[];
   windowTex: THREE.Texture | null;
   crane: CraneState | null;
+  flag: THREE.Mesh | null;
 }
 
 // Procedural window-grid texture — dark punched windows on a white base so
@@ -1128,7 +1129,7 @@ function planWillisTower(
   // Stagger each section so it reads as bottom-up construction
   ctx.revealed.push({ modules: sec1.modules, delay,        duration: 3.0 });
   ctx.revealed.push({ modules: sec2.modules, delay: delay + 0.8, duration: 2.5 });
-  ctx.revealed.push({ modules: sec3.modules, delay: delay + 1.4, duration: 2.0 });
+  ctx.revealed.push({ modules: sec3.modules, delay: delay + 1.4, duration: 5.0 });
 
   return group;
 }
@@ -1855,15 +1856,16 @@ function planCrane(
   attachOutline(cabin, ctx, 1.1);
   top.add(cabin);
 
-  // Flag pole on top of the cabin
-  const poleH = 1.0;
+  // Flag pole — parented to static group (not rotating top) so the flag
+  // follows the wind, not the jib.
+  const poleH = 1.5;
   const poleGeom = ctx.tracker.track(new THREE.CylinderGeometry(0.035, 0.035, poleH, 6));
   const pole = new THREE.Mesh(poleGeom, poleMat);
-  pole.position.set(0.85 + cabW / 2 - 0.1, cabH / 2 - 0.05 + poleH / 2, 0);
+  pole.position.set(0, mastTopY + poleH / 2, 0);
   pole.castShadow = true;
-  top.add(pole);
+  group.add(pole);
 
-  // Norwegian flag — small plane with flag texture, two-sided
+  // Norwegian flag — plane with flag texture, two-sided
   const flagTex = ctx.tracker.track(makeNorwegianFlagTexture());
   const flagMat = ctx.tracker.track(
     new THREE.MeshStandardMaterial({
@@ -1873,18 +1875,19 @@ function planCrane(
       metalness: 0,
     }),
   );
-  const flagW = 0.5;
-  const flagH = 0.34;
+  const flagW = 1.0;
+  const flagH = 0.68;
   const flagGeom = ctx.tracker.track(new THREE.PlaneGeometry(flagW, flagH));
   const flag = new THREE.Mesh(flagGeom, flagMat);
   flag.position.set(
-    0.85 + cabW / 2 - 0.1 + flagW / 2,
-    cabH / 2 - 0.05 + poleH - flagH / 2 - 0.06,
+    flagW / 2,
+    mastTopY + poleH - flagH / 2 - 0.06,
     0,
   );
-  flag.rotation.y = Math.PI / 2;
+  flag.rotation.y = 0;
   flag.castShadow = true;
-  top.add(flag);
+  group.add(flag);
+  ctx.flag = flag;
 
   // Cable — thin cylinder oriented each frame from jib end to box. Unit
   // height; the animate loop sets position/rotation/scale. Lives in the
@@ -2121,6 +2124,212 @@ function planFoliage(
   return group;
 }
 
+// Modern plaza — gridded paving bands, linear tree rows, benches, reflecting
+// pool, and lighting bollards. Designed as a composed urban space rather than
+// random scatter.
+function planPlaza(
+  ctx: SceneCtx,
+  planX: number,
+  planY: number,
+  planW: number,
+  planH: number,
+): THREE.Group {
+  const group = new THREE.Group();
+  const w = toW(planW);
+  const d = toW(planH);
+  const y0 = LAYERS.surfTop;
+
+  // Materials
+  const darkPaveMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x9a9585, roughness: 0.88, metalness: 0 }),
+  );
+  const lightPaveMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0xd4cdb8, roughness: 0.85, metalness: 0 }),
+  );
+  const waterMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({
+      color: 0x8aaabb, roughness: 0.15, metalness: 0.3,
+      transparent: true, opacity: 0.7,
+    }),
+  );
+  const benchMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x4a3827, roughness: 0.85, metalness: 0 }),
+  );
+  const benchLegMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.5, metalness: 0.6 }),
+  );
+  const treeTrunkMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x3d2b1a, roughness: 0.9, metalness: 0 }),
+  );
+  const treeCanopyMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x4a6e3a, roughness: 0.92, metalness: 0 }),
+  );
+  const bollardMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.4, metalness: 0.5 }),
+  );
+  const bollardCapMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({
+      color: 0xfff8e0, roughness: 0.3, metalness: 0.1,
+      emissive: new THREE.Color(0xfff8e0), emissiveIntensity: 0.3,
+    }),
+  );
+
+  // --- Reflecting pool dimensions (centered) ---
+  const poolW = w * 0.35;
+  const poolD = d * 0.22;
+  const poolH = 0.06;
+  const poolX = 0;
+  const poolZ = 0;
+  const rimThick = 0.06;
+  const poolLeft = poolX - poolW / 2 - rimThick;
+  const poolRight = poolX + poolW / 2 + rimThick;
+
+  // --- Paving bands: alternating light/dark stripes along X, gap for pool ---
+  const stripeCount = 9;
+  const stripeW = w / stripeCount;
+  for (let i = 0; i < stripeCount; i++) {
+    const mat = i % 2 === 0 ? lightPaveMat : darkPaveMat;
+    const sx = -w / 2 + stripeW / 2 + i * stripeW;
+    const sLeft = sx - stripeW / 2;
+    const sRight = sx + stripeW / 2;
+
+    // Skip stripes fully inside pool zone
+    if (sLeft >= poolLeft && sRight <= poolRight) continue;
+
+    // Clip stripes that partially overlap the pool
+    if (sRight > poolLeft && sLeft < poolRight) {
+      // Left fragment
+      if (sLeft < poolLeft) {
+        const fragW = poolLeft - sLeft;
+        const geom = ctx.tracker.track(new THREE.BoxGeometry(fragW, 0.02, d));
+        const frag = new THREE.Mesh(geom, mat);
+        frag.position.set(sLeft + fragW / 2, y0 + 0.01, 0);
+        frag.receiveShadow = true;
+        group.add(frag);
+      }
+      // Right fragment
+      if (sRight > poolRight) {
+        const fragW = sRight - poolRight;
+        const geom = ctx.tracker.track(new THREE.BoxGeometry(fragW, 0.02, d));
+        const frag = new THREE.Mesh(geom, mat);
+        frag.position.set(poolRight + fragW / 2, y0 + 0.01, 0);
+        frag.receiveShadow = true;
+        group.add(frag);
+      }
+      continue;
+    }
+
+    const geom = ctx.tracker.track(new THREE.BoxGeometry(stripeW, 0.02, d));
+    const stripe = new THREE.Mesh(geom, mat);
+    stripe.position.set(sx, y0 + 0.01, 0);
+    stripe.receiveShadow = true;
+    group.add(stripe);
+  }
+
+  // --- Reflecting pool: centered ---
+  const poolGeom = ctx.tracker.track(new THREE.BoxGeometry(poolW, poolH, poolD));
+  const pool = new THREE.Mesh(poolGeom, waterMat);
+  pool.position.set(poolX, y0 + poolH / 2 + 0.03, poolZ);
+  pool.receiveShadow = true;
+  group.add(pool);
+  // Pool rim — thin stone border
+  const rimH = 0.08;
+  const rimParts: [number, number, number, number][] = [
+    [poolW + rimThick * 2, rimThick, 0, -poolD / 2 - rimThick / 2],  // south
+    [poolW + rimThick * 2, rimThick, 0, poolD / 2 + rimThick / 2],   // north
+    [rimThick, poolD, -poolW / 2 - rimThick / 2, 0],                  // west
+    [rimThick, poolD, poolW / 2 + rimThick / 2, 0],                   // east
+  ];
+  for (const [rw, rd, rx, rz] of rimParts) {
+    const rGeom = ctx.tracker.track(new THREE.BoxGeometry(rw, rimH, rd));
+    const rim = new THREE.Mesh(rGeom, darkPaveMat);
+    rim.position.set(poolX + rx, y0 + rimH / 2 + 0.03, poolZ + rz);
+    rim.receiveShadow = true;
+    rim.castShadow = true;
+    group.add(rim);
+  }
+
+  // --- Tree rows: two parallel rows of deciduous trees ---
+  const treeRow = (rowX: number, count: number, startZ: number, spacing: number): void => {
+    for (let i = 0; i < count; i++) {
+      const tz = startZ + i * spacing;
+      // Trunk
+      const trunkH = 0.7;
+      const trunkGeom = ctx.tracker.track(new THREE.CylinderGeometry(0.04, 0.06, trunkH, 6));
+      const trunk = new THREE.Mesh(trunkGeom, treeTrunkMat);
+      trunk.position.set(rowX, y0 + trunkH / 2, tz);
+      trunk.castShadow = true;
+      group.add(trunk);
+      // Canopy — icosahedron for rounded deciduous look
+      const canopyR = 0.35 + (i % 3) * 0.05;
+      const canopyGeom = ctx.tracker.track(new THREE.IcosahedronGeometry(canopyR, 1));
+      const canopy = new THREE.Mesh(canopyGeom, treeCanopyMat);
+      canopy.position.set(rowX, y0 + trunkH + canopyR * 0.6, tz);
+      canopy.castShadow = true;
+      canopy.receiveShadow = true;
+      group.add(canopy);
+    }
+  };
+  const treeSpacing = d / 4;
+  treeRow(-w * 0.35, 3, -d * 0.3, treeSpacing);
+  treeRow(w * 0.35, 3, -d * 0.3, treeSpacing);
+
+  // --- Benches: paired along tree rows, facing inward ---
+  const placeBench = (bx: number, bz: number, rotY: number): void => {
+    const seatW = 0.6;
+    const seatD = 0.18;
+    const seatH = 0.22;
+    // Seat plank
+    const seatGeom = ctx.tracker.track(new THREE.BoxGeometry(seatW, 0.04, seatD));
+    const seat = new THREE.Mesh(seatGeom, benchMat);
+    seat.position.set(bx, y0 + seatH, bz);
+    seat.rotation.y = rotY;
+    seat.castShadow = true;
+    seat.receiveShadow = true;
+    group.add(seat);
+    // Two legs
+    const legGeom = ctx.tracker.track(new THREE.BoxGeometry(0.04, seatH, 0.04));
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(legGeom, benchLegMat);
+      const dx = side * (seatW / 2 - 0.06);
+      leg.position.set(
+        bx + dx * Math.cos(rotY),
+        y0 + seatH / 2,
+        bz + dx * Math.sin(rotY),
+      );
+      leg.castShadow = true;
+      group.add(leg);
+    }
+  };
+  // Benches between trees on left row, facing right
+  placeBench(-w * 0.28, -d * 0.3 + treeSpacing * 0.5, 0);
+  placeBench(-w * 0.28, -d * 0.3 + treeSpacing * 1.5, 0);
+  // Benches between trees on right row, facing left
+  placeBench(w * 0.28, -d * 0.3 + treeSpacing * 0.5, 0);
+  placeBench(w * 0.28, -d * 0.3 + treeSpacing * 1.5, 0);
+
+  // --- Bollards: line of small light posts along the south edge ---
+  const bollardCount = 5;
+  const bollardSpacing = w * 0.7 / (bollardCount - 1);
+  for (let i = 0; i < bollardCount; i++) {
+    const bx = -w * 0.35 + i * bollardSpacing;
+    const postH = 0.35;
+    const postGeom = ctx.tracker.track(new THREE.CylinderGeometry(0.025, 0.03, postH, 6));
+    const post = new THREE.Mesh(postGeom, bollardMat);
+    post.position.set(bx, y0 + postH / 2, d * 0.4);
+    post.castShadow = true;
+    group.add(post);
+    // Glowing cap
+    const capGeom = ctx.tracker.track(new THREE.SphereGeometry(0.04, 6, 4));
+    const cap = new THREE.Mesh(capGeom, bollardCapMat);
+    cap.position.set(bx, y0 + postH + 0.02, d * 0.4);
+    group.add(cap);
+  }
+
+  group.position.set(toX(planX + planW / 2), 0, toZ(planY + planH / 2));
+  return group;
+}
+
 // ---------------------------------------------------------------------------
 // Buildings — places every massing element on the slab
 // ---------------------------------------------------------------------------
@@ -2146,7 +2355,7 @@ function buildBuildings(ctx: SceneCtx): THREE.Group {
   // === Towers — rows 1-2, cols 4-5 ===
   add(planTower(ctx, 526, 166, 108, 108, H.towerA, 0.45));              // D2 — plain modular tower
   add(planOasiaTower(ctx, 646, 166, 114, 108, H.towerB, 0.55));         // E2 — Oasia-inspired plant tower
-  add(planWillisTower(ctx, 526, 286, 108,  94, H.towerTall, 0.65));     // D3 — Willis-style stepped tallest
+  add(planWillisTower(ctx, 526, 286, 108,  94, H.towerTall, 1.20));     // D3 — Willis-style stepped tallest (delayed)
 
   // === Row 2 waterfront landmarks ===
   // Black gate spanning the opera + concert cells — one continuous mass
@@ -2181,9 +2390,11 @@ function buildBuildings(ctx: SceneCtx): THREE.Group {
   add(planSpruceGrove(ctx, 40,  40, 120, 400, 401, 0.55));  // West Bank — dense linear forest
   add(planSpruceGrove(ctx, 286, 40, 108, 114, 402, 0.60));  // Botanical Gardens — denser still
 
-  // === Foliage — bushes and flower beds in plazas (softer scale) ===
-  add(planFoliage(ctx, 286, 166, 108, 108, 303, 0.4));  // Plaza C2
-  add(planFoliage(ctx, 286, 526, 228, 108, 304, 0.35)); // Town Square
+  // === Plaza C2 — foliage (crane area) ===
+  add(planFoliage(ctx, 286, 166, 108, 108, 303, 0.4));
+
+  // === Town Square — modern plaza in front of the stave church ===
+  add(planPlaza(ctx, 286, 526, 228, 108));
 
   // === Row 4 — D4, E4 residential ===
   lowRiseCell(ctx, group, 526, 526, 108, 108, H.midBlock, 41, 0.95);
@@ -2217,6 +2428,7 @@ export function initDioramaScene(container: HTMLElement): () => void {
     revealed: [],
     windowTex,
     crane: null,
+    flag: null,
   };
 
   const scene = new THREE.Scene();
@@ -2362,7 +2574,7 @@ export function initDioramaScene(container: HTMLElement): () => void {
 
   // Construction time runs at 0.2x real time — lazy background pacing,
   // full reveal completes in ~20 seconds. Camera and water stay at real speed.
-  const ANIM_SPEED = 0.2;
+  const ANIM_SPEED = 0.1;
 
   const animate = (): void => {
     if (!running) return;
@@ -2571,6 +2783,12 @@ export function initDioramaScene(container: HTMLElement): () => void {
         cable.scale.set(1, length, 1);
         cable.quaternion.identity();
       }
+    }
+
+    // Flag — gentle sway back and forth ±15° around base orientation
+    if (ctx.flag) {
+      const swing = Math.sin(t * 1.2) * (Math.PI / 12);
+      ctx.flag.rotation.y = swing;
     }
 
     renderer.render(scene, camera);
