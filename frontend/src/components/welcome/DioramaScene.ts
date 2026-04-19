@@ -1129,7 +1129,7 @@ function planWillisTower(
   // Stagger each section so it reads as bottom-up construction
   ctx.revealed.push({ modules: sec1.modules, delay,        duration: 3.0 });
   ctx.revealed.push({ modules: sec2.modules, delay: delay + 0.8, duration: 2.5 });
-  ctx.revealed.push({ modules: sec3.modules, delay: delay + 1.4, duration: 2.0 });
+  ctx.revealed.push({ modules: sec3.modules, delay: delay + 1.4, duration: 3.0 });
 
   return group;
 }
