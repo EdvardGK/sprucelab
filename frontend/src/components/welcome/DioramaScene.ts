@@ -2427,6 +2427,7 @@ export function initDioramaScene(container: HTMLElement): () => void {
     revealed: [],
     windowTex,
     crane: null,
+    flag: null,
   };
 
   const scene = new THREE.Scene();
