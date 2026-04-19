@@ -1879,11 +1879,11 @@ function planCrane(
   const flagGeom = ctx.tracker.track(new THREE.PlaneGeometry(flagW, flagH));
   const flag = new THREE.Mesh(flagGeom, flagMat);
   flag.position.set(
-    0,
-    mastTopY + poleH - flagH / 2 - 0.06,
     flagW / 2,
+    mastTopY + poleH - flagH / 2 - 0.06,
+    0,
   );
-  flag.rotation.y = -Math.PI / 2;
+  flag.rotation.y = 0;
   flag.castShadow = true;
   group.add(flag);
 
