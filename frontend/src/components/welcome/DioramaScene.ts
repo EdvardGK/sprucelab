@@ -2045,76 +2045,177 @@ function planSpruceGrove(
   return group;
 }
 
-// Low-poly foliage — bushes (octahedrons) and flower beds (thin boxes)
-// scattered across an area with a deterministic seed.
-function planFoliage(
+// Modern plaza — gridded paving bands, linear tree rows, benches, reflecting
+// pool, and lighting bollards. Designed as a composed urban space rather than
+// random scatter.
+function planPlaza(
   ctx: SceneCtx,
   planX: number,
   planY: number,
   planW: number,
   planH: number,
-  seed: number,
-  density = 0.5,
 ): THREE.Group {
   const group = new THREE.Group();
   const w = toW(planW);
   const d = toW(planH);
+  const y0 = LAYERS.surfTop;
 
-  const bushMat = ctx.tracker.track(
-    new THREE.MeshStandardMaterial({ color: 0x557a3e, roughness: 0.94, metalness: 0 }),
+  // Materials
+  const darkPaveMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x9a9585, roughness: 0.88, metalness: 0 }),
   );
-  const bedMat = ctx.tracker.track(
-    new THREE.MeshStandardMaterial({ color: 0x8a4a5c, roughness: 0.92, metalness: 0 }),
+  const lightPaveMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0xd4cdb8, roughness: 0.85, metalness: 0 }),
   );
-  const bedSoilMat = ctx.tracker.track(
-    new THREE.MeshStandardMaterial({ color: 0x5a3a28, roughness: 0.95, metalness: 0 }),
+  const waterMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({
+      color: 0x8aaabb, roughness: 0.15, metalness: 0.3,
+      transparent: true, opacity: 0.7,
+    }),
+  );
+  const benchMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x4a3827, roughness: 0.85, metalness: 0 }),
+  );
+  const benchLegMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.5, metalness: 0.6 }),
+  );
+  const treeTrunkMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x3d2b1a, roughness: 0.9, metalness: 0 }),
+  );
+  const treeCanopyMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x4a6e3a, roughness: 0.92, metalness: 0 }),
+  );
+  const bollardMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.4, metalness: 0.5 }),
+  );
+  const bollardCapMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({
+      color: 0xfff8e0, roughness: 0.3, metalness: 0.1,
+      emissive: new THREE.Color(0xfff8e0), emissiveIntensity: 0.3,
+    }),
   );
 
-  const rand = (i: number): number => {
-    const x = Math.sin(seed * 11.7 + i * 31.3) * 43758.5453;
-    return x - Math.floor(x);
-  };
-
-  const area = (w * d) * density;
-  const bushCount = Math.max(3, Math.floor(area * 0.6));
-  const bedCount = Math.max(1, Math.floor(area * 0.2));
-
-  // Bushes — low-poly octahedrons
-  for (let i = 0; i < bushCount; i++) {
-    const r = 0.18 + rand(i * 2) * 0.18;
-    const bushGeom = ctx.tracker.track(new THREE.OctahedronGeometry(r, 0));
-    const bush = new THREE.Mesh(bushGeom, bushMat);
-    bush.position.set(
-      (rand(i * 2 + 1) - 0.5) * (w - 0.4),
-      LAYERS.surfTop + r * 0.6,
-      (rand(i * 2 + 3) - 0.5) * (d - 0.4),
+  // --- Paving bands: alternating light/dark stripes along X ---
+  const stripeCount = 9;
+  const stripeW = w / stripeCount;
+  for (let i = 0; i < stripeCount; i++) {
+    const mat = i % 2 === 0 ? lightPaveMat : darkPaveMat;
+    const geom = ctx.tracker.track(new THREE.BoxGeometry(stripeW, 0.02, d));
+    const stripe = new THREE.Mesh(geom, mat);
+    stripe.position.set(
+      -w / 2 + stripeW / 2 + i * stripeW,
+      y0 + 0.01,
+      0,
     );
-    bush.rotation.y = rand(i * 2 + 5) * Math.PI;
-    bush.castShadow = true;
-    bush.receiveShadow = true;
-    group.add(bush);
+    stripe.receiveShadow = true;
+    group.add(stripe);
   }
 
-  // Flower beds — thin rectangular boxes with bright cap
-  for (let i = 0; i < bedCount; i++) {
-    const bw = 0.6 + rand(i * 5) * 0.5;
-    const bd = 0.25 + rand(i * 5 + 1) * 0.2;
-    const soilGeom = ctx.tracker.track(new THREE.BoxGeometry(bw, 0.12, bd));
-    const soil = new THREE.Mesh(soilGeom, bedSoilMat);
-    const px = (rand(i * 5 + 2) - 0.5) * (w - bw);
-    const pz = (rand(i * 5 + 3) - 0.5) * (d - bd);
-    soil.position.set(px, LAYERS.surfTop + 0.06, pz);
-    soil.rotation.y = rand(i * 5 + 4) > 0.5 ? Math.PI / 2 : 0;
-    soil.castShadow = true;
-    soil.receiveShadow = true;
-    group.add(soil);
+  // --- Reflecting pool: slim rectangle off-center ---
+  const poolW = w * 0.35;
+  const poolD = d * 0.2;
+  const poolH = 0.06;
+  const poolGeom = ctx.tracker.track(new THREE.BoxGeometry(poolW, poolH, poolD));
+  const pool = new THREE.Mesh(poolGeom, waterMat);
+  pool.position.set(w * 0.08, y0 + poolH / 2 + 0.02, -d * 0.15);
+  pool.receiveShadow = true;
+  group.add(pool);
+  // Pool rim — thin stone border
+  const rimThick = 0.06;
+  const rimH = 0.08;
+  const rimParts: [number, number, number, number][] = [
+    [poolW + rimThick * 2, rimThick, 0, -poolD / 2 - rimThick / 2],  // south
+    [poolW + rimThick * 2, rimThick, 0, poolD / 2 + rimThick / 2],   // north
+    [rimThick, poolD, -poolW / 2 - rimThick / 2, 0],                  // west
+    [rimThick, poolD, poolW / 2 + rimThick / 2, 0],                   // east
+  ];
+  for (const [rw, rd, rx, rz] of rimParts) {
+    const rGeom = ctx.tracker.track(new THREE.BoxGeometry(rw, rimH, rd));
+    const rim = new THREE.Mesh(rGeom, darkPaveMat);
+    rim.position.set(
+      pool.position.x + rx,
+      y0 + rimH / 2 + 0.02,
+      pool.position.z + rz,
+    );
+    rim.receiveShadow = true;
+    rim.castShadow = true;
+    group.add(rim);
+  }
 
-    // Flower cap — a slightly taller, narrower plate in a warm tone
-    const capGeom = ctx.tracker.track(new THREE.BoxGeometry(bw * 0.9, 0.08, bd * 0.7));
-    const cap = new THREE.Mesh(capGeom, bedMat);
-    cap.position.set(px, LAYERS.surfTop + 0.16, pz);
-    cap.rotation.y = soil.rotation.y;
-    cap.castShadow = true;
+  // --- Tree rows: two parallel rows of deciduous trees ---
+  const treeRow = (rowX: number, count: number, startZ: number, spacing: number): void => {
+    for (let i = 0; i < count; i++) {
+      const tz = startZ + i * spacing;
+      // Trunk
+      const trunkH = 0.7;
+      const trunkGeom = ctx.tracker.track(new THREE.CylinderGeometry(0.04, 0.06, trunkH, 6));
+      const trunk = new THREE.Mesh(trunkGeom, treeTrunkMat);
+      trunk.position.set(rowX, y0 + trunkH / 2, tz);
+      trunk.castShadow = true;
+      group.add(trunk);
+      // Canopy — icosahedron for rounded deciduous look
+      const canopyR = 0.35 + (i % 3) * 0.05;
+      const canopyGeom = ctx.tracker.track(new THREE.IcosahedronGeometry(canopyR, 1));
+      const canopy = new THREE.Mesh(canopyGeom, treeCanopyMat);
+      canopy.position.set(rowX, y0 + trunkH + canopyR * 0.6, tz);
+      canopy.castShadow = true;
+      canopy.receiveShadow = true;
+      group.add(canopy);
+    }
+  };
+  const treeSpacing = d / 4;
+  treeRow(-w * 0.35, 3, -d * 0.3, treeSpacing);
+  treeRow(w * 0.35, 3, -d * 0.3, treeSpacing);
+
+  // --- Benches: paired along tree rows, facing inward ---
+  const placeBench = (bx: number, bz: number, rotY: number): void => {
+    const seatW = 0.6;
+    const seatD = 0.18;
+    const seatH = 0.22;
+    // Seat plank
+    const seatGeom = ctx.tracker.track(new THREE.BoxGeometry(seatW, 0.04, seatD));
+    const seat = new THREE.Mesh(seatGeom, benchMat);
+    seat.position.set(bx, y0 + seatH, bz);
+    seat.rotation.y = rotY;
+    seat.castShadow = true;
+    seat.receiveShadow = true;
+    group.add(seat);
+    // Two legs
+    const legGeom = ctx.tracker.track(new THREE.BoxGeometry(0.04, seatH, 0.04));
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(legGeom, benchLegMat);
+      const dx = side * (seatW / 2 - 0.06);
+      leg.position.set(
+        bx + dx * Math.cos(rotY),
+        y0 + seatH / 2,
+        bz + dx * Math.sin(rotY),
+      );
+      leg.castShadow = true;
+      group.add(leg);
+    }
+  };
+  // Benches between trees on left row, facing right
+  placeBench(-w * 0.28, -d * 0.3 + treeSpacing * 0.5, 0);
+  placeBench(-w * 0.28, -d * 0.3 + treeSpacing * 1.5, 0);
+  // Benches between trees on right row, facing left
+  placeBench(w * 0.28, -d * 0.3 + treeSpacing * 0.5, 0);
+  placeBench(w * 0.28, -d * 0.3 + treeSpacing * 1.5, 0);
+
+  // --- Bollards: line of small light posts along the south edge ---
+  const bollardCount = 5;
+  const bollardSpacing = w * 0.7 / (bollardCount - 1);
+  for (let i = 0; i < bollardCount; i++) {
+    const bx = -w * 0.35 + i * bollardSpacing;
+    const postH = 0.35;
+    const postGeom = ctx.tracker.track(new THREE.CylinderGeometry(0.025, 0.03, postH, 6));
+    const post = new THREE.Mesh(postGeom, bollardMat);
+    post.position.set(bx, y0 + postH / 2, d * 0.4);
+    post.castShadow = true;
+    group.add(post);
+    // Glowing cap
+    const capGeom = ctx.tracker.track(new THREE.SphereGeometry(0.04, 6, 4));
+    const cap = new THREE.Mesh(capGeom, bollardCapMat);
+    cap.position.set(bx, y0 + postH + 0.02, d * 0.4);
     group.add(cap);
   }
 
