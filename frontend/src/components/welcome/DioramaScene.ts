@@ -2283,9 +2283,11 @@ function buildBuildings(ctx: SceneCtx): THREE.Group {
   add(planSpruceGrove(ctx, 40,  40, 120, 400, 401, 0.55));  // West Bank — dense linear forest
   add(planSpruceGrove(ctx, 286, 40, 108, 114, 402, 0.60));  // Botanical Gardens — denser still
 
-  // === Foliage — bushes and flower beds in plazas (softer scale) ===
-  add(planFoliage(ctx, 286, 166, 108, 108, 303, 0.4));  // Plaza C2
-  add(planFoliage(ctx, 286, 526, 228, 108, 304, 0.35)); // Town Square
+  // === Plaza C2 — foliage (crane area) ===
+  add(planFoliage(ctx, 286, 166, 108, 108, 303, 0.4));
+
+  // === Town Square — modern plaza in front of the stave church ===
+  add(planPlaza(ctx, 286, 526, 228, 108));
 
   // === Row 4 — D4, E4 residential ===
   lowRiseCell(ctx, group, 526, 526, 108, 108, H.midBlock, 41, 0.95);
