@@ -2045,6 +2045,83 @@ function planSpruceGrove(
   return group;
 }
 
+// Low-poly foliage — bushes (octahedrons) and flower beds (thin boxes)
+// scattered across an area with a deterministic seed.
+function planFoliage(
+  ctx: SceneCtx,
+  planX: number,
+  planY: number,
+  planW: number,
+  planH: number,
+  seed: number,
+  density = 0.5,
+): THREE.Group {
+  const group = new THREE.Group();
+  const w = toW(planW);
+  const d = toW(planH);
+
+  const bushMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x557a3e, roughness: 0.94, metalness: 0 }),
+  );
+  const bedMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x8a4a5c, roughness: 0.92, metalness: 0 }),
+  );
+  const bedSoilMat = ctx.tracker.track(
+    new THREE.MeshStandardMaterial({ color: 0x5a3a28, roughness: 0.95, metalness: 0 }),
+  );
+
+  const rand = (i: number): number => {
+    const x = Math.sin(seed * 11.7 + i * 31.3) * 43758.5453;
+    return x - Math.floor(x);
+  };
+
+  const area = (w * d) * density;
+  const bushCount = Math.max(3, Math.floor(area * 0.6));
+  const bedCount = Math.max(1, Math.floor(area * 0.2));
+
+  // Bushes — low-poly octahedrons
+  for (let i = 0; i < bushCount; i++) {
+    const r = 0.18 + rand(i * 2) * 0.18;
+    const bushGeom = ctx.tracker.track(new THREE.OctahedronGeometry(r, 0));
+    const bush = new THREE.Mesh(bushGeom, bushMat);
+    bush.position.set(
+      (rand(i * 2 + 1) - 0.5) * (w - 0.4),
+      LAYERS.surfTop + r * 0.6,
+      (rand(i * 2 + 3) - 0.5) * (d - 0.4),
+    );
+    bush.rotation.y = rand(i * 2 + 5) * Math.PI;
+    bush.castShadow = true;
+    bush.receiveShadow = true;
+    group.add(bush);
+  }
+
+  // Flower beds — thin rectangular boxes with bright cap
+  for (let i = 0; i < bedCount; i++) {
+    const bw = 0.6 + rand(i * 5) * 0.5;
+    const bd = 0.25 + rand(i * 5 + 1) * 0.2;
+    const soilGeom = ctx.tracker.track(new THREE.BoxGeometry(bw, 0.12, bd));
+    const soil = new THREE.Mesh(soilGeom, bedSoilMat);
+    const px = (rand(i * 5 + 2) - 0.5) * (w - bw);
+    const pz = (rand(i * 5 + 3) - 0.5) * (d - bd);
+    soil.position.set(px, LAYERS.surfTop + 0.06, pz);
+    soil.rotation.y = rand(i * 5 + 4) > 0.5 ? Math.PI / 2 : 0;
+    soil.castShadow = true;
+    soil.receiveShadow = true;
+    group.add(soil);
+
+    // Flower cap — a slightly taller, narrower plate in a warm tone
+    const capGeom = ctx.tracker.track(new THREE.BoxGeometry(bw * 0.9, 0.08, bd * 0.7));
+    const cap = new THREE.Mesh(capGeom, bedMat);
+    cap.position.set(px, LAYERS.surfTop + 0.16, pz);
+    cap.rotation.y = soil.rotation.y;
+    cap.castShadow = true;
+    group.add(cap);
+  }
+
+  group.position.set(toX(planX + planW / 2), 0, toZ(planY + planH / 2));
+  return group;
+}
+
 // Modern plaza — gridded paving bands, linear tree rows, benches, reflecting
 // pool, and lighting bollards. Designed as a composed urban space rather than
 // random scatter.
