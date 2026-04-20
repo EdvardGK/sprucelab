@@ -32,6 +32,7 @@ import ProjectTypesPage from './pages/ProjectTypesPage';
 import ProjectMaterialLibrary from './pages/ProjectMaterialLibrary';
 import ProjectBEP from './pages/ProjectBEP';
 import ProjectField from './pages/ProjectField';
+import AdminDashboard from './pages/AdminDashboard';
 import ProcessingReports from './pages/dev/ProcessingReports';
 import ProcessingReportDetail from './pages/dev/ProcessingReportDetail';
 
