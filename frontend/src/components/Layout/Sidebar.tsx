@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Home,
-  Target,
   FileText,
   Folder,
   Search,
@@ -12,7 +11,6 @@ import {
   Settings,
   HelpCircle,
   BarChart3,
-  Code,
   User,
   Layers,
   FileStack,
