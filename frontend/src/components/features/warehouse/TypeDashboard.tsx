@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useDashboardMetrics } from '@/hooks/use-warehouse';
+import type { ActionItem } from '@/hooks/use-warehouse';
 import { HealthScoreRing } from './HealthScoreRing';
 import { ModelHealthGrid } from './ModelHealthCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, CheckCircle2, Clock, Eye, Layers } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Eye, Layers, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 interface TypeDashboardProps {
   projectId: string;
