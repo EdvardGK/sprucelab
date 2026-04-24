@@ -197,7 +197,7 @@ sprucelab/
 │   │   ├── api/                # API clients (api-client.ts, ifc-service-client.ts)
 │   │   └── i18n/               # Translations (en.json, nb.json)
 │   └── package.json
-���── docs/                       # Plans, worklogs, TODOs, knowledge, research
+├── docs/                       # Plans, worklogs, TODOs, knowledge, research
 ├── django-test/                # Standalone test scripts
 └── archive/                    # Archived code (BEP, old scenes, etc.)
 ```
