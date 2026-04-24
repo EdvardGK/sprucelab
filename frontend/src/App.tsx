@@ -25,7 +25,6 @@ import TypeLibraryPage from './pages/TypeLibraryPage';
 import ProjectTypeLibrary from './pages/ProjectTypeLibrary';
 import ProjectTypesPage from './pages/ProjectTypesPage';
 import ProjectMaterialLibrary from './pages/ProjectMaterialLibrary';
-import ProjectBEP from './pages/ProjectBEP';
 import ProjectField from './pages/ProjectField';
 import AdminDashboard from './pages/AdminDashboard';
 import ProcessingReports from './pages/dev/ProcessingReports';
