@@ -92,13 +92,7 @@ class ScriptViewSet(viewsets.ModelViewSet):
         serializer = ExecuteScriptRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        model_id = request.data.get('model_id')
-        if not model_id:
-            return Response(
-                {'error': 'model_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+        model_id = str(serializer.validated_data['model_id'])
         parameters = serializer.validated_data.get('parameters', {})
 
         try:
