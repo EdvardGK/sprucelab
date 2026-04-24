@@ -137,6 +137,108 @@ return <p>{t('common.save')}</p>;  // Correct
 
 ---
 
+## Common Patterns
+
+### Adding a DRF ViewSet
+
+```python
+# 1. Model: apps/{app}/models.py
+# 2. Serializer: apps/{app}/serializers.py
+class ThingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Thing
+        fields = ['id', 'name', ...]
+
+class ThingListSerializer(serializers.ModelSerializer):  # lightweight for lists
+    class Meta:
+        model = Thing
+        fields = ['id', 'name']
+
+# 3. ViewSet: apps/{app}/views.py
+class ThingViewSet(viewsets.ModelViewSet):
+    queryset = Thing.objects.all()
+    serializer_class = ThingSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ThingListSerializer
+        return ThingSerializer
+
+    @action(detail=True, methods=['post'], url_path='do-something')
+    def do_something(self, request, pk=None):
+        obj = self.get_object()
+        # ... business logic
+        return Response({'status': 'ok'})
+
+# 4. URL: apps/{app}/urls.py
+router.register(r'things', ThingViewSet, basename='thing')
+
+# 5. Wire in config/urls.py:
+path('api/things/', include('apps.{app}.urls')),
+```
+
+### Adding a FastAPI Endpoint
+
+```python
+# 1. Schema: ifc-service/models/schemas.py (Pydantic)
+class ThingResponse(BaseModel):
+    status: str
+    data: dict
+
+# 2. Service: ifc-service/services/thing_service.py (business logic)
+# 3. Endpoint: ifc-service/api/thing.py
+router = APIRouter(prefix="/thing", tags=["thing"])
+
+@router.post("/process", response_model=ThingResponse)
+async def process_thing(request: ThingRequest):
+    result = await thing_service.process(request)
+    return ThingResponse(status="ok", data=result)
+
+# 4. Wire in ifc-service/api/router.py:
+from api.thing import router as thing_router
+api_router.include_router(thing_router)
+```
+
+### Adding a React Query Hook
+
+```tsx
+// In hooks/use-{feature}.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import apiClient from '@/lib/api-client';
+
+// Query keys factory
+const featureKeys = {
+  all: ['feature'] as const,
+  list: (filters: Record<string, unknown>) => [...featureKeys.all, 'list', filters] as const,
+  detail: (id: string) => [...featureKeys.all, 'detail', id] as const,
+};
+
+// Read hook
+export function useFeatureList(filters = {}) {
+  return useQuery({
+    queryKey: featureKeys.list(filters),
+    queryFn: async () => {
+      const response = await apiClient.get('/types/feature/', { params: filters });
+      return response.data.results;
+    },
+  });
+}
+
+// Mutation hook
+export function useUpdateFeature() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Feature> }) => {
+      const response = await apiClient.patch(`/types/feature/${id}/`, data);
+      return response.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: featureKeys.all }),
+  });
+}
+```
+
+---
+
 ## Error Handling
 
 - **NEVER create fallbacks or use mock data** that obscures errors
