@@ -87,7 +87,6 @@ def build_script_context(model: Model, parameters: Dict[str, Any]) -> Dict[str, 
         'SystemMembership': SystemMembership,
 
         # Helper functions
-        'get_geometry': get_geometry,
         'get_properties': get_properties,
         'save_output': save_output,
 
