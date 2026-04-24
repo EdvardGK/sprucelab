@@ -67,6 +67,9 @@
 - [x] Common Patterns in CLAUDE.md
 - [x] entities/views.py split (2855 lines -> 8 modules)
 - [x] Codebase simplification (BEP archived, dead apps removed, -13.8k lines)
+- [x] Dashboard Enhancement (verification bar, action items, weighted health score)
+- [x] Version Change Detection (service, endpoint, hook, TypeScript types)
+- [x] Sandwich View (SandwichDiagram.tsx SVG component with material colors)
 
 ---
 
