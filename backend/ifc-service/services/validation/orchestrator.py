@@ -108,15 +108,8 @@ class ValidationOrchestrator:
                 )
 
             try:
-                # Load BEP rules
-                bep_rules = await bep_loader.load_rules_for_model(
-                    request.model_id,
-                    request.bep_id,
-                )
-
-                if not bep_rules:
-                    logger.info(f"No BEP found for model {request.model_id}, running basic validation")
-                    bep_rules = self._create_default_rules()
+                # BEP loader archived -- use default rules
+                bep_rules = self._create_default_rules()
 
                 # Load IFC file
                 ifc_file = self._load_ifc(file_path)
