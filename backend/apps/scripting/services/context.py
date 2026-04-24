@@ -3,7 +3,7 @@ Build context for script execution.
 
 Provides scripts with access to:
 - Model data (entities, properties, systems, materials, types)
-- Helper functions (get_geometry, get_properties, save_output)
+- Helper functions (get_properties, save_output)
 - Whitelisted libraries (ifcopenshell, numpy, pandas, re)
 """
 import re
