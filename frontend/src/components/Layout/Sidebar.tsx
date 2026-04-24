@@ -156,10 +156,10 @@ export function Sidebar() {
             {/* Project Overview */}
             <div className="mt-4 space-y-0.5">
               <Link
-                to={`/projects/${projectId}`}
+                to={`/projects/${projectId}/dashboard`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  location.pathname === `/projects/${projectId}`
+                  location.pathname === `/projects/${projectId}/dashboard`
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                 )}
