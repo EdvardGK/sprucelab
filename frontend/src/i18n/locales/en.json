@@ -859,6 +859,10 @@
       "skipped": "{{count}} skipped"
     }
   },
+  "sandwich": {
+    "noLayers": "No material layers defined",
+    "totalThickness": "Total"
+  },
   "typeBank": {
     "title": "Type Bank",
     "description": "Global type classification library across all models",
