@@ -42,7 +42,6 @@ export default function BIMWorkbench() {
         {/* Content - Full height, no scrolling at container level */}
         <div className="flex-1 overflow-hidden">
           {activeView === 'classify' && <TypeAnalysisWorkbench projectId={project.id} />}
-          {activeView === 'bep' && <BEPTab projectId={project.id} />}
           {activeView === 'scripting' && <ScriptingTab projectId={project.id} />}
         </div>
       </div>
