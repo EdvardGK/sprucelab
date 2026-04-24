@@ -40,7 +40,7 @@ const router = createBrowserRouter([
   { path: "/", element: guard(<ProjectsGallery />) },
   { path: "/my-page", element: guard(<MyPage />) },
   { path: "/projects", element: guard(<ProjectsGallery />) },
-  { path: "/projects/:id", element: guard(<ProjectModels />) },
+  { path: "/projects/:id", element: guard(<ProjectDashboard />) },
   { path: "/projects/:id/dashboard", element: guard(<ProjectDashboard />) },
   { path: "/projects/:id/models", element: guard(<ProjectModels />) },
   { path: "/projects/:id/my-page", element: guard(<ProjectMyPage />) },
