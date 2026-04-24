@@ -10,7 +10,7 @@ For BIM professionals who USE models, not create them. Dashboards, verification,
 
 **Tech Stack**: Django 5.0 + DRF | FastAPI (IFC processing) | PostgreSQL (Supabase) | React 18 + TypeScript + Vite | Tailwind v4 + shadcn/ui | ThatOpen + Three.js
 
-**Docs**: PRD at `docs/plans/PRD_v2.md` | Worklogs at `docs/worklog/` | TODOs at `docs/todos/` | Reference at `docs/knowledge/`
+**Docs**: PRD at `docs/plans/PRD_v2.md` | Worklogs at `docs/worklog/` | TODOs at `docs/todos/` | Reference at `docs/knowledge/` | API map at `docs/knowledge/API_SURFACE.md`
 
 ---
 
