@@ -837,6 +837,32 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 data['health_score'] = 0
             del data['health_scores']
 
+        # Action items: types needing attention (flagged or review), sorted by severity
+        action_items = []
+        flagged_types = (
+            IFCType.objects
+            .filter(model__project_id=project_id, instance_count__gt=0)
+            .filter(
+                Q(mapping__verification_status='flagged') |
+                Q(mapping__mapping_status='review') |
+                Q(mapping__mapping_status='followup')
+            )
+            .select_related('mapping', 'model')
+            .order_by('mapping__verification_status', '-mapping__updated_at')[:20]
+        )
+        for ft in flagged_types:
+            issues = (ft.mapping.verification_issues or []) if ft.mapping else []
+            action_items.append({
+                'type_id': str(ft.id),
+                'type_name': ft.type_name,
+                'ifc_class': ft.ifc_type,
+                'model_name': ft.model.name if ft.model else '',
+                'model_id': str(ft.model_id),
+                'status': ft.mapping.mapping_status if ft.mapping else 'pending',
+                'verification_status': ft.mapping.verification_status if ft.mapping else 'pending',
+                'issues': issues[:3],  # Top 3 issues per type
+            })
+
         return Response({
             'mode': 'project',
             'project_id': project_id,
@@ -846,6 +872,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             },
             'models': model_breakdown,
             'by_discipline': by_discipline,
+            'action_items': action_items,
         })
 
 
