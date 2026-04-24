@@ -75,7 +75,7 @@ Quick reference for all REST endpoints. Django serves `/api/`, FastAPI serves `/
 
 | Method | Path | ViewSet | Key Actions |
 |--------|------|---------|-------------|
-| CRUD | `/api/scripts/` | `ScriptViewSet` | `execute` (pending) |
+| CRUD | `/api/scripts/` | `ScriptViewSet` | `execute` |
 | RO | `/api/script-executions/` | `ScriptExecutionViewSet` | |
 | CRUD | `/api/workflows/` | `AutomationWorkflowViewSet` | `activate`, `deactivate` |
 | RO | `/api/workflow-executions/` | `WorkflowExecutionViewSet` | |
