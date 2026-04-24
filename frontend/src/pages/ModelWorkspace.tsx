@@ -8,7 +8,6 @@ import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QTODashboard } from '@/components/features/qto/QTODashboard';
-import { MMIDashboard } from '@/components/features/mmi/MMIDashboard';
 import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer';
 import { ElementPropertiesPanel, ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { AppLayout } from '@/components/Layout/AppLayout';
