@@ -176,7 +176,7 @@ class IFCEntityViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Get an entity by model ID and express ID (for viewer selection).
 
-        GET /api/entities/by-express-id/?model={model_id}&express_id={express_id}
+        GET /api/types/by-express-id/?model={model_id}&express_id={express_id}
 
         Note: Express IDs are NOT stored in the database. This endpoint fetches
         all entities for the model and finds the one at the corresponding index.
@@ -582,7 +582,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Get types consolidated by signature (ifc_type + type_name + key properties).
 
-        GET /api/entities/types/consolidated/?model={id}
+        GET /api/types/types/consolidated/?model={id}
 
         Creates a "type signature" for ML-style grouping:
         - ifc_type: IfcColumnType
@@ -685,7 +685,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Apply mapping to ALL types matching (ifc_type, type_name) at once.
 
-        POST /api/entities/types/map-consolidated/
+        POST /api/types/types/map-consolidated/
         {
             "model_id": "uuid",
             "ifc_type": "IfcColumnType",
@@ -936,7 +936,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Export types to Reduzer-compatible Excel format for LCA import.
 
-        GET /api/entities/types/export-reduzer/?model={id}&include_unmapped=false
+        GET /api/types/types/export-reduzer/?model={id}&include_unmapped=false
 
         Returns Excel file with Reduzer import format:
         - description: Type name
