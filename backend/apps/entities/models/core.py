@@ -61,7 +61,7 @@ class IFCEntity(models.Model):
     volume = models.FloatField(
         null=True,
         blank=True,
-        help_text="Net volume in cubic meters (m3) - from Qto_*BaseQuantities"
+        help_text="Net volume in cubic meters (m³) - from Qto_*BaseQuantities"
     )
     length = models.FloatField(
         null=True,
