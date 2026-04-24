@@ -127,5 +127,5 @@
 
 ---
 
-**Next Action**: B3 - Dashboard Enhancement (integrate verification data)
-**Then**: B4 - Version Change Detection
+**Next Action**: Event/Webhook System (agent-ready platform)
+**Then**: CLI Expansion (spruce types/verify/scripts commands)
