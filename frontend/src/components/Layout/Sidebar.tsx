@@ -246,30 +246,6 @@ export function Sidebar() {
                   <Box className="h-4 w-4" />
                   <span>{t('nav.materialLibrary')}</span>
                 </Link>
-                <Link
-                  to={`/projects/${projectId}/spaces`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/spaces`)
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <Folder className="h-4 w-4" />
-                  <span>{t('nav.spaces')}</span>
-                </Link>
-                <Link
-                  to={`/projects/${projectId}/qto`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/qto`)
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  <span>{t('nav.qto')}</span>
-                </Link>
               </div>
             </div>
           </div>
