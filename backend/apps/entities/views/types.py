@@ -643,22 +643,26 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                     'classification_score': 0,
                     'unit_score': 0,
                     'material_score': 0,
+                    'verification_score': 0,
+                    'verification_passed': 0,
+                    'verification_warning': 0,
+                    'verification_failed': 0,
+                    'verification_pending': 0,
                 }
 
-            # Classification score (40%): types with NS3451 code
+            # Classification score (30%): types with NS3451 code
             with_ns3451 = types_qs.filter(
                 mapping__ns3451_code__isnull=False
             ).exclude(mapping__ns3451_code='').count()
             classification_score = (with_ns3451 / total) * 100
 
-            # Unit score (20%): types with representative_unit
+            # Unit score (15%): types with representative_unit
             with_unit = types_qs.filter(
                 mapping__representative_unit__isnull=False
             ).exclude(mapping__representative_unit='').count()
             unit_score = (with_unit / total) * 100
 
-            # Material score (40%): types with at least 1 material layer with quantity > 0
-            # Use subquery to check if any definition_layer exists with quantity_per_unit > 0
+            # Material score (25%): types with at least 1 material layer with quantity > 0
             has_material_layer = TypeDefinitionLayer.objects.filter(
                 type_mapping=OuterRef('mapping'),
                 quantity_per_unit__gt=0
@@ -670,11 +674,29 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             ).filter(has_layers=True).count()
             material_score = (with_materials / total) * 100
 
+            # Verification score (30%): types with no verification errors
+            # verification_status: pending, auto (engine-checked), verified (human), flagged (errors)
+            verified_ok = types_qs.filter(
+                mapping__verification_status__in=['auto', 'verified']
+            ).exclude(
+                mapping__verification_status='flagged'
+            ).count()
+            verification_failed = types_qs.filter(
+                mapping__verification_status='flagged'
+            ).count()
+            verification_pending = types_qs.filter(
+                Q(mapping__verification_status='pending') | Q(mapping__isnull=True)
+            ).count()
+            # For score: only count non-pending types (verified types / checked types)
+            checked = total - verification_pending
+            verification_score = (verified_ok / checked * 100) if checked > 0 else 0
+
             # Composite health score
             health_score = round(
-                classification_score * 0.4 +
-                unit_score * 0.2 +
-                material_score * 0.4,
+                classification_score * 0.30 +
+                unit_score * 0.15 +
+                material_score * 0.25 +
+                verification_score * 0.30,
                 1
             )
 
@@ -693,6 +715,11 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'classification_percent': round(classification_score, 1),
                 'unit_percent': round(unit_score, 1),
                 'material_percent': round(material_score, 1),
+                'verification_percent': round(verification_score, 1),
+                'verification_passed': verified_ok,
+                'verification_warning': 0,  # counted via issues, not status
+                'verification_failed': verification_failed,
+                'verification_pending': verification_pending,
             }
 
         def get_status_counts(types_qs):
