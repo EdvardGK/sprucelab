@@ -34,7 +34,7 @@ Quick reference for all REST endpoints. Django serves `/api/`, FastAPI serves `/
 | Method | Path | ViewSet | Key Actions |
 |--------|------|---------|-------------|
 | CRUD | `/api/types/types/` | `IFCTypeViewSet` | `instances`, `export-excel`, `export-reduzer`, `import-excel`, `dashboard-metrics`, `verify` |
-| CRUD | `/api/types/type-mappings/` | `TypeMappingViewSet` | `summary`, `consolidated`, `map-consolidated`, `bulk-update` |
+| CRUD | `/api/types/type-mappings/` | `TypeMappingViewSet` | `summary`, `consolidated`, `map-consolidated`, `bulk-update` (batch classify) |
 | CRUD | `/api/types/type-definition-layers/` | `TypeDefinitionLayerViewSet` | `bulk-update` |
 | RO | `/api/types/entities/` | `IFCEntityViewSet` | `by-express-id` |
 | RO | `/api/types/processing-reports/` | `ProcessingReportViewSet` | |
