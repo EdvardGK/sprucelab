@@ -339,30 +339,6 @@ export function Sidebar() {
                 <Folder className="h-4 w-4" />
                 <span>{t('nav.projects')}</span>
               </Link>
-              <Link
-                to="/scripts"
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 pl-8 text-sm transition-colors',
-                  isActive('/scripts')
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Code className="h-4 w-4" />
-                <span>{t('nav.scriptsLibrary')}</span>
-              </Link>
-              <Link
-                to="/stats"
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 pl-8 text-sm transition-colors',
-                  isActive('/stats')
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span>{t('nav.quickStats')}</span>
-              </Link>
             </div>
           )}
           </div>
