@@ -513,6 +513,8 @@ export const warehouseKeys = {
   // Dashboard Metrics
   dashboardMetrics: (projectId?: string, modelId?: string) =>
     [...warehouseKeys.all, 'dashboard-metrics', { projectId, modelId }] as const,
+  versionChanges: (modelId: string, compareTo?: string) =>
+    [...warehouseKeys.all, 'version-changes', modelId, compareTo] as const,
 };
 
 // Semantic type query keys
