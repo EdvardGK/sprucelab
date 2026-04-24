@@ -222,7 +222,7 @@ class TypeDefinitionLayer(models.Model):
     # === Quantity per type unit (the "recipe ratio") ===
     quantity_per_unit = models.FloatField(
         default=1.0,
-        help_text="Amount of this material per 1 type unit (e.g., 0.25 m3/m2)"
+        help_text="Amount of this material per 1 type unit (e.g., 0.25 m³/m²)"
     )
     material_unit = models.CharField(
         max_length=10,
