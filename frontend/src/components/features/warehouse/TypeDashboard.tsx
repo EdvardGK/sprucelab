@@ -321,6 +321,57 @@ function CompletenessBar({
 }
 
 /**
+ * Action items list showing types that need attention.
+ */
+function ActionItemsList({
+  items,
+  onModelSelect,
+}: {
+  items: ActionItem[];
+  onModelSelect?: (modelId: string) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Card className="shrink-0">
+      <CardHeader className="p-[clamp(0.5rem,1.5vw,0.75rem)] pb-0">
+        <CardTitle className="text-[clamp(0.75rem,1.5vw,0.875rem)] flex items-center gap-1.5">
+          <ShieldAlert className="h-[clamp(0.875rem,1.5vw,1rem)] w-[clamp(0.875rem,1.5vw,1rem)] text-amber-500" />
+          {t('dashboard.actionItems', 'Action Items')}
+          <span className="text-muted-foreground font-normal">({items.length})</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-[clamp(0.5rem,1.5vw,0.75rem)]">
+        <div className="space-y-[clamp(0.25rem,0.5vw,0.375rem)] max-h-[220px] overflow-y-auto">
+          {items.map((item) => (
+            <div
+              key={item.type_id}
+              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer text-[clamp(0.5rem,1vw,0.625rem)]"
+              onClick={() => onModelSelect?.(item.model_id)}
+            >
+              {item.verification_status === 'flagged' ? (
+                <ShieldAlert className="h-3.5 w-3.5 text-red-500 shrink-0" />
+              ) : (
+                <ShieldCheck className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              )}
+              <span className="font-medium truncate min-w-0">{item.type_name}</span>
+              <span className="text-muted-foreground shrink-0">{item.ifc_class}</span>
+              <span className="text-muted-foreground shrink-0 ml-auto">{item.model_name}</span>
+              {item.issues.length > 0 && (
+                <span className="text-muted-foreground shrink-0">
+                  {item.issues[0].message}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+
+/**
  * Loading skeleton for dashboard.
  */
 function DashboardSkeleton() {
