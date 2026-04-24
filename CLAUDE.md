@@ -172,34 +172,34 @@ cd frontend && yarn install && yarn dev
 
 ```
 sprucelab/
-├── CLAUDE.md                    # This file
+├── CLAUDE.md                   # This file
 ├── backend/
-│   ├── config/                  # Django settings, URLs, Celery
+│   ├── config/                 # Django settings, URLs, Celery
 │   ├── apps/
-│   │   ├��─ accounts/            # User auth, admin dashboard
-│   │   ├── projects/            # Project CRUD, ProjectConfig
-│   │   ├── models/              # IFC model upload, versioning, fragments
-│   │   ├── entities/            # Types, TypeBank, classification (serves /api/types/)
-│   │   ├── scripting/           # Script execution system
-│   │   ├─��� viewers/             # 3D viewer groups
-│   │   ├── automation/          # Pipeline/workflow automation
-│   │   └── field/               # Field checklists
-│   ├── ifc-service/             # FastAPI microservice (IFC parsing, validation)
+│   │   ├── accounts/           # User auth, admin dashboard
+│   │   ├── projects/           # Project CRUD, ProjectConfig
+│   │   ├── models/             # IFC model upload, versioning, fragments
+│   │   ├── entities/           # Types, TypeBank, classification (serves /api/types/)
+│   │   ├── scripting/          # Script execution system
+│   │   ├── viewers/            # 3D viewer groups
+│   │   ├── automation/         # Pipeline/workflow automation
+│   │   └── field/              # Field checklists
+│   ├── ifc-service/            # FastAPI microservice (IFC parsing, validation)
 │   └── manage.py
-├─��� frontend/
-│   ├���─ src/
-│   │   ├── pages/               # Route pages
+├── frontend/
+│   ├── src/
+│   │   ├── pages/              # Route pages
 │   │   ├── components/
-│   │   │   ├── features/        # Domain components (warehouse, viewer, etc.)
-│   │   │   ├���─ layout/          # Sidebar, header
-│   │   │   └── ui/              # shadcn/ui primitives
-��   │   ├── hooks/               # React Query hooks (use-warehouse, use-models, etc.)
-│   │   ├── api/                 # API clients (api-client.ts, ifc-service-client.ts)
-│   │   └── i18n/                # Translations (en.json, nb.json)
+│   │   │   ├── features/       # Domain components (warehouse, viewer, etc.)
+│   │   │   ├── layout/         # Sidebar, header
+│   │   │   └── ui/             # shadcn/ui primitives
+│   │   ├── hooks/              # React Query hooks (use-warehouse, use-models, etc.)
+│   │   ├── api/                # API clients (api-client.ts, ifc-service-client.ts)
+│   │   └── i18n/               # Translations (en.json, nb.json)
 │   └── package.json
-├── docs/                        # Plans, worklogs, TODOs, knowledge, research
-├── django-test/                 # Standalone test scripts
-└── archive/                     # Archived code (BEP, old scenes, etc.)
+���── docs/                       # Plans, worklogs, TODOs, knowledge, research
+├── django-test/                # Standalone test scripts
+└── archive/                    # Archived code (BEP, old scenes, etc.)
 ```
 
 ---
