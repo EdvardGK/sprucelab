@@ -67,6 +67,7 @@ const router = createBrowserRouter([
   { path: "/stats", element: guard(<QuickStats />) },
   { path: "/settings", element: guard(<Settings />) },
   { path: "/type-library", element: guard(<TypeLibraryPage />) },
+  { path: "/admin", element: guard(<AdminDashboard />) },
   { path: "/dev/processing-reports", element: guard(<ProcessingReports />) },
   { path: "/dev/processing-reports/:id", element: guard(<ProcessingReportDetail />) },
 ]);
