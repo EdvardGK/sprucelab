@@ -119,9 +119,9 @@
 | Verification Engine | Done | 4 rules, ProjectConfig custom rules |
 | Script Execution API | Done | POST /api/scripts/{id}/execute/ |
 | Batch Classification | Done | All fields supported |
-| Version Change Detection | Pending | Infrastructure ready (Model.version_diff) |
-| Dashboard Enhancement | Pending | Needs verification data integration |
-| Sandwich View | Pending | Pure frontend, data exists |
+| Version Change Detection | Done | Service + endpoint + hook |
+| Dashboard Enhancement | Done | Verification bar + action items |
+| Sandwich View | Done | SVG component with material colors |
 | Event/Webhook System | Pending | Agent-ready platform feature |
 | CLI Expansion | Pending | types/verify/scripts commands |
 
