@@ -859,6 +859,10 @@
       "skipped": "{{count}} hoppet over"
     }
   },
+  "sandwich": {
+    "noLayers": "Ingen materiallag definert",
+    "totalThickness": "Totalt"
+  },
   "typeBank": {
     "title": "Typebank",
     "description": "Global typeklassifiseringsbibliotek på tvers av alle modeller",
