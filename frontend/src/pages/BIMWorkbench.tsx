@@ -49,16 +49,6 @@ export default function BIMWorkbench() {
   );
 }
 
-// BEP Configuration Tab - Now uses MMI Table Maker
-function BEPTab({ projectId }: { projectId: string }) {
-  return (
-    <div className="p-6 overflow-y-auto h-full">
-      <MMITableMaker projectId={projectId} />
-    </div>
-  );
-}
-
-
 // Scripting Tab
 function ScriptingTab({ projectId: _projectId }: { projectId: string }) {
   const { t } = useTranslation();
