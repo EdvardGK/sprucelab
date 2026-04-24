@@ -5,9 +5,7 @@ import { useProject } from '@/hooks/use-projects';
 import { Card, CardContent } from '@/components/ui/card';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { TypeAnalysisWorkbench } from '@/components/features/warehouse/workbench/TypeAnalysisWorkbench';
-import { MMITableMaker } from '@/components/features/bep/MMITableMaker';
-
-type ViewId = 'classify' | 'bep' | 'scripting';
+type ViewId = 'classify' | 'scripting';
 
 export default function BIMWorkbench() {
   const { t } = useTranslation();
