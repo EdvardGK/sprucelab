@@ -314,6 +314,51 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'], url_path='version-changes')
+    def version_changes(self, request):
+        """
+        Get type-level changes between model versions.
+
+        GET /api/types/types/version-changes/?model={id}
+        GET /api/types/types/version-changes/?model={id}&compare_to={old_model_id}
+
+        If compare_to is not provided, uses model.parent_model (previous version).
+        Returns diff summary with per-type changes (new/removed/changed).
+        """
+        model_id = request.query_params.get('model')
+        if not model_id:
+            return Response(
+                {'error': 'model query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from apps.models.models import Model
+        model = Model.objects.filter(id=model_id).first()
+        if not model:
+            return Response({'error': 'Model not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Determine comparison target
+        compare_to = request.query_params.get('compare_to')
+        if compare_to:
+            old_model = Model.objects.filter(id=compare_to).first()
+        else:
+            old_model = model.parent_model
+
+        if not old_model:
+            return Response(
+                {'error': 'No previous version to compare against. Use compare_to parameter.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        from ..services.version_compare import compare_model_versions
+        diff = compare_model_versions(str(model_id), str(old_model.id))
+
+        # Store summary on model
+        model.version_diff = diff.summary
+        model.save(update_fields=['version_diff'])
+
+        return Response(diff.to_dict())
+
     @action(detail=True, methods=['get'], url_path='instances')
     def instances(self, request, pk=None):
         """
