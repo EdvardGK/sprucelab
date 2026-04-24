@@ -33,11 +33,13 @@
 - [ ] Wire into: model processing complete, types classified, verification complete
 - [ ] Start with 3 events: `model.processed`, `types.classified`, `verification.complete`
 
-### Agent-Ready: Sprucelab MCP Server
-- [ ] Create `backend/mcp-server/` (standalone, like `ifc-service/`)
-- [ ] Tools: `list_projects`, `list_models`, `get_model_types`, `classify_type`
-- [ ] Tools: `get_verification_status`, `execute_script`, `get_type_bank`
-- [ ] Uses `mcp` Python SDK, wraps Django API calls
+### Agent-Ready: CLI Expansion (spruce types/verify/scripts)
+- [ ] `spruce types list --model X` -- list types with mapping status
+- [ ] `spruce types classify --model X --type Y --ns3451 222 --unit m2`
+- [ ] `spruce types export --model X --format excel|reduzer`
+- [ ] `spruce verify --model X` -- run verification, print results table
+- [ ] `spruce scripts list` / `spruce scripts run --script X --model Y`
+- [ ] All commands support `--json` for agent consumption
 
 ---
 
