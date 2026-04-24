@@ -56,7 +56,7 @@ class IFCEntity(models.Model):
     area = models.FloatField(
         null=True,
         blank=True,
-        help_text="Net area in square meters (m2) - from Qto_*BaseQuantities"
+        help_text="Net area in square meters (m²) - from Qto_*BaseQuantities"
     )
     volume = models.FloatField(
         null=True,
