@@ -1329,19 +1329,35 @@ class TypeMappingViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='bulk-update')
     def bulk_update(self, request):
         """
-        Bulk update multiple type mappings.
+        Bulk update multiple type mappings (batch classification).
 
-        POST /api/type-mappings/bulk-update/
+        POST /api/types/type-mappings/bulk-update/
         Body: {
             "mappings": [
-                {"ifc_type_id": "uuid", "ns3451_code": "222", "mapping_status": "mapped"},
+                {
+                    "ifc_type_id": "uuid",
+                    "ns3451_code": "222",
+                    "representative_unit": "m2",
+                    "discipline": "ARK",
+                    "notes": "Exterior bearing wall",
+                    "mapping_status": "mapped"
+                },
                 ...
             ]
         }
+
+        All fields except ifc_type_id are optional. Only provided fields are updated.
+        If ns3451_code is set and mapping_status is omitted, status defaults to "mapped".
         """
         mappings_data = request.data.get('mappings', [])
         if not mappings_data:
             return Response({'error': 'mappings array is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Allowed fields for update
+        ALLOWED_FIELDS = {
+            'ns3451_code', 'representative_unit', 'discipline',
+            'type_category', 'notes', 'mapping_status', 'confidence',
+        }
 
         updated = 0
         created = 0
@@ -1349,30 +1365,45 @@ class TypeMappingViewSet(viewsets.ModelViewSet):
 
         for item in mappings_data:
             ifc_type_id = item.get('ifc_type_id')
-            ns3451_code = item.get('ns3451_code')
-            mapping_status = item.get('mapping_status', 'mapped')
+            if not ifc_type_id:
+                errors.append({'ifc_type_id': None, 'error': 'ifc_type_id is required'})
+                continue
+
+            # Build defaults dict from provided fields only
+            defaults = {}
+            for field in ALLOWED_FIELDS:
+                if field in item:
+                    defaults[field] = item[field]
+
+            # If ns3451_code provided, also set the FK
+            if 'ns3451_code' in defaults:
+                defaults['ns3451_id'] = defaults['ns3451_code']
+
+            # Auto-set status to mapped if classification provided but status omitted
+            if 'ns3451_code' in defaults and 'mapping_status' not in defaults:
+                defaults['mapping_status'] = 'mapped'
+
+            # Set mapped_at timestamp
+            if defaults.get('mapping_status') == 'mapped':
+                defaults['mapped_at'] = datetime.now()
 
             try:
                 mapping, was_created = TypeMapping.objects.update_or_create(
                     ifc_type_id=ifc_type_id,
-                    defaults={
-                        'ns3451_code': ns3451_code,
-                        'ns3451_id': ns3451_code,  # FK uses code as PK
-                        'mapping_status': mapping_status,
-                        'mapped_at': datetime.now() if mapping_status == 'mapped' else None,
-                    }
+                    defaults=defaults,
                 )
                 if was_created:
                     created += 1
                 else:
                     updated += 1
             except Exception as e:
-                errors.append({'ifc_type_id': ifc_type_id, 'error': str(e)})
+                errors.append({'ifc_type_id': str(ifc_type_id), 'error': str(e)})
 
         return Response({
             'created': created,
             'updated': updated,
-            'errors': errors
+            'error_count': len(errors),
+            'errors': errors,
         })
 
 
