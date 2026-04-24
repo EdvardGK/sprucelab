@@ -610,9 +610,10 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         - by_discipline: Aggregated by discipline (ARK, RIB, etc.)
 
         Health Score Formula (0-100):
-        - Classification score (40%): types with NS3451 code
-        - Unit score (20%): types with representative_unit
-        - Material score (40%): types with at least 1 material layer with quantity
+        - Classification score (30%): types with NS3451 code
+        - Unit score (15%): types with representative_unit
+        - Material score (25%): types with at least 1 material layer with quantity
+        - Verification score (30%): types passing verification (no errors)
 
         Status thresholds:
         - healthy (green): >= 80
