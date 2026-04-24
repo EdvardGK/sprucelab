@@ -537,3 +537,26 @@ export function useResetVerification() {
     },
   });
 }
+
+// =============================================================================
+// VERSION CHANGE DETECTION
+// =============================================================================
+
+/**
+ * Fetch version changes for a model (compared to its parent version).
+ */
+export function useVersionChanges(modelId: string, compareTo?: string, enabled = true) {
+  return useQuery({
+    queryKey: warehouseKeys.versionChanges(modelId, compareTo),
+    queryFn: async () => {
+      const params = new URLSearchParams({ model: modelId });
+      if (compareTo) params.append('compare_to', compareTo);
+      const response = await apiClient.get<VersionDiff>(
+        `/types/types/version-changes/?${params}`
+      );
+      return response.data;
+    },
+    enabled: enabled && !!modelId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
