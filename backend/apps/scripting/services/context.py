@@ -19,7 +19,6 @@ from apps.entities.models import (
     System,
     Material,
     IFCType,
-    Geometry,
     MaterialAssignment,
     SystemMembership,
 )
