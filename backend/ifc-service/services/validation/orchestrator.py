@@ -22,7 +22,9 @@ from models.validation_schemas import (
     Severity,
     BEPRules,
 )
-from .bep_loader import bep_loader
+# BEP loader archived (2026-04) -- validation falls back to default rules
+# from .bep_loader import bep_loader
+bep_loader = None
 from .executors import GUIDExecutor, PropertyExecutor, NamingExecutor
 
 logger = logging.getLogger(__name__)
