@@ -172,6 +172,22 @@ export interface DisciplineMetrics {
   health_score: number;
 }
 
+export interface ActionItem {
+  type_id: string;
+  type_name: string;
+  ifc_class: string;
+  model_name: string;
+  model_id: string;
+  status: string;
+  verification_status: string;
+  issues: Array<{
+    rule_id: string;
+    rule_name: string;
+    severity: string;
+    message: string;
+  }>;
+}
+
 export interface DashboardMetrics {
   project_summary: {
     total_types: number;
@@ -185,9 +201,15 @@ export interface DashboardMetrics {
     classification_percent: number;
     unit_percent: number;
     material_percent: number;
+    verification_percent: number;
+    verification_passed: number;
+    verification_warning: number;
+    verification_failed: number;
+    verification_pending: number;
   };
   models: ModelHealthMetrics[];
   by_discipline: Record<string, DisciplineMetrics>;
+  action_items?: ActionItem[];
 }
 
 export interface BulkUpdateMapping {
