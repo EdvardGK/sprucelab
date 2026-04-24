@@ -24,10 +24,15 @@ from apps.entities.models import (
     System, Material, IFCType, GraphEdge,
     IFCValidationReport, ProcessingReport
 )
-from apps.bep.models import (
-    BEPConfiguration, TechnicalRequirement, MMIScaleDefinition,
-    NamingConvention, RequiredPropertySet, ValidationRule, SubmissionMilestone
-)
+# BEP app archived (2026-04)
+try:
+    from apps.bep.models import (
+        BEPConfiguration, TechnicalRequirement, MMIScaleDefinition,
+        NamingConvention, RequiredPropertySet, ValidationRule, SubmissionMilestone
+    )
+    HAS_BEP = True
+except ImportError:
+    HAS_BEP = False
 from apps.viewers.models import ViewerGroup, ViewerModel
 from apps.scripting.models import Script, ScriptExecution, AutomationWorkflow, WorkflowExecution
 
