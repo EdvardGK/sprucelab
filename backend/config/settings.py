@@ -96,7 +96,7 @@ INSTALLED_APPS = [
     'apps.entities',
     'apps.graph',
     'apps.scripting',
-    'apps.bep',
+    # 'apps.bep',  # Archived 2026-04 (deprioritized, see archive/backend/bep/)
     'apps.viewers',
     'apps.automation',
     'apps.field',
