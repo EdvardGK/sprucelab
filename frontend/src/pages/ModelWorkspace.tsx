@@ -226,7 +226,7 @@ function OverviewTab({ model }: { model: Model }) {
       {/* Sub-tab content */}
       {subTab === 'dashboard' && <AnalysisDashboard analysis={analysis} model={model} />}
       {subTab === 'qto' && <QTODashboard modelId={model.id} />}
-      {subTab === 'mmi' && <MMIDashboard modelId={model.id} />}
+      {subTab === 'mmi' && <PlaceholderTab title="MMI" />}
       {subTab === 'statistics' && <PlaceholderTab title="Statistics" />}
       {subTab === 'properties' && <PlaceholderTab title="Properties" />}
     </div>
