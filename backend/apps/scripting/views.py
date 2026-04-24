@@ -77,6 +77,47 @@ class ScriptViewSet(viewsets.ModelViewSet):
 
         return queryset.order_by('category', 'name')
 
+    @action(detail=True, methods=['post'])
+    def execute(self, request, pk=None):
+        """
+        Execute a script on a model.
+
+        POST /api/scripts/{id}/execute/
+        Body: { "model_id": "<uuid>", "parameters": {} }
+
+        Returns the ScriptExecution object (status will be 'success' or 'error').
+        """
+        script = self.get_object()
+
+        serializer = ExecuteScriptRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        model_id = request.data.get('model_id')
+        if not model_id:
+            return Response(
+                {'error': 'model_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        parameters = serializer.validated_data.get('parameters', {})
+
+        try:
+            execution = execute_script(
+                script_id=str(script.id),
+                model_id=str(model_id),
+                parameters=parameters,
+            )
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(
+            ScriptExecutionSerializer(execution).data,
+            status=status.HTTP_201_CREATED
+        )
+
 
 class ScriptExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     """
