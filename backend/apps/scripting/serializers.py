@@ -82,9 +82,12 @@ class ScriptExecutionListSerializer(serializers.ModelSerializer):
 
 
 class ExecuteScriptRequestSerializer(serializers.Serializer):
-    """Serializer for script execution request."""
+    """Serializer for script execution request.
 
-    script_id = serializers.UUIDField(help_text="ID of script to execute")
+    Used with POST /api/scripts/{id}/execute/ -- script_id comes from the URL.
+    """
+
+    model_id = serializers.UUIDField(help_text="ID of model to run script on")
     parameters = serializers.JSONField(
         required=False,
         default=dict,
