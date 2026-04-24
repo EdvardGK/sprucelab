@@ -120,7 +120,7 @@
 | Dashboard Enhancement | Pending | Needs verification data integration |
 | Sandwich View | Pending | Pure frontend, data exists |
 | Event/Webhook System | Pending | Agent-ready platform feature |
-| MCP Server | Pending | Agent-ready platform feature |
+| CLI Expansion | Pending | types/verify/scripts commands |
 
 ---
 
