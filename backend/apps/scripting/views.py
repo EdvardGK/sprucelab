@@ -26,8 +26,7 @@ from .serializers import (
     AutomationWorkflowSerializer,
     WorkflowExecutionSerializer,
 )
-# ScriptRunner import will be added when execution endpoint is implemented
-# from .services.runner import ScriptRunner
+from .services.runner import execute_script
 
 
 class ScriptViewSet(viewsets.ModelViewSet):
