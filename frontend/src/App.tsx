@@ -51,7 +51,6 @@ const router = createBrowserRouter([
   { path: "/projects/:id/types", element: guard(<ProjectTypesPage />) },
   { path: "/projects/:id/type-library", element: guard(<ProjectTypeLibrary />) },
   { path: "/projects/:id/material-library", element: guard(<ProjectMaterialLibrary />) },
-  { path: "/projects/:id/bep", element: guard(<ProjectBEP />) },
   { path: "/projects/:id/field", element: guard(<ProjectField />) },
   { path: "/projects/:id/workbench", element: guard(<BIMWorkbench />) },
   { path: "/projects/:id/models/:modelId", element: guard(<ModelWorkspace />) },
