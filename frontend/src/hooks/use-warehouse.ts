@@ -141,6 +141,28 @@ export interface Material {
   usage_count: number;
 }
 
+export interface TypeChange {
+  type_name: string;
+  ifc_class: string;
+  change_type: 'new' | 'removed' | 'changed';
+  new_type_id: string | null;
+  old_type_id: string | null;
+  instance_delta: number;
+  details: Record<string, unknown>;
+}
+
+export interface VersionDiff {
+  new_model_id: string;
+  old_model_id: string;
+  new_count: number;
+  removed_count: number;
+  changed_count: number;
+  unchanged_count: number;
+  total_new: number;
+  total_old: number;
+  changes: TypeChange[];
+}
+
 export interface MappingSummary {
   total: number;
   mapped: number;
