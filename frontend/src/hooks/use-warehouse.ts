@@ -283,7 +283,7 @@ export function useNS3451Codes(options: UseNS3451CodesOptions = {}) {
       if (parent_code) params.append('parent_code', parent_code);
       if (search) params.append('search', search);
 
-      const url = `/entities/ns3451-codes/${params.toString() ? `?${params}` : ''}`;
+      const url = `/types/ns3451-codes/${params.toString() ? `?${params}` : ''}`;
       const response = await apiClient.get<PaginatedResponse<NS3451Code>>(url);
       return response.data.results || [];
     },
@@ -300,7 +300,7 @@ export function useNS3451Hierarchy() {
     queryKey: warehouseKeys.ns3451Hierarchy(),
     queryFn: async () => {
       const response = await apiClient.get<NS3451Hierarchy>(
-        '/entities/ns3451-codes/hierarchy/'
+        '/types/ns3451-codes/hierarchy/'
       );
       return response.data;
     },
@@ -329,7 +329,7 @@ export function useModelTypes(modelId: string, options: UseModelTypesOptions = {
 
       // Types endpoint returns unpaginated array (pagination disabled for mapping workflow)
       const response = await apiClient.get<IFCType[]>(
-        `/entities/types/?${params}`
+        `/types/types/?${params}`
       );
       return response.data || [];
     },
@@ -342,7 +342,7 @@ export function useTypeMappingSummary(modelId: string) {
     queryKey: warehouseKeys.typesSummary(modelId),
     queryFn: async () => {
       const response = await apiClient.get<MappingSummary>(
-        `/entities/types/summary/?model=${modelId}`
+        `/types/types/summary/?model=${modelId}`
       );
       return response.data;
     },
@@ -371,7 +371,7 @@ export function useTypeInstances(typeId: string | null, options: UseTypeInstance
       params.append('offset', String(offset));
 
       const response = await apiClient.get<TypeInstancesResponse>(
-        `/entities/types/${typeId}/instances/?${params}`
+        `/types/types/${typeId}/instances/?${params}`
       );
       return response.data;
     },
@@ -397,7 +397,7 @@ export function useUpdateTypeMapping() {
   return useMutation({
     mutationFn: async ({ mappingId, ...data }: UpdateTypeMappingParams) => {
       const response = await apiClient.patch<TypeMapping>(
-        `/entities/type-mappings/${mappingId}/`,
+        `/types/type-mappings/${mappingId}/`,
         data
       );
       return response.data;
@@ -432,7 +432,7 @@ export function useCreateTypeMapping() {
   return useMutation({
     mutationFn: async (data: CreateTypeMappingParams) => {
       const response = await apiClient.post<TypeMapping>(
-        '/entities/type-mappings/',
+        '/types/type-mappings/',
         data
       );
       return response.data;
@@ -450,7 +450,7 @@ export function useBulkUpdateTypeMappings() {
   return useMutation({
     mutationFn: async (mappings: BulkUpdateMapping[]) => {
       const response = await apiClient.post<BulkUpdateResponse>(
-        '/entities/type-mappings/bulk-update/',
+        '/types/type-mappings/bulk-update/',
         { mappings }
       );
       return response.data;
@@ -482,7 +482,7 @@ export function useModelMaterials(modelId: string, options: UseModelMaterialsOpt
       if (category) params.append('category', category);
 
       const response = await apiClient.get<PaginatedResponse<Material>>(
-        `/entities/materials/?${params}`
+        `/types/materials/?${params}`
       );
       return response.data.results || [];
     },
@@ -495,7 +495,7 @@ export function useMaterialMappingSummary(modelId: string) {
     queryKey: warehouseKeys.materialsSummary(modelId),
     queryFn: async () => {
       const response = await apiClient.get<MappingSummary>(
-        `/entities/materials/summary/?model=${modelId}`
+        `/types/materials/summary/?model=${modelId}`
       );
       return response.data;
     },
@@ -523,7 +523,7 @@ export function useUpdateMaterialMapping() {
   return useMutation({
     mutationFn: async ({ mappingId, ...data }: UpdateMaterialMappingParams) => {
       const response = await apiClient.patch<MaterialMapping>(
-        `/entities/material-mappings/${mappingId}/`,
+        `/types/material-mappings/${mappingId}/`,
         data
       );
       return response.data;
@@ -550,7 +550,7 @@ export function useCreateMaterialMapping() {
   return useMutation({
     mutationFn: async (data: CreateMaterialMappingParams) => {
       const response = await apiClient.post<MaterialMapping>(
-        '/entities/material-mappings/',
+        '/types/material-mappings/',
         data
       );
       return response.data;
@@ -601,7 +601,7 @@ export function useExportTypesExcel() {
   return useMutation({
     mutationFn: async (modelId: string) => {
       const response = await apiClient.get(
-        `/entities/types/export-excel/?model=${modelId}`,
+        `/types/types/export-excel/?model=${modelId}`,
         {
           responseType: 'blob',
         }
@@ -657,7 +657,7 @@ export function useExportTypesReduzer() {
       }
 
       const response = await apiClient.get(
-        `/entities/types/export-reduzer/?${params}`,
+        `/types/types/export-reduzer/?${params}`,
         {
           responseType: 'blob',
         }
@@ -704,7 +704,7 @@ export function useImportTypesExcel() {
       formData.append('model_id', modelId);
 
       const response = await apiClient.post<ExcelImportResult>(
-        '/entities/types/import-excel/',
+        '/types/types/import-excel/',
         formData,
         {
           headers: {
@@ -735,7 +735,7 @@ export function useExportTypeBankExcel() {
       const query = params.toString();
 
       const response = await apiClient.get(
-        `/entities/type-bank/export-excel/${query ? `?${query}` : ''}`,
+        `/types/type-bank/export-excel/${query ? `?${query}` : ''}`,
         { responseType: 'blob' }
       );
 
@@ -777,7 +777,7 @@ export function useVerifyModel() {
   return useMutation({
     mutationFn: async (modelId: string) => {
       const response = await apiClient.post<ModelVerificationResult>(
-        `/entities/types/verify/?model=${modelId}`
+        `/types/types/verify/?model=${modelId}`
       );
       return response.data;
     },
@@ -814,7 +814,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsOptions = {}) {
       if (modelId) params.append('model_id', modelId);
 
       const response = await apiClient.get<DashboardMetrics>(
-        `/entities/types/dashboard-metrics/?${params}`
+        `/types/types/dashboard-metrics/?${params}`
       );
       return response.data;
     },
@@ -991,7 +991,7 @@ export function useSemanticTypes() {
   return useQuery({
     queryKey: semanticTypeKeys.list(),
     queryFn: async () => {
-      const response = await apiClient.get<SemanticType[]>('/entities/semantic-types/');
+      const response = await apiClient.get<SemanticType[]>('/types/semantic-types/');
       return response.data;
     },
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes (reference data)
@@ -1006,7 +1006,7 @@ export function useSemanticTypesByCategory() {
     queryKey: semanticTypeKeys.byCategory(),
     queryFn: async () => {
       const response = await apiClient.get<Record<SemanticTypeCategory, SemanticType[]>>(
-        '/entities/semantic-types/by-category/'
+        '/types/semantic-types/by-category/'
       );
       return response.data;
     },
@@ -1024,7 +1024,7 @@ export function useSemanticTypesForIfcClass(ifcClass: string, options: { enabled
     queryKey: semanticTypeKeys.forIfcClass(ifcClass),
     queryFn: async () => {
       const response = await apiClient.get<SemanticTypeSuggestion[]>(
-        `/entities/semantic-types/for-ifc-class/?ifc_class=${encodeURIComponent(ifcClass)}`
+        `/types/semantic-types/for-ifc-class/?ifc_class=${encodeURIComponent(ifcClass)}`
       );
       return response.data;
     },
@@ -1059,7 +1059,7 @@ export function useTypeBankEntries(options: UseTypeBankEntriesOptions = {}) {
       if (search) params.append('search', search);
 
       const response = await apiClient.get<PaginatedResponse<TypeBankEntry>>(
-        `/entities/type-bank/?${params}`
+        `/types/type-bank/?${params}`
       );
       return response.data.results || [];
     },
@@ -1076,7 +1076,7 @@ export function useTypeBankEntry(id: string, options: { enabled?: boolean } = {}
   return useQuery({
     queryKey: typeBankKeys.detail(id),
     queryFn: async () => {
-      const response = await apiClient.get<TypeBankEntryFull>(`/entities/type-bank/${id}/`);
+      const response = await apiClient.get<TypeBankEntryFull>(`/types/type-bank/${id}/`);
       return response.data;
     },
     enabled: enabled && !!id,
@@ -1090,7 +1090,7 @@ export function useTypeBankSummary() {
   return useQuery({
     queryKey: typeBankKeys.summary(),
     queryFn: async () => {
-      const response = await apiClient.get<TypeBankSummary>('/entities/type-bank/summary/');
+      const response = await apiClient.get<TypeBankSummary>('/types/type-bank/summary/');
       return response.data;
     },
   });
@@ -1103,7 +1103,7 @@ export function useSemanticSummary() {
   return useQuery({
     queryKey: typeBankKeys.semanticSummary(),
     queryFn: async () => {
-      const response = await apiClient.get<SemanticSummary>('/entities/type-bank/semantic-summary/');
+      const response = await apiClient.get<SemanticSummary>('/types/type-bank/semantic-summary/');
       return response.data;
     },
     staleTime: 30_000,
@@ -1120,7 +1120,7 @@ export function useSemanticTypeSuggestions(entryId: string, options: { enabled?:
     queryKey: typeBankKeys.suggestions(entryId),
     queryFn: async () => {
       const response = await apiClient.get<SemanticTypeSuggestion[]>(
-        `/entities/type-bank/${entryId}/suggest-semantic-types/`
+        `/types/type-bank/${entryId}/suggest-semantic-types/`
       );
       return response.data;
     },
@@ -1141,7 +1141,7 @@ export function useAutoNormalizeTypeBank() {
   return useMutation({
     mutationFn: async (params: { overwrite?: boolean; ifc_class?: string } = {}) => {
       const response = await apiClient.post<{ normalized: number; skipped: number }>(
-        '/entities/type-bank/auto-normalize/',
+        '/types/type-bank/auto-normalize/',
         params
       );
       return response.data;
@@ -1169,7 +1169,7 @@ export function useSetSemanticType() {
         status: string;
         semantic_type_code: string;
         semantic_type_name: string;
-      }>(`/entities/type-bank/${entryId}/set-semantic-type/`, {
+      }>(`/types/type-bank/${entryId}/set-semantic-type/`, {
         semantic_type_code: semanticTypeCode,
       });
       return response.data;
@@ -1194,7 +1194,7 @@ export function useVerifySemanticType() {
         status: string;
         semantic_type_code: string;
         semantic_type_name: string;
-      }>(`/entities/type-bank/${entryId}/verify-semantic-type/`);
+      }>(`/types/type-bank/${entryId}/verify-semantic-type/`);
       return response.data;
     },
     onSuccess: (_, entryId) => {
@@ -1301,7 +1301,7 @@ export function useGlobalTypeLibrary(options: UseGlobalTypeLibraryOptions = {}) 
     queryKey: globalTypeLibraryKeys.list(filters),
     queryFn: async () => {
       const params = new URLSearchParams(filters);
-      const url = `/entities/type-library/${params.toString() ? `?${params}` : ''}`;
+      const url = `/types/type-library/${params.toString() ? `?${params}` : ''}`;
       const response = await apiClient.get<PaginatedResponse<GlobalTypeLibraryEntry>>(url);
       return response.data.results || [];
     },
@@ -1324,7 +1324,7 @@ export function useGlobalTypeLibrarySummary(options: { projectId?: string; model
     queryKey: globalTypeLibraryKeys.summary(filters),
     queryFn: async () => {
       const params = new URLSearchParams(filters);
-      const url = `/entities/type-library/unified-summary/${params.toString() ? `?${params}` : ''}`;
+      const url = `/types/type-library/unified-summary/${params.toString() ? `?${params}` : ''}`;
       const response = await apiClient.get<GlobalTypeLibrarySummary>(url);
       return response.data;
     },
@@ -1346,7 +1346,7 @@ export function useEmptyTypes(options: { projectId?: string; modelId?: string } 
     queryKey: globalTypeLibraryKeys.emptyTypes(filters),
     queryFn: async () => {
       const params = new URLSearchParams(filters);
-      const url = `/entities/type-library/empty-types/${params.toString() ? `?${params}` : ''}`;
+      const url = `/types/type-library/empty-types/${params.toString() ? `?${params}` : ''}`;
       const response = await apiClient.get<PaginatedResponse<GlobalTypeLibraryEntry>>(url);
       return response.data.results || [];
     },
@@ -1363,7 +1363,7 @@ export function useVerifyType() {
   return useMutation({
     mutationFn: async ({ entryId, notes }: { entryId: string; notes?: string }) => {
       const response = await apiClient.post<GlobalTypeLibraryEntry>(
-        `/entities/type-library/${entryId}/verify/`,
+        `/types/type-library/${entryId}/verify/`,
         notes ? { notes } : {}
       );
       return response.data;
@@ -1383,7 +1383,7 @@ export function useFlagType() {
   return useMutation({
     mutationFn: async ({ entryId, flagReason }: { entryId: string; flagReason: string }) => {
       const response = await apiClient.post<GlobalTypeLibraryEntry>(
-        `/entities/type-library/${entryId}/flag/`,
+        `/types/type-library/${entryId}/flag/`,
         { flag_reason: flagReason }
       );
       return response.data;
@@ -1403,7 +1403,7 @@ export function useResetVerification() {
   return useMutation({
     mutationFn: async (entryId: string) => {
       const response = await apiClient.post<GlobalTypeLibraryEntry>(
-        `/entities/type-library/${entryId}/reset-verification/`
+        `/types/type-library/${entryId}/reset-verification/`
       );
       return response.data;
     },
