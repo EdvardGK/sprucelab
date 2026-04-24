@@ -115,30 +115,6 @@ export function Sidebar() {
               <User className="h-4 w-4" />
               <span>{t('nav.myPage')}</span>
             </Link>
-            <Link
-              to="/my-issues"
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                isActive('/my-issues')
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-              )}
-            >
-              <Target className="h-4 w-4" />
-              <span>{t('nav.myIssues')}</span>
-            </Link>
-            <Link
-              to="/my-rfis"
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                isActive('/my-rfis')
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-              )}
-            >
-              <FileText className="h-4 w-4" />
-              <span>{t('nav.myRFIs')}</span>
-            </Link>
           </div>
         )}
 
