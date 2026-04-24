@@ -19,6 +19,7 @@ import {
   type GlobalTypeLibraryEntry,
   type GlobalTypeLibrarySummary,
   type VerificationStatus,
+  type VersionDiff,
 } from './use-warehouse';
 
 // =============================================================================
