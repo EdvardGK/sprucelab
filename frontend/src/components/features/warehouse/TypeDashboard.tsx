@@ -117,7 +117,7 @@ export function TypeDashboard({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-[clamp(0.5rem,1.5vw,0.75rem)]">
-          <div className="grid grid-cols-3 gap-[clamp(0.5rem,1.5vw,0.75rem)]">
+          <div className="grid grid-cols-4 gap-[clamp(0.5rem,1.5vw,0.75rem)]">
             <CompletenessBar
               label={t('dashboard.classification', 'Classification')}
               value={project_summary.classification_percent}
@@ -133,9 +133,19 @@ export function TypeDashboard({
               value={project_summary.material_percent}
               helpText={t('dashboard.materialsHelp', 'Types with material layers')}
             />
+            <CompletenessBar
+              label={t('dashboard.verification', 'Verification')}
+              value={project_summary.verification_percent ?? 0}
+              helpText={t('dashboard.verificationHelp', 'Types passing verification rules')}
+            />
           </div>
         </CardContent>
       </Card>
+
+      {/* Action Items */}
+      {metrics.action_items && metrics.action_items.length > 0 && (
+        <ActionItemsList items={metrics.action_items} onModelSelect={onModelSelect} />
+      )}
 
       {/* Models Section */}
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
