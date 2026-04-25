@@ -1,14 +1,16 @@
 # Sprucelab - Data-First BIM Intelligence Platform
 
-**"IFC in -> Actionable insight out. Types are the language. Data is the product."**
+**"Files in -> Data streams out. No file is an orphan. Every format feeds the whole."**
 
 For BIM professionals who USE models, not create them. Dashboards, verification, and change detection are the product. The 3D viewer serves insights, not the other way around.
 
-**Design Principle**: Every feature must answer: *Is this model ready? What needs attention? What changed?*
+**Design Principles**:
+- Every feature must answer: *Is this model ready? What needs attention? What changed?*
+- **Agent-first, human-second.** The GUI is human-first, but the data layer, APIs, processing pipeline, and CLI serve agents, automation, and scripting as primary consumers. Every operation must be API-accessible with structured (JSON) output. No operation requires a human in the loop unless explicitly flagged. Status transitions are predictable and pollable. Extraction results are queryable, filterable, and diffable.
 
 **Core Insight**: Types are the unit of coordination in BIM. A building has 50,000 entities but only 300-500 unique types.
 
-**Tech Stack**: Django 5.0 + DRF | FastAPI (IFC processing) | PostgreSQL (Supabase) | React 18 + TypeScript + Vite | Tailwind v4 + shadcn/ui | ThatOpen + Three.js
+**Tech Stack**: Django 5.0 + DRF | FastAPI (file processing) | PostgreSQL (Supabase) | React 18 + TypeScript + Vite | Tailwind v4 + shadcn/ui | ThatOpen + Three.js
 
 **Docs**: PRD at `docs/plans/PRD_v2.md` | Worklogs at `docs/worklog/` | TODOs at `docs/todos/` | Reference at `docs/knowledge/` | API map at `docs/knowledge/API_SURFACE.md`
 
