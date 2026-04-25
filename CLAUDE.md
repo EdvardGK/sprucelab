@@ -334,4 +334,5 @@ sprucelab/
 ---
 
 **Architecture**: Django + FastAPI + React + PostgreSQL (Supabase)
-**Framework**: ifcopenshell + Norwegian Standards (NS-3451)
+**Extraction**: ifcopenshell (IFC) | planned: laspy (LAS/LAZ), ezdxf (DWG/DXF), pdfplumber (PDF), openpyxl (Excel)
+**Standards**: Norwegian Standards (NS-3451), EPSG CRS registry
