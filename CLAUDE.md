@@ -307,7 +307,7 @@ sprucelab/
 │   ├── apps/
 │   │   ├── accounts/           # User auth, admin dashboard
 │   │   ├── projects/           # Project CRUD, ProjectConfig
-│   │   ├── models/             # IFC model upload, versioning, fragments
+│   │   ├── models/             # SourceFile, Model upload, versioning, fragments
 │   │   ├── entities/           # Types, TypeBank, classification (serves /api/types/)
 │   │   ├── scripting/          # Script execution system
 │   │   ├── viewers/            # 3D viewer groups
