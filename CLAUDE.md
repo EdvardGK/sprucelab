@@ -126,7 +126,8 @@ Export:    LCA export via material layers (Django /api/types/export-*)
 - Only split at natural boundaries with clear logical separations.
 
 ### Architecture
-- **Django coordinates, FastAPI processes.** Django handles auth, CRUD, metadata. FastAPI handles IFC parsing, validation, heavy I/O.
+- **Django coordinates, FastAPI processes.** Django handles auth, CRUD, metadata. FastAPI handles file extraction (IFC parsing, validation, heavy I/O).
+- **Agent-first API design**: Every endpoint returns structured JSON. Processing events are machine-readable (structured logs, not prose). Status fields use finite enums, not free text. All mutations support `?dry_run=true` where applicable. No endpoint should require interactive/human flow to complete.
 - Reference: `docs/knowledge/django-vs-fastapi.md`
 
 ---
