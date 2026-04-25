@@ -16,9 +16,30 @@ For BIM professionals who USE models, not create them. Dashboards, verification,
 
 ---
 
-## Types-Only Architecture
+## Data Foundation Architecture
 
-**CRITICAL**: Sprucelab extracts TYPES, not individual entities.
+### Layered Processing Model
+
+Every file dropped into Sprucelab becomes a data stream, not an orphan entity. The pipeline is format-agnostic at the edges and format-specific in extraction.
+
+```
+Layer 0 - Source:      SourceFile (filesystem facts: name, size, format, checksum)
+Layer 1 - Extraction:  ExtractionRun (what the extractor discovered: CRS, units, types, structure)
+Layer 2 - Data:        Format-specific extracted data (IFCType, layers, spatial, properties)
+Layer 3 - Intelligence: TypeBank, classification, verification, cross-project linking
+```
+
+**Supported/planned formats**:
+- **3D Models**: IFC (primary), point clouds (LAS/LAZ/E57)
+- **Drawings**: DWG/DXF, SVG, PDF (drawing sheets)
+- **Documents**: PDF, Office suite (DOCX/XLSX/PPTX)
+- **Structured data**: JSON, XML, CSV, Excel
+
+CRS and units are discovered during extraction (Layer 1), not assumed at upload (Layer 0).
+
+### Types-Only Architecture (IFC)
+
+**CRITICAL**: For IFC files, Sprucelab extracts TYPES, not individual entities.
 
 ```
 Parse:     IFC -> FastAPI extracts types only (2 sec for 100MB)
@@ -31,6 +52,8 @@ Export:    LCA export via material layers (Django /api/types/export-*)
 **We DON'T store**: Individual entities, entity-level properties, geometry. Viewer loads IFC directly.
 
 **Key Models**:
+- `SourceFile`: Format-agnostic file record (every file gets one, no orphans)
+- `ExtractionRun`: Processing run with status, log, discovered CRS/units, quality report
 - `IFCType`: Per-model type with instance_count
 - `TypeMapping`: Type -> classification (NS3451, unit, discipline, status)
 - `TypeDefinitionLayer`: Material sandwich composition per type
@@ -41,7 +64,7 @@ Export:    LCA export via material layers (Django /api/types/export-*)
 **Key Files**:
 - `backend/apps/entities/models/` - All type/classification models (Django app named `entities`, serves `/api/types/`)
 - `backend/apps/projects/models.py` - ProjectConfig
-- `backend/ifc-service/` - FastAPI microservice
+- `backend/ifc-service/` - FastAPI microservice (IFC extraction, will expand to other formats)
 - `frontend/src/components/features/warehouse/` - Type UI components
 - `frontend/src/hooks/use-warehouse.ts` - Type data hooks
 
