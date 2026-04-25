@@ -78,9 +78,10 @@ Export:    LCA export via material layers (Django /api/types/export-*)
 - Always extract complete spatial hierarchy and ALL property sets
 
 ### Database
-- Celery + Redis for IFC processing -- NEVER process IFC in Django request/response cycle
+- Celery + Redis for file processing -- NEVER process files in Django request/response cycle
 - Geometry NOT returned in list endpoints
 - Paginate large lists (100 per page)
+- **No silent data loss**: Every extraction must produce a structured processing log. Dropped elements, skipped properties, unit conversion warnings -- all logged to ExtractionRun, visible via API
 
 ### TypeBank Rules
 - Types identified by signature tuple `(ifc_class, type_name, predefined_type, material)`, not GUID
