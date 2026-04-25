@@ -313,7 +313,7 @@ sprucelab/
 │   │   ├── viewers/            # 3D viewer groups
 │   │   ├── automation/         # Pipeline/workflow automation
 │   │   └── field/              # Field checklists
-│   ├── ifc-service/            # FastAPI microservice (IFC parsing, validation)
+│   ├── ifc-service/            # FastAPI microservice (file extraction: IFC, point cloud, drawings, structured data)
 │   └── manage.py
 ├── frontend/
 │   ├── src/
