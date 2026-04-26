@@ -421,7 +421,19 @@ class IFCParserService:
                 ))
 
             if untyped_total > 0:
+                log('warning', 'types', f'{untyped_total} elements have no IfcTypeObject assignment',
+                    untyped_element_count=untyped_total, synthetic_type_count=len(untyped_groups))
                 print(f"[Parser] Tracked {untyped_total} untyped elements across {len(untyped_groups)} synthetic types")
+
+            typed_type_count = len(types) - len(untyped_groups)
+            log('info', 'types', f'Extracted {len(types)} types ({typed_type_count} from IfcTypeObject, {len(untyped_groups)} synthetic)',
+                typed_count=typed_type_count, synthetic_count=len(untyped_groups))
+
+            # Count types with properties extracted
+            types_with_props = sum(1 for t in types if t.properties)
+            if types_with_props > 0:
+                log('info', 'properties', f'{types_with_props}/{len(types)} types have Pset properties',
+                    types_with_properties=types_with_props)
 
             result.types = types
             result.type_count = len(types)
@@ -430,12 +442,31 @@ class IFCParserService:
             materials, _ = self._extract_materials(ifc_file)
             result.materials = materials
             result.material_count = len(materials)
+            log('info', 'materials', f'Extracted {len(materials)} materials', count=len(materials))
 
             result.success = True
             result.duration_seconds = time.time() - start_time
 
+            # Build quality report
+            result.quality_report = {
+                'total_elements': element_count,
+                'typed_elements': element_count - untyped_total,
+                'untyped_elements': untyped_total,
+                'type_count': len(types),
+                'typed_type_count': typed_type_count,
+                'synthetic_type_count': len(untyped_groups),
+                'types_with_properties': types_with_props,
+                'material_count': len(materials),
+                'storey_count': result.storey_count,
+                'length_unit': discovered_unit,
+                'coverage_pct': round((element_count - untyped_total) / element_count * 100, 1) if element_count > 0 else 0,
+            }
+
+            log('info', 'complete', f'Extraction complete in {result.duration_seconds:.2f}s',
+                duration_seconds=round(result.duration_seconds, 2))
+
             print(f"[Parser] Types-only extraction complete in {result.duration_seconds:.2f}s")
-            print(f"  Types: {result.type_count} ({result.type_count - len(untyped_groups)} from IfcTypeObject, {len(untyped_groups)} synthetic)")
+            print(f"  Types: {result.type_count} ({typed_type_count} from IfcTypeObject, {len(untyped_groups)} synthetic)")
             print(f"  Materials: {result.material_count}")
             print(f"  Total elements: {result.element_count}")
 
@@ -443,6 +474,7 @@ class IFCParserService:
             result.success = False
             result.error = str(e)
             result.duration_seconds = time.time() - start_time
+            log('error', 'fatal', f'Extraction failed: {str(e)}')
 
         return result
 
