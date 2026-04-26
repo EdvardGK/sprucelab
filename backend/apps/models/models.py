@@ -108,6 +108,12 @@ class Model(models.Model):
     ifc_schema = models.CharField(max_length=50, blank=True, null=True)  # IFC2X3, IFC4, etc.
     file_url = models.URLField(max_length=500, blank=True, null=True)  # Supabase Storage URL
     file_size = models.BigIntegerField(default=0, help_text="File size in bytes")
+    checksum_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        help_text="SHA-256 checksum of the uploaded file (for integrity verification)"
+    )
 
     # ThatOpen Fragments storage (optimized binary format for 10-100x faster loading)
     fragments_url = models.URLField(
