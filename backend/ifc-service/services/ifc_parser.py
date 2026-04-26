@@ -296,8 +296,31 @@ class IFCParserService:
                     element_count += 1
             result.element_count = element_count
 
-            # Count storeys
-            result.storey_count = len(ifc_file.by_type('IfcBuildingStorey'))
+            # Extract storeys with elevations
+            storeys = []
+            storey_guid_map = {}  # guid -> storey dict
+            for storey in ifc_file.by_type('IfcBuildingStorey'):
+                elevation = getattr(storey, 'Elevation', None)
+                storey_data = {
+                    'guid': storey.GlobalId,
+                    'name': storey.Name or storey.GlobalId,
+                    'elevation': float(elevation) * length_unit_scale if elevation is not None else None,
+                }
+                storeys.append(storey_data)
+                storey_guid_map[storey.GlobalId] = storey_data
+            result.storeys = storeys
+            result.storey_count = len(storeys)
+            log('info', 'storeys', f'Found {len(storeys)} storeys',
+                storeys=[{'name': s['name'], 'elevation': s['elevation']} for s in storeys])
+
+            # Parse IfcRelContainedInSpatialStructure to build storey->element mapping
+            # This tells us which elements are on which floor
+            element_to_storey = {}  # element_guid -> storey_guid
+            for rel in ifc_file.by_type('IfcRelContainedInSpatialStructure'):
+                structure = rel.RelatingStructure
+                if structure.is_a('IfcBuildingStorey'):
+                    for element in (rel.RelatedElements or []):
+                        element_to_storey[element.GlobalId] = structure.GlobalId
 
             # Extract types with instance counts
             types = []
