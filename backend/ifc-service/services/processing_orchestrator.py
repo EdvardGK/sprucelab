@@ -570,6 +570,7 @@ Mode: Types-only (no entity storage)
             'verified_at': datetime.now(timezone.utc).isoformat(),
             'verification_method': 'ifcopenshell',
             'processing_mode': 'types_only',
+            'quality_report': getattr(parse_result, 'quality_report', {}),
         }
 
         return await self.repository.create_processing_report(
@@ -580,7 +581,7 @@ Mode: Types-only (no entity storage)
             overall_status='failed' if is_failure else 'success',
             ifc_schema=result.ifc_schema,
             file_size_bytes=parse_result.file_size_bytes if parse_result else 0,
-            stage_results=[],  # Simplified mode doesn't have stages
+            stage_results=getattr(parse_result, 'log_entries', []),
             total_entities_processed=result.type_count + result.material_count,
             total_entities_skipped=0,
             total_entities_failed=0,
