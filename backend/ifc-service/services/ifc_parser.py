@@ -511,6 +511,7 @@ class IFCParserService:
                 'types_with_properties': types_with_props,
                 'material_count': len(materials),
                 'storey_count': result.storey_count,
+                'elements_with_storey': elements_with_storey,
                 'length_unit': discovered_unit,
                 'coverage_pct': round((element_count - untyped_total) / element_count * 100, 1) if element_count > 0 else 0,
             }
