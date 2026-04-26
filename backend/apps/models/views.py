@@ -210,6 +210,15 @@ class ModelViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+        # Compute SHA-256 checksum (streaming, no OOM risk)
+        import hashlib
+        uploaded_file.seek(0)
+        sha256 = hashlib.sha256()
+        for chunk in uploaded_file.chunks():
+            sha256.update(chunk)
+        file_checksum = sha256.hexdigest()
+        uploaded_file.seek(0)
+
         # Skip timestamp extraction to avoid OOM on large files
         # FastAPI will extract metadata after downloading
         new_ifc_timestamp = None
