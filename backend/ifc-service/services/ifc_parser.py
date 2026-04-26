@@ -1470,10 +1470,19 @@ class IFCParserService:
                                     if prop.is_a('IfcPropertySingleValue'):
                                         prop_value = None
                                         prop_type = 'string'
+                                        value_number = None
+                                        value_boolean = None
 
                                         if prop.NominalValue:
-                                            prop_value = str(prop.NominalValue.wrappedValue)
-                                            prop_type = type(prop.NominalValue.wrappedValue).__name__
+                                            raw = prop.NominalValue.wrappedValue
+                                            prop_value = str(raw)
+                                            prop_type = type(raw).__name__
+
+                                            # Populate typed columns
+                                            if isinstance(raw, bool):
+                                                value_boolean = raw
+                                            elif isinstance(raw, (int, float)):
+                                                value_number = float(raw)
 
                                         properties.append(PropertyData(
                                             entity_id=element.GlobalId,  # Store GUID, convert later
@@ -1481,6 +1490,8 @@ class IFCParserService:
                                             property_name=prop.Name,
                                             property_value=prop_value,
                                             property_type=prop_type,
+                                            value_number=value_number,
+                                            value_boolean=value_boolean,
                                         ))
 
                                 except Exception as e:
