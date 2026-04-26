@@ -391,6 +391,7 @@ class IFCParserService:
             # lost in many platforms. We create synthetic types for them so they
             # appear in the type inventory with accurate counts.
             typed_guids = set()
+            element_to_type_name = {}  # element_guid -> type_name (for storey distribution)
             for type_element in ifc_file.by_type('IfcTypeObject'):
                 type_rels = None
                 if hasattr(type_element, 'Types') and type_element.Types:
@@ -398,10 +399,12 @@ class IFCParserService:
                 elif hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
                     type_rels = type_element.ObjectTypeOf
                 if type_rels:
+                    t_name = type_element.Name or type_element.GlobalId
                     for rel in type_rels:
                         if rel.RelatedObjects:
                             for obj in rel.RelatedObjects:
                                 typed_guids.add(obj.GlobalId)
+                                element_to_type_name[obj.GlobalId] = t_name
 
             # Group untyped elements by (ifc_class, object_type)
             untyped_groups = defaultdict(lambda: {'count': 0, 'first_element': None})
