@@ -993,6 +993,53 @@ class IFCParserService:
         except Exception:
             return ''
 
+    # Key properties to extract from type-level Psets (Pset_*Common).
+    # These define what a type IS and feed into TypeBankEntry statistics.
+    _TYPE_PROPERTY_KEYS = {
+        'IsExternal', 'LoadBearing', 'FireRating',
+        'ThermalTransmittance', 'AcousticRating', 'Reference',
+    }
+
+    def _extract_type_properties(self, type_object) -> Dict[str, Any]:
+        """
+        Extract key properties from IfcTypeObject's property sets.
+
+        Looks for Pset_*Common property sets and extracts predefined
+        properties (IsExternal, LoadBearing, FireRating, etc.).
+
+        Returns dict of property_name -> value (typed: bool, float, or str).
+        Never raises.
+        """
+        props = {}
+        if type_object is None:
+            return props
+
+        try:
+            # IfcTypeObject stores properties via HasPropertySets (direct attribute)
+            psets = getattr(type_object, 'HasPropertySets', None)
+            if not psets:
+                return props
+
+            for pset in psets:
+                if not pset.is_a('IfcPropertySet'):
+                    continue
+                for prop in (pset.HasProperties or []):
+                    if prop.Name not in self._TYPE_PROPERTY_KEYS:
+                        continue
+                    if prop.is_a('IfcPropertySingleValue') and prop.NominalValue is not None:
+                        raw = prop.NominalValue.wrappedValue
+                        # Preserve typed values
+                        if isinstance(raw, bool):
+                            props[prop.Name] = raw
+                        elif isinstance(raw, (int, float)):
+                            props[prop.Name] = float(raw)
+                        else:
+                            props[prop.Name] = str(raw)
+        except Exception:
+            pass
+
+        return props
+
     # Representative unit inference for types, used to populate TypeMapping.representative_unit
     # when the parser creates a mapping. Matches the conventions in the seed command and the
     # Materials Browser UI. Anything not in this map defaults to 'm2'.
