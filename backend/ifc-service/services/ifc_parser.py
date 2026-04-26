@@ -135,6 +135,11 @@ class TypesOnlyResult:
     element_count: int = 0  # Total elements (for stats, not stored)
     storey_count: int = 0
 
+    # Structured processing log (machine-readable)
+    log_entries: List[Dict] = field(default_factory=list)
+    # Quality report (summary of data completeness)
+    quality_report: Dict = field(default_factory=dict)
+
     # Timing
     duration_seconds: float = 0.0
 
