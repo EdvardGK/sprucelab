@@ -902,6 +902,9 @@ class IFCParserService:
                 if not material and definition_layers:
                     material = definition_layers[0].material_name
 
+                # Extract key properties from type Psets (IsExternal, LoadBearing, etc.)
+                type_properties = self._extract_type_properties(type_object) if type_object else None
+
                 types.append(TypeData(
                     type_guid=type_guid,
                     type_name=object_type,  # Use ObjectType as canonical name
@@ -910,6 +913,7 @@ class IFCParserService:
                     material=material,
                     instance_count=instance_count,
                     has_ifc_type_object=has_ifc_type_object,
+                    properties=type_properties or None,
                     representative_unit=representative_unit,
                     definition_layers=definition_layers,
                 ))
