@@ -244,11 +244,22 @@ class IFCParserService:
         result = TypesOnlyResult()
         start_time = time.time()
 
+        def log(level: str, stage: str, message: str, **details):
+            """Append structured log entry."""
+            result.log_entries.append({
+                'timestamp': datetime.now().isoformat(),
+                'level': level,
+                'stage': stage,
+                'message': message,
+                **details,
+            })
+
         try:
             # Open the file
             ifc_file = ifcopenshell.open(file_path)
             result.ifc_schema = ifc_file.schema
             result.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+            log('info', 'open', f'Opened {result.ifc_schema} file ({result.file_size_bytes} bytes)')
 
             # Resolve the file's length unit so LayerThickness values can be
             # correctly normalized to meters (Revit exports are usually in mm).
@@ -256,6 +267,21 @@ class IFCParserService:
                 length_unit_scale = float(ifcopenshell.util.unit.calculate_unit_scale(ifc_file))
             except Exception:
                 length_unit_scale = 1.0
+            # Infer human-readable unit from scale
+            if abs(length_unit_scale - 0.001) < 1e-6:
+                discovered_unit = 'mm'
+            elif abs(length_unit_scale - 0.01) < 1e-6:
+                discovered_unit = 'cm'
+            elif abs(length_unit_scale - 0.3048) < 1e-4:
+                discovered_unit = 'ft'
+            elif abs(length_unit_scale - 0.0254) < 1e-5:
+                discovered_unit = 'in'
+            elif abs(length_unit_scale - 1.0) < 1e-6:
+                discovered_unit = 'm'
+            else:
+                discovered_unit = f'scale={length_unit_scale}'
+            log('info', 'units', f'Length unit: {discovered_unit} (scale={length_unit_scale})',
+                length_unit=discovered_unit, length_unit_scale=length_unit_scale)
             print(f"[Parser] Length unit scale (to meters): {length_unit_scale}")
 
             # Count elements for stats (quick scan)
