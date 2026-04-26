@@ -323,6 +323,71 @@ class IFCParserService:
                     # Log but continue - don't fail entire parse for one bad type
                     print(f"[Parser] Warning: Failed to extract type {getattr(type_element, 'GlobalId', 'unknown')}: {e}")
 
+            # ==================== Untyped Element Tracking ====================
+            # Find elements NOT covered by any IfcTypeObject. These are silently
+            # lost in many platforms. We create synthetic types for them so they
+            # appear in the type inventory with accurate counts.
+            typed_guids = set()
+            for type_element in ifc_file.by_type('IfcTypeObject'):
+                type_rels = None
+                if hasattr(type_element, 'Types') and type_element.Types:
+                    type_rels = type_element.Types
+                elif hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+                    type_rels = type_element.ObjectTypeOf
+                if type_rels:
+                    for rel in type_rels:
+                        if rel.RelatedObjects:
+                            for obj in rel.RelatedObjects:
+                                typed_guids.add(obj.GlobalId)
+
+            # Group untyped elements by (ifc_class, object_type)
+            untyped_groups = defaultdict(lambda: {'count': 0, 'first_element': None})
+            untyped_total = 0
+            for element in ifc_file.by_type('IfcElement'):
+                if element.GlobalId not in typed_guids:
+                    ifc_class = element.is_a()
+                    object_type = getattr(element, 'ObjectType', None) or '<untyped>'
+                    key = (ifc_class, object_type)
+                    group = untyped_groups[key]
+                    group['count'] += 1
+                    if group['first_element'] is None:
+                        group['first_element'] = element
+                    untyped_total += 1
+
+            # Create synthetic types for untyped groups
+            for (ifc_class, object_type), group in untyped_groups.items():
+                type_name = object_type if object_type != '<untyped>' else f'{ifc_class}::<untyped>'
+                ifc_type_class = ifc_class + 'Type' if not ifc_class.endswith('Type') else ifc_class
+                type_guid = 'synth_' + hashlib.md5(f'{ifc_class}:{object_type}'.encode()).hexdigest()[:18]
+
+                # Try to get material from representative element
+                material = ''
+                representative_element = group['first_element']
+                representative_unit = self._infer_representative_unit(ifc_type_class)
+                definition_layers = self._extract_type_layers(
+                    type_object=None,
+                    representative_element=representative_element,
+                    representative_unit=representative_unit,
+                    length_unit_scale=length_unit_scale,
+                )
+                if definition_layers:
+                    material = definition_layers[0].material_name
+
+                types.append(TypeData(
+                    type_guid=type_guid,
+                    type_name=type_name,
+                    ifc_type=ifc_type_class,
+                    predefined_type='NOTDEFINED',
+                    material=material,
+                    instance_count=group['count'],
+                    has_ifc_type_object=False,
+                    representative_unit=representative_unit,
+                    definition_layers=definition_layers,
+                ))
+
+            if untyped_total > 0:
+                print(f"[Parser] Tracked {untyped_total} untyped elements across {len(untyped_groups)} synthetic types")
+
             result.types = types
             result.type_count = len(types)
 
@@ -335,7 +400,7 @@ class IFCParserService:
             result.duration_seconds = time.time() - start_time
 
             print(f"[Parser] Types-only extraction complete in {result.duration_seconds:.2f}s")
-            print(f"  Types: {result.type_count} (with instance counts)")
+            print(f"  Types: {result.type_count} ({result.type_count - len(untyped_groups)} from IfcTypeObject, {len(untyped_groups)} synthetic)")
             print(f"  Materials: {result.material_count}")
             print(f"  Total elements: {result.element_count}")
 
