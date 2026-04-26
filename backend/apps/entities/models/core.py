@@ -125,13 +125,28 @@ class SpatialHierarchy(models.Model):
 class PropertySet(models.Model):
     """
     IFC property sets (Psets) and individual properties.
+
+    Values are stored in typed columns alongside the text fallback:
+    - property_value: Always populated (text representation)
+    - value_number: Populated for numeric properties (enables range queries)
+    - value_boolean: Populated for boolean properties (enables boolean filters)
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     entity = models.ForeignKey('IFCEntity', on_delete=models.CASCADE, related_name='property_sets')
     pset_name = models.CharField(max_length=255)
     property_name = models.CharField(max_length=255)
     property_value = models.TextField(blank=True, null=True)
-    property_type = models.CharField(max_length=50, blank=True, null=True)  # STRING, INTEGER, BOOLEAN, etc.
+    property_type = models.CharField(max_length=50, blank=True, null=True)  # STRING, INTEGER, BOOLEAN, REAL, etc.
+    value_number = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Typed numeric value (for range queries). Populated when property_type is numeric."
+    )
+    value_boolean = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Typed boolean value (for boolean filters). Populated when property_type is BOOLEAN."
+    )
 
     class Meta:
         app_label = 'entities'
@@ -139,6 +154,7 @@ class PropertySet(models.Model):
         indexes = [
             models.Index(fields=['pset_name']),
             models.Index(fields=['property_name']),
+            models.Index(fields=['value_boolean']),
         ]
 
     def __str__(self):
