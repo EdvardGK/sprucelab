@@ -135,6 +135,11 @@ class TypesOnlyResult:
     element_count: int = 0  # Total elements (for stats, not stored)
     storey_count: int = 0
 
+    # Spatial data
+    storeys: List[Dict] = field(default_factory=list)  # [{guid, name, elevation}]
+    storey_type_distribution: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    # {storey_guid: {type_name: instance_count}}
+
     # Structured processing log (machine-readable)
     log_entries: List[Dict] = field(default_factory=list)
     # Quality report (summary of data completeness)
