@@ -298,13 +298,16 @@ class IFCRepository:
                         prop.property_name,
                         prop.property_value,
                         prop.property_type,
+                        prop.value_number,
+                        prop.value_boolean,
                     ))
 
                 await conn.executemany(
                     """
                     INSERT INTO property_sets (
-                        id, entity_id, pset_name, property_name, property_value, property_type
-                    ) VALUES ($1, $2, $3, $4, $5, $6)
+                        id, entity_id, pset_name, property_name, property_value, property_type,
+                        value_number, value_boolean
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     """,
                     records
                 )
