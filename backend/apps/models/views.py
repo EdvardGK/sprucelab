@@ -249,6 +249,7 @@ class ModelViewSet(viewsets.ModelViewSet):
             original_filename=uploaded_file.name,
             file_url=file_url,
             file_size=uploaded_file.size,  # Save file size in bytes
+            checksum_sha256=file_checksum,
             version_number=version_number,
             parent_model=parent_model,  # Link to previous version
             ifc_timestamp=new_ifc_timestamp,  # Store IFC timestamp
