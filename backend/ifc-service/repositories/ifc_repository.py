@@ -984,7 +984,7 @@ class IFCRepository:
                         )
 
                 except Exception as e:
-                    # Log error but continue processing
+                    stats['link_failures'] += 1
                     print(f"[TypeBank] Error linking type {type_data.type_guid}: {e}")
 
         return stats
