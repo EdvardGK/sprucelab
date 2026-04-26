@@ -42,6 +42,8 @@ class PropertyData:
     property_name: str
     property_value: Optional[str] = None
     property_type: Optional[str] = None
+    value_number: Optional[float] = None
+    value_boolean: Optional[bool] = None
 
 
 @dataclass
