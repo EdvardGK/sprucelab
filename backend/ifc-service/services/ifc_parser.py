@@ -803,12 +803,14 @@ class IFCParserService:
         try:
             for element in ifc_file.by_type('IfcElement'):
                 object_type = getattr(element, 'ObjectType', None)
-                if object_type:  # Only count typed elements
-                    group = object_type_groups[object_type]
-                    group['guids'].append(element.GlobalId)
-                    group['ifc_classes'].add(element.is_a())
-                    if group['first_element'] is None:
-                        group['first_element'] = element
+                if not object_type:
+                    # Synthetic key for untyped elements: group by ifc_class
+                    object_type = f'{element.is_a()}::<untyped>'
+                group = object_type_groups[object_type]
+                group['guids'].append(element.GlobalId)
+                group['ifc_classes'].add(element.is_a())
+                if group['first_element'] is None:
+                    group['first_element'] = element
         except Exception as e:
             errors.append({
                 'stage': 'types',
