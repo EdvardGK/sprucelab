@@ -452,9 +452,31 @@ class IFCParserService:
                 ))
 
             if untyped_total > 0:
+                # Add untyped elements to element_to_type_name for storey distribution
+                for element in ifc_file.by_type('IfcElement'):
+                    if element.GlobalId not in element_to_type_name:
+                        ifc_class = element.is_a()
+                        object_type = getattr(element, 'ObjectType', None) or '<untyped>'
+                        type_name = object_type if object_type != '<untyped>' else f'{ifc_class}::<untyped>'
+                        element_to_type_name[element.GlobalId] = type_name
                 log('warning', 'types', f'{untyped_total} elements have no IfcTypeObject assignment',
                     untyped_element_count=untyped_total, synthetic_type_count=len(untyped_groups))
                 print(f"[Parser] Tracked {untyped_total} untyped elements across {len(untyped_groups)} synthetic types")
+
+            # ==================== Build Storey-Type Distribution ====================
+            # Cross-reference spatial containment with type assignments
+            storey_type_dist = defaultdict(lambda: defaultdict(int))
+            elements_with_storey = 0
+            for elem_guid, storey_guid in element_to_storey.items():
+                type_name = element_to_type_name.get(elem_guid)
+                if type_name:
+                    storey_type_dist[storey_guid][type_name] += 1
+                    elements_with_storey += 1
+
+            result.storey_type_distribution = {k: dict(v) for k, v in storey_type_dist.items()}
+            if storey_type_dist:
+                log('info', 'spatial', f'{elements_with_storey} elements mapped to storeys across {len(storey_type_dist)} storeys',
+                    elements_mapped=elements_with_storey, storeys_with_elements=len(storey_type_dist))
 
             typed_type_count = len(types) - len(untyped_groups)
             log('info', 'types', f'Extracted {len(types)} types ({typed_type_count} from IfcTypeObject, {len(untyped_groups)} synthetic)',
