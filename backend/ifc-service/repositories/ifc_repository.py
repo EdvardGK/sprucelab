@@ -874,6 +874,7 @@ class IFCRepository:
             'entries_created': 0,
             'entries_reused': 0,
             'observations_created': 0,
+            'link_failures': 0,
         }
 
         if not types:
