@@ -282,6 +282,8 @@ class ProcessRequest(BaseModel):
     file_path: Optional[str] = Field(None, description="Local path to IFC file (for local development)")
     skip_geometry: bool = Field(True, description="Skip geometry extraction (always True for now)")
     django_callback_url: Optional[str] = Field(None, description="URL to call when processing completes")
+    source_file_id: Optional[str] = Field(None, description="UUID of the SourceFile (Layer 0) — Phase 2")
+    extraction_run_id: Optional[str] = Field(None, description="UUID of an existing ExtractionRun to write into; if omitted the orchestrator creates one")
 
 
 class ProcessResponse(BaseModel):
