@@ -145,7 +145,7 @@ def reverse(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("models", "0018_create_source_file_and_extraction_run"),
-        ("entities", "0017_add_data_quality_fields"),
+        ("entities", "0033_typed_property_values"),
     ]
 
     operations = [
