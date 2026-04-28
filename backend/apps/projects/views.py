@@ -1,13 +1,14 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, Sum, Q, F
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 import json
 import yaml
 
-from .models import Project, ProjectConfig
+from .models import Project, ProjectConfig, ProjectScope
 from .serializers import (
     ProjectSerializer,
     ProjectConfigSerializer,
@@ -16,9 +17,12 @@ from .serializers import (
     ProjectConfigUpdateSerializer,
     ProjectConfigImportSerializer,
     ProjectConfigCreateFromTemplateSerializer,
+    ProjectScopeSerializer,
+    ProjectScopeListSerializer,
     ConfigValidationSerializer,
 )
 from .services.bep_defaults import BEPDefaults, get_bep_template
+from .services.scope_assignment import assign_files_to_scope
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
