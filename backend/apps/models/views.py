@@ -738,6 +738,7 @@ class ModelViewSet(viewsets.ModelViewSet):
                 version_number=version_number,
                 file_url=file_url,
                 file_size=file.size,
+                checksum_sha256=file_checksum,
                 ifc_schema=ifc_schema,
                 element_count=element_count,
                 storey_count=storey_count,
@@ -748,6 +749,7 @@ class ModelViewSet(viewsets.ModelViewSet):
                 validation_status='pending',
                 status='ready',  # Model is ready to use immediately!
                 uploaded_by=request.user if request.user.is_authenticated else None,
+                source_file=source_file,
             )
 
             # Optionally: Store entities from metadata (bulk insert)
