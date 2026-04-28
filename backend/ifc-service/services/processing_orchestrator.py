@@ -8,15 +8,35 @@ It coordinates between:
 """
 
 import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional, Dict, List
+from typing import Any, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor
 
+from core.database import get_connection
 from services.ifc_parser import IFCParserService, ParseResult, TypesOnlyResult
 from repositories.ifc_repository import (
     IFCRepository, EntityData, PropertyData, SpatialData
 )
+
+
+def _length_unit_name(scale: float) -> Optional[str]:
+    """Map an ifcopenshell length_unit_scale (factor to meters) to a friendly name."""
+    if scale is None:
+        return None
+    by_name = {
+        'mm': 0.001,
+        'cm': 0.01,
+        'm': 1.0,
+        'km': 1000.0,
+        'in': 0.0254,
+        'ft': 0.3048,
+    }
+    for name, factor in by_name.items():
+        if abs(scale - factor) < 1e-6:
+            return name
+    return None
 
 
 @dataclass
