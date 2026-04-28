@@ -693,6 +693,43 @@ class ModelViewSet(viewsets.ModelViewSet):
             saved_path = default_storage.save(file_path, file)
             file_url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else saved_path
 
+            # Streaming SHA-256 (re-read from saved storage)
+            import hashlib
+            file.seek(0)
+            sha = hashlib.sha256()
+            for chunk in file.chunks():
+                sha.update(chunk)
+            file_checksum = sha.hexdigest()
+
+            # Phase 2 Layer 0/1: SourceFile + a synthetic completed
+            # ExtractionRun. web-ifc already produced metadata client-side, so
+            # there's nothing to extract server-side — we just record the run.
+            source_file = get_or_create_source_file(
+                project=project,
+                original_filename=file.name,
+                file_url=file_url,
+                file_size=file.size,
+                checksum=file_checksum,
+                uploaded_by=request.user if request.user.is_authenticated else None,
+                mime_type=getattr(file, 'content_type', '') or '',
+            )
+            from django.utils import timezone as _tz
+            now = _tz.now()
+            ExtractionRun.objects.create(
+                source_file=source_file,
+                status='completed',
+                completed_at=now,
+                duration_seconds=0.0,
+                quality_report={
+                    'total_elements': element_count,
+                    'storey_count': storey_count,
+                    'system_count': system_count,
+                    'ifc_schema': ifc_schema,
+                    'extraction_method': 'web-ifc-client',
+                },
+                extractor_version='web-ifc-client',
+            )
+
             # Create model record with pre-parsed metadata
             model = Model.objects.create(
                 project=project,
