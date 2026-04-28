@@ -305,7 +305,8 @@ async def get_processing_status(
                 material_count=result.material_count,
                 type_count=result.type_count,
                 ifc_schema=result.ifc_schema,
-                processing_report_id=result.processing_report_id,
+                extraction_run_id=result.extraction_run_id,
+                processing_report_id=result.processing_report_id,  # legacy alias
                 duration_seconds=result.duration_seconds,
                 error=result.error,
                 stage_results=result.stage_results,
