@@ -713,6 +713,7 @@ class IFCRepository:
         crs_source: Optional[str] = None,
         crs_confidence: Optional[float] = None,
         discovered_units: Optional[Dict] = None,
+        discovered_grid: Optional[Dict] = None,
         quality_report: Optional[Dict] = None,
         log_entries: Optional[List[Dict]] = None,
         error_message: Optional[str] = None,
