@@ -384,6 +384,15 @@ class ProcessingOrchestrator:
         result = ProcessingResult(model_id=model_id)
         start_time = time.time()
 
+        # Resolve / create the ExtractionRun for this run.
+        run_id = await self._resolve_extraction_run(
+            model_id=model_id,
+            source_file_id=source_file_id,
+            extraction_run_id=extraction_run_id,
+        )
+        if run_id:
+            await self.repository.update_extraction_run(run_id, status='running')
+
         try:
             # ==================== Update Status: Parsing ====================
             print(f"\n[Orchestrator] Processing model {model_id} (types-only mode)")
@@ -419,10 +428,14 @@ class ProcessingOrchestrator:
                     processing_error=error_msg,
                 )
 
-                # Create a failure report
-                result.processing_report_id = await self._create_types_only_report(
-                    model_id, start_time, result, parse_result, is_failure=True
-                )
+                # Mark the ExtractionRun failed
+                result.extraction_run_id = run_id
+                result.processing_report_id = run_id  # legacy alias
+                if run_id:
+                    await self._finalize_extraction_run(
+                        run_id, parse_result, result, start_time, status='failed',
+                        error=error_msg,
+                    )
 
                 return result
 
