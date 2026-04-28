@@ -1,7 +1,6 @@
 """
 End-to-end: upload an IFC, watch the orchestrator land a SourceFile and a
-completed ExtractionRun, and confirm the legacy /processing-reports/ shim
-still hands the same data back in the old shape.
+completed ExtractionRun.
 
 Boots a real FastAPI subprocess (see conftest.fastapi_service) so the round
 trip exercises the actual HTTP path Django uses in production.
