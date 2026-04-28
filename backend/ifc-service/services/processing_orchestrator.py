@@ -495,16 +495,19 @@ class ProcessingOrchestrator:
             result.status = 'ready'
             result.duration_seconds = time.time() - start_time
 
-            # ==================== Create Processing Report ====================
-            result.processing_report_id = await self._create_types_only_report(
-                model_id, start_time, result, parse_result, is_failure=False
-            )
+            # ==================== Finalize ExtractionRun ====================
+            result.extraction_run_id = run_id
+            result.processing_report_id = run_id  # legacy alias
+            if run_id:
+                await self._finalize_extraction_run(
+                    run_id, parse_result, result, start_time, status='completed',
+                )
 
             print(f"\n[Orchestrator] Complete in {result.duration_seconds:.2f}s")
             print(f"  Types: {result.type_count} (with instance counts)")
             print(f"  Materials: {result.material_count}")
             print(f"  Total elements (not stored): {result.element_count}")
-            print(f"  Report ID: {result.processing_report_id}")
+            print(f"  ExtractionRun ID: {result.extraction_run_id}")
 
             return result
 
