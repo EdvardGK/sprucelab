@@ -55,6 +55,8 @@ class IFCServiceClient:
         file_url: str,
         skip_geometry: bool = True,
         callback_url: Optional[str] = None,
+        source_file_id: Optional[str] = None,
+        extraction_run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Start IFC processing - returns quick stats immediately.
