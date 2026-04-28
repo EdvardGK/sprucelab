@@ -526,27 +526,26 @@ class ProcessingOrchestrator:
                 processing_error=str(e),
             )
 
-            # Create failure report
-            try:
-                result.processing_report_id = await self.repository.create_processing_report(
-                    model_id=model_id,
-                    started_at=datetime.fromtimestamp(start_time, tz=timezone.utc),
-                    completed_at=datetime.now(timezone.utc),
-                    duration_seconds=result.duration_seconds,
-                    overall_status='failed',
-                    stage_results=[],
-                    errors=[{
-                        'stage': 'orchestrator',
-                        'severity': 'critical',
-                        'message': str(e),
-                        'timestamp': datetime.now().isoformat(),
-                    }],
-                    catastrophic_failure=True,
-                    failure_exception=str(e),
-                    summary=f"CATASTROPHIC FAILURE: {e}",
-                )
-            except Exception:
-                pass  # Don't fail on report creation failure
+            # Mark the ExtractionRun failed
+            result.extraction_run_id = run_id
+            result.processing_report_id = run_id  # legacy alias
+            if run_id:
+                try:
+                    await self.repository.update_extraction_run(
+                        run_id,
+                        status='failed',
+                        completed_at=datetime.now(timezone.utc),
+                        duration_seconds=result.duration_seconds,
+                        error_message=str(e),
+                        log_entries=[{
+                            'ts': datetime.now(timezone.utc).isoformat(),
+                            'level': 'critical',
+                            'stage': 'orchestrator',
+                            'message': str(e),
+                        }],
+                    )
+                except Exception:
+                    pass  # Don't fail on report write failure
 
             return result
 
