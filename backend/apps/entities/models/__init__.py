@@ -58,7 +58,6 @@ from .typebank import (
 
 # Reporting and analysis models
 from .reporting import (
-    ProcessingReport,
     IFCValidationReport,
     GraphEdge,
     RoomAssignment,
