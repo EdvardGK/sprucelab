@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Python shim that runs under the `sprucelab` conda env.
+#
+# Auto-activates if not already active, so recipes work from any shell.
+# Set CONDA_ENV to override (default: sprucelab).
+set -euo pipefail
+
+env_name="${CONDA_ENV:-sprucelab}"
+
+# Fast path: if we're already in the right env, just exec python.
+if [[ "${CONDA_DEFAULT_ENV:-}" == "$env_name" ]]; then
+    exec python "$@"
+fi
+
+# Slow path: source conda + activate the env, then exec.
+conda_sh=""
+for cand in \
+    "${CONDA_PREFIX:-}/etc/profile.d/conda.sh" \
+    "$HOME/miniconda3/etc/profile.d/conda.sh" \
+    "$HOME/anaconda3/etc/profile.d/conda.sh" \
+    "/opt/miniconda3/etc/profile.d/conda.sh"; do
+    if [[ -f "$cand" ]]; then conda_sh="$cand"; break; fi
+done
+
+if [[ -z "$conda_sh" ]]; then
+    echo "[python-shim] could not find conda.sh — install miniconda or set CONDA_ENV=base" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+source "$conda_sh"
+conda activate "$env_name" 2>/dev/null || {
+    echo "[python-shim] conda env '$env_name' not found — create it or set CONDA_ENV=<name>" >&2
+    exit 1
+}
+
+exec python "$@"
