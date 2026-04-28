@@ -593,6 +593,8 @@ class ModelViewSet(viewsets.ModelViewSet):
                 file_url=file_url,
                 skip_geometry=True,
                 callback_url=callback_url,
+                source_file_id=str(source_file.id),
+                extraction_run_id=str(extraction_run.id),
             )
 
             if quick_stats.get('success'):
