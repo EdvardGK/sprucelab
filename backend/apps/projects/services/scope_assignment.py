@@ -7,9 +7,10 @@ Two assignment paths exist on the roadmap:
    ids are rejected to keep scope membership consistent with project ownership.
 
 2. **Auto** — derive scope membership from spatial data (storey footprint
-   polygon containment + axis-grid bounds). Stub only; the dependency on
-   IfcGrid extraction lands in Phase 4 of the data-foundation plan
-   (``docs/plans/2026-04-26-data-foundation-plan.md``).
+   polygon containment + axis-grid bounds). Stub only. IfcGrid extraction
+   shipped in Phase 4 (``ExtractionRun.discovered_grid``); the remaining
+   blocker is per-scope footprint authoring (UI + ``ProjectScope.footprint_polygon``
+   capture), which is a separate slice.
 """
 from __future__ import annotations
 
