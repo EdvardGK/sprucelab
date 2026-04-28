@@ -130,7 +130,6 @@ Phases 2.5 + 3.
 
 ## Next
 
-- **Run migrations locally**: `cd backend && ../tools/python manage.py migrate`.
 - **Phase 4 — IfcGrid extraction**: pull U/V-axes with labels and positions
   into `ExtractionRun.discovered_grid` JSON. Plan section starts at line
   152 of `docs/plans/2026-04-26-data-foundation-plan.md`. Required
