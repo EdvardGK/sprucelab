@@ -363,12 +363,15 @@ class ProcessingOrchestrator:
             if unit_name:
                 discovered_units['length'] = unit_name
 
+        discovered_grid = getattr(parse_result, 'discovered_grid', None) or None
+
         await self.repository.update_extraction_run(
             run_id,
             status=status,
             completed_at=datetime.now(timezone.utc),
             duration_seconds=result.duration_seconds,
             discovered_units=discovered_units or None,
+            discovered_grid=discovered_grid,
             quality_report=quality_report,
             log_entries=log_entries,
             error_message=error,
