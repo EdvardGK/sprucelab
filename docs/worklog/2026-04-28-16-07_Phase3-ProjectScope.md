@@ -118,13 +118,15 @@ segments and skipped past the empty router into the scopes sub-router, so
 those tests passed and obscured the bug. Fix: `configs/` and `scopes/`
 sub-routers now come first, empty router last.
 
-### Migrations stayed unapplied locally
+### Migrations applied during /worklog
 
-`tools/python manage.py migrate` was permission-denied this session. Faked
+`tools/python manage.py migrate` was permission-denied mid-session. Faked
 `automation/0001_initial` (its tables already existed in the local DB).
-The Phase 3 migrations + the Phase 2.5 backlog (entities 0031–0034, models
-0016–0019) are all written and consistent (`makemigrations --dry-run`
-clean) but unapplied. Next session needs to run `migrate` first thing.
+The user ran `python manage.py migrate` directly during the worklog step
+and all queued migrations applied cleanly: `models 0016–0020`,
+`entities 0031–0034`, `field 0001_initial`, `projects 0005_add_project_scope`,
+`viewers 0003_add_viewergroup_scope`. Local DB is now caught up on
+Phases 2.5 + 3.
 
 ## Next
 
