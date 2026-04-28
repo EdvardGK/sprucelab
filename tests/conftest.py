@@ -28,6 +28,9 @@ IFC_SERVICE = BACKEND / "ifc-service"
 
 # Make backend importable for Django settings before pytest-django loads it.
 sys.path.insert(0, str(BACKEND))
+# ifc-service modules use bare imports (`from services.ifc_parser import ...`)
+# so the FastAPI service dir needs to be on the path for parser-level tests.
+sys.path.insert(0, str(IFC_SERVICE))
 
 
 # ---------------------------------------------------------------------------
