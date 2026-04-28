@@ -1546,7 +1546,7 @@ class ModelViewSet(viewsets.ModelViewSet):
             - material_count: int
             - type_count: int
             - ifc_schema: str
-            - processing_report_id: UUID
+            - extraction_run_id: UUID
             - duration_seconds: float
             - error: str (if failed)
 
