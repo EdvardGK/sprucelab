@@ -264,7 +264,6 @@ class ProcessingOrchestrator:
 
             # Mark the ExtractionRun failed
             result.extraction_run_id = run_id
-            result.processing_report_id = run_id  # legacy alias
             if run_id:
                 try:
                     await self.repository.update_extraction_run(
