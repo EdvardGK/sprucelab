@@ -742,6 +742,8 @@ class IFCRepository:
             add("crs_confidence", crs_confidence)
         if discovered_units is not None:
             add("discovered_units", discovered_units, jsonb=True)
+        if discovered_grid is not None:
+            add("discovered_grid", discovered_grid, jsonb=True)
         if quality_report is not None:
             add("quality_report", quality_report, jsonb=True)
         if log_entries is not None:
