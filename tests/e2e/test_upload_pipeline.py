@@ -128,6 +128,41 @@ def test_legacy_models_upload_still_creates_source_file(
     assert any(r['id'] == run['id'] for r in flat), 'flat extractions endpoint should expose the run'
 
 
+def test_grid_extraction_lands_on_extraction_run(
+    settings, live_server, fastapi_service, project, sample_ifc_with_grid_path, api_get
+):
+    """
+    Phase 4 round-trip: parser pulls IfcGrid, orchestrator passes it through,
+    repo writes ``extraction_runs.discovered_grid``, DRF serializer exposes it.
+    """
+    settings.IFC_SERVICE_URL = fastapi_service['base_url']
+    settings.IFC_SERVICE_API_KEY = 'test-key'
+
+    with open(sample_ifc_with_grid_path, 'rb') as fh:
+        resp = requests.post(
+            f"{live_server.url}/api/files/",
+            data={'project_id': str(project.id)},
+            files={'file': (Path(sample_ifc_with_grid_path).name, fh, 'application/ifc')},
+            timeout=30,
+        )
+    assert resp.status_code == 201, resp.text
+    sf_id = resp.json()['id']
+
+    run = _wait_for_run(api_get, sf_id)
+    assert run['status'] == 'completed', f"run failed: {run}"
+
+    detail = requests.get(
+        f"{live_server.url}/api/files/extractions/{run['id']}/", timeout=10
+    ).json()
+
+    grid = detail.get('discovered_grid')
+    assert grid is not None, 'discovered_grid missing from serializer'
+    grids = grid.get('grids', [])
+    assert len(grids) == 1, grids
+    assert [a['tag'] for a in grids[0]['u_axes']] == ['A', 'B']
+    assert [a['tag'] for a in grids[0]['v_axes']] == ['1', '2', '3']
+
+
 def test_dedup_same_bytes_into_same_project(
     settings, live_server, fastapi_service, project, sample_ifc_path
 ):
