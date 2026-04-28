@@ -105,7 +105,6 @@ __all__ = [
     'TypeBankAlias',
     'TypeBankScope',
     # Reporting
-    'ProcessingReport',
     'IFCValidationReport',
     'GraphEdge',
     'RoomAssignment',
