@@ -3,19 +3,36 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, Database, AlertCircle } from 'lucide-react';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { ProcessingStatusBadge } from '@/components/ProcessingStatusBadge';
-import { useProcessingReports } from '@/hooks/use-processing-reports';
-import type { ProcessingReportFilters } from '@/hooks/use-processing-reports';
+import { useExtractions, type ExtractionFilters } from '@/hooks/use-processing-reports';
+import type { ExtractionRunStatus } from '@/lib/api-types';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/lib/format';
 
+const STATUS_BADGE: Record<ExtractionRunStatus, string> = {
+  pending: 'bg-gray-100 text-gray-800 border-gray-200',
+  running: 'bg-blue-100 text-blue-800 border-blue-200',
+  completed: 'bg-green-100 text-green-800 border-green-200',
+  failed: 'bg-red-100 text-red-800 border-red-200',
+};
+
+function StatusBadge({ status }: { status: ExtractionRunStatus }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border capitalize',
+        STATUS_BADGE[status]
+      )}
+    >
+      {status}
+    </span>
+  );
+}
+
 export default function ProcessingReports() {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState<ProcessingReportFilters>({
-    ordering: '-started_at', // Newest first
-  });
+  const [filters, setFilters] = useState<ExtractionFilters>({});
 
-  const { data: reports, isLoading, error } = useProcessingReports(filters);
+  const { data: runs, isLoading, error } = useExtractions(filters);
 
   const formatDuration = (seconds: number | null) => {
     if (seconds === null) return '—';
@@ -40,70 +57,48 @@ export default function ProcessingReports() {
     return date.toLocaleDateString();
   };
 
+  const setStatus = (status: ExtractionRunStatus | undefined) =>
+    setFilters((f) => ({ ...f, status }));
+
+  const statusOptions: Array<ExtractionRunStatus | undefined> = [
+    undefined,
+    'completed',
+    'running',
+    'pending',
+    'failed',
+  ];
+
   return (
     <AppLayout>
       <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
         <div className="w-full">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-text-primary">Processing Reports</h1>
+            <h1 className="text-3xl font-bold text-text-primary">Extraction Runs</h1>
             <p className="text-text-secondary mt-1">
-              Detailed IFC processing logs for debugging and monitoring
+              Layer-1 processing runs over uploaded source files (debug + audit).
             </p>
           </div>
 
           {/* Filters */}
           <div className="mb-4 flex items-center gap-2">
-            <span className="text-sm text-text-secondary">Filter:</span>
-            <Button
-              variant={filters.overall_status === undefined ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilters({ ...filters, overall_status: undefined })}
-            >
-              All
-            </Button>
-            <Button
-              variant={filters.overall_status === 'success' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilters({ ...filters, overall_status: 'success' })}
-            >
-              Success
-            </Button>
-            <Button
-              variant={filters.overall_status === 'partial' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilters({ ...filters, overall_status: 'partial' })}
-            >
-              Partial
-            </Button>
-            <Button
-              variant={filters.overall_status === 'failed' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilters({ ...filters, overall_status: 'failed' })}
-            >
-              Failed
-            </Button>
-
-            <div className="ml-auto">
+            <span className="text-sm text-text-secondary">Status:</span>
+            {statusOptions.map((opt) => (
               <Button
-                variant={filters.catastrophic_failure ? 'destructive' : 'outline'}
+                key={opt ?? 'all'}
+                variant={filters.status === opt ? 'default' : 'outline'}
                 size="sm"
-                onClick={() =>
-                  setFilters({
-                    ...filters,
-                    catastrophic_failure: !filters.catastrophic_failure ? true : undefined,
-                  })
-                }
+                onClick={() => setStatus(opt)}
               >
-                Catastrophic Only
+                {opt ?? 'All'}
               </Button>
-            </div>
+            ))}
           </div>
 
           {/* Loading State */}
           {isLoading && (
             <div className="text-center py-12 text-text-secondary">
-              Loading processing reports...
+              Loading extraction runs...
             </div>
           )}
 
@@ -112,33 +107,33 @@ export default function ProcessingReports() {
             <div className="rounded-lg border border-error bg-error/10 p-4 text-error">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-5 w-5" />
-                <h3 className="font-semibold">Failed to load reports</h3>
+                <h3 className="font-semibold">Failed to load runs</h3>
               </div>
               <p className="text-sm">{String(error)}</p>
             </div>
           )}
 
           {/* Empty State */}
-          {!isLoading && !error && reports && reports.length === 0 && (
+          {!isLoading && !error && runs && runs.length === 0 && (
             <div className="text-center py-12">
               <Database className="h-12 w-12 text-text-tertiary mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-text-primary mb-2">No reports found</h3>
+              <h3 className="text-lg font-semibold text-text-primary mb-2">No runs found</h3>
               <p className="text-text-secondary">
-                {filters.overall_status
-                  ? `No reports with status "${filters.overall_status}"`
-                  : 'Upload an IFC model to generate processing reports'}
+                {filters.status
+                  ? `No runs with status "${filters.status}"`
+                  : 'Upload a source file to trigger an extraction.'}
               </p>
             </div>
           )}
 
           {/* Table */}
-          {!isLoading && !error && reports && reports.length > 0 && (
+          {!isLoading && !error && runs && runs.length > 0 && (
             <div className="rounded-lg border border-border overflow-hidden">
               <table className="w-full">
                 <thead className="bg-surface border-b border-border">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
-                      Model
+                      Source File
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
                       Status
@@ -147,13 +142,13 @@ export default function ProcessingReports() {
                       Duration
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
-                      Schema
+                      Format
                     </th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">
                       File Size
                     </th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold text-text-primary">
-                      Errors
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
+                      CRS
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">
                       Started
@@ -161,50 +156,42 @@ export default function ProcessingReports() {
                   </tr>
                 </thead>
                 <tbody className="bg-card divide-y divide-border">
-                  {reports.map((report) => (
+                  {runs.map((run) => (
                     <tr
-                      key={report.id}
+                      key={run.id}
                       className="cursor-pointer hover:bg-surface/50 transition-colors"
-                      onClick={() => navigate(`/dev/processing-reports/${report.id}`)}
+                      onClick={() => navigate(`/dev/processing-reports/${run.id}`)}
                     >
                       <td className="px-4 py-3 text-sm">
-                        <div className="font-medium text-text-primary">{report.model_name}</div>
-                        <div className="text-xs text-text-tertiary">{report.project_name}</div>
+                        <div className="font-medium text-text-primary">
+                          {run.source_file_name ?? '—'}
+                        </div>
+                        <div className="text-xs text-text-tertiary">
+                          {run.project_name ?? '—'}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <ProcessingStatusBadge status={report.overall_status} />
-                          {report.catastrophic_failure && (
-                            <span className="text-xs text-error font-medium">CRITICAL</span>
-                          )}
-                        </div>
+                        <StatusBadge status={run.status} />
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Clock className="h-3 w-3" />
-                          {formatDuration(report.duration_seconds)}
+                          {formatDuration(run.duration_seconds)}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary">
                         <code className="text-xs bg-surface px-1.5 py-0.5 rounded">
-                          {report.ifc_schema || '—'}
+                          {run.format ?? '—'}
                         </code>
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary text-right">
-                        {formatFileSize(report.file_size_bytes)}
+                        {run.file_size !== null ? formatFileSize(run.file_size) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right">
-                        <span
-                          className={cn(
-                            'font-medium',
-                            report.errors.length > 0 ? 'text-error' : 'text-text-tertiary'
-                          )}
-                        >
-                          {report.errors.length}
-                        </span>
+                      <td className="px-4 py-3 text-sm text-text-secondary">
+                        {run.discovered_crs ?? '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-tertiary">
-                        {formatDate(report.started_at)}
+                        {formatDate(run.started_at)}
                       </td>
                     </tr>
                   ))}
