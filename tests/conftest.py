@@ -199,6 +199,20 @@ def sample_ifc_path(tmp_path_factory) -> Path:
     return out
 
 
+@pytest.fixture(scope="session")
+def sample_ifc_with_grid_path(tmp_path_factory) -> Path:
+    """
+    Synthetic IFC4 with a single IfcGrid: 2 U-axes, 3 V-axes, all IfcLine.
+
+    Used by parser-level grid tests and the end-to-end round-trip that
+    asserts ``ExtractionRun.discovered_grid`` is populated.
+    """
+    from .fixtures.ifc_factory import build_ifc_with_grid
+    out = tmp_path_factory.mktemp("ifc-grid") / "with-grid.ifc"
+    build_ifc_with_grid(out)
+    return out
+
+
 @pytest.fixture
 def api_client(client, live_server):
     """
