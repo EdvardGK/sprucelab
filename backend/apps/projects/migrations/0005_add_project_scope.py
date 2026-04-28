@@ -54,8 +54,18 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'project_scopes',
                 'ordering': ['name'],
-                'unique_together': {('project', 'parent', 'name')},
-                'indexes': [models.Index(fields=['project', 'parent'], name='project_sco_project_f9469d_idx')],
             },
+        ),
+        migrations.AddConstraint(
+            model_name='projectscope',
+            constraint=models.UniqueConstraint(
+                fields=('project', 'parent', 'name'),
+                name='uniq_project_scope_name',
+                nulls_distinct=False,
+            ),
+        ),
+        migrations.AddIndex(
+            model_name='projectscope',
+            index=models.Index(fields=['project', 'parent'], name='project_sco_project_f9469d_idx'),
         ),
     ]
