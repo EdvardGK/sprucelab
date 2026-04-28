@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    ProcessingReportViewSet, IFCEntityViewSet,
+    IFCEntityViewSet,
     NS3451CodeViewSet, SemanticTypeViewSet, IFCTypeViewSet, TypeMappingViewSet,
     TypeDefinitionLayerViewSet, MaterialViewSet, MaterialMappingViewSet,
     TypeBankEntryViewSet, TypeBankObservationViewSet, TypeBankAliasViewSet,
@@ -10,7 +10,6 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'processing-reports', ProcessingReportViewSet, basename='processing-report')
 router.register(r'entities', IFCEntityViewSet, basename='entity')
 
 # Warehouse routes (legacy - TypeMapping)
