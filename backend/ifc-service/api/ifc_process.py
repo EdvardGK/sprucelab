@@ -142,6 +142,8 @@ async def process_ifc_file(
         callback_url,
         temp_dir,  # Pass temp_dir for cleanup
         request.file_url,  # Pass file_url for fragment generation
+        request.source_file_id,
+        request.extraction_run_id,
     )
 
     # Return quick stats immediately
