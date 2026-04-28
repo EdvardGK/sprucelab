@@ -75,7 +75,7 @@ class ViewerGroupListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ViewerGroup
         fields = [
-            'id', 'project', 'project_name', 'name', 'description',
+            'id', 'project', 'project_name', 'scope', 'name', 'description',
             'group_type', 'parent', 'parent_name', 'display_order',
             'model_count', 'created_at', 'updated_at'
         ]
