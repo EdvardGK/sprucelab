@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Sprucelab API curl wrapper.
+#
+# Usage:
+#   tools/api GET /models/
+#   tools/api POST /files/ < body.json
+#   tools/api POST /files/ --data-binary @body.json
+#   tools/api GET /models/?project=<uuid>
+#
+# Picks up DJANGO_URL from env (default http://localhost:8000).
+# Adds /api/ prefix automatically. Sets Content-Type: application/json
+# unless overridden.
+
+set -euo pipefail
+
+if [[ $# -lt 2 ]]; then
+    echo "usage: tools/api <METHOD> <PATH> [curl-args...]" >&2
+    exit 64
+fi
+
+method="$1"; shift
+path="$1"; shift
+
+base="${DJANGO_URL:-http://localhost:8000}"
+
+# Normalize: ensure leading /, ensure /api/ prefix
+[[ "$path" == /* ]] || path="/$path"
+[[ "$path" == /api/* ]] || path="/api${path}"
+
+url="${base}${path}"
+
+# Default to JSON content-type unless caller provided one
+has_ct=0
+for arg in "$@"; do
+    case "$arg" in
+        -H*|--header*) has_ct=1 ;;
+    esac
+done
+
+ct_args=()
+if (( has_ct == 0 )); then
+    ct_args=(-H "Content-Type: application/json")
+fi
+
+exec curl -sS -X "$method" "${ct_args[@]}" "$@" "$url"
