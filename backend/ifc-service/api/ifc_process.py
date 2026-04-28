@@ -392,7 +392,6 @@ async def process_ifc_file_sync(
             type_count=result.type_count,
             ifc_schema=result.ifc_schema,
             extraction_run_id=result.extraction_run_id,
-            processing_report_id=result.processing_report_id,  # legacy alias
             duration_seconds=result.duration_seconds,
             error=result.error,
             stage_results=result.stage_results,
