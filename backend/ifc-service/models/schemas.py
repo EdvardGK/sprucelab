@@ -303,7 +303,8 @@ class ProcessResponse(BaseModel):
 
     # Processing info
     ifc_schema: Optional[str] = Field(None, description="IFC schema version")
-    processing_report_id: Optional[str] = Field(None, description="UUID of ProcessingReport")
+    processing_report_id: Optional[str] = Field(None, description="DEPRECATED: legacy alias for extraction_run_id")
+    extraction_run_id: Optional[str] = Field(None, description="UUID of the ExtractionRun (Phase 2)")
     duration_seconds: float = Field(0.0, description="Processing duration in seconds")
     error: Optional[str] = Field(None, description="Error message if failed")
 
