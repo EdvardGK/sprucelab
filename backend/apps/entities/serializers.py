@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
-    System, Material, IFCType, ProcessingReport,
+    System, Material, IFCType,
     NS3451Code, SemanticType, SemanticTypeIFCMapping,
     TypeMapping, TypeDefinitionLayer, MaterialMapping,
     TypeBankEntry, TypeBankObservation, TypeBankAlias, TypeBankScope,
