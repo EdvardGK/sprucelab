@@ -234,7 +234,6 @@ class ProcessingOrchestrator:
 
             # ==================== Finalize ExtractionRun ====================
             result.extraction_run_id = run_id
-            result.processing_report_id = run_id  # legacy alias
             if run_id:
                 await self._finalize_extraction_run(
                     run_id, parse_result, result, start_time, status='completed',
