@@ -103,6 +103,10 @@ class IFCServiceClient:
 
         if callback_url:
             payload["django_callback_url"] = callback_url
+        if source_file_id:
+            payload["source_file_id"] = str(source_file_id)
+        if extraction_run_id:
+            payload["extraction_run_id"] = str(extraction_run_id)
 
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
