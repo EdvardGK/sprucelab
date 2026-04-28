@@ -549,67 +549,96 @@ class ProcessingOrchestrator:
 
             return result
 
-    async def _create_types_only_report(
-        self,
-        model_id: str,
-        start_time: float,
-        result: ProcessingResult,
-        parse_result: TypesOnlyResult,
-        is_failure: bool,
-    ) -> str:
-        """Create a processing report for types-only processing."""
-        completed_at = datetime.now(timezone.utc)
-        started_at = datetime.fromtimestamp(start_time, tz=timezone.utc)
+    # ----------------------------------------------------------------------
+    # Phase 2: ExtractionRun lifecycle (replaces _create_types_only_report)
+    # ----------------------------------------------------------------------
 
-        # Calculate types with instances
+    async def _resolve_extraction_run(
+        self,
+        *,
+        model_id: str,
+        source_file_id: Optional[str],
+        extraction_run_id: Optional[str],
+    ) -> Optional[str]:
+        """
+        Pick the ExtractionRun row to write into.
+
+        Order of preference:
+          1. extraction_run_id passed by Django (the dispatcher created one).
+          2. source_file_id passed by Django -> create a fresh run.
+          3. Look up Model.source_file_id from the DB -> create a fresh run.
+          4. None: legacy Model with no SourceFile (pre-Phase-2 backfill); skip.
+        """
+        if extraction_run_id:
+            return extraction_run_id
+
+        if source_file_id:
+            return await self.repository.create_extraction_run(
+                source_file_id=source_file_id,
+                status='running',
+                extractor_version='ifc-service@types-only',
+            )
+
+        # Fall back to looking up the Model's source_file
+        async with get_connection() as conn:
+            row = await conn.fetchrow(
+                "SELECT source_file_id FROM models WHERE id = $1",
+                uuid.UUID(model_id),
+            )
+        if row and row['source_file_id']:
+            return await self.repository.create_extraction_run(
+                source_file_id=str(row['source_file_id']),
+                status='running',
+                extractor_version='ifc-service@types-only',
+            )
+
+        return None
+
+    async def _finalize_extraction_run(
+        self,
+        run_id: str,
+        parse_result: TypesOnlyResult,
+        result: ProcessingResult,
+        start_time: float,
+        status: str,
+        error: Optional[str] = None,
+    ) -> None:
+        """Write final state into the ExtractionRun row."""
         types_with_instances = sum(1 for t in parse_result.types if t.instance_count > 0)
         total_instances = sum(t.instance_count for t in parse_result.types)
 
-        summary = f"""
-IFC Processing {'FAILED' if is_failure else 'Complete'} (Types-Only Mode)
-========================================
-Duration: {result.duration_seconds:.2f}s
-IFC Schema: {result.ifc_schema or 'Unknown'}
+        # quality_report: combine parser-provided one with run-level totals.
+        quality_report: Dict[str, Any] = dict(getattr(parse_result, 'quality_report', {}) or {})
+        quality_report.setdefault('total_elements', result.element_count)
+        quality_report.setdefault('storey_count', result.storey_count)
+        quality_report.setdefault('material_count', result.material_count)
+        quality_report.setdefault('type_count', result.type_count)
+        quality_report.setdefault('types_with_instances', types_with_instances)
+        quality_report.setdefault('total_instances', total_instances)
+        if parse_result.ifc_schema:
+            quality_report.setdefault('ifc_schema', parse_result.ifc_schema)
+        quality_report.setdefault('file_size_bytes', getattr(parse_result, 'file_size_bytes', 0))
+        quality_report.setdefault('processing_mode', 'types_only')
 
-Types: {result.type_count} ({types_with_instances} with instances)
-Total Type Instances: {total_instances}
-Materials: {result.material_count}
-Storeys: {result.storey_count}
-Total Elements: {result.element_count} (not stored)
+        log_entries = list(getattr(parse_result, 'log_entries', []) or [])
 
-Mode: Types-only (no entity storage)
-"""
+        # Discovered units (length only for now — area/volume can be derived later)
+        discovered_units: Dict[str, str] = {}
+        unit_scale = getattr(parse_result, 'length_unit_scale', None)
+        if unit_scale is not None:
+            unit_name = _length_unit_name(unit_scale)
+            if unit_name:
+                discovered_units['length'] = unit_name
 
-        verification_data = {
-            'types_total': result.type_count,
-            'types_with_instances': types_with_instances,
-            'types_without_instances': result.type_count - types_with_instances,
-            'total_instances': total_instances,
-            'entities_total': result.element_count,
-            'entities_stored': 0,  # We don't store entities in this mode
-            'verified_at': datetime.now(timezone.utc).isoformat(),
-            'verification_method': 'ifcopenshell',
-            'processing_mode': 'types_only',
-            'quality_report': getattr(parse_result, 'quality_report', {}),
-        }
-
-        return await self.repository.create_processing_report(
-            model_id=model_id,
-            started_at=started_at,
-            completed_at=completed_at,
+        await self.repository.update_extraction_run(
+            run_id,
+            status=status,
+            completed_at=datetime.now(timezone.utc),
             duration_seconds=result.duration_seconds,
-            overall_status='failed' if is_failure else 'success',
-            ifc_schema=result.ifc_schema,
-            file_size_bytes=parse_result.file_size_bytes if parse_result else 0,
-            stage_results=getattr(parse_result, 'log_entries', []),
-            total_entities_processed=result.type_count + result.material_count,
-            total_entities_skipped=0,
-            total_entities_failed=0,
-            errors=[],
-            catastrophic_failure=is_failure and result.error is not None,
-            failure_exception=result.error if is_failure else None,
-            summary=summary,
-            verification_data=verification_data,
+            discovered_units=discovered_units or None,
+            quality_report=quality_report,
+            log_entries=log_entries,
+            error_message=error,
         )
 
     def _get_ifc_type_for_hierarchy(self, level: str) -> str:
