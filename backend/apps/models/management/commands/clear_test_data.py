@@ -9,7 +9,6 @@ This will delete:
 - All models (and cascade delete all related data)
 - All entities, geometry, properties
 - All BEP configurations
-- All processing reports
 - All viewer groups
 - All scripts and workflows
 
