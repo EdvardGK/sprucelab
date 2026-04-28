@@ -537,6 +537,23 @@ class ModelViewSet(viewsets.ModelViewSet):
         ).values_list('version_number', flat=True)
         next_version = max(existing_versions, default=0) + 1
 
+        # Phase 2 Layer 0: SourceFile for this direct upload. Checksum is
+        # empty here because the bytes are in cloud storage already and we
+        # don't download to compute it; backfilled later if needed.
+        source_file = get_or_create_source_file(
+            project=project,
+            original_filename=filename,
+            file_url=file_url,
+            file_size=file_size or 0,
+            checksum="",
+            uploaded_by=request.user if request.user.is_authenticated else None,
+            mime_type="",
+        )
+        extraction_run = ExtractionRun.objects.create(
+            source_file=source_file,
+            status='pending',
+        )
+
         # Create model record
         model = Model.objects.create(
             project=project,
@@ -548,6 +565,7 @@ class ModelViewSet(viewsets.ModelViewSet):
             status='processing',
             parsing_status='pending',
             uploaded_by=request.user if request.user.is_authenticated else None,
+            source_file=source_file,
         )
 
         print(f"✅ Model created: {model.name} v{model.version_number}")
