@@ -248,7 +248,6 @@ async def _process_full(
             "type_count": result.type_count if result else 0,
             "ifc_schema": result.ifc_schema if result else None,
             "extraction_run_id": (result.extraction_run_id if result else None),
-            "processing_report_id": (result.extraction_run_id if result else None),  # legacy alias
             "duration_seconds": result.duration_seconds if result else 0,
             "error": error_msg or (result.error if result else None),
         }
