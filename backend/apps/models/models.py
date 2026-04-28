@@ -133,6 +133,10 @@ class ExtractionRun(models.Model):
         default=dict, blank=True,
         help_text='{"length": "mm", "area": "m2", "angle": "deg"}',
     )
+    discovered_grid = models.JSONField(
+        default=dict, blank=True,
+        help_text='{"grids": [{"name", "guid", "placement", "u_axes": [...], "v_axes": [...], "w_axes": [...]}]}',
+    )
 
     quality_report = models.JSONField(
         default=dict, blank=True,
