@@ -67,17 +67,15 @@ class ProcessingResult:
 
 class ProcessingOrchestrator:
     """
-    Orchestrates IFC file processing.
+    Orchestrates IFC file processing (types-only mode).
 
     Flow:
-    1. Update model status to 'parsing'
-    2. Parse IFC file (extract all metadata)
-    3. Write spatial hierarchy (creates storey entities first)
-    4. Write materials, types, systems
-    5. Write elements (with storey references)
-    6. Write properties (with entity references)
-    7. Update model status to 'ready'
-    8. Create processing report
+    1. Resolve / create the ExtractionRun for this run.
+    2. Update model status to 'parsing'.
+    3. Parse types only (~2s) via ifcopenshell in a thread pool.
+    4. Write materials, types, type-bank links, type definition layers.
+    5. Update model status to 'ready'.
+    6. Finalize the ExtractionRun (status, quality_report, log_entries, units).
     """
 
     def __init__(
