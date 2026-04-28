@@ -546,3 +546,105 @@ class ProjectConfigViewSet(viewsets.ModelViewSet):
             ProjectConfigDetailSerializer(new_config).data,
             status=status.HTTP_201_CREATED
         )
+
+
+class ProjectScopeViewSet(viewsets.ModelViewSet):
+    """
+    /api/projects/scopes/ — nestable organizational unit (Phase 3).
+
+    Filter by ``?project=<uuid>`` and optionally ``?parent=<uuid>`` (or
+    ``?parent__isnull=true`` for root scopes). Mirrors the flat-with-query-
+    param convention used by SourceFileViewSet, ViewerGroupViewSet, and
+    ExtractionRunViewSet — no nested-router library is in use.
+    """
+    queryset = ProjectScope.objects.all()
+    serializer_class = ProjectScopeSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProjectScopeListSerializer
+        return ProjectScopeSerializer
+
+    def get_queryset(self):
+        qs = ProjectScope.objects.select_related('project', 'parent')
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            qs = qs.filter(project_id=project_id)
+        parent_id = self.request.query_params.get('parent')
+        if parent_id is not None:
+            qs = qs.filter(parent_id=parent_id)
+        roots_only = self.request.query_params.get('parent__isnull')
+        if roots_only and roots_only.lower() in ('1', 'true', 'yes'):
+            qs = qs.filter(parent__isnull=True)
+        scope_type = self.request.query_params.get('scope_type')
+        if scope_type:
+            qs = qs.filter(scope_type=scope_type)
+        return qs.order_by('name')
+
+    @action(detail=True, methods=['post'], url_path='assign-files')
+    def assign_files(self, request, pk=None):
+        """Bulk-assign SourceFiles to this scope.
+
+        POST body: ``{"source_file_ids": ["<uuid>", ...]}``. Cross-project
+        files are rejected with 400.
+        """
+        scope = self.get_object()
+        ids = request.data.get('source_file_ids') or []
+        if not isinstance(ids, list):
+            return Response(
+                {'error': 'source_file_ids must be a list'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            updated = assign_files_to_scope(scope, ids)
+        except DjangoValidationError as exc:
+            return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'updated': updated, 'scope': str(scope.id)})
+
+    @action(detail=True, methods=['get'])
+    def files(self, request, pk=None):
+        """List SourceFiles assigned to this scope."""
+        from apps.models.models import SourceFile
+        from apps.models.serializers import SourceFileListSerializer
+
+        scope = self.get_object()
+        qs = SourceFile.objects.filter(scope=scope).select_related('project').order_by('-uploaded_at')
+        serializer = SourceFileListSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def tree(self, request):
+        """Return scopes as a denormalized tree per project.
+
+        ``GET /api/projects/scopes/tree/?project=<uuid>``. Returns a list of
+        root scopes with ``children`` recursively embedded. One DB query per
+        project — fine for the sizes we expect (tens, not thousands).
+        """
+        project_id = request.query_params.get('project')
+        if not project_id:
+            return Response(
+                {'error': 'project query param is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        scopes = list(
+            ProjectScope.objects.filter(project_id=project_id)
+            .order_by('name')
+            .values('id', 'parent_id', 'name', 'scope_type')
+        )
+        nodes = {
+            str(s['id']): {
+                'id': str(s['id']),
+                'parent': str(s['parent_id']) if s['parent_id'] else None,
+                'name': s['name'],
+                'scope_type': s['scope_type'],
+                'children': [],
+            }
+            for s in scopes
+        }
+        roots = []
+        for node in nodes.values():
+            if node['parent'] and node['parent'] in nodes:
+                nodes[node['parent']]['children'].append(node)
+            else:
+                roots.append(node)
+        return Response(roots)
