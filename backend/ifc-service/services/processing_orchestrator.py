@@ -57,9 +57,6 @@ class ProcessingResult:
     # Processing info
     ifc_schema: Optional[str] = None
     extraction_run_id: Optional[str] = None
-    # DEPRECATED: kept for one cycle so existing Django callers don't break;
-    # mirrors extraction_run_id. Will be removed in Phase 2.5.
-    processing_report_id: Optional[str] = None
     duration_seconds: float = 0.0
     error: Optional[str] = None
 
