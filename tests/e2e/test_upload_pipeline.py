@@ -7,7 +7,6 @@ trip exercises the actual HTTP path Django uses in production.
 """
 from __future__ import annotations
 
-import json
 import time
 from pathlib import Path
 
