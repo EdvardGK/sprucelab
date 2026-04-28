@@ -14,29 +14,95 @@ from ..models import (
 from ..serializers import ProcessingReportSerializer, IFCEntitySerializer
 
 
-class ProcessingReportViewSet(viewsets.ReadOnlyModelViewSet):
+class ProcessingReportViewSet(viewsets.ViewSet):
     """
-    API endpoint for viewing processing reports.
+    DEPRECATED compat shim.
 
-    list: Get all processing reports
-    retrieve: Get a single processing report
-
-    Filtering:
-    - ?model={model_id} - Filter by model
-    - ?overall_status=success|partial|failed - Filter by status
-    - ?catastrophic_failure=true|false - Filter by catastrophic failures only
-
-    Ordering:
-    - ?ordering=-started_at (default: newest first)
-    - ?ordering=duration_seconds (sort by duration)
-    - ?ordering=total_entities_failed (sort by failure count)
+    The Phase 2 data foundation replaced ProcessingReport with ExtractionRun.
+    Frontend pages still on the old endpoint (/api/types/processing-reports/)
+    keep working because we re-shape live ExtractionRun rows into the legacy
+    ProcessingReport response schema here. Slated for removal in Phase 2.5
+    once the frontend migrates.
     """
-    queryset = ProcessingReport.objects.all()
-    serializer_class = ProcessingReportSerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['model', 'overall_status', 'catastrophic_failure']
-    ordering_fields = ['started_at', 'duration_seconds', 'total_entities_failed']
-    ordering = ['-started_at']  # Default: newest first
+
+    def _qs(self):
+        # Local import to avoid circular import at module load.
+        from apps.models.models import ExtractionRun
+        qs = ExtractionRun.objects.select_related(
+            'source_file', 'source_file__project',
+        )
+
+        model_id = self.request.query_params.get('model')
+        if model_id:
+            qs = qs.filter(source_file__derived_models__id=model_id)
+
+        overall_status = self.request.query_params.get('overall_status')
+        if overall_status:
+            mapping = {'success': 'completed', 'partial': 'completed', 'failed': 'failed'}
+            qs = qs.filter(status=mapping.get(overall_status, overall_status))
+
+        catastrophic = self.request.query_params.get('catastrophic_failure')
+        if catastrophic is not None:
+            want = catastrophic.lower() in ('1', 'true', 'yes')
+            qs = qs.filter(status='failed') if want else qs.exclude(status='failed')
+
+        ordering = self.request.query_params.get('ordering', '-started_at')
+        if ordering in {'started_at', '-started_at', 'duration_seconds', '-duration_seconds'}:
+            qs = qs.order_by(ordering)
+        else:
+            qs = qs.order_by('-started_at')
+
+        return qs
+
+    def _shape(self, run):
+        """Project an ExtractionRun row back into ProcessingReport's wire shape."""
+        sf = run.source_file
+        derived = sf.derived_models.first() if sf else None
+        qr = run.quality_report or {}
+        return {
+            'id': str(run.id),
+            'model': str(derived.id) if derived else None,
+            'model_name': derived.name if derived else None,
+            'model_id': str(derived.id) if derived else None,
+            'project_id': str(sf.project_id) if sf else None,
+            'project_name': sf.project.name if sf and sf.project else None,
+            'started_at': run.started_at,
+            'completed_at': run.completed_at,
+            'duration_seconds': run.duration_seconds,
+            'overall_status': (
+                'success' if run.status == 'completed'
+                else 'failed' if run.status == 'failed'
+                else 'partial'
+            ),
+            'ifc_schema': qr.get('ifc_schema'),
+            'file_size_bytes': qr.get('file_size_bytes', 0),
+            'stage_results': run.log_entries or [],
+            'total_entities_processed': qr.get('total_entities_processed', qr.get('total_elements', 0)),
+            'total_entities_skipped': qr.get('total_entities_skipped', 0),
+            'total_entities_failed': qr.get('total_entities_failed', 0),
+            'errors': [],
+            'catastrophic_failure': run.status == 'failed',
+            'failure_stage': None,
+            'failure_exception': run.error_message if run.status == 'failed' else None,
+            'failure_traceback': None,
+            'summary': None,
+            'verification_data': qr,
+        }
+
+    def list(self, request):
+        runs = list(self._qs()[:200])
+        results = [self._shape(r) for r in runs]
+        return Response({'count': len(results), 'next': None, 'previous': None, 'results': results})
+
+    def retrieve(self, request, pk=None):
+        from apps.models.models import ExtractionRun
+        try:
+            run = ExtractionRun.objects.select_related(
+                'source_file', 'source_file__project',
+            ).get(pk=pk)
+        except ExtractionRun.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(self._shape(run))
 
 
 def get_entity_location(entity):
