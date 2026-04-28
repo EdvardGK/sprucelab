@@ -355,6 +355,8 @@ class ProcessingOrchestrator:
         self,
         model_id: str,
         file_path: str,
+        source_file_id: Optional[str] = None,
+        extraction_run_id: Optional[str] = None,
     ) -> ProcessingResult:
         """
         Simplified processing - types only, no entity storage.
