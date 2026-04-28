@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/auth/me/', current_user, name='current-user-legacy'),
     path('api/projects/', include('apps.projects.urls')),
     path('api/models/', include('apps.models.urls')),
+    path('api/files/', include('apps.models.files_urls')),
     path('api/types/', include('apps.entities.urls')),
     path('api/viewers/', include('apps.viewers.urls')),
     path('api/', include('apps.scripting.urls')),
