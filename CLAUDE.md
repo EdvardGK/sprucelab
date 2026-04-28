@@ -277,7 +277,15 @@ export function useUpdateFeature() {
 ## Quick Start
 
 ```bash
-# Backend
+# One-command dev kit (requires `just`: pacman -S just)
+just up           # Postgres + Redis up, migrations applied
+just dev          # Full interactive stack (Django, FastAPI, Vite)
+just test         # Unit tests
+just test-e2e     # End-to-end tests (boots its own FastAPI subprocess)
+just routes       # Print URL conf as a flat list (agent-friendly)
+just api GET /files/?project=<uuid>   # Curl wrapper
+
+# Manual fallback
 cd backend && pip install -r requirements.txt
 python manage.py migrate && python manage.py runserver
 
