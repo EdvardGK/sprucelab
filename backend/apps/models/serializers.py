@@ -177,7 +177,7 @@ class ExtractionRunSerializer(serializers.ModelSerializer):
             'id', 'source_file', 'status',
             'started_at', 'completed_at', 'duration_seconds',
             'discovered_crs', 'crs_source', 'crs_confidence', 'discovered_units',
-            'quality_report', 'log_entries',
+            'discovered_grid', 'quality_report', 'log_entries',
             'error_message', 'extractor_version', 'task_id',
         ]
         read_only_fields = fields
