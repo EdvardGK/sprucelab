@@ -20,7 +20,7 @@ class ModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Model
         fields = [
-            'id', 'project', 'project_name', 'name', 'original_filename',
+            'id', 'project', 'project_name', 'scope', 'name', 'original_filename',
             'ifc_schema', 'file_url', 'file_size',
             # Legacy status (deprecated, use layer-specific statuses below)
             'status',
