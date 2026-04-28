@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, ProjectConfig
+from .models import Project, ProjectConfig, ProjectScope
 from .services.bep_defaults import BEPDefaults, get_bep_template
 
 
