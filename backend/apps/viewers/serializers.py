@@ -52,7 +52,7 @@ class ViewerGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = ViewerGroup
         fields = [
-            'id', 'project', 'project_name', 'name', 'description',
+            'id', 'project', 'project_name', 'scope', 'name', 'description',
             'group_type', 'parent', 'display_order', 'is_expanded',
             'models', 'model_count',
             'created_by', 'created_at', 'updated_at'
