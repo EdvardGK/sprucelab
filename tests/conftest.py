@@ -171,6 +171,8 @@ def _wire_service_urls(request, settings, fastapi_service):
         settings.DJANGO_URL = request.getfixturevalue('live_server').url
     settings.IFC_SERVICE_URL = fastapi_service['base_url']
     settings.IFC_SERVICE_API_KEY = 'test-key'
+    # The legacy upload guard refuses localhost file URLs unless DEBUG is on.
+    settings.DEBUG = True
 
 
 @pytest.fixture
