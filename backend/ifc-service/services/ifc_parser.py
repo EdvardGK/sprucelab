@@ -144,6 +144,8 @@ class TypesOnlyResult:
     log_entries: List[Dict] = field(default_factory=list)
     # Quality report (summary of data completeness)
     quality_report: Dict = field(default_factory=dict)
+    # IfcGrid extraction (Phase 4): {"grids": [{name, guid, placement, u_axes, v_axes, w_axes}]}
+    discovered_grid: Dict = field(default_factory=dict)
 
     # Timing
     duration_seconds: float = 0.0
