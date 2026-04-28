@@ -269,6 +269,15 @@ class ModelViewSet(viewsets.ModelViewSet):
             ifc_timestamp=new_ifc_timestamp,  # Store IFC timestamp
             status='processing',  # Set to processing immediately
             uploaded_by=request.user if request.user.is_authenticated else None,
+            source_file=source_file,
+        )
+
+        # Phase 2 Layer 1: an ExtractionRun row is created up-front so the
+        # orchestrator can flip it through running -> completed/failed without
+        # racing other concurrent runs against the same SourceFile.
+        extraction_run = ExtractionRun.objects.create(
+            source_file=source_file,
+            status='pending',
         )
 
         # Start IFC processing via FastAPI
