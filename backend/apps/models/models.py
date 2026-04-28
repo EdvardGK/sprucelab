@@ -312,6 +312,14 @@ class Model(models.Model):
     parent_model = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='versions')
     is_published = models.BooleanField(default=False, help_text="Whether this version is the active/published version")
 
+    # Layer 0 link: every Model is derived from a SourceFile. Nullable for now
+    # because the data migration backfills existing rows; new uploads always
+    # populate it.
+    source_file = models.ForeignKey(
+        'SourceFile', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='derived_models',
+    )
+
     # Phase 1: identity attribution. Versioning audit log (ModelEvent) arrives in Phase 2.
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
