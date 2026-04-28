@@ -213,7 +213,7 @@ class SourceFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = SourceFile
         fields = [
-            'id', 'project', 'project_name', 'original_filename', 'file_url',
+            'id', 'project', 'project_name', 'scope', 'original_filename', 'file_url',
             'file_size', 'checksum_sha256', 'format', 'mime_type',
             'version_number', 'parent_file', 'is_current',
             'uploaded_by', 'uploaded_at', 'extraction_runs',
