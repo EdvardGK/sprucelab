@@ -110,9 +110,6 @@ class Command(BaseCommand):
                 self.stdout.write('Deleting viewer groups...')
                 ViewerGroup.objects.all().delete()
 
-                self.stdout.write('Deleting processing reports...')
-                ProcessingReport.objects.all().delete()
-
                 self.stdout.write('Deleting validation reports...')
                 IFCValidationReport.objects.all().delete()
 
