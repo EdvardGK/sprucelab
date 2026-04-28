@@ -200,6 +200,8 @@ async def _process_full(
         result = await processing_orchestrator.process_model_types_only(
             model_id=model_id,
             file_path=file_path,
+            source_file_id=source_file_id,
+            extraction_run_id=extraction_run_id,
         )
 
         _processing_status[model_id] = {
