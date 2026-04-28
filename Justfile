@@ -103,18 +103,9 @@ api method path *args:
     @bash tools/api {{method}} {{path}} "$@"
 
 # Pretty-print the Django URL conf (agent-friendly endpoint inventory)
-routes:
+routes *args:
     @just _safety-check
-    cd backend && {{PY}} manage.py show_urls 2>/dev/null || \
-        {{PY}} manage.py shell -c "from django.urls import get_resolver; \
-import json; \
-def walk(r, p=''): \
-    out=[]; \
-    for u in r.url_patterns: \
-        if hasattr(u,'url_patterns'): out.extend(walk(u, p+str(u.pattern))); \
-        else: out.append(p+str(u.pattern)); \
-    return out; \
-print('\n'.join(sorted(walk(get_resolver()))))"
+    @{{PY}} tools/routes.py "$@"
 
 # Tail Django + FastAPI logs (requires services running via `just dev`)
 logs:
