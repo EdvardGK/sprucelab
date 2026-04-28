@@ -159,6 +159,20 @@ def _open_permissions(settings):
     }
 
 
+@pytest.fixture(autouse=True)
+def _wire_service_urls(request, settings, fastapi_service):
+    """
+    Auto-wire DJANGO_URL + IFC_SERVICE_URL when a test pulls in `live_server`.
+
+    FastAPI downloads the uploaded file from DJANGO_URL; without this it'd
+    hit production:8000 by default.
+    """
+    if 'live_server' in request.fixturenames:
+        settings.DJANGO_URL = request.getfixturevalue('live_server').url
+    settings.IFC_SERVICE_URL = fastapi_service['base_url']
+    settings.IFC_SERVICE_API_KEY = 'test-key'
+
+
 @pytest.fixture
 def project(db):
     """A fresh Project for each test."""
