@@ -114,8 +114,6 @@ def test_legacy_models_upload_still_creates_source_file(
             timeout=30,
         )
     assert resp.status_code == 201, resp.text
-    model_payload = resp.json()['model']
-    model_id = model_payload['id']
 
     # Source file appears in /api/files/.
     files = api_get(f"/files/?project={project.id}")
@@ -126,12 +124,9 @@ def test_legacy_models_upload_still_creates_source_file(
     run = _wait_for_run(api_get, sf_id)
     assert run['status'] == 'completed'
 
-    # Legacy /processing-reports/ compat shim returns the same data.
-    reports = api_get(f"/types/processing-reports/?model={model_id}")
-    assert reports, "compat shim should expose the run"
-    r0 = reports[0]
-    assert r0['overall_status'] == 'success'
-    assert r0['stage_results'], 'compat shim should re-shape log_entries'
+    # The flat extractions endpoint surfaces the same run.
+    flat = api_get(f"/files/extractions/?source_file={sf_id}")
+    assert any(r['id'] == run['id'] for r in flat), 'flat extractions endpoint should expose the run'
 
 
 def test_dedup_same_bytes_into_same_project(
