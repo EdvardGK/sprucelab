@@ -16,7 +16,6 @@ from .library import (
 from .analysis import ModelAnalysisViewSet
 
 __all__ = [
-    'ProcessingReportViewSet',
     'IFCEntityViewSet',
     'NS3451CodeViewSet',
     'SemanticTypeViewSet',
