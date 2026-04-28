@@ -12,7 +12,10 @@ scope_router = DefaultRouter()
 scope_router.register(r'', ProjectScopeViewSet, basename='project-scope')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    # More-specific paths must come first — the empty-prefix DRF router
+    # matches single-segment URLs as ProjectViewSet detail (pk=...) and
+    # would otherwise swallow /api/projects/scopes/ etc.
     path('configs/', include(config_router.urls)),
     path('scopes/', include(scope_router.urls)),
+    path('', include(router.urls)),
 ]
