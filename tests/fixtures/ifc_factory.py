@@ -130,5 +130,16 @@ def build_ifc_with_grid(out: Path) -> Path:
     grid.UAxes = u_axes
     grid.VAxes = v_axes
 
+    # Identity placement so the parser exercises the placement code path.
+    origin = f.create_entity("IfcCartesianPoint", Coordinates=(0.0, 0.0, 0.0))
+    z_dir = f.create_entity("IfcDirection", DirectionRatios=(0.0, 0.0, 1.0))
+    x_dir = f.create_entity("IfcDirection", DirectionRatios=(1.0, 0.0, 0.0))
+    axis2 = f.create_entity(
+        "IfcAxis2Placement3D", Location=origin, Axis=z_dir, RefDirection=x_dir
+    )
+    grid.ObjectPlacement = f.create_entity(
+        "IfcLocalPlacement", PlacementRelTo=None, RelativePlacement=axis2
+    )
+
     f.write(str(out))
     return out
