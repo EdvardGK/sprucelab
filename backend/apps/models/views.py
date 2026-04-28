@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from datetime import datetime
 
-from .models import Model
+from .models import ExtractionRun, Model, SourceFile
 from .serializers import (
     ModelSerializer,
     ModelDetailSerializer,
@@ -20,6 +20,7 @@ from .serializers import (
 from .tasks import revert_model_task
 from apps.projects.models import Project
 from apps.entities.models import IFCValidationReport, IFCEntity
+from .files_views import get_or_create_source_file
 import json
 
 
