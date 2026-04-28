@@ -742,6 +742,93 @@ class IFCRepository:
 
         return str(report_id)
 
+    # ---------------------------------------------------------------------
+    # Phase 2: ExtractionRun (replaces ProcessingReport)
+    # ---------------------------------------------------------------------
+
+    async def create_extraction_run(
+        self,
+        *,
+        source_file_id: str,
+        status: str = "running",
+        extractor_version: str = "",
+    ) -> str:
+        """Create an ExtractionRun row in 'pending' / 'running' state."""
+        run_id = uuid.uuid4()
+        async with get_connection() as conn:
+            await conn.execute(
+                """
+                INSERT INTO extraction_runs (
+                    id, source_file_id, status, started_at,
+                    discovered_units, quality_report, log_entries,
+                    extractor_version
+                )
+                VALUES ($1, $2, $3, NOW(), '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, $4)
+                """,
+                run_id, uuid.UUID(source_file_id), status, extractor_version,
+            )
+        return str(run_id)
+
+    async def update_extraction_run(
+        self,
+        run_id: str,
+        *,
+        status: Optional[str] = None,
+        completed_at: Optional[datetime] = None,
+        duration_seconds: Optional[float] = None,
+        discovered_crs: Optional[str] = None,
+        crs_source: Optional[str] = None,
+        crs_confidence: Optional[float] = None,
+        discovered_units: Optional[Dict] = None,
+        quality_report: Optional[Dict] = None,
+        log_entries: Optional[List[Dict]] = None,
+        error_message: Optional[str] = None,
+        extractor_version: Optional[str] = None,
+        task_id: Optional[str] = None,
+    ) -> None:
+        """Update mutable fields on an ExtractionRun. Only writes provided fields."""
+        sets: List[str] = []
+        args: List[Any] = []
+
+        def add(col: str, val: Any, jsonb: bool = False) -> None:
+            args.append(json.dumps(val) if jsonb else val)
+            sets.append(f"{col} = ${len(args)}")
+
+        if status is not None:
+            add("status", status)
+        if completed_at is not None:
+            add("completed_at", completed_at)
+        if duration_seconds is not None:
+            add("duration_seconds", duration_seconds)
+        if discovered_crs is not None:
+            add("discovered_crs", discovered_crs)
+        if crs_source is not None:
+            add("crs_source", crs_source)
+        if crs_confidence is not None:
+            add("crs_confidence", crs_confidence)
+        if discovered_units is not None:
+            add("discovered_units", discovered_units, jsonb=True)
+        if quality_report is not None:
+            add("quality_report", quality_report, jsonb=True)
+        if log_entries is not None:
+            add("log_entries", log_entries, jsonb=True)
+        if error_message is not None:
+            add("error_message", error_message)
+        if extractor_version is not None:
+            add("extractor_version", extractor_version)
+        if task_id is not None:
+            add("task_id", task_id)
+
+        if not sets:
+            return
+
+        args.append(uuid.UUID(run_id))
+        async with get_connection() as conn:
+            await conn.execute(
+                f"UPDATE extraction_runs SET {', '.join(sets)} WHERE id = ${len(args)}",
+                *args,
+            )
+
     async def delete_model_data(self, model_id: str) -> Dict[str, int]:
         """
         Delete all data for a model (for re-processing).
