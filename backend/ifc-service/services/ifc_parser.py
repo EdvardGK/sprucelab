@@ -888,6 +888,103 @@ class IFCParserService:
 
         return items, len(items), errors
 
+    def _extract_grids(self, ifc_file, length_unit_scale: float) -> Dict:
+        """
+        Extract every IfcGrid: name, guid, 4x4 placement, U/V/W axes.
+
+        Each axis becomes:
+          {tag, curve_type, start: [x,y,z]|None, direction: [dx,dy,dz]|None}
+
+        IfcLine: start = Pnt.Coordinates, direction = DirectionRatios * Magnitude.
+        IfcPolyline: start = first point, direction = (last - first).
+        Other curve types: curve_type recorded, start/direction = None.
+
+        Coordinates and the placement translation column are converted to
+        meters via ``length_unit_scale`` so downstream consumers
+        (drawing-sheet axis registration, footprint containment) can compare
+        values without re-resolving units.
+        """
+        try:
+            import ifcopenshell.util.placement
+        except Exception:
+            ifcopenshell.util.placement = None  # type: ignore[attr-defined]
+
+        result_grids: List[Dict] = []
+
+        def _scaled_point(coords) -> Optional[List[float]]:
+            if coords is None:
+                return None
+            try:
+                return [float(c) * length_unit_scale for c in coords]
+            except Exception:
+                return None
+
+        def _axis_dict(axis) -> Dict:
+            tag = getattr(axis, 'AxisTag', None)
+            curve = getattr(axis, 'AxisCurve', None)
+            entry: Dict = {
+                'tag': tag,
+                'curve_type': curve.is_a() if curve is not None else None,
+                'start': None,
+                'direction': None,
+            }
+            if curve is None:
+                return entry
+            try:
+                if curve.is_a('IfcLine'):
+                    pnt = getattr(curve, 'Pnt', None)
+                    direction = getattr(curve, 'Dir', None)
+                    if pnt is not None:
+                        entry['start'] = _scaled_point(getattr(pnt, 'Coordinates', None))
+                    if direction is not None:
+                        ratios = getattr(direction, 'DirectionRatios', None)
+                        magnitude = float(getattr(direction, 'Magnitude', 1.0) or 1.0)
+                        if ratios is not None:
+                            # Direction ratios are unitless (orientation) but the
+                            # IfcVector magnitude carries the same length unit as
+                            # the model, so scale it to meters.
+                            scaled_mag = magnitude * length_unit_scale
+                            entry['direction'] = [float(r) * scaled_mag for r in ratios]
+                elif curve.is_a('IfcPolyline'):
+                    points = list(getattr(curve, 'Points', []) or [])
+                    if len(points) >= 2:
+                        first = _scaled_point(getattr(points[0], 'Coordinates', None))
+                        last = _scaled_point(getattr(points[-1], 'Coordinates', None))
+                        entry['start'] = first
+                        if first is not None and last is not None:
+                            entry['direction'] = [last[i] - first[i] for i in range(len(first))]
+            except Exception:
+                # Curve geometry unreadable — keep tag + curve_type, drop coords.
+                entry['start'] = None
+                entry['direction'] = None
+            return entry
+
+        for grid in ifc_file.by_type('IfcGrid'):
+            placement: Optional[List[List[float]]] = None
+            try:
+                if grid.ObjectPlacement is not None and ifcopenshell.util.placement is not None:
+                    matrix = ifcopenshell.util.placement.get_local_placement(grid.ObjectPlacement)
+                    if matrix is not None:
+                        # Numpy array; copy + scale translation column to meters.
+                        m = [[float(v) for v in row] for row in matrix]
+                        for r in range(3):
+                            m[r][3] = m[r][3] * length_unit_scale
+                        placement = m
+            except Exception:
+                placement = None
+
+            grid_entry: Dict = {
+                'name': getattr(grid, 'Name', None),
+                'guid': getattr(grid, 'GlobalId', None),
+                'placement': placement,
+                'u_axes': [_axis_dict(a) for a in (getattr(grid, 'UAxes', None) or [])],
+                'v_axes': [_axis_dict(a) for a in (getattr(grid, 'VAxes', None) or [])],
+                'w_axes': [_axis_dict(a) for a in (getattr(grid, 'WAxes', None) or [])],
+            }
+            result_grids.append(grid_entry)
+
+        return {'grids': result_grids}
+
     def _extract_materials(self, ifc_file) -> Tuple[List[MaterialData], List[Dict]]:
         """Extract materials."""
         materials = []
