@@ -59,29 +59,53 @@ export interface UploadModelRequest {
   file: File;
 }
 
-export interface ProcessingReport {
+/** Layer 1 extraction run (replaces the legacy ProcessingReport shape). */
+export type ExtractionRunStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface ExtractionRunLogEntry {
+  ts?: string;
+  level?: string;
+  stage?: string;
+  message?: string;
+  details?: Record<string, unknown>;
+}
+
+export interface ExtractionRunListItem {
   id: string;
-  model: string;
-  model_name: string;
-  model_id: string;
-  project_id: string;
-  project_name: string;
+  source_file: string;
+  status: ExtractionRunStatus;
   started_at: string;
   completed_at: string | null;
   duration_seconds: number | null;
-  overall_status: 'success' | 'partial' | 'failed';
-  ifc_schema: string | null;
-  file_size_bytes: number;
-  stage_results: any[];
-  total_entities_processed: number;
-  total_entities_skipped: number;
-  total_entities_failed: number;
-  errors: any[];
-  catastrophic_failure: boolean;
-  failure_stage: string | null;
-  failure_exception: string | null;
-  failure_traceback: string | null;
-  summary: string | null;
+  discovered_crs: string | null;
+  extractor_version: string;
+  error_message: string | null;
+}
+
+export interface ExtractionRun extends ExtractionRunListItem {
+  crs_source: string | null;
+  crs_confidence: number | null;
+  discovered_units: Record<string, string>;
+  quality_report: Record<string, unknown>;
+  log_entries: ExtractionRunLogEntry[];
+  task_id: string | null;
+}
+
+export interface SourceFileListItem {
+  id: string;
+  project: string;
+  project_name: string;
+  original_filename: string;
+  format: string;
+  file_size: number;
+  checksum_sha256: string;
+  mime_type: string;
+  version_number: number;
+  parent_file: string | null;
+  is_current: boolean;
+  uploaded_by: string | null;
+  uploaded_at: string;
+  latest_extraction_status: ExtractionRunStatus | null;
 }
 
 export interface ViewerGroup {
