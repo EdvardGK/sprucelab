@@ -33,7 +33,7 @@ export function useProcessingReports(filters?: ProcessingReportFilters) {
       }
       if (filters?.ordering) params.append('ordering', filters.ordering);
 
-      const url = `/entities/processing-reports/${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `/types/processing-reports/${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await apiClient.get<PaginatedResponse<ProcessingReport>>(url);
 
       // Extract the results array from paginated response
@@ -47,7 +47,7 @@ export function useProcessingReport(id: string) {
   return useQuery({
     queryKey: processingReportKeys.detail(id),
     queryFn: async () => {
-      const response = await apiClient.get<ProcessingReport>(`/entities/processing-reports/${id}/`);
+      const response = await apiClient.get<ProcessingReport>(`/types/processing-reports/${id}/`);
       return response.data;
     },
     enabled: !!id,
@@ -60,7 +60,7 @@ export function useModelProcessingReports(modelId: string) {
     queryKey: processingReportKeys.byModel(modelId),
     queryFn: async () => {
       const response = await apiClient.get<PaginatedResponse<ProcessingReport>>(
-        `/entities/processing-reports/?model=${modelId}`
+        `/types/processing-reports/?model=${modelId}`
       );
       return response.data.results || [];
     },
