@@ -146,6 +146,19 @@ def fastapi_service(django_db_setup, django_db_blocker) -> Iterator[dict]:
 # Domain fixtures
 # ---------------------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def _open_permissions(settings):
+    """
+    Tests bypass auth by default — the data-foundation pipeline is what's
+    under test, not authn. Real auth gets covered in dedicated tests.
+    """
+    settings.REST_FRAMEWORK = {
+        **getattr(settings, 'REST_FRAMEWORK', {}),
+        'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
+        'DEFAULT_AUTHENTICATION_CLASSES': [],
+    }
+
+
 @pytest.fixture
 def project(db):
     """A fresh Project for each test."""
