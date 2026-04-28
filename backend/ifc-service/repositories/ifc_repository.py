@@ -675,75 +675,8 @@ class IFCRepository:
 
         return len(records)
 
-    async def create_processing_report(
-        self,
-        model_id: str,
-        started_at: datetime,
-        completed_at: Optional[datetime] = None,
-        duration_seconds: Optional[float] = None,
-        overall_status: str = "failed",
-        ifc_schema: Optional[str] = None,
-        file_size_bytes: int = 0,
-        stage_results: Optional[List[Dict]] = None,
-        total_entities_processed: int = 0,
-        total_entities_skipped: int = 0,
-        total_entities_failed: int = 0,
-        errors: Optional[List[Dict]] = None,
-        catastrophic_failure: bool = False,
-        failure_stage: Optional[str] = None,
-        failure_exception: Optional[str] = None,
-        failure_traceback: Optional[str] = None,
-        summary: Optional[str] = None,
-        verification_data: Optional[Dict] = None,
-    ) -> str:
-        """
-        Create a processing report.
-
-        Returns:
-            The report ID (UUID string)
-        """
-        report_id = uuid.uuid4()
-        model_uuid = uuid.UUID(model_id)
-
-        async with get_connection() as conn:
-            await conn.execute(
-                """
-                INSERT INTO processing_reports (
-                    id, model_id, started_at, completed_at, duration_seconds,
-                    overall_status, ifc_schema, file_size_bytes,
-                    stage_results, total_entities_processed, total_entities_skipped,
-                    total_entities_failed, errors, catastrophic_failure,
-                    failure_stage, failure_exception, failure_traceback, summary,
-                    verification_data
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
-                )
-                """,
-                report_id,
-                model_uuid,
-                started_at,
-                completed_at,
-                duration_seconds,
-                overall_status,
-                ifc_schema,
-                file_size_bytes,
-                json.dumps(stage_results or []),
-                total_entities_processed,
-                total_entities_skipped,
-                total_entities_failed,
-                json.dumps(errors or []),
-                catastrophic_failure,
-                failure_stage,
-                failure_exception,
-                failure_traceback,
-                summary,
-                json.dumps(verification_data or {}),
-            )
-
-        return str(report_id)
-
     # ---------------------------------------------------------------------
-    # Phase 2: ExtractionRun (replaces ProcessingReport)
+    # ExtractionRun lifecycle
     # ---------------------------------------------------------------------
 
     async def create_extraction_run(
