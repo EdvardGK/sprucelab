@@ -220,6 +220,19 @@ class ModelViewSet(viewsets.ModelViewSet):
         file_checksum = sha256.hexdigest()
         uploaded_file.seek(0)
 
+        # Phase 2 Layer 0: ensure a SourceFile exists for this upload so every
+        # file is addressable via /api/files/, regardless of which upload
+        # endpoint was used.
+        source_file = get_or_create_source_file(
+            project=project,
+            original_filename=uploaded_file.name,
+            file_url=file_url,
+            file_size=uploaded_file.size,
+            checksum=file_checksum,
+            uploaded_by=request.user if request.user.is_authenticated else None,
+            mime_type=getattr(uploaded_file, 'content_type', '') or '',
+        )
+
         # Skip timestamp extraction to avoid OOM on large files
         # FastAPI will extract metadata after downloading
         new_ifc_timestamp = None
