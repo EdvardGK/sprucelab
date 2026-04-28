@@ -90,12 +90,13 @@ def fastapi_service(django_db_setup, django_db_blocker) -> Iterator[dict]:
     Yields:
         dict with `base_url`, `port`, `pid`. Subprocess is killed at session end.
     """
-    from django.conf import settings as django_settings
-    db = django_settings.DATABASES["default"]
-    test_db_name = db.get("TEST", {}).get("NAME") or f"test_{db['NAME']}"
+    from django.db import connection
+    # `connection.settings_dict` reflects the active connection (the test DB
+    # pytest-django created). NAME is already swapped to the test name here.
+    db = connection.settings_dict
     db_url = (
         f"postgresql://{db['USER']}:{db['PASSWORD']}"
-        f"@{db['HOST']}:{db['PORT']}/{test_db_name}"
+        f"@{db['HOST']}:{db['PORT']}/{db['NAME']}"
     )
 
     port = _free_port()
