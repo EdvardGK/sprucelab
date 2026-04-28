@@ -937,12 +937,18 @@ class IFCParserService:
                     if pnt is not None:
                         entry['start'] = _scaled_point(getattr(pnt, 'Coordinates', None))
                     if direction is not None:
-                        ratios = getattr(direction, 'DirectionRatios', None)
-                        magnitude = float(getattr(direction, 'Magnitude', 1.0) or 1.0)
+                        # IfcLine.Dir is an IfcVector: Orientation (IfcDirection) + Magnitude.
+                        # Some authors hand back a raw IfcDirection — handle both.
+                        if direction.is_a('IfcVector'):
+                            orientation = getattr(direction, 'Orientation', None)
+                            magnitude = float(getattr(direction, 'Magnitude', 1.0) or 1.0)
+                            ratios = getattr(orientation, 'DirectionRatios', None) if orientation is not None else None
+                        else:
+                            magnitude = 1.0
+                            ratios = getattr(direction, 'DirectionRatios', None)
                         if ratios is not None:
-                            # Direction ratios are unitless (orientation) but the
-                            # IfcVector magnitude carries the same length unit as
-                            # the model, so scale it to meters.
+                            # Direction ratios are unitless; the magnitude carries
+                            # the model's length unit, so scale it to meters.
                             scaled_mag = magnitude * length_unit_scale
                             entry['direction'] = [float(r) * scaled_mag for r in ratios]
                 elif curve.is_a('IfcPolyline'):
