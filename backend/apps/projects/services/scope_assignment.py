@@ -59,9 +59,11 @@ def assign_files_to_scope(
 def auto_assign_by_footprint(scope: ProjectScope) -> int:
     """Auto-assign storeys/files to a scope by footprint-polygon containment.
 
-    Phase 4 work — depends on IfcGrid extraction landing first. Tracked in
-    ``docs/plans/2026-04-26-data-foundation-plan.md``.
+    Phase 4 (IfcGrid extraction) populated ``ExtractionRun.discovered_grid``,
+    but containment also needs ``ProjectScope.footprint_polygon`` — that
+    capture is a UI slice that has not landed yet.
     """
     raise NotImplementedError(
-        "Footprint-polygon auto-assignment lands in Phase 4 (IfcGrid extraction)."
+        "Footprint-polygon auto-assignment needs ProjectScope.footprint_polygon "
+        "to be authored (UI slice not yet shipped)."
     )
