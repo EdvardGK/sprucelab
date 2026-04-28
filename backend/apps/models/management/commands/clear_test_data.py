@@ -21,7 +21,7 @@ from apps.models.models import Model
 from apps.entities.models import (
     IFCEntity, PropertySet, SpatialHierarchy,
     System, Material, IFCType, GraphEdge,
-    IFCValidationReport, ProcessingReport
+    IFCValidationReport,
 )
 # BEP app archived (2026-04)
 try:
