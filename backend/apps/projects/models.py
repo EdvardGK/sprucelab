@@ -376,7 +376,17 @@ class ProjectScope(models.Model):
     class Meta:
         db_table = 'project_scopes'
         ordering = ['name']
-        unique_together = [('project', 'parent', 'name')]
+        constraints = [
+            # nulls_distinct=False so two ROOT scopes (parent IS NULL) with the
+            # same name in the same project still collide. Postgres' default
+            # NULLS-distinct behavior would otherwise allow duplicates at the
+            # root level. Requires Postgres 15+ / Django 5+.
+            models.UniqueConstraint(
+                fields=['project', 'parent', 'name'],
+                name='uniq_project_scope_name',
+                nulls_distinct=False,
+            ),
+        ]
         indexes = [
             models.Index(fields=['project', 'parent']),
         ]
