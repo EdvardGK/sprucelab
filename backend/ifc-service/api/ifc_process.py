@@ -377,6 +377,8 @@ async def process_ifc_file_sync(
         result = await processing_orchestrator.process_model_types_only(
             model_id=request.model_id,
             file_path=file_path,
+            source_file_id=request.source_file_id,
+            extraction_run_id=request.extraction_run_id,
         )
 
         return ProcessResponse(
@@ -390,7 +392,8 @@ async def process_ifc_file_sync(
             material_count=result.material_count,
             type_count=result.type_count,
             ifc_schema=result.ifc_schema,
-            processing_report_id=result.processing_report_id,
+            extraction_run_id=result.extraction_run_id,
+            processing_report_id=result.processing_report_id,  # legacy alias
             duration_seconds=result.duration_seconds,
             error=result.error,
             stage_results=result.stage_results,
