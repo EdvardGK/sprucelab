@@ -131,6 +131,9 @@ class SourceFileViewSet(viewsets.ModelViewSet):
         project_id = self.request.query_params.get('project')
         if project_id:
             qs = qs.filter(project_id=project_id)
+        scope_id = self.request.query_params.get('scope')
+        if scope_id:
+            qs = qs.filter(scope_id=scope_id)
         fmt = self.request.query_params.get('format')
         if fmt:
             qs = qs.filter(format=fmt)
