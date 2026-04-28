@@ -248,6 +248,10 @@ class Model(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='models')
+    scope = models.ForeignKey(
+        'projects.ProjectScope', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='models',
+    )
     name = models.CharField(max_length=255)
     original_filename = models.CharField(max_length=255)
     ifc_schema = models.CharField(max_length=50, blank=True, null=True)  # IFC2X3, IFC4, etc.
