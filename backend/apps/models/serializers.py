@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Model
+from .models import Model, SourceFile, ExtractionRun
 from apps.entities.models import IFCValidationReport
 
 
