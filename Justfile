@@ -12,7 +12,9 @@ set shell := ["bash", "-cu"]
 set positional-arguments
 
 ROOT := justfile_directory()
-PY   := env_var_or_default("PYTHON", "python")
+# Default PY auto-activates the `sprucelab` conda env so recipes work from any
+# shell. Override with PYTHON=/path/to/python if you have a different setup.
+PY   := env_var_or_default("PYTHON", justfile_directory() + "/tools/python")
 
 # Default: list recipes
 default:
