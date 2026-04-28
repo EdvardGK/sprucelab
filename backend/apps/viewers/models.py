@@ -28,6 +28,10 @@ class ViewerGroup(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='viewer_groups', null=True, blank=True)
+    scope = models.ForeignKey(
+        'projects.ProjectScope', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='viewer_groups',
+    )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, help_text="Optional description of this group")
     group_type = models.CharField(max_length=50, choices=GROUP_TYPE_CHOICES, default='custom')
