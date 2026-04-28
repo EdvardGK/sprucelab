@@ -2,9 +2,9 @@
 Views package for the entities app.
 
 Re-exports all ViewSets so that urls.py can continue to use:
-    from .views import ProcessingReportViewSet, IFCEntityViewSet, ...
+    from .views import IFCEntityViewSet, ...
 """
-from .legacy import ProcessingReportViewSet, IFCEntityViewSet
+from .legacy import IFCEntityViewSet
 from .classification import NS3451CodeViewSet, SemanticTypeViewSet
 from .types import IFCTypeViewSet, TypeMappingViewSet, TypeDefinitionLayerViewSet
 from .materials import MaterialViewSet, MaterialMappingViewSet
