@@ -1,94 +1,12 @@
 """
-Reporting and analysis models: processing reports, validation, graph edges,
-room assignments, model analysis.
+Reporting and analysis models: validation, graph edges, room assignments,
+model analysis.
+
+Layer-1 extraction runs live in apps.models.models.ExtractionRun (which
+replaced the legacy ProcessingReport in Phase 2).
 """
 from django.db import models
 import uuid
-
-
-class ProcessingReport(models.Model):
-    """
-    Detailed processing report for IFC file extraction.
-
-    CRITICAL: This report MUST be created even if processing fails catastrophically.
-    Each stage tracks: processed count, skipped count, failed count, errors.
-    """
-    STATUS_CHOICES = [
-        ('success', 'Success'),
-        ('partial', 'Partial Success'),
-        ('failed', 'Failed'),
-    ]
-
-    STAGE_CHOICES = [
-        ('file_open', 'File Open'),
-        ('validation', 'Validation'),
-        ('spatial_hierarchy', 'Spatial Hierarchy'),
-        ('materials', 'Materials'),
-        ('types', 'Types'),
-        ('systems', 'Systems'),
-        ('elements', 'Elements'),
-        ('properties', 'Property Sets'),
-        ('graph_edges', 'Graph Edges'),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    model = models.ForeignKey('models.Model', on_delete=models.CASCADE, related_name='processing_reports')
-
-    # Timestamps
-    started_at = models.DateTimeField(auto_now_add=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
-    duration_seconds = models.FloatField(null=True, blank=True)
-
-    # Overall status
-    overall_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='failed')
-
-    # File info
-    ifc_schema = models.CharField(max_length=50, blank=True, null=True)
-    file_size_bytes = models.BigIntegerField(default=0)
-
-    # Per-stage results (JSON array of stage objects)
-    # Each stage: {stage, status, processed, skipped, failed, errors[], duration_ms}
-    stage_results = models.JSONField(default=list, blank=True)
-
-    # Overall counts
-    total_entities_processed = models.IntegerField(default=0)
-    total_entities_skipped = models.IntegerField(default=0)
-    total_entities_failed = models.IntegerField(default=0)
-
-    # Errors (JSON array of error objects)
-    # Each error: {stage, severity, message, element_guid, element_type, timestamp}
-    errors = models.JSONField(default=list, blank=True)
-
-    # Catastrophic failure details
-    catastrophic_failure = models.BooleanField(default=False)
-    failure_stage = models.CharField(max_length=50, blank=True, null=True, choices=STAGE_CHOICES)
-    failure_exception = models.TextField(blank=True, null=True)
-    failure_traceback = models.TextField(blank=True, null=True)
-
-    # Summary text
-    summary = models.TextField(blank=True, null=True)
-
-    # Verification metadata (for audit trail)
-    # Structure: {types_total, types_with_instances, types_without_instances,
-    #             entities_total, entities_with_type, entities_geometry_only,
-    #             verified_at, verification_method}
-    verification_data = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Verification stats from ifcopenshell parsing"
-    )
-
-    class Meta:
-        app_label = 'entities'
-        db_table = 'processing_reports'
-        ordering = ['-started_at']
-        indexes = [
-            models.Index(fields=['overall_status']),
-            models.Index(fields=['started_at']),
-        ]
-
-    def __str__(self):
-        return f"Processing {self.overall_status.upper()} - {self.model.name} ({self.started_at})"
 
 
 class IFCValidationReport(models.Model):
