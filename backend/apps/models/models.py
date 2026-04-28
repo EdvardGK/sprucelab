@@ -47,6 +47,10 @@ class SourceFile(models.Model):
     project = models.ForeignKey(
         'projects.Project', on_delete=models.CASCADE, related_name='source_files'
     )
+    scope = models.ForeignKey(
+        'projects.ProjectScope', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='source_files',
+    )
 
     original_filename = models.CharField(max_length=255)
     file_url = models.URLField(max_length=500, blank=True, null=True)
