@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
                 'db_table': 'project_scopes',
                 'ordering': ['name'],
                 'unique_together': {('project', 'parent', 'name')},
-                'indexes': [models.Index(fields=['project', 'parent'], name='project_sco_project_parent_idx')],
+                'indexes': [models.Index(fields=['project', 'parent'], name='project_sco_project_f9469d_idx')],
             },
         ),
     ]
