@@ -315,6 +315,27 @@ class IFCParserService:
             log('info', 'storeys', f'Found {len(storeys)} storeys',
                 storeys=[{'name': s['name'], 'elevation': s['elevation']} for s in storeys])
 
+            # Extract IfcGrid axes (Phase 4) — failure isolated; bad grid never fails parse.
+            try:
+                result.discovered_grid = self._extract_grids(ifc_file, length_unit_scale)
+                grid_count = len(result.discovered_grid.get('grids', []))
+                if grid_count:
+                    log('info', 'grids', f'Extracted {grid_count} grid(s)',
+                        grids=[
+                            {
+                                'name': g.get('name'),
+                                'u_axis_count': len(g.get('u_axes', [])),
+                                'v_axis_count': len(g.get('v_axes', [])),
+                                'w_axis_count': len(g.get('w_axes', [])),
+                            }
+                            for g in result.discovered_grid['grids']
+                        ])
+                else:
+                    log('info', 'grids', 'No IfcGrid entities in file')
+            except Exception as exc:
+                result.discovered_grid = {'grids': []}
+                log('warning', 'grids', f'Grid extraction failed: {exc}', error=str(exc))
+
             # Parse IfcRelContainedInSpatialStructure to build storey->element mapping
             # This tells us which elements are on which floor
             element_to_storey = {}  # element_guid -> storey_guid
