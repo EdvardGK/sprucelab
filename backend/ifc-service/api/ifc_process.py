@@ -169,6 +169,8 @@ async def _process_full(
     callback_url: str,
     temp_dir: Optional[str] = None,
     file_url: Optional[str] = None,
+    source_file_id: Optional[str] = None,
+    extraction_run_id: Optional[str] = None,
 ):
     """
     Background task for full processing.
