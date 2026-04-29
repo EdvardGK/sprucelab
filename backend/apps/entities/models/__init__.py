@@ -67,6 +67,13 @@ from .reporting import (
     AnalysisTypeStorey,
 )
 
+# Drawing models (Phase 5)
+from .drawings import (
+    DrawingSheet,
+    TitleBlockTemplate,
+    DrawingRegistration,
+)
+
 __all__ = [
     # Core
     'IFCEntity',
