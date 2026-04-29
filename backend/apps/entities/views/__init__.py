@@ -33,4 +33,6 @@ __all__ = [
     'ProductCompositionViewSet',
     'GlobalTypeLibraryViewSet',
     'ModelAnalysisViewSet',
+    'DrawingSheetViewSet',
+    'TitleBlockTemplateViewSet',
 ]
