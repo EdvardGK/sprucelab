@@ -213,6 +213,20 @@ def sample_ifc_with_grid_path(tmp_path_factory) -> Path:
     return out
 
 
+@pytest.fixture(scope="session")
+def sample_pdf_path(tmp_path_factory) -> Path:
+    """
+    Two-page PDF: page 0 is an A3 drawing, page 1 is an A4 document.
+
+    Used by the Phase 5 e2e round-trip that asserts the drawing dispatch
+    writes one DrawingSheet per page with the correct ``is_drawing`` flag.
+    """
+    from .fixtures.drawing_factory import build_pdf_multipage_mixed
+    out = tmp_path_factory.mktemp("pdf") / "mixed.pdf"
+    build_pdf_multipage_mixed(out)
+    return out
+
+
 @pytest.fixture
 def api_client(client, live_server):
     """
