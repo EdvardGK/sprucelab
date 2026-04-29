@@ -7,6 +7,7 @@ from .models import (
     TypeBankEntry, TypeBankObservation, TypeBankAlias, TypeBankScope,
     MaterialLibrary, ProductLibrary, ProductComposition,
     ModelAnalysis, AnalysisStorey, AnalysisType, AnalysisTypeStorey,
+    DrawingSheet, TitleBlockTemplate, DrawingRegistration,
 )
 
 
