@@ -39,3 +39,6 @@ api_router.include_router(crs_router)
 
 # IDS validation (buildingSMART Information Delivery Specification)
 api_router.include_router(ids_router)
+
+# Drawing extraction (DWG/DXF/PDF)
+api_router.include_router(drawings_router)
