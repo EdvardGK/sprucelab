@@ -38,6 +38,10 @@ router.register(r'material-library', MaterialLibraryViewSet, basename='material-
 router.register(r'product-library', ProductLibraryViewSet, basename='product-library')
 router.register(r'product-compositions', ProductCompositionViewSet, basename='product-composition')
 
+# Drawings (Phase 5)
+router.register(r'drawings', DrawingSheetViewSet, basename='drawing')
+router.register(r'title-block-templates', TitleBlockTemplateViewSet, basename='title-block-template')
+
 urlpatterns = [
     path('', include(router.urls)),
 ]
