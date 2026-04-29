@@ -163,6 +163,55 @@ def test_grid_extraction_lands_on_extraction_run(
     assert [a['tag'] for a in grids[0]['v_axes']] == ['1', '2', '3']
 
 
+def test_pdf_upload_creates_drawing_sheets(
+    settings, live_server, fastapi_service, project, sample_pdf_path, api_get
+):
+    """
+    Phase 5 round-trip: upload a 2-page PDF (A3 drawing + A4 document),
+    Django dispatches to the FastAPI drawing extractor, the response is
+    persisted as one DrawingSheet per page with the correct is_drawing flag.
+    """
+    settings.IFC_SERVICE_URL = fastapi_service['base_url']
+    settings.IFC_SERVICE_API_KEY = 'test-key'
+
+    with open(sample_pdf_path, 'rb') as fh:
+        resp = requests.post(
+            f"{live_server.url}/api/files/",
+            data={'project_id': str(project.id)},
+            files={'file': (Path(sample_pdf_path).name, fh, 'application/pdf')},
+            timeout=30,
+        )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body['format'] == 'pdf'
+    sf_id = body['id']
+
+    run = _wait_for_run(api_get, sf_id)
+    assert run['status'] == 'completed', f"run failed: {run}"
+
+    detail = requests.get(
+        f"{live_server.url}/api/files/extractions/{run['id']}/", timeout=10
+    ).json()
+    qr = detail['quality_report']
+    assert qr.get('sheet_count') == 2, qr
+    assert qr.get('drawing_pages') == 1, qr
+    assert qr.get('document_pages') == 1, qr
+
+    # List endpoint returns the two sheets, sorted by page_index.
+    rows = api_get(f"/types/drawings/?source_file={sf_id}")
+    assert [r['page_index'] for r in rows] == [0, 1], rows
+
+    # Detail view exposes raw_metadata.is_drawing — page 0 is the A3 drawing,
+    # page 1 is the dense A4 document.
+    flags = {}
+    for row in rows:
+        d = requests.get(
+            f"{live_server.url}/api/types/drawings/{row['id']}/", timeout=10
+        ).json()
+        flags[d['page_index']] = d['raw_metadata']['is_drawing']
+    assert flags == {0: True, 1: False}
+
+
 def test_dedup_same_bytes_into_same_project(
     settings, live_server, fastapi_service, project, sample_ifc_path
 ):
