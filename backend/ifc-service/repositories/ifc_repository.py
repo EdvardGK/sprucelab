@@ -60,22 +60,6 @@ class TypeData:
     definition_layers: List[TypeLayerData] = field(default_factory=list)
 
 
-@dataclass
-class SystemData:
-    """Data for a system."""
-    system_guid: str
-    system_name: Optional[str]
-    system_type: Optional[str]
-    description: Optional[str] = None
-
-
-@dataclass
-class TypeAssignmentData:
-    """Data for a type→entity assignment (IfcRelDefinesByType)."""
-    entity_guid: str  # GUID of the element
-    type_guid: str    # GUID of the type object
-
-
 # =============================================================================
 # Repository Class
 # =============================================================================
