@@ -19,43 +19,6 @@ from core.database import get_connection, get_transaction
 # =============================================================================
 
 @dataclass
-class EntityData:
-    """Data for a single IFC entity."""
-    ifc_guid: str
-    ifc_type: str
-    name: Optional[str] = None
-    description: Optional[str] = None
-    storey_id: Optional[str] = None
-    area: Optional[float] = None
-    volume: Optional[float] = None
-    length: Optional[float] = None
-    height: Optional[float] = None
-    perimeter: Optional[float] = None
-    is_geometry_only: bool = False  # True if entity has no type, name, or properties
-
-
-@dataclass
-class PropertyData:
-    """Data for a single property."""
-    entity_id: str
-    pset_name: str
-    property_name: str
-    property_value: Optional[str] = None
-    property_type: Optional[str] = None
-    value_number: Optional[float] = None
-    value_boolean: Optional[bool] = None
-
-
-@dataclass
-class SpatialData:
-    """Data for spatial hierarchy entry."""
-    entity_id: str
-    parent_id: Optional[str]
-    hierarchy_level: str
-    path: List[str]
-
-
-@dataclass
 class MaterialData:
     """Data for a material."""
     material_guid: str
