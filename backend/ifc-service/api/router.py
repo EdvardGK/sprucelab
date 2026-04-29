@@ -12,6 +12,7 @@ from api.ifc_validate import router as validate_router
 from api.ifc_health_check import router as health_check_router
 from api.crs_lookup import router as crs_router
 from api.ifc_ids import router as ids_router
+from api.drawings import router as drawings_router
 
 api_router = APIRouter()
 
