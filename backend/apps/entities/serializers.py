@@ -740,3 +740,53 @@ class ModelAnalysisSerializer(serializers.ModelSerializer):
             'project_name', 'site_name', 'building_name',
             'storeys', 'types',
         ]
+
+
+# =============================================================================
+# DRAWING SERIALIZERS (Phase 5)
+# =============================================================================
+
+
+class DrawingSheetSerializer(serializers.ModelSerializer):
+    """Full drawing-sheet view, including raw_metadata (text blocks etc.)."""
+
+    class Meta:
+        model = DrawingSheet
+        fields = [
+            'id', 'source_file', 'extraction_run', 'scope',
+            'page_index', 'sheet_number', 'sheet_name',
+            'width_mm', 'height_mm', 'scale',
+            'title_block_data', 'raw_metadata',
+        ]
+        read_only_fields = ['source_file', 'extraction_run', 'raw_metadata']
+
+
+class DrawingSheetListSerializer(serializers.ModelSerializer):
+    """Lightweight list view (no raw_metadata for bandwidth)."""
+
+    class Meta:
+        model = DrawingSheet
+        fields = [
+            'id', 'source_file', 'scope', 'page_index',
+            'sheet_number', 'sheet_name', 'width_mm', 'height_mm', 'scale',
+            'title_block_data',
+        ]
+
+
+class TitleBlockTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TitleBlockTemplate
+        fields = ['id', 'project', 'name', 'fields', 'is_default', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class DrawingRegistrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrawingRegistration
+        fields = [
+            'id', 'drawing_sheet',
+            'ref1_paper_x', 'ref1_paper_y', 'ref1_grid_u', 'ref1_grid_v',
+            'ref2_paper_x', 'ref2_paper_y', 'ref2_grid_u', 'ref2_grid_v',
+            'transform_matrix', 'grid_source_run', 'created_at',
+        ]
+        read_only_fields = ['transform_matrix', 'created_at']
