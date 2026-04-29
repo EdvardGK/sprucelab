@@ -135,6 +135,52 @@ def test_pdf_upload_extracts_and_promotes_claim(
     )
     assert dup.status_code == 409, dup.text
 
+    # 8. Loop closure: the promoted claim now shows up as a verification rule
+    #    on the next /verify/ call. We synthesize a Model + IFCType programmatically
+    #    (cheaper than uploading an IFC for this assertion) and assert the
+    #    engine surfaces an info issue against the type whose name matches
+    #    the claim subject.
+    from apps.models.models import Model
+    from apps.entities.models import IFCType
+    claim_subject = fire_claim['normalized']['subject']
+    model = Model.objects.create(
+        project=project,
+        name='claim-loop-test.ifc',
+        original_filename='claim-loop-test.ifc',
+        status='ready',
+    )
+    matching = IFCType.objects.create(
+        model=model,
+        type_guid='1' * 22,
+        type_name=f'Concrete {claim_subject} 200mm',
+        ifc_type='IfcWallType',
+    )
+    IFCType.objects.create(
+        model=model,
+        type_guid='2' * 22,
+        type_name='Concrete columns C30/37',
+        ifc_type='IfcColumnType',
+    )
+
+    verify = requests.post(
+        f"{live_server.url}/api/types/types/verify/?model={model.id}",
+        timeout=15,
+    )
+    assert verify.status_code == 200, verify.text
+    body = verify.json()
+    expected_rule_id = f'claim:{claim_id}'
+    assert expected_rule_id in body['rules_applied'], body['rules_applied']
+
+    matching_result = next(
+        (tr for tr in body['type_results'] if tr['type_id'] == str(matching.id)),
+        None,
+    )
+    assert matching_result is not None
+    claim_issues = [i for i in matching_result['issues'] if i['rule_id'] == expected_rule_id]
+    assert len(claim_issues) == 1
+    assert claim_issues[0]['severity'] == 'info'
+    assert fire_claim['normalized']['value'] in claim_issues[0]['message']
+
 
 def test_reject_and_supersede_endpoints(
     settings, live_server, fastapi_service, project, sample_pdf_claim_corpus_path, api_get,

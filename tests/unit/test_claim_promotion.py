@@ -104,8 +104,14 @@ def test_promote_writes_into_active_project_config(project_with_source_file):
     assert isinstance(rules, list) and len(rules) == 1
     entry = rules[0]
     assert entry["_claim_id"] == str(claim.id)
-    assert entry["predicate"] == "fire_resistance_class"
-    assert entry["value"] == "REI60"
+    # Translator turns the normalized form into engine-shape keys.
+    assert entry["check"] == "claim_subject_match"
+    assert entry["target"] == "type"
+    assert entry["claim_value"] == "REI60"
+    assert entry["id"] == f"claim:{claim.id}"
+    # Raw normalized form stays in `_normalized` for audit / future re-translation.
+    assert entry["_normalized"]["predicate"] == "fire_resistance_class"
+    assert entry["_normalized"]["value"] == "REI60"
 
 
 def test_promote_creates_active_config_when_none_exists(project_with_source_file):
@@ -149,7 +155,8 @@ def test_promote_appends_when_config_already_has_other_rules(project_with_source
     assert len(rules) == 2
     assert rules[0]["_claim_id"] == "preexisting"
     # Newest entry was appended at the end so order = chronological.
-    assert rules[-1]["predicate"] == "fire_resistance_class"
+    assert rules[-1]["check"] == "claim_subject_match"
+    assert rules[-1]["_normalized"]["predicate"] == "fire_resistance_class"
 
 
 def test_promote_rejects_already_promoted_claim(project_with_source_file):
@@ -159,6 +166,52 @@ def test_promote_rejects_already_promoted_claim(project_with_source_file):
 
     with pytest.raises(ClaimStateError):
         promote_claim(claim)
+
+
+def test_promote_unknown_predicate_writes_no_check_entry(project_with_source_file):
+    """Predicates outside the translator's table still promote successfully —
+    they just land without a ``check`` key, so the verification engine skips
+    them. This keeps Sprint 6.3 (LLM-emitted predicates) forward-compatible.
+    """
+    _, sf, run, doc = project_with_source_file
+    claim = _make_claim(
+        sf, run, doc,
+        predicate="color_code", value="RAL 9003", units="",
+        statement="Doors shall be RAL 9003.",
+    )
+
+    result = promote_claim(claim)
+    assert result["status"] == "promoted"
+
+    cfg = claim.promoted_to_config
+    rules = cfg.config[CLAIM_DERIVED_RULES_SECTION]
+    entry = rules[-1]
+    # Audit metadata is still attached so the loop can be inspected.
+    assert entry["_claim_id"] == str(claim.id)
+    assert entry["_normalized"]["predicate"] == "color_code"
+    # But no `check` — engine ignores it silently.
+    assert "check" not in entry
+
+
+def test_promote_with_explicit_rule_payload_bypasses_translator(project_with_source_file):
+    """Callers can hand-craft a rule_payload to override the default translator.
+    Useful for one-off custom promotions or operator overrides.
+    """
+    _, sf, run, doc = project_with_source_file
+    claim = _make_claim(sf, run, doc)
+
+    custom = {"check": "value_in", "target": "mapping", "field": "ns3451_code",
+              "allowed_values": ["210", "211"], "severity": "warning",
+              "id": "custom:fire-walls-ns3451", "name": "Fire walls NS3451"}
+    result = promote_claim(claim, rule_payload=custom)
+    assert result["status"] == "promoted"
+
+    entry = claim.promoted_to_config.config[CLAIM_DERIVED_RULES_SECTION][-1]
+    assert entry["check"] == "value_in"
+    assert entry["allowed_values"] == ["210", "211"]
+    assert entry["id"] == "custom:fire-walls-ns3451"
+    # Audit metadata still wraps it.
+    assert entry["_claim_id"] == str(claim.id)
 
 
 # ---------------------------------------------------------------------------

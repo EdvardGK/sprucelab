@@ -123,7 +123,20 @@ def promote_claim(
 
     project = claim.source_file.project
     section = section or CLAIM_DERIVED_RULES_SECTION
-    payload = dict(rule_payload or claim.normalized or {})
+    if rule_payload is None:
+        # Default path: try to translate the claim's normalized form into an
+        # engine-shape rule. If the predicate isn't translatable (unknown,
+        # deferred, missing subject) we still write the entry — just without
+        # a `check` key. The verification engine filters those out, and the
+        # Claim record itself preserves the full normalized form via
+        # `_normalized` for any future translator to pick up.
+        from apps.entities.services.claim_rule_translator import translate_claim_to_rule
+        translated = translate_claim_to_rule(
+            str(claim.id), claim.normalized or {}, claim.statement or "",
+        )
+        payload = translated if translated else {}
+    else:
+        payload = dict(rule_payload)
     rule_entry = _build_rule_entry(claim, section=section, payload=payload)
 
     if dry_run:
