@@ -145,11 +145,6 @@ class Migration(migrations.Migration):
                 "ordering": ["project_id", "name"],
             },
         ),
-        migrations.RenameIndex(
-            model_name="propertyset",
-            new_name="property_se_value_b_30e8f1_idx",
-            old_name="property_se_value_b_idx",
-        ),
         migrations.AddField(
             model_name="drawingregistration",
             name="grid_source_run",
