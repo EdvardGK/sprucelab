@@ -270,6 +270,67 @@ class SourceFileViewSet(viewsets.ModelViewSet):
             run.save(update_fields=['status', 'error_message'])
         return run
 
+    def _dispatch_drawing_extraction(self, source_file: SourceFile, file_url: str):
+        """
+        Synchronous drawing pipeline: call FastAPI, persist DrawingSheet rows
+        from the response, finalize the ExtractionRun in one request.
+        """
+        from datetime import timezone as _tz, datetime as _dt
+        from apps.entities.models import DrawingSheet
+
+        run = ExtractionRun.objects.create(
+            source_file=source_file,
+            status='running',
+        )
+
+        client = IFCServiceClient()
+        if not client.is_available():
+            run.status = 'failed'
+            run.error_message = 'FastAPI ifc-service unavailable'
+            run.completed_at = _dt.now(_tz.utc)
+            run.save(update_fields=['status', 'error_message', 'completed_at'])
+            return run
+
+        try:
+            response = client.extract_drawing(file_url=file_url, fmt=source_file.format)
+        except Exception as exc:
+            run.status = 'failed'
+            run.error_message = str(exc)
+            run.completed_at = _dt.now(_tz.utc)
+            run.save(update_fields=['status', 'error_message', 'completed_at'])
+            return run
+
+        sheets = response.get('sheets') or []
+        for sheet_payload in sheets:
+            DrawingSheet.objects.create(
+                source_file=source_file,
+                extraction_run=run,
+                scope=source_file.scope,
+                page_index=sheet_payload.get('page_index', 0),
+                sheet_number=sheet_payload.get('sheet_number') or '',
+                sheet_name=sheet_payload.get('sheet_name') or '',
+                width_mm=sheet_payload.get('width_mm'),
+                height_mm=sheet_payload.get('height_mm'),
+                scale=sheet_payload.get('scale') or '',
+                title_block_data=sheet_payload.get('title_block_data') or {},
+                raw_metadata={
+                    **(sheet_payload.get('raw_metadata') or {}),
+                    'is_drawing': sheet_payload.get('is_drawing', True),
+                },
+            )
+
+        run.status = 'completed' if response.get('success') else 'failed'
+        run.duration_seconds = response.get('duration_seconds')
+        run.log_entries = response.get('log_entries') or []
+        run.quality_report = response.get('quality_report') or {}
+        run.error_message = response.get('error') or ''
+        run.completed_at = _dt.now(_tz.utc)
+        run.save(update_fields=[
+            'status', 'duration_seconds', 'log_entries',
+            'quality_report', 'error_message', 'completed_at',
+        ])
+        return run
+
 
 class ExtractionRunViewSet(viewsets.ReadOnlyModelViewSet):
     """
