@@ -15,10 +15,8 @@ from typing import Any, Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor
 
 from core.database import get_connection
-from services.ifc_parser import IFCParserService, ParseResult, TypesOnlyResult
-from repositories.ifc_repository import (
-    IFCRepository, EntityData, PropertyData, SpatialData
-)
+from services.ifc_parser import IFCParserService, TypesOnlyResult
+from repositories.ifc_repository import IFCRepository
 
 
 def _length_unit_name(scale: float) -> Optional[str]:
