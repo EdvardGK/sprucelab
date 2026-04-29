@@ -310,3 +310,42 @@ class ProcessResponse(BaseModel):
     # Detailed results (optional, can be omitted for brief responses)
     stage_results: Optional[List[Dict[str, Any]]] = Field(None, description="Per-stage results")
     errors: Optional[List[Dict[str, Any]]] = Field(None, description="List of errors encountered")
+
+
+# ============================================================================
+# Drawing Extraction (Phase 5)
+# ============================================================================
+
+
+class DrawingExtractRequest(BaseModel):
+    """Request to extract drawing metadata (DWG/DXF/PDF) from a remote file."""
+
+    file_url: Optional[str] = Field(None, description="URL to download the drawing file from")
+    file_path: Optional[str] = Field(None, description="Local path (for tests / local dev)")
+    format: str = Field(..., description="Source format: 'dxf', 'dwg', or 'pdf'")
+
+
+class DrawingSheetPayload(BaseModel):
+    """One extracted sheet, ready to persist as a DrawingSheet."""
+
+    page_index: int
+    sheet_number: str = ""
+    sheet_name: str = ""
+    width_mm: Optional[float] = None
+    height_mm: Optional[float] = None
+    scale: str = ""
+    is_drawing: bool = True
+    title_block_data: Dict[str, Any] = Field(default_factory=dict)
+    raw_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DrawingExtractResponse(BaseModel):
+    """Stateless extraction result. Caller is responsible for persistence."""
+
+    success: bool
+    format: str
+    sheets: List[DrawingSheetPayload] = Field(default_factory=list)
+    log_entries: List[Dict[str, Any]] = Field(default_factory=list)
+    quality_report: Dict[str, Any] = Field(default_factory=dict)
+    duration_seconds: float = 0.0
+    error: Optional[str] = None
