@@ -29,64 +29,6 @@ from repositories.ifc_repository import (
 
 
 @dataclass
-class StageResult:
-    """Result of a processing stage."""
-    stage: str
-    status: str  # 'success', 'partial', 'failed'
-    processed: int = 0
-    skipped: int = 0
-    failed: int = 0
-    errors: List[str] = field(default_factory=list)
-    duration_ms: int = 0
-    message: str = ""
-
-
-@dataclass
-class ParseError:
-    """Error that occurred during parsing."""
-    stage: str
-    severity: str  # 'warning', 'error', 'critical'
-    message: str
-    element_guid: Optional[str] = None
-    element_type: Optional[str] = None
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-
-
-@dataclass
-class ParseResult:
-    """Complete result of parsing an IFC file."""
-    success: bool = False
-    ifc_schema: str = ""
-    file_size_bytes: int = 0
-
-    # Extracted data
-    entities: List[EntityData] = field(default_factory=list)
-    properties: List[PropertyData] = field(default_factory=list)
-    spatial_items: List[SpatialData] = field(default_factory=list)
-    materials: List[MaterialData] = field(default_factory=list)
-    types: List[TypeData] = field(default_factory=list)
-    systems: List[SystemData] = field(default_factory=list)
-    type_assignments: List[TypeAssignmentData] = field(default_factory=list)
-
-    # Counts
-    element_count: int = 0
-    storey_count: int = 0
-    property_count: int = 0
-    material_count: int = 0
-    type_count: int = 0
-    system_count: int = 0
-    type_assignment_count: int = 0
-
-    # Processing info
-    stage_results: List[Dict] = field(default_factory=list)
-    errors: List[Dict] = field(default_factory=list)
-    duration_seconds: float = 0.0
-
-    # Maps for cross-referencing (guid -> temp_id for linking)
-    storey_guid_to_temp_id: Dict[str, str] = field(default_factory=dict)
-
-
-@dataclass
 class QuickStats:
     """Quick stats extracted in <1 second for immediate UI feedback."""
     success: bool = False
