@@ -1,22 +1,22 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileStack, Upload } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { AppLayout } from '@/components/Layout/AppLayout';
+import { ClaimInbox } from '@/components/features/claims/ClaimInbox';
 
 export default function ProjectDocuments() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { data: project, isLoading } = useProject(id!);
 
   if (isLoading) {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="w-full">
-            <div className="text-text-secondary">Loading project...</div>
-          </div>
+          <div className="text-text-secondary">{t('common.loading')}</div>
         </div>
       </AppLayout>
     );
@@ -26,9 +26,7 @@ export default function ProjectDocuments() {
     return (
       <AppLayout>
         <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="w-full">
-            <div className="text-error">Project not found</div>
-          </div>
+          <div className="text-error">Project not found</div>
         </div>
       </AppLayout>
     );
@@ -36,52 +34,25 @@ export default function ProjectDocuments() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-        {/* Header */}
-        <div className="mb-8 w-full">
+      <div className="flex flex-col w-full h-full overflow-hidden">
+        <div className="flex-none px-6 md:px-8 lg:px-12 pt-6 pb-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(`/projects/${id}`)}
-            className="mb-4"
+            className="mb-3 -ml-2"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Project
+            {t('common.back')}
           </Button>
-
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-text-primary">Documents</h1>
-              <p className="text-text-secondary mt-2">{project.name}</p>
-            </div>
-
-            <Button size="lg">
-              <Upload className="mr-2 h-5 w-5" />
-              Upload Document
-            </Button>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-2xl font-bold text-text-primary">{t('claims.pageHeading')}</h1>
+            <span className="text-text-secondary text-sm">{project.name}</span>
           </div>
+          <p className="text-text-secondary text-sm mt-1">{t('claims.pageSubheading')}</p>
         </div>
-
-        {/* Documents section */}
-        <div className="w-full">
-          <Card className="text-center py-12">
-            <CardContent className="pt-6">
-              <FileStack className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-text-primary mb-2">
-                Documents Module Coming Soon
-              </h3>
-              <p className="text-text-secondary mb-6">
-                Upload and manage project documents, specifications, and reports
-              </p>
-              <div className="space-y-2 text-sm text-text-tertiary text-left max-w-md mx-auto">
-                <p>• Upload PDFs, Word docs, Excel sheets</p>
-                <p>• Organize by folders and categories</p>
-                <p>• Link documents to models and elements</p>
-                <p>• Version control for documents</p>
-                <p>• Search and filter documents</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex-1 min-h-0 mx-6 md:mx-8 lg:mx-12 mb-6 rounded-md border bg-background overflow-hidden">
+          <ClaimInbox projectId={id!} />
         </div>
       </div>
     </AppLayout>
