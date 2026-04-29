@@ -375,55 +375,5 @@ class ProcessingOrchestrator:
             error_message=error,
         )
 
-    def _get_ifc_type_for_hierarchy(self, level: str) -> str:
-        """Get the IFC type for a hierarchy level."""
-        type_map = {
-            'project': 'IfcProject',
-            'site': 'IfcSite',
-            'building': 'IfcBuilding',
-            'storey': 'IfcBuildingStorey',
-        }
-        return type_map.get(level, 'IfcSpatialStructureElement')
-
-    def _calculate_verification_data(
-        self,
-        parse_result: ParseResult,
-        type_assignment_count: int,
-    ) -> Dict:
-        """
-        Calculate verification stats for audit trail.
-
-        This provides transparency about data quality, showing:
-        - How many types have instances vs. are empty
-        - How many entities are geometry-only (no meaningful metadata)
-        - Verification timestamp and method
-        """
-        # Count types with instances (from type assignments)
-        types_with_assignments = set()
-        for assignment in parse_result.type_assignments:
-            types_with_assignments.add(assignment.type_guid)
-
-        types_total = len(parse_result.types)
-        types_with_instances = len(types_with_assignments)
-        types_without_instances = types_total - types_with_instances
-
-        # Count entities
-        entities_total = len(parse_result.entities)
-        entities_geometry_only = sum(
-            1 for e in parse_result.entities if e.is_geometry_only
-        )
-        entities_with_type = type_assignment_count
-
-        return {
-            'types_total': types_total,
-            'types_with_instances': types_with_instances,
-            'types_without_instances': types_without_instances,
-            'entities_total': entities_total,
-            'entities_with_type': entities_with_type,
-            'entities_geometry_only': entities_geometry_only,
-            'verified_at': datetime.now(timezone.utc).isoformat(),
-            'verification_method': 'ifcopenshell',
-        }
-
 # Singleton instance
 processing_orchestrator = ProcessingOrchestrator()
