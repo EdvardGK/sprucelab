@@ -119,4 +119,8 @@ __all__ = [
     'AnalysisStorey',
     'AnalysisType',
     'AnalysisTypeStorey',
+    # Drawings
+    'DrawingSheet',
+    'TitleBlockTemplate',
+    'DrawingRegistration',
 ]
