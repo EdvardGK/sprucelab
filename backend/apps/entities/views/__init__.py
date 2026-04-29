@@ -15,6 +15,8 @@ from .library import (
 )
 from .analysis import ModelAnalysisViewSet
 from .drawings import DrawingSheetViewSet, TitleBlockTemplateViewSet
+from .documents import DocumentContentViewSet
+from .claims import ClaimViewSet
 
 __all__ = [
     'IFCEntityViewSet',
@@ -35,4 +37,6 @@ __all__ = [
     'ModelAnalysisViewSet',
     'DrawingSheetViewSet',
     'TitleBlockTemplateViewSet',
+    'DocumentContentViewSet',
+    'ClaimViewSet',
 ]

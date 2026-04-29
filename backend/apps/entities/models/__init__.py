@@ -74,6 +74,19 @@ from .drawings import (
     DrawingRegistration,
 )
 
+# Document models (Phase 6)
+from .documents import (
+    DocumentContent,
+    EXTRACTION_METHOD_CHOICES,
+)
+
+# Claim models (Phase 6, Sprint 6.2)
+from .claims import (
+    Claim,
+    CLAIM_TYPE_CHOICES,
+    CLAIM_STATUS_CHOICES,
+)
+
 __all__ = [
     # Core
     'IFCEntity',
@@ -123,4 +136,11 @@ __all__ = [
     'DrawingSheet',
     'TitleBlockTemplate',
     'DrawingRegistration',
+    # Documents
+    'DocumentContent',
+    'EXTRACTION_METHOD_CHOICES',
+    # Claims
+    'Claim',
+    'CLAIM_TYPE_CHOICES',
+    'CLAIM_STATUS_CHOICES',
 ]

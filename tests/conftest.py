@@ -154,11 +154,18 @@ def _open_permissions(settings):
     """
     Tests bypass auth by default — the data-foundation pipeline is what's
     under test, not authn. Real auth gets covered in dedicated tests.
+
+    Throttling is also disabled: prod ships with 60/min anon + 600/min user,
+    which trips inside the e2e suite once enough uploads + polls happen in
+    a single run. Throttle correctness is a separate concern; turning it off
+    here keeps the data-pipeline tests deterministic.
     """
     settings.REST_FRAMEWORK = {
         **getattr(settings, 'REST_FRAMEWORK', {}),
         'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
         'DEFAULT_AUTHENTICATION_CLASSES': [],
+        'DEFAULT_THROTTLE_CLASSES': [],
+        'DEFAULT_THROTTLE_RATES': {},
     }
 
 
@@ -224,6 +231,73 @@ def sample_pdf_path(tmp_path_factory) -> Path:
     from .fixtures.drawing_factory import build_pdf_multipage_mixed
     out = tmp_path_factory.mktemp("pdf") / "mixed.pdf"
     build_pdf_multipage_mixed(out)
+    return out
+
+
+@pytest.fixture(scope="session")
+def sample_pdf_document_path(tmp_path_factory) -> Path:
+    """
+    Single A4 PDF with dense text (a 'document'), bilingual specs body.
+
+    Phase 6 Sprint 6.1 fixture: drives both the unit document-extractor
+    tests and the e2e round-trip that asserts DocumentContent rows land.
+    """
+    from .fixtures.document_factory import build_pdf_text_document
+    out = tmp_path_factory.mktemp("pdf-doc") / "spec.pdf"
+    build_pdf_text_document(out)
+    return out
+
+
+@pytest.fixture(scope="session")
+def sample_docx_path(tmp_path_factory) -> Path:
+    """DOCX with headings, list, and table for the Phase 6 unit + e2e tests."""
+    from .fixtures.document_factory import build_docx_with_headings
+    out = tmp_path_factory.mktemp("docx") / "spec.docx"
+    build_docx_with_headings(out)
+    return out
+
+
+@pytest.fixture(scope="session")
+def sample_xlsx_path(tmp_path_factory) -> Path:
+    """XLSX with typed columns and a date sheet for the Phase 6 type-preservation tests."""
+    from .fixtures.document_factory import build_xlsx_with_typed_data
+    out = tmp_path_factory.mktemp("xlsx") / "quantities.xlsx"
+    build_xlsx_with_typed_data(out)
+    return out
+
+
+@pytest.fixture(scope="session")
+def sample_pptx_path(tmp_path_factory) -> Path:
+    """PPTX with three titled slides + bullets for the Phase 6 slide-rendering tests."""
+    from .fixtures.document_factory import build_pptx_with_slides
+    out = tmp_path_factory.mktemp("pptx") / "deck.pptx"
+    build_pptx_with_slides(out)
+    return out
+
+
+@pytest.fixture(scope="session")
+def sample_pdf_doc_and_drawing_path(tmp_path_factory) -> Path:
+    """
+    Two-page PDF: page 0 dense A4 document, page 1 sparse A3 drawing.
+
+    Used by the e2e test that exercises the combined PDF dispatch (drawing
+    extractor + document extractor over the same SourceFile).
+    """
+    from .fixtures.document_factory import build_pdf_multipage_doc_and_drawing
+    out = tmp_path_factory.mktemp("pdf-mixed-2") / "mixed.pdf"
+    build_pdf_multipage_doc_and_drawing(out)
+    return out
+
+
+@pytest.fixture(scope="session")
+def sample_pdf_claim_corpus_path(tmp_path_factory) -> Path:
+    """
+    A4 PDF densely seeded with NB+EN normative statements for the
+    Sprint 6.2 claim-extractor pipeline tests.
+    """
+    from .fixtures.document_factory import build_pdf_claim_corpus
+    out = tmp_path_factory.mktemp("pdf-claims") / "spec_claims.pdf"
+    build_pdf_claim_corpus(out)
     return out
 
 

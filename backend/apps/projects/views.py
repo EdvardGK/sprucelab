@@ -48,6 +48,90 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = ModelSerializer(models, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'], url_path='search')
+    def search(self, request, pk=None):
+        """
+        Universal search across project documents (Phase 6, Sprint 6.1).
+
+        Query params:
+          ?q=<phrase>             required, case-insensitive
+          ?format=pdf,docx,xlsx   optional comma-separated SourceFile.format filter
+          ?scope=<uuid>           optional ProjectScope filter
+
+        Returns a flat list of {source_file, format, page, snippet, scope, relevance}
+        ordered by simple relevance score (substring count). The intent is to
+        give agents and the eventual frontend a single endpoint that returns
+        actionable hits across every document Sprucelab has parsed for this
+        project. Search-engine-grade ranking can be added later once usage
+        patterns are clearer.
+        """
+        from apps.entities.models import DocumentContent
+
+        project = self.get_object()
+        query = (request.query_params.get('q') or '').strip()
+        if not query:
+            return Response(
+                {'error': "Query param 'q' is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        formats_csv = request.query_params.get('format') or ''
+        formats = [f.strip().lower() for f in formats_csv.split(',') if f.strip()]
+        scope_id = request.query_params.get('scope')
+
+        qs = DocumentContent.objects.filter(
+            source_file__project=project,
+        ).select_related('source_file', 'scope')
+
+        if formats:
+            qs = qs.filter(source_file__format__in=formats)
+        if scope_id:
+            qs = qs.filter(scope_id=scope_id)
+
+        needle = query.lower()
+        results = []
+        for doc in qs:
+            haystack = (doc.search_text or '').lower()
+            if not haystack and doc.markdown_content:
+                haystack = doc.markdown_content.lower()
+            if not haystack:
+                continue
+            count = haystack.count(needle)
+            if count == 0:
+                continue
+            snippet = self._build_snippet(
+                doc.markdown_content or doc.search_text or '',
+                query,
+            )
+            results.append({
+                'document_id': str(doc.id),
+                'source_file': str(doc.source_file_id),
+                'original_filename': doc.source_file.original_filename,
+                'format': doc.source_file.format,
+                'page': doc.page_index,
+                'scope': str(doc.scope_id) if doc.scope_id else None,
+                'snippet': snippet,
+                'relevance': count,
+            })
+
+        results.sort(key=lambda r: (-r['relevance'], r['original_filename'], r['page']))
+        return Response({'count': len(results), 'results': results})
+
+    @staticmethod
+    def _build_snippet(text: str, query: str, *, radius: int = 80) -> str:
+        """Return a small window around the first case-insensitive match of `query`."""
+        if not text:
+            return ''
+        idx = text.lower().find(query.lower())
+        if idx < 0:
+            return text[:radius * 2]
+        start = max(0, idx - radius)
+        end = min(len(text), idx + len(query) + radius)
+        snippet = text[start:end]
+        prefix = '…' if start > 0 else ''
+        suffix = '…' if end < len(text) else ''
+        return f'{prefix}{snippet}{suffix}'
+
     @action(detail=True, methods=['get'])
     def statistics(self, request, pk=None):
         """

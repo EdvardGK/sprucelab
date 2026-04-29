@@ -203,9 +203,26 @@ class SourceFileViewSet(viewsets.ModelViewSet):
     # ------------------------------------------------------------------
 
     def _dispatch_extraction(self, source_file: SourceFile, file_url: str):
-        """Route to the format-specific extractor. IFC + drawings (DXF/DWG/PDF) wired."""
-        if source_file.format in ('dxf', 'dwg', 'pdf'):
+        """
+        Route to the format-specific extractor.
+
+        - IFC: legacy parser via FastAPI + callback
+        - DXF/DWG: drawing extractor only
+        - PDF: drawing extractor (drawing pages) + document extractor (document pages)
+        - DOCX/XLSX/PPTX: document extractor only
+        """
+        if source_file.format in ('dxf', 'dwg'):
             return self._dispatch_drawing_extraction(source_file, file_url)
+
+        if source_file.format == 'pdf':
+            # Mixed PDFs are common (specs with embedded drawings, drawing
+            # sets with title-block notes). Run both extractors over the same
+            # file; each one is responsible for ignoring pages that aren't
+            # its concern via the shared _looks_like_document_page heuristic.
+            return self._dispatch_pdf_extraction(source_file, file_url)
+
+        if source_file.format in ('docx', 'xlsx', 'pptx'):
+            return self._dispatch_document_extraction(source_file, file_url)
 
         if source_file.format != 'ifc':
             # Unsupported format: create a noop ExtractionRun marked failed so
@@ -330,6 +347,274 @@ class SourceFileViewSet(viewsets.ModelViewSet):
             'quality_report', 'error_message', 'completed_at',
         ])
         return run
+
+    def _dispatch_document_extraction(self, source_file: SourceFile, file_url: str):
+        """
+        Synchronous document pipeline: call FastAPI, persist DocumentContent
+        rows from the response, finalize the ExtractionRun in one request.
+        """
+        from datetime import timezone as _tz, datetime as _dt
+        from apps.entities.models import DocumentContent
+
+        run = ExtractionRun.objects.create(
+            source_file=source_file,
+            status='running',
+        )
+
+        client = IFCServiceClient()
+        if not client.is_available():
+            run.status = 'failed'
+            run.error_message = 'FastAPI ifc-service unavailable'
+            run.completed_at = _dt.now(_tz.utc)
+            run.save(update_fields=['status', 'error_message', 'completed_at'])
+            return run
+
+        try:
+            response = client.extract_document(file_url=file_url, fmt=source_file.format)
+        except Exception as exc:
+            run.status = 'failed'
+            run.error_message = str(exc)
+            run.completed_at = _dt.now(_tz.utc)
+            run.save(update_fields=['status', 'error_message', 'completed_at'])
+            return run
+
+        documents = self._persist_document_payloads(
+            source_file, run, response.get('documents') or [],
+        )
+
+        quality_report = dict(response.get('quality_report') or {})
+
+        # Heuristic claim extraction on top of the substrate (Sprint 6.2).
+        # Counts roll into the same quality_report dict so dashboards see one
+        # number per run instead of having to join two updates.
+        claim_count = self._extract_claims_from_documents(source_file, run, documents)
+        if claim_count:
+            quality_report['claim_count'] = claim_count
+
+        run.status = 'completed' if response.get('success') else 'failed'
+        run.duration_seconds = response.get('duration_seconds')
+        run.log_entries = response.get('log_entries') or []
+        run.quality_report = quality_report
+        run.error_message = response.get('error') or ''
+        run.completed_at = _dt.now(_tz.utc)
+        run.save(update_fields=[
+            'status', 'duration_seconds', 'log_entries',
+            'quality_report', 'error_message', 'completed_at',
+        ])
+        return run
+
+    def _dispatch_pdf_extraction(self, source_file: SourceFile, file_url: str):
+        """
+        PDFs may carry both drawing pages and document pages. Run both
+        extractors and merge the outcomes onto a single ExtractionRun:
+
+        * drawing extractor writes one DrawingSheet per page (already has
+          per-page is_drawing flag)
+        * document extractor writes one DocumentContent per document page
+          (skips drawing pages)
+        * quality_report aggregates the counts so a UI can see "this PDF
+          gave us 3 drawing sheets + 4 document pages"
+        """
+        from datetime import timezone as _tz, datetime as _dt
+        from apps.entities.models import DrawingSheet, DocumentContent
+
+        run = ExtractionRun.objects.create(
+            source_file=source_file,
+            status='running',
+        )
+
+        client = IFCServiceClient()
+        if not client.is_available():
+            run.status = 'failed'
+            run.error_message = 'FastAPI ifc-service unavailable'
+            run.completed_at = _dt.now(_tz.utc)
+            run.save(update_fields=['status', 'error_message', 'completed_at'])
+            return run
+
+        log_entries: list = []
+        merged_quality: dict = {}
+        any_failure_message = ''
+        all_succeeded = True
+        total_duration = 0.0
+
+        # Drawings first (so per-page metadata is in place before documents
+        # rely on the same is_drawing classification).
+        try:
+            drawing_response = client.extract_drawing(file_url=file_url, fmt='pdf')
+        except Exception as exc:
+            drawing_response = None
+            all_succeeded = False
+            any_failure_message = f'drawing extractor: {exc}'
+
+        if drawing_response is not None:
+            for sheet_payload in drawing_response.get('sheets') or []:
+                DrawingSheet.objects.create(
+                    source_file=source_file,
+                    extraction_run=run,
+                    scope=source_file.scope,
+                    page_index=sheet_payload.get('page_index', 0),
+                    sheet_number=sheet_payload.get('sheet_number') or '',
+                    sheet_name=sheet_payload.get('sheet_name') or '',
+                    width_mm=sheet_payload.get('width_mm'),
+                    height_mm=sheet_payload.get('height_mm'),
+                    scale=sheet_payload.get('scale') or '',
+                    title_block_data=sheet_payload.get('title_block_data') or {},
+                    raw_metadata={
+                        **(sheet_payload.get('raw_metadata') or {}),
+                        'is_drawing': sheet_payload.get('is_drawing', True),
+                    },
+                )
+            log_entries.extend(drawing_response.get('log_entries') or [])
+            qr = drawing_response.get('quality_report') or {}
+            merged_quality.update({
+                'sheet_count': qr.get('sheet_count', 0),
+                'drawing_pages': qr.get('drawing_pages', 0),
+                'document_pages_via_drawings': qr.get('document_pages', 0),
+            })
+            total_duration += float(drawing_response.get('duration_seconds') or 0.0)
+            if not drawing_response.get('success', False):
+                all_succeeded = False
+                any_failure_message = (
+                    any_failure_message
+                    or drawing_response.get('error')
+                    or 'drawing extractor failed'
+                )
+
+        # Documents second (skips pages classified as drawings).
+        try:
+            document_response = client.extract_document(file_url=file_url, fmt='pdf')
+        except Exception as exc:
+            document_response = None
+            all_succeeded = False
+            any_failure_message = (
+                any_failure_message or f'document extractor: {exc}'
+            )
+
+        documents: list = []
+        if document_response is not None:
+            documents = self._persist_document_payloads(
+                source_file, run, document_response.get('documents') or [],
+            )
+            log_entries.extend(document_response.get('log_entries') or [])
+            qr = document_response.get('quality_report') or {}
+            merged_quality.update({
+                'document_count': qr.get('document_count', 0),
+                'document_pages': qr.get('document_pages', 0),
+                'drawing_pages_via_documents': qr.get('drawing_pages', 0),
+                'total_chars': qr.get('total_chars', 0),
+            })
+            total_duration += float(document_response.get('duration_seconds') or 0.0)
+            if not document_response.get('success', False):
+                all_succeeded = False
+                any_failure_message = (
+                    any_failure_message
+                    or document_response.get('error')
+                    or 'document extractor failed'
+                )
+
+        # Heuristic claims (Sprint 6.2) — folded into merged_quality before
+        # the run is finalized so dashboards see one number per run.
+        claim_count = self._extract_claims_from_documents(source_file, run, documents)
+        if claim_count:
+            merged_quality['claim_count'] = claim_count
+
+        run.status = 'completed' if all_succeeded else 'failed'
+        run.duration_seconds = total_duration
+        run.log_entries = log_entries
+        run.quality_report = merged_quality
+        run.error_message = '' if all_succeeded else any_failure_message
+        run.completed_at = _dt.now(_tz.utc)
+        run.save(update_fields=[
+            'status', 'duration_seconds', 'log_entries',
+            'quality_report', 'error_message', 'completed_at',
+        ])
+        return run
+
+    @staticmethod
+    def _persist_document_payloads(
+        source_file: SourceFile,
+        run: ExtractionRun,
+        payloads: list,
+    ) -> list:
+        """
+        Persist DocumentContent rows from a FastAPI documents/extract response.
+
+        Returns the persisted list so the caller can run claim extraction
+        on the same rows after the run is finalized (claim counts roll into
+        the final quality_report).
+        """
+        from apps.entities.models import DocumentContent
+
+        persisted: list[DocumentContent] = []
+        for payload in payloads:
+            # Drawing-classified PDF pages come back with is_document=False;
+            # skip them — the drawing extractor already handled them.
+            if not payload.get('is_document', True):
+                continue
+            doc = DocumentContent.objects.create(
+                source_file=source_file,
+                extraction_run=run,
+                scope=source_file.scope,
+                page_index=payload.get('page_index', 0),
+                markdown_content=payload.get('markdown_content') or '',
+                structured_data=payload.get('structured_data') or {},
+                page_count=payload.get('page_count', 1),
+                structure=payload.get('structure') or {},
+                extracted_images=payload.get('extracted_images') or [],
+                search_text=payload.get('search_text') or '',
+                extraction_method=payload.get('extraction_method', 'structured'),
+            )
+            persisted.append(doc)
+        return persisted
+
+    @staticmethod
+    def _extract_claims_from_documents(
+        source_file: SourceFile,
+        run: ExtractionRun,
+        documents: list,
+    ) -> int:
+        """
+        Run heuristic claim extraction on each DocumentContent's markdown.
+
+        Failure-isolated: if the FastAPI claim extractor errors, the run
+        still finalizes — claims are an additive layer on top of the
+        substrate, not a gate. Returns the total claim count so the caller
+        can roll it into ``run.quality_report``.
+        """
+        from apps.entities.models import Claim
+
+        if not documents:
+            return 0
+
+        client = IFCServiceClient()
+        total_claims = 0
+        for doc in documents:
+            markdown = doc.markdown_content or ''
+            if not markdown.strip():
+                continue
+            try:
+                response = client.extract_claims(markdown=markdown)
+            except Exception:
+                # Don't fail the run on claim extraction errors — log only.
+                continue
+            for cand in response.get('claims') or []:
+                Claim.objects.create(
+                    source_file=source_file,
+                    document=doc,
+                    extraction_run=run,
+                    scope=source_file.scope,
+                    statement=cand.get('statement') or '',
+                    normalized=cand.get('normalized') or {},
+                    claim_type=cand.get('claim_type', 'rule'),
+                    confidence=cand.get('confidence', 0.0),
+                    source_location={
+                        **(cand.get('source_location') or {}),
+                        'document_id': str(doc.id),
+                        'page': doc.page_index,
+                    },
+                )
+                total_claims += 1
+        return total_claims
 
 
 class ExtractionRunViewSet(viewsets.ReadOnlyModelViewSet):

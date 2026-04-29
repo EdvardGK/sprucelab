@@ -8,6 +8,7 @@ from .views import (
     MaterialLibraryViewSet, ProductLibraryViewSet, ProductCompositionViewSet,
     GlobalTypeLibraryViewSet, ModelAnalysisViewSet,
     DrawingSheetViewSet, TitleBlockTemplateViewSet,
+    DocumentContentViewSet, ClaimViewSet,
 )
 
 router = DefaultRouter()
@@ -41,6 +42,12 @@ router.register(r'product-compositions', ProductCompositionViewSet, basename='pr
 # Drawings (Phase 5)
 router.register(r'drawings', DrawingSheetViewSet, basename='drawing')
 router.register(r'title-block-templates', TitleBlockTemplateViewSet, basename='title-block-template')
+
+# Documents (Phase 6, Sprint 6.1)
+router.register(r'documents', DocumentContentViewSet, basename='document')
+
+# Claims (Phase 6, Sprint 6.2)
+router.register(r'claims', ClaimViewSet, basename='claim')
 
 urlpatterns = [
     path('', include(router.urls)),

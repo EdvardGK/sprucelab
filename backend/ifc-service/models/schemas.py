@@ -349,3 +349,74 @@ class DrawingExtractResponse(BaseModel):
     quality_report: Dict[str, Any] = Field(default_factory=dict)
     duration_seconds: float = 0.0
     error: Optional[str] = None
+
+
+# ============================================================================
+# Document Extraction (Phase 6)
+# ============================================================================
+
+
+class DocumentExtractRequest(BaseModel):
+    """Request to extract document content (PDF/DOCX/XLSX/PPTX) from a remote file."""
+
+    file_url: Optional[str] = Field(None, description="URL to download the document file from")
+    file_path: Optional[str] = Field(None, description="Local path (for tests / local dev)")
+    format: str = Field(..., description="Source format: 'pdf', 'docx', 'xlsx', or 'pptx'")
+
+
+class DocumentContentPayload(BaseModel):
+    """One extracted document body, ready to persist as a DocumentContent row."""
+
+    page_index: int = 0
+    markdown_content: str = ""
+    structured_data: Dict[str, Any] = Field(default_factory=dict)
+    page_count: int = 1
+    structure: Dict[str, Any] = Field(default_factory=dict)
+    extracted_images: List[Dict[str, Any]] = Field(default_factory=list)
+    search_text: str = ""
+    extraction_method: str = "structured"
+    is_document: bool = True
+
+
+class DocumentExtractResponse(BaseModel):
+    """Stateless extraction result. Caller is responsible for persistence."""
+
+    success: bool
+    format: str
+    documents: List[DocumentContentPayload] = Field(default_factory=list)
+    log_entries: List[Dict[str, Any]] = Field(default_factory=list)
+    quality_report: Dict[str, Any] = Field(default_factory=dict)
+    duration_seconds: float = 0.0
+    error: Optional[str] = None
+
+
+# ============================================================================
+# Claim Extraction (Phase 6, Sprint 6.2)
+# ============================================================================
+
+
+class ClaimExtractRequest(BaseModel):
+    """Request to extract normative claim candidates from a markdown body."""
+
+    markdown: str = Field(..., description="Document body (markdown) to scan for normative statements")
+
+
+class ClaimCandidatePayload(BaseModel):
+    """One claim candidate, ready to persist as a Claim row."""
+
+    statement: str = ""
+    normalized: Dict[str, Any] = Field(default_factory=dict)
+    claim_type: str = "rule"
+    confidence: float = 0.0
+    source_location: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ClaimExtractResponse(BaseModel):
+    """Stateless claim-extraction result."""
+
+    success: bool
+    claims: List[ClaimCandidatePayload] = Field(default_factory=list)
+    log_entries: List[Dict[str, Any]] = Field(default_factory=list)
+    quality_report: Dict[str, Any] = Field(default_factory=dict)
+    duration_seconds: float = 0.0
+    error: Optional[str] = None
