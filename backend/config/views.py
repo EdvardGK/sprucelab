@@ -1,5 +1,5 @@
 """
-Root-level auth / identity / health views.
+Root-level auth / identity / health / capability views.
 """
 
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -8,6 +8,51 @@ from rest_framework.response import Response
 from django.db import connection
 
 from apps.accounts.models import UserProfile
+
+
+API_VERSION = '1.0'
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@throttle_classes([])  # Capability discovery is itself a feature — no auth, no rate limit.
+def capabilities(request):
+    """
+    Public capability manifest. Lets agents discover what the API can do
+    without scraping docs.
+
+    Stable contract — additive changes only. Increment ``api_version`` for
+    breaking changes.
+    """
+    from apps.models.models import SourceFile  # local import to avoid app-init cycles
+
+    return Response({
+        'api_version': API_VERSION,
+        'service': 'sprucelab-django',
+        'file_formats': [code for code, _ in SourceFile.FORMAT_CHOICES],
+        'mutations_supporting_dry_run': [
+            'POST /api/types/type-mappings/bulk-update/',
+            'POST /api/types/type-definition-layers/bulk-update/',
+            'POST /api/types/claims/{id}/promote/',
+            'POST /api/types/claims/{id}/reject/',
+            'POST /api/types/claims/{id}/supersede/',
+        ],
+        'extraction_pipelines': {
+            'ifc': 'fastapi:/api/v1/ifc/extract',
+            'pdf': 'django:/api/files/{id}/extract/ → drawing+document extractors',
+            'docx': 'django:/api/files/{id}/extract/ → document extractor',
+            'xlsx': 'django:/api/files/{id}/extract/ → document extractor',
+            'pptx': 'django:/api/files/{id}/extract/ → document extractor',
+            'dxf': 'django:/api/files/{id}/extract/ → drawing extractor',
+        },
+        'verification': {
+            'engine_endpoint': 'POST /api/types/types/verify/?model={id}',
+            'rule_sources': ['DEFAULT_RULES', 'ProjectConfig.config[claim_derived_rules]', 'ProjectConfig.config[verification][rules]'],
+            'rule_id_prefixes': {
+                'claim:': 'derived from a promoted Claim — see /api/types/types/claim-issues/',
+            },
+        },
+    })
 
 
 @api_view(['GET'])

@@ -1217,6 +1217,7 @@
     "title": "Claim references",
     "description": "Info-severity rules derived from promoted document claims.",
     "viewClaim": "View claim",
-    "noReferences": "No claim references for this type."
+    "noReferences": "No claim references for this type.",
+    "inModel": "in {{model}}"
   }
 }

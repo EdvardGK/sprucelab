@@ -11,6 +11,7 @@ Quick reference for all REST endpoints. Django serves `/api/`, FastAPI serves `/
 | Method | Path | Handler | Purpose |
 |--------|------|---------|---------|
 | GET | `/api/health/` | `health_check` | Health check |
+| GET | `/api/capabilities/` | `capabilities` | Public manifest: api_version, file_formats, dry-run-capable mutations, extraction pipelines, verification rule conventions |
 | GET | `/api/me/` | `current_user` | Current user profile |
 | PATCH | `/api/me/profile/` | `update_profile` | Update profile |
 
@@ -33,11 +34,10 @@ Quick reference for all REST endpoints. Django serves `/api/`, FastAPI serves `/
 
 | Method | Path | ViewSet | Key Actions |
 |--------|------|---------|-------------|
-| CRUD | `/api/types/types/` | `IFCTypeViewSet` | `instances`, `export-excel`, `export-reduzer`, `import-excel`, `dashboard-metrics`, `verify`, `version-changes` |
-| CRUD | `/api/types/type-mappings/` | `TypeMappingViewSet` | `summary`, `consolidated`, `map-consolidated`, `bulk-update` (batch classify) |
-| CRUD | `/api/types/type-definition-layers/` | `TypeDefinitionLayerViewSet` | `bulk-update` |
+| CRUD | `/api/types/types/` | `IFCTypeViewSet` | `instances`, `export-excel`, `export-reduzer`, `import-excel`, `dashboard-metrics`, `verify`, `claim-issues`, `version-changes` |
+| CRUD | `/api/types/type-mappings/` | `TypeMappingViewSet` | `summary`, `consolidated`, `map-consolidated`, `bulk-update` (batch classify, supports `?dry_run=true`) |
+| CRUD | `/api/types/type-definition-layers/` | `TypeDefinitionLayerViewSet` | `bulk-update` (destructive: replaces all layers; supports `?dry_run=true`) |
 | RO | `/api/types/entities/` | `IFCEntityViewSet` | `by-express-id` |
-| RO | `/api/types/processing-reports/` | `ProcessingReportViewSet` | |
 
 **Classification**:
 
@@ -70,6 +70,20 @@ Quick reference for all REST endpoints. Django serves `/api/`, FastAPI serves `/
 | Method | Path | ViewSet | Key Actions |
 |--------|------|---------|-------------|
 | RO | `/api/types/model-analysis/` | `ModelAnalysisViewSet` | `run` |
+
+**Drawings (Phase 5)**:
+
+| Method | Path | ViewSet | Key Actions |
+|--------|------|---------|-------------|
+| CRUD | `/api/types/drawings/` | `DrawingSheetViewSet` | `register` (solve affine transform from grid intersections); filters: `project`, `is_drawing` |
+| CRUD | `/api/types/title-block-templates/` | `TitleBlockTemplateViewSet` | |
+
+**Documents & Claims (Phase 6)**:
+
+| Method | Path | ViewSet | Key Actions |
+|--------|------|---------|-------------|
+| RO | `/api/types/documents/` | `DocumentContentViewSet` | `content` (`?as=markdown\|json`); filters: `project`, `scope`, `source_file`, `format`, `extraction_method` |
+| CRUD | `/api/types/claims/` | `ClaimViewSet` | `promote`, `reject`, `supersede`, `conflicts` — all mutations support `?dry_run=true` |
 
 ### Scripting (apps/scripting/) -- prefix: `/api/`
 

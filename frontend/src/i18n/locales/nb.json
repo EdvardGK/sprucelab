@@ -1217,6 +1217,7 @@
     "title": "Kravreferanser",
     "description": "Informative regler avledet fra godkjente dokumentkrav.",
     "viewClaim": "Vis krav",
-    "noReferences": "Ingen kravreferanser for denne typen."
+    "noReferences": "Ingen kravreferanser for denne typen.",
+    "inModel": "i {{model}}"
   }
 }

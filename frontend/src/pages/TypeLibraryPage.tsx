@@ -217,6 +217,7 @@ export default function TypeLibraryPage() {
           <div className="w-[400px] flex-shrink-0 bg-background">
             <TypeDetailPanel
               type={selectedType}
+              projectId={selectedProjectId}
               onClose={() => setSelectedType(null)}
               className="h-full"
             />

@@ -314,6 +314,43 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'], url_path='claim-issues')
+    def claim_issues(self, request):
+        """
+        Per-type verification issues with originating-Claim provenance.
+
+        GET /api/types/types/claim-issues/?project={id}&type_name={name}
+        Optional: ?model={id} to narrow to one model
+        Optional: ?severity=info,warning,error to filter
+
+        Returns one row per (issue, model). Claim-derived rules carry full
+        claim metadata under the ``claim`` key; non-claim rules return
+        ``claim: null`` so the UI can still surface them in the same panel.
+        """
+        project_id = request.query_params.get('project')
+        type_name = request.query_params.get('type_name')
+        if not project_id or not type_name:
+            return Response(
+                {'error': 'project and type_name query parameters are required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        model_id = request.query_params.get('model')
+        severity_param = request.query_params.get('severity')
+        severities = (
+            [s.strip() for s in severity_param.split(',') if s.strip()]
+            if severity_param else None
+        )
+
+        from ..services.claim_issue_resolver import resolve_type_claim_issues
+        rows = resolve_type_claim_issues(
+            project_id=project_id,
+            type_name=type_name,
+            model_id=model_id,
+            severities=severities,
+        )
+        return Response({'count': len(rows), 'results': rows})
+
     @action(detail=False, methods=['get'], url_path='version-changes')
     def version_changes(self, request):
         """
@@ -953,6 +990,7 @@ class TypeMappingViewSet(viewsets.ModelViewSet):
         Bulk update multiple type mappings (batch classification).
 
         POST /api/types/type-mappings/bulk-update/
+        Optional query: ?dry_run=true (preview without writing)
         Body: {
             "mappings": [
                 {
@@ -969,10 +1007,15 @@ class TypeMappingViewSet(viewsets.ModelViewSet):
 
         All fields except ifc_type_id are optional. Only provided fields are updated.
         If ns3451_code is set and mapping_status is omitted, status defaults to "mapped".
+
+        Response is identical-shape regardless of mode; ``dry_run: true`` means
+        the counts/errors describe what *would* happen, no DB writes occurred.
         """
         mappings_data = request.data.get('mappings', [])
         if not mappings_data:
             return Response({'error': 'mappings array is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        dry_run = request.query_params.get('dry_run', '').lower() == 'true'
 
         # Allowed fields for update
         ALLOWED_FIELDS = {
@@ -983,6 +1026,21 @@ class TypeMappingViewSet(viewsets.ModelViewSet):
         updated = 0
         created = 0
         errors = []
+
+        # Pre-fetch existing mappings for cheap "would create vs would update" decisions
+        # in dry-run mode. The non-dry-run path re-uses the same map to avoid a second
+        # query inside update_or_create's read.
+        ifc_type_ids = [
+            item.get('ifc_type_id')
+            for item in mappings_data
+            if item.get('ifc_type_id')
+        ]
+        existing_ids = {
+            str(pk)
+            for pk in TypeMapping.objects
+                .filter(ifc_type_id__in=ifc_type_ids)
+                .values_list('ifc_type_id', flat=True)
+        }
 
         for item in mappings_data:
             ifc_type_id = item.get('ifc_type_id')
@@ -1008,8 +1066,17 @@ class TypeMappingViewSet(viewsets.ModelViewSet):
             if defaults.get('mapping_status') == 'mapped':
                 defaults['mapped_at'] = datetime.now()
 
+            would_create = str(ifc_type_id) not in existing_ids
+
+            if dry_run:
+                if would_create:
+                    created += 1
+                else:
+                    updated += 1
+                continue
+
             try:
-                mapping, was_created = TypeMapping.objects.update_or_create(
+                _, was_created = TypeMapping.objects.update_or_create(
                     ifc_type_id=ifc_type_id,
                     defaults=defaults,
                 )
@@ -1021,6 +1088,7 @@ class TypeMappingViewSet(viewsets.ModelViewSet):
                 errors.append({'ifc_type_id': str(ifc_type_id), 'error': str(e)})
 
         return Response({
+            'dry_run': dry_run,
             'created': created,
             'updated': updated,
             'error_count': len(errors),
@@ -1051,9 +1119,10 @@ class TypeDefinitionLayerViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='bulk-update')
     def bulk_update(self, request):
         """
-        Bulk create/update layers for a type mapping.
+        Bulk create/update layers for a type mapping (destructive: replaces all).
 
         POST /api/type-definition-layers/bulk-update/
+        Optional query: ?dry_run=true (preview without writing)
         Body: {
             "type_mapping_id": "uuid",
             "layers": [
@@ -1066,6 +1135,10 @@ class TypeDefinitionLayerViewSet(viewsets.ModelViewSet):
         This will:
         1. Delete existing layers for the type mapping
         2. Create new layers from the provided data
+
+        Dry-run returns ``would_delete``/``would_create`` counts and the prepared
+        layer payloads (with serializer-style fields for client preview), but
+        performs no DB writes.
         """
         type_mapping_id = request.data.get('type_mapping_id')
         layers_data = request.data.get('layers', [])
@@ -1077,6 +1150,31 @@ class TypeDefinitionLayerViewSet(viewsets.ModelViewSet):
             type_mapping = TypeMapping.objects.get(id=type_mapping_id)
         except TypeMapping.DoesNotExist:
             return Response({'error': 'TypeMapping not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        dry_run = request.query_params.get('dry_run', '').lower() == 'true'
+        existing_count = TypeDefinitionLayer.objects.filter(type_mapping=type_mapping).count()
+
+        if dry_run:
+            # Build preview payloads without persisting. Mirrors the serialized
+            # shape so the client can render the same diff it'd see post-commit.
+            preview = [
+                {
+                    'layer_order': layer_data.get('layer_order', 1),
+                    'material_name': layer_data.get('material_name', ''),
+                    'thickness_mm': layer_data.get('thickness_mm', 0),
+                    'epd_id': layer_data.get('epd_id'),
+                    'notes': layer_data.get('notes', ''),
+                }
+                for layer_data in layers_data
+            ]
+            return Response({
+                'dry_run': True,
+                'type_mapping_id': str(type_mapping_id),
+                'would_delete': existing_count,
+                'would_create': len(preview),
+                'layers': preview,
+                'count': len(preview),
+            })
 
         # Delete existing layers
         TypeDefinitionLayer.objects.filter(type_mapping=type_mapping).delete()
@@ -1095,7 +1193,8 @@ class TypeDefinitionLayerViewSet(viewsets.ModelViewSet):
             created_layers.append(TypeDefinitionLayerSerializer(layer).data)
 
         return Response({
+            'dry_run': False,
             'type_mapping_id': str(type_mapping_id),
             'layers': created_layers,
-            'count': len(created_layers)
+            'count': len(created_layers),
         })
