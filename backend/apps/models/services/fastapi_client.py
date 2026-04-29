@@ -351,6 +351,31 @@ class IFCServiceClient:
             response.raise_for_status()
             return response.json()
 
+    def extract_drawing(
+        self,
+        file_url: str,
+        fmt: str,
+    ) -> Dict[str, Any]:
+        """
+        Extract drawing metadata (DWG/DXF/PDF) from a remote file.
+
+        Synchronous: returns the full extraction result inline. Drawings
+        extract fast enough that a background callback is unnecessary.
+        """
+        url = f"{self.base_url}/api/v1/drawings/extract"
+        payload = {"file_url": file_url, "format": fmt}
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                url,
+                json=payload,
+                headers={
+                    "X-API-Key": self.api_key,
+                    "Content-Type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            return response.json()
+
     def health_check(self) -> Dict[str, Any]:
         """Check if FastAPI service is healthy."""
         url = f"{self.base_url}/api/v1/health"
