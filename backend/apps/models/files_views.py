@@ -203,7 +203,10 @@ class SourceFileViewSet(viewsets.ModelViewSet):
     # ------------------------------------------------------------------
 
     def _dispatch_extraction(self, source_file: SourceFile, file_url: str):
-        """Route to the format-specific extractor. Today only IFC is wired up."""
+        """Route to the format-specific extractor. IFC + drawings (DXF/DWG/PDF) wired."""
+        if source_file.format in ('dxf', 'dwg', 'pdf'):
+            return self._dispatch_drawing_extraction(source_file, file_url)
+
         if source_file.format != 'ifc':
             # Unsupported format: create a noop ExtractionRun marked failed so
             # there's still a row to look at.
