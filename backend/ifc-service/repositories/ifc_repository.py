@@ -71,9 +71,6 @@ class IFCRepository:
     All methods are async and use batched operations for performance.
     """
 
-    ENTITY_BATCH_SIZE = 500
-    PROPERTY_BATCH_SIZE = 1000
-
     async def update_model_status(
         self,
         model_id: str,
