@@ -24,8 +24,7 @@ from collections import defaultdict
 import hashlib
 
 from repositories.ifc_repository import (
-    EntityData, PropertyData, SpatialData,
-    MaterialData, TypeData, TypeLayerData, SystemData, TypeAssignmentData
+    MaterialData, TypeData, TypeLayerData,
 )
 
 
