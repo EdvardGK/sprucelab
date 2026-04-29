@@ -348,7 +348,7 @@ export function useProjectMaterials(projectId: string | undefined): {
       queryFn: async () => {
         const params = new URLSearchParams();
         params.append('model', model.id);
-        const response = await apiClient.get<IFCType[]>(`/entities/types/?${params}`);
+        const response = await apiClient.get<IFCType[]>(`/types/types/?${params}`);
         return {
           modelId: model.id,
           modelName: model.name,

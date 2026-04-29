@@ -164,8 +164,8 @@ celery -A config worker --loglevel=info
 
 ### Entities
 
-- `GET /api/entities/?model_id={id}` - List entities
-- `GET /api/entities/{id}/` - Get entity detail with properties
+- `GET /api/types/?model_id={id}` - List entities
+- `GET /api/types/{id}/` - Get entity detail with properties
 
 ### Changes
 

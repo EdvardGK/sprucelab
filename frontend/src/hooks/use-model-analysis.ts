@@ -12,7 +12,7 @@ export function useModelAnalysis(modelId: string) {
     queryKey: analysisKeys.detail(modelId),
     queryFn: async () => {
       const response = await apiClient.get<PaginatedResponse<ModelAnalysis>>(
-        `/entities/model-analysis/?model=${modelId}`
+        `/types/model-analysis/?model=${modelId}`
       );
       return response.data.results[0] ?? null;
     },
@@ -34,7 +34,7 @@ export function useRunAnalysis() {
   return useMutation({
     mutationFn: async (modelId: string) => {
       const response = await apiClient.post<ModelAnalysis>(
-        `/entities/model-analysis/run/`,
+        `/types/model-analysis/run/`,
         { model: modelId }
       );
       return response.data;

@@ -154,7 +154,7 @@ export function MaterialLayerEditor({
 
     setIsSaving(true);
     try {
-      const response = await authedFetch(`${API_BASE}/entities/type-definition-layers/bulk-update/`, {
+      const response = await authedFetch(`${API_BASE}/types/type-definition-layers/bulk-update/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

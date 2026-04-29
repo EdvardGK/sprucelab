@@ -9,7 +9,6 @@ import {
   Database,
   CheckCircle2,
   Clock,
-  XCircle,
   AlertTriangle,
   ChevronDown,
   ChevronUp,
