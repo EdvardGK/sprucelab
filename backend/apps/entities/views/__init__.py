@@ -14,6 +14,7 @@ from .library import (
     GlobalTypeLibraryViewSet,
 )
 from .analysis import ModelAnalysisViewSet
+from .drawings import DrawingSheetViewSet, TitleBlockTemplateViewSet
 
 __all__ = [
     'IFCEntityViewSet',
