@@ -1,0 +1,20 @@
+# Railway config for the FastAPI ifc-service.
+#
+# This file exists *inside* the service's Root Directory so it overrides
+# the repo-root `railway.toml` (which is for the Django service). Without
+# it, Railway picks up the root config and tries to build this service
+# with Dockerfile.django + Django's gunicorn startCommand + Django's
+# /api/health/ healthcheck path, all of which are wrong for FastAPI.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["**"]
+
+[deploy]
+# The Dockerfile's CMD already runs uvicorn correctly via `sh -c`.
+# No startCommand override.
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
