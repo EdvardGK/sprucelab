@@ -516,3 +516,160 @@ class VerificationEngine:
             )
 
         return None
+
+
+# =============================================================================
+# Model-scope checks (Phase F-2: storey deviation)
+# =============================================================================
+
+STOREY_MATCH_RULE_ID = 'storey_match'
+STOREY_MATCH_RULE_NAME = 'Storey deviation'
+
+
+def _floor_name_keys(entry: dict) -> set[str]:
+    """Lowercase {name} ∪ {aliases} for a canonical floor entry."""
+    keys: set[str] = set()
+    name = entry.get('name')
+    if isinstance(name, str) and name.strip():
+        keys.add(name.strip().lower())
+    for alias in entry.get('aliases') or []:
+        if isinstance(alias, str) and alias.strip():
+            keys.add(alias.strip().lower())
+    return keys
+
+
+def check_storey_deviation(model) -> list[VerificationIssue]:
+    """
+    Compare a model's proposed storey list against its scope's canonical floors.
+
+    Inputs are read off the Model instance:
+      - ``model.scope.canonical_floors`` — canonical list. If empty or scope is
+        unset, returns ``[]`` (bootstrap state — nothing to deviate from).
+      - ``model.scope.storey_merge_tolerance_m`` — elevation tolerance.
+      - Latest ``storey_list`` Claim for ``model.source_file`` — proposed list.
+        If no claim exists, returns ``[]``.
+
+    Match rules (mirror ``claim_promotion._reconcile_floors``):
+      1. proposed name or canonical alias match (case-insensitive) → no issue.
+      2. elevation within tolerance, names differ → ``warning`` (rename).
+      3. otherwise → ``error`` (deviating floor).
+
+    Plus: each canonical floor with no match in the proposed list emits a
+    ``warning`` (the model is missing a known floor).
+
+    Returns a list of ``VerificationIssue``. All issues use
+    ``rule_id='storey_match'``.
+    """
+    if model is None:
+        return []
+
+    scope = getattr(model, 'scope', None)
+    if scope is None:
+        return []
+
+    canonical = list(scope.canonical_floors or [])
+    if not canonical:
+        return []
+
+    source_file = getattr(model, 'source_file', None)
+    if source_file is None:
+        return []
+
+    from apps.entities.models import Claim
+    claim = (
+        Claim.objects
+        .filter(source_file=source_file, claim_type='storey_list')
+        .order_by('-extracted_at')
+        .first()
+    )
+    if claim is None:
+        return []
+
+    payload = claim.normalized if isinstance(claim.normalized, dict) else {}
+    raw_floors = payload.get('floors') if isinstance(payload, dict) else None
+    if not isinstance(raw_floors, list):
+        return []
+
+    proposed: list[dict] = []
+    for entry in raw_floors:
+        if not isinstance(entry, dict):
+            continue
+        name = (entry.get('name') or '').strip() if isinstance(entry.get('name'), str) else ''
+        if not name:
+            continue
+        try:
+            elev = entry.get('elevation_m')
+            elev_m = float(elev) if elev is not None else None
+        except (TypeError, ValueError):
+            elev_m = None
+        proposed.append({'name': name, 'elevation_m': elev_m})
+
+    tolerance_m = float(scope.storey_merge_tolerance_m or 0.0)
+
+    issues: list[VerificationIssue] = []
+    matched_canonical_idxs: set[int] = set()
+
+    for prop in proposed:
+        prop_name_key = prop['name'].lower()
+        prop_elev = prop['elevation_m']
+
+        # Rule 1: name/alias match → no issue.
+        name_match_idx = next(
+            (i for i, c in enumerate(canonical) if prop_name_key in _floor_name_keys(c)),
+            None,
+        )
+        if name_match_idx is not None:
+            matched_canonical_idxs.add(name_match_idx)
+            continue
+
+        # Rule 2: elevation within tolerance, names differ → warning.
+        elev_match_idx: int | None = None
+        if prop_elev is not None:
+            for i, c in enumerate(canonical):
+                c_elev = c.get('elevation_m')
+                if c_elev is None:
+                    continue
+                if abs(float(c_elev) - float(prop_elev)) <= tolerance_m:
+                    elev_match_idx = i
+                    break
+        if elev_match_idx is not None:
+            c = canonical[elev_match_idx]
+            matched_canonical_idxs.add(elev_match_idx)
+            issues.append(VerificationIssue(
+                rule_id=STOREY_MATCH_RULE_ID,
+                rule_name=STOREY_MATCH_RULE_NAME,
+                severity='warning',
+                message=(
+                    f"Storey '{prop['name']}' at {prop_elev:.2f}m matches canonical "
+                    f"'{c.get('name')}' by elevation; name differs."
+                ),
+            ))
+            continue
+
+        # Rule 3: no match → error.
+        elev_part = f"at {prop_elev:.2f}m" if prop_elev is not None else "(no elevation)"
+        issues.append(VerificationIssue(
+            rule_id=STOREY_MATCH_RULE_ID,
+            rule_name=STOREY_MATCH_RULE_NAME,
+            severity='error',
+            message=(
+                f"Storey '{prop['name']}' {elev_part} has no match in canonical floor list."
+            ),
+        ))
+
+    # Reverse pass: canonical floors not present in the proposed list.
+    for i, c in enumerate(canonical):
+        if i in matched_canonical_idxs:
+            continue
+        c_elev = c.get('elevation_m')
+        elev_part = f"at {float(c_elev):.2f}m" if c_elev is not None else "(no elevation)"
+        issues.append(VerificationIssue(
+            rule_id=STOREY_MATCH_RULE_ID,
+            rule_name=STOREY_MATCH_RULE_NAME,
+            severity='warning',
+            message=(
+                f"Canonical floor '{c.get('name')}' {elev_part} not present in this model."
+            ),
+        ))
+
+    return issues

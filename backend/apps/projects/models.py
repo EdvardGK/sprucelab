@@ -152,6 +152,10 @@ class ProjectConfig(models.Model):
         default=False,
         help_text="In controlled phase: block upload verification until new types reviewed"
     )
+    block_on_storey_deviation = models.BooleanField(
+        default=False,
+        help_text="When true, models with storey_match errors cannot be published."
+    )
 
     class Meta:
         db_table = 'project_configs'
