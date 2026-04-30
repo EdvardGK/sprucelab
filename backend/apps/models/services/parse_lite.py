@@ -61,6 +61,22 @@ def parse_ifc_stats(file_path: str) -> Dict[str, Any]:
     storey_count = len(storeys)
     storey_names = [s.Name for s in storeys if s.Name]
 
+    # Storey list with elevations — feeds the storey_list Claim emitter so the
+    # Claim Inbox receives a structured floor proposal per upload. Cheap: same
+    # IFC iteration, one extra attribute access per storey.
+    storey_list: List[Dict[str, Any]] = []
+    for i, s in enumerate(storeys):
+        elevation = getattr(s, 'Elevation', None)
+        try:
+            elevation_m = float(elevation) if elevation is not None else None
+        except (TypeError, ValueError):
+            elevation_m = None
+        storey_list.append({
+            'guid': s.GlobalId,
+            'name': s.Name or s.LongName or f'Storey #{i + 1}',
+            'elevation_m': elevation_m,
+        })
+
     # Type objects (IfcWallType, etc.)
     type_objects = list(ifc_file.by_type('IfcTypeObject'))
     type_count = len(type_objects)
@@ -85,6 +101,7 @@ def parse_ifc_stats(file_path: str) -> Dict[str, Any]:
         'system_count': system_count,
         'type_summary': type_summary,
         'storey_names': storey_names,
+        'storeys': storey_list,
         'material_names': material_names,
         'duration_seconds': round(duration, 2),
     }

@@ -30,6 +30,7 @@ CLAIM_TYPE_CHOICES = [
     ('requirement', 'Requirement (general)'),
     ('constraint', 'Constraint (limit / threshold)'),
     ('fact', 'Fact (descriptive, non-normative)'),
+    ('storey_list', 'Storey list (canonical floor proposal)'),
 ]
 
 CLAIM_STATUS_CHOICES = [
@@ -115,6 +116,17 @@ class Claim(models.Model):
         on_delete=models.SET_NULL,
         related_name='derived_from_claims',
         help_text='Which ProjectConfig the promotion wrote into',
+    )
+    promoted_to_scope = models.ForeignKey(
+        'projects.ProjectScope',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='derived_from_claims',
+        help_text=(
+            'For storey_list claims: which ProjectScope.canonical_floors the '
+            'promotion wrote into. Mutually exclusive with promoted_to_config '
+            '— claim_type drives which one is used.'
+        ),
     )
     config_section = models.CharField(
         max_length=100, blank=True,

@@ -250,6 +250,18 @@ async def _process_full(
             "extraction_run_id": (result.extraction_run_id if result else None),
             "duration_seconds": result.duration_seconds if result else 0,
             "error": error_msg or (result.error if result else None),
+            # Storey list with elevations — Django emits a storey_list Claim
+            # from this so the Claim Inbox can adjudicate canonical floors.
+            # Normalize field names to the Claim contract: elevation_m + guid.
+            "storeys": [
+                {
+                    "guid": s.get("guid"),
+                    "name": s.get("name"),
+                    "elevation_m": s.get("elevation"),
+                }
+                for s in (getattr(result, 'storeys', None) or [])
+                if isinstance(s, dict)
+            ] if result else [],
         }
 
         async with httpx.AsyncClient() as client:

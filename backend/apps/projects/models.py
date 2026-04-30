@@ -370,6 +370,16 @@ class ProjectScope(models.Model):
         help_text="Max storey-elevation delta (m) treated as the same floor WITHIN this scope",
     )
 
+    canonical_floors = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Canonical floor list for this scope. List of "
+            "{code, name, elevation_m, aliases[], _promoted_from_claim, _promoted_at}. "
+            "Populated by promoting storey_list claims through the Claim Inbox."
+        ),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

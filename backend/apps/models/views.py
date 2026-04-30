@@ -1582,6 +1582,25 @@ class ModelViewSet(viewsets.ModelViewSet):
             type_count = request.data.get('type_count', 0)
             print(f"✅ Processing complete for {model.name}: {model.element_count} elements, {type_count} types in {duration:.1f}s")
 
+            # Emit storey_list Claim from the discovered storeys so the Claim
+            # Inbox can adjudicate the canonical floor list. Failure-isolated.
+            run_id = request.data.get('extraction_run_id')
+            storeys_payload = request.data.get('storeys') or []
+            if run_id and storeys_payload and model.source_file_id:
+                try:
+                    from apps.models.models import ExtractionRun
+                    from apps.entities.services.storey_claim_emitter import emit_storey_list_claim
+                    run = ExtractionRun.objects.filter(id=run_id).first()
+                    if run is not None:
+                        emit_storey_list_claim(
+                            source_file=model.source_file,
+                            extraction_run=run,
+                            storeys=storeys_payload,
+                            extraction_method='ifc_lite',
+                        )
+                except Exception as exc:
+                    print(f"⚠️  storey_list claim emission failed: {exc}")
+
             # Fire model.processed webhook event (non-blocking)
             try:
                 from apps.automation.services.webhook_dispatcher import dispatch_event

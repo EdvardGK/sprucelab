@@ -58,6 +58,7 @@ def capabilities(request):
                 'document.processed',
                 'claim.extracted',
                 'verification.complete',
+                'floor.canonical.changed',
             ],
             'planned': [
                 'types.classified',
