@@ -945,6 +945,39 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'issues': issues[:3],  # Top 3 issues per type
             })
 
+        # F-2: per-model storey deviation as synthetic action items. Conforms
+        # to the existing ActionItem TS contract via a `model:<id>` type_id
+        # prefix; click-through still routes through `model_id`. F-3 will
+        # introduce a proper `kind` discriminator alongside the Floors UI.
+        from apps.entities.services.verification_engine import check_storey_deviation
+        scoped_models = (
+            Model.objects
+            .filter(project_id=project_id)
+            .select_related('scope', 'source_file')[:50]
+        )
+        for m in scoped_models:
+            storey_issues = check_storey_deviation(m)
+            if not storey_issues:
+                continue
+            action_items.append({
+                'type_id': f'model:{m.id}',
+                'type_name': 'Storey deviation',
+                'ifc_class': '—',
+                'model_name': m.name or '',
+                'model_id': str(m.id),
+                'status': 'deviation',
+                'verification_status': 'flagged',
+                'issues': [
+                    {
+                        'rule_id': i.rule_id,
+                        'rule_name': i.rule_name,
+                        'severity': i.severity,
+                        'message': i.message,
+                    }
+                    for i in storey_issues[:3]
+                ],
+            })
+
         return Response({
             'mode': 'project',
             'project_id': project_id,

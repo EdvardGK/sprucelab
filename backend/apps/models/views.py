@@ -1151,6 +1151,35 @@ class ModelViewSet(viewsets.ModelViewSet):
                 'model': ModelDetailSerializer(model).data
             })
 
+        # F-2: Storey deviation gate. Block publish when ProjectConfig
+        # `block_on_storey_deviation` is True and the model's storeys deviate
+        # from the scope's canonical_floors with at least one error.
+        from apps.projects.models import ProjectConfig
+        from apps.entities.services.verification_engine import check_storey_deviation
+        config = (
+            ProjectConfig.objects
+            .filter(project=model.project, is_active=True)
+            .order_by('-version')
+            .first()
+        )
+        if config and config.block_on_storey_deviation:
+            storey_issues = check_storey_deviation(model)
+            errors = [i for i in storey_issues if i.severity == 'error']
+            if errors:
+                return Response({
+                    'detail': 'Model has storey deviations; cannot publish.',
+                    'gate': 'storey_deviation',
+                    'issues': [
+                        {
+                            'rule_id': i.rule_id,
+                            'rule_name': i.rule_name,
+                            'severity': i.severity,
+                            'message': i.message,
+                        }
+                        for i in errors
+                    ],
+                }, status=status.HTTP_402_PAYMENT_REQUIRED)
+
         # Find currently published version
         currently_published = Model.objects.filter(
             project=model.project,
