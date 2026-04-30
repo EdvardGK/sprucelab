@@ -9,7 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QTODashboard } from '@/components/features/qto/QTODashboard';
 import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer';
-import { ElementPropertiesPanel, ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
+import { ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
+import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPanel';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
 import { treemapLayout } from '@/lib/treemap';
@@ -602,9 +603,10 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               />
             </div>
             <aside className="w-80 border-l border-border bg-background overflow-hidden flex-shrink-0">
-              <ElementPropertiesPanel
+              <IFCPropertiesPanel
                 element={selectedElement}
                 onClose={() => setSelectedElement(null)}
+                className="h-full"
               />
             </aside>
           </div>

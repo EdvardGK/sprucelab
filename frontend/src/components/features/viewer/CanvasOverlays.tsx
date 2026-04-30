@@ -1,10 +1,11 @@
 /**
  * Canvas Overlays — HUD elements positioned on top of the 3D canvas
  *
- * 1. TypeToolbar: Vertical buttons on left edge (Vegg, Dekke, Dør, etc.)
- * 2. SectionFloat: Active section planes on top-right
- * 3. ViewerHUD: Floating toolbar at bottom-center (tools only)
- * 4. CanvasStatusPanel: Floating info panel at bottom-right (filters, sections, measurements, camera)
+ * 1. SectionFloat: Active section planes on top-right
+ * 2. ViewerHUD: Floating toolbar at bottom-center (tools only)
+ * 3. CanvasStatusPanel: Floating info panel at bottom-right (filters, sections, measurements, camera)
+ *
+ * (TypeToolbar was retired in favour of <ViewerFilterPanel> on the left edge.)
  */
 
 import { useTranslation } from 'react-i18next';
@@ -21,12 +22,6 @@ import type { SectionPlane } from '@/hooks/useSectionPlanes';
 
 // ── Shared types ──
 
-export interface TypeFilterInfo {
-  type: string;
-  visible: boolean;
-  count?: number;
-}
-
 export interface ActiveFilter {
   id: string;
   label: string;
@@ -34,117 +29,6 @@ export interface ActiveFilter {
 
 export type ViewerTool = 'select' | 'section' | 'measure';
 export type ViewMode = 'perspective' | 'wireframe' | 'xray';
-
-// ═══ TYPE TOOLBAR ═══
-
-const IFC_TYPE_CONFIG: Record<string, { label: string; i18nKey: string; icon: React.ReactNode }> = {
-  IfcWall: { label: 'Vegg', i18nKey: 'wall', icon: <WallIcon /> },
-  IfcSlab: { label: 'Dekke', i18nKey: 'slab', icon: <SlabIcon /> },
-  IfcDoor: { label: 'Dør', i18nKey: 'door', icon: <DoorIcon /> },
-  IfcWindow: { label: 'Vindu', i18nKey: 'window', icon: <WindowIcon /> },
-  IfcColumn: { label: 'Søyle', i18nKey: 'column', icon: <ColumnIcon /> },
-  IfcBeam: { label: 'Bjelke', i18nKey: 'beam', icon: <BeamIcon /> },
-  IfcRoof: { label: 'Tak', i18nKey: 'roof', icon: <WallIcon /> },
-  IfcStair: { label: 'Trapp', i18nKey: 'stair', icon: <WallIcon /> },
-  IfcRailing: { label: 'Rekkverk', i18nKey: 'railing', icon: <BeamIcon /> },
-  IfcCurtainWall: { label: 'Fasade', i18nKey: 'curtainWall', icon: <WindowIcon /> },
-  IfcPlate: { label: 'Plate', i18nKey: 'plate', icon: <SlabIcon /> },
-  IfcMember: { label: 'Profil', i18nKey: 'member', icon: <BeamIcon /> },
-  IfcFooting: { label: 'Fundament', i18nKey: 'footing', icon: <SlabIcon /> },
-  IfcCovering: { label: 'Kledning', i18nKey: 'covering', icon: <SlabIcon /> },
-  IfcFurnishingElement: { label: 'Inventar', i18nKey: 'furniture', icon: <ColumnIcon /> },
-  IfcBuildingElementProxy: { label: 'Proxy', i18nKey: 'proxy', icon: <ColumnIcon /> },
-};
-
-const TYPE_PRIORITY = [
-  'IfcWall', 'IfcSlab', 'IfcDoor', 'IfcWindow', 'IfcColumn', 'IfcBeam',
-  'IfcRoof', 'IfcStair', 'IfcRailing', 'IfcCurtainWall', 'IfcPlate',
-  'IfcMember', 'IfcFooting', 'IfcCovering', 'IfcFurnishingElement',
-  'IfcBuildingElementProxy',
-];
-
-const MAX_VISIBLE_TYPES = 6;
-
-interface TypeToolbarProps {
-  types: TypeFilterInfo[];
-  onToggle: (type: string) => void;
-  onShowAll: () => void;
-  className?: string;
-}
-
-export function TypeToolbar({ types, onToggle, onShowAll, className }: TypeToolbarProps) {
-  const { t } = useTranslation();
-
-  const sorted = [...types].sort((a, b) => {
-    const ai = TYPE_PRIORITY.indexOf(a.type);
-    const bi = TYPE_PRIORITY.indexOf(b.type);
-    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-  });
-
-  const visible = sorted.slice(0, MAX_VISIBLE_TYPES);
-  const hasStructural = sorted.some(t => ['IfcColumn', 'IfcBeam', 'IfcMember', 'IfcFooting'].includes(t.type));
-
-  const archTypes = visible.filter(t => !['IfcColumn', 'IfcBeam', 'IfcMember', 'IfcFooting'].includes(t.type));
-  const structTypes = visible.filter(t => ['IfcColumn', 'IfcBeam', 'IfcMember', 'IfcFooting'].includes(t.type));
-
-  return (
-    <div className={cn(
-      'absolute top-2 left-2 z-[5] flex flex-col gap-0.5',
-      'bg-[rgba(15,19,33,0.8)] backdrop-blur-[12px]',
-      'border border-white/[0.08] rounded-md p-1',
-      className,
-    )}>
-      {archTypes.map(tf => (
-        <TypeButton key={tf.type} typeFilter={tf} onToggle={onToggle} />
-      ))}
-
-      {hasStructural && archTypes.length > 0 && structTypes.length > 0 && (
-        <div className="h-px bg-white/[0.06] mx-1 my-0.5" />
-      )}
-
-      {structTypes.map(tf => (
-        <TypeButton key={tf.type} typeFilter={tf} onToggle={onToggle} />
-      ))}
-
-      <div className="h-px bg-white/[0.06] mx-1 my-0.5" />
-
-      <button
-        onClick={onShowAll}
-        className="w-[42px] h-9 flex flex-col items-center justify-center gap-px rounded border border-transparent bg-transparent text-white/55 hover:bg-white/[0.06] hover:text-white/70 hover:border-white/[0.08] transition-all cursor-pointer"
-        title={t('viewer.types.allVisible')}
-      >
-        <Eye className="w-3.5 h-3.5" />
-        <span className="text-[7px] font-semibold uppercase tracking-tight leading-none">
-          {t('viewer.types.allVisible')}
-        </span>
-      </button>
-    </div>
-  );
-}
-
-function TypeButton({ typeFilter, onToggle }: { typeFilter: TypeFilterInfo; onToggle: (type: string) => void }) {
-  const { t } = useTranslation();
-  const config = IFC_TYPE_CONFIG[typeFilter.type];
-  if (!config) return null;
-
-  const label = t(`viewer.types.${config.i18nKey}`);
-
-  return (
-    <button
-      onClick={() => onToggle(typeFilter.type)}
-      title={label}
-      className={cn(
-        'w-[42px] h-9 flex flex-col items-center justify-center gap-px rounded border transition-all cursor-pointer',
-        typeFilter.visible
-          ? 'border-transparent bg-transparent text-white/45 hover:bg-white/[0.06] hover:text-white/70 hover:border-white/[0.08]'
-          : 'border-transparent bg-transparent text-white/45 opacity-25',
-      )}
-    >
-      {config.icon}
-      <span className="text-[7px] font-semibold uppercase tracking-tight leading-none">{label}</span>
-    </button>
-  );
-}
 
 
 // ═══ SECTION FLOAT ═══
@@ -470,57 +354,6 @@ export function CanvasStatusPanel({
 
 
 // ═══ SVG ICONS ═══
-
-function WallIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="4" y="2" width="16" height="20" rx="1" />
-    </svg>
-  );
-}
-
-function SlabIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2" y="9" width="20" height="6" rx="1" />
-    </svg>
-  );
-}
-
-function DoorIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="6" y="2" width="12" height="20" rx="1" />
-      <circle cx="15" cy="12" r="1.5" />
-    </svg>
-  );
-}
-
-function WindowIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="4" y="4" width="16" height="16" rx="1" />
-      <line x1="12" y1="4" x2="12" y2="20" />
-      <line x1="4" y1="12" x2="20" y2="12" />
-    </svg>
-  );
-}
-
-function ColumnIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="8" y="2" width="8" height="20" rx="1" />
-    </svg>
-  );
-}
-
-function BeamIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="2" y="8" width="20" height="8" rx="1" />
-    </svg>
-  );
-}
 
 function WireframeIcon() {
   return (

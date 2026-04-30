@@ -19,6 +19,14 @@ import { type ElementProperties } from './ElementPropertiesPanel';
 
 interface IFCPropertiesPanelProps {
   element: ElementProperties | null;
+  /**
+   * Multi-select view: when 2+ elements are selected, show an aggregate
+   * summary (count, type breakdown, summed quantities) instead of the single
+   * element. Pass `[el]` for single-select; pass `null`/empty for empty state.
+   */
+  aggregate?: ElementProperties[];
+  /** Optional close button on the header. Hidden when omitted. */
+  onClose?: () => void;
   className?: string;
 }
 
@@ -195,15 +203,18 @@ function toBool(val: any): boolean {
 // Main Component
 // ═══════════════════════════════════════════════════════════════
 
-export function IFCPropertiesPanel({ element, className }: IFCPropertiesPanelProps) {
+export function IFCPropertiesPanel({ element, aggregate, onClose, className }: IFCPropertiesPanelProps) {
   const { t } = useTranslation();
+
+  // Aggregate view: 2+ selected.
+  if (aggregate && aggregate.length > 1) {
+    return <AggregateSummary aggregate={aggregate} onClose={onClose} className={className} />;
+  }
 
   if (!element) {
     return (
       <div className={cn('bg-card border-l border-border flex flex-col overflow-hidden', className)}>
-        <div className="flex items-center justify-between px-2.5 py-[7px] border-b border-border bg-surface-muted flex-shrink-0">
-          <h3 className="text-[11px] font-bold text-text-primary">{t('viewer.properties.title')}</h3>
-        </div>
+        <PanelHeader title={t('viewer.properties.title')} onClose={onClose} />
         <div className="flex-1 flex items-center justify-center text-text-tertiary text-xs">
           {t('viewer.selectType')}
         </div>
@@ -216,12 +227,8 @@ export function IFCPropertiesPanel({ element, className }: IFCPropertiesPanelPro
   return (
     <div className={cn('bg-card border-l border-border flex flex-col overflow-hidden', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between px-2.5 py-[7px] border-b border-border bg-surface-muted flex-shrink-0">
-        <h3 className="text-[11px] font-bold text-text-primary">{t('viewer.properties.title')}</h3>
-        <span className="text-[8px] font-semibold uppercase tracking-wide px-[5px] py-px rounded-[3px] bg-surface-muted text-text-tertiary border border-border">
-          IFC 4
-        </span>
-      </div>
+      <PanelHeader title={t('viewer.properties.title')} onClose={onClose} ifcBadge />
+
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto min-h-0">
@@ -746,5 +753,116 @@ function ChevronSvg() {
     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
       <path d="m9 18 6-6-6-6" />
     </svg>
+  );
+}
+
+// ── Panel header with optional close button ──
+
+function PanelHeader({
+  title,
+  onClose,
+  ifcBadge = false,
+}: {
+  title: string;
+  onClose?: () => void;
+  ifcBadge?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between px-2.5 py-[7px] border-b border-border bg-surface-muted flex-shrink-0">
+      <h3 className="text-[11px] font-bold text-text-primary">{title}</h3>
+      <div className="flex items-center gap-1.5">
+        {ifcBadge && (
+          <span className="text-[8px] font-semibold uppercase tracking-wide px-[5px] py-px rounded-[3px] bg-surface-muted text-text-tertiary border border-border">
+            IFC 4
+          </span>
+        )}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-0.5 rounded text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-colors"
+            aria-label="Close"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Aggregate (multi-select) summary ──
+
+function AggregateSummary({
+  aggregate,
+  onClose,
+  className,
+}: {
+  aggregate: ElementProperties[];
+  onClose?: () => void;
+  className?: string;
+}) {
+  // Type breakdown
+  const byType = new Map<string, number>();
+  for (const e of aggregate) {
+    byType.set(e.type, (byType.get(e.type) || 0) + 1);
+  }
+  const typeRows = Array.from(byType.entries()).sort((a, b) => b[1] - a[1]);
+
+  // Summed quantities (only sum compatible quantities)
+  const sumNum = (k: keyof ElementProperties): number =>
+    aggregate.reduce((s, e) => s + (typeof e[k] === 'number' ? (e[k] as number) : 0), 0);
+  const totalArea = sumNum('area');
+  const totalVolume = sumNum('volume');
+  const totalLength = sumNum('length');
+
+  return (
+    <div className={cn('bg-card border-l border-border flex flex-col overflow-hidden', className)}>
+      <PanelHeader title={`${aggregate.length} elements selected`} onClose={onClose} />
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-3">
+        {/* Type breakdown */}
+        <section>
+          <h4 className="text-[9px] font-semibold uppercase tracking-wide text-text-tertiary mb-1.5">
+            Types
+          </h4>
+          <div className="space-y-0.5">
+            {typeRows.map(([type, count]) => (
+              <div
+                key={type}
+                className="flex items-center justify-between px-2 py-1 rounded text-[10px] bg-surface-muted/40"
+              >
+                <span className="truncate text-text-primary">{type.replace('Ifc', '')}</span>
+                <span className="tabular-nums text-text-secondary font-medium">{count}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+        {/* Summed quantities */}
+        {(totalArea > 0 || totalVolume > 0 || totalLength > 0) && (
+          <section>
+            <h4 className="text-[9px] font-semibold uppercase tracking-wide text-text-tertiary mb-1.5">
+              Totals
+            </h4>
+            <div className="grid grid-cols-3 gap-1.5">
+              {totalArea > 0 && <Stat label="Area" value={totalArea.toFixed(1)} unit="m²" />}
+              {totalVolume > 0 && <Stat label="Volume" value={totalVolume.toFixed(2)} unit="m³" />}
+              {totalLength > 0 && <Stat label="Length" value={totalLength.toFixed(1)} unit="m" />}
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, unit }: { label: string; value: string; unit: string }) {
+  return (
+    <div className="bg-surface-muted/60 border border-border rounded px-2 py-1.5">
+      <div className="text-[8px] uppercase tracking-wide text-text-tertiary">{label}</div>
+      <div className="text-xs font-bold text-text-primary tabular-nums">
+        {value} <span className="text-[9px] font-normal text-text-secondary">{unit}</span>
+      </div>
+    </div>
   );
 }
