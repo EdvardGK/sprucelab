@@ -222,8 +222,8 @@ export default function ProjectModels() {
                   >
                     {/* Top section: Name, version, status */}
                     <div className="flex flex-col space-y-1.5 px-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium text-text-primary truncate pr-8">
+                      <div className="flex items-start justify-between gap-2 pr-7">
+                        <p className="text-sm font-medium text-text-primary truncate">
                           {model.name}
                         </p>
                         <ModelStatusBadge status={model.status} />
