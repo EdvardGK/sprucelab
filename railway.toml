@@ -7,9 +7,13 @@ dockerfilePath = "backend/Dockerfile.django"
 watchPatterns = ["backend/**"]
 
 [deploy]
-# Run from /app where Dockerfile copies the code
-# Timeout 120s to handle slow statistics queries
-startCommand = "cd /app && python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
+# Dockerfile.django sets WORKDIR /app, so no `cd` prefix is needed.
+# Wrap in `sh -c` because Railway no longer auto-shell-wraps startCommand
+# (a 2026-04 platform change broke the bare `cd /app && ...` form by
+# treating the first token as an executable). Access logging is enabled
+# so we can attribute slow requests to specific URLs.
+# TOML literal string (single quotes) — no escaping needed.
+startCommand = '''sh -c "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --access-logformat '%(t)s %(h)s %(m)s %(U)s%(q)s -> %(s)s in %(L)ss'"'''
 healthcheckPath = "/api/health/"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
