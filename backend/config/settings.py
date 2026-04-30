@@ -76,6 +76,11 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    # Railway's internal healthcheck hits HTTP without setting
+    # X-Forwarded-Proto, so Django's SECURE_SSL_REDIRECT issues a 301 and
+    # the check sees "service unavailable". Exempting the health path
+    # keeps SSL redirect on for everything else.
+    SECURE_REDIRECT_EXEMPT = [r'^api/health/?$']
 
 
 # Application definition
