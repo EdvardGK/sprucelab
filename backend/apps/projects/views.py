@@ -1,13 +1,14 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, Sum, Q, F
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 import json
 import yaml
 
-from .models import Project, ProjectConfig
+from .models import Project, ProjectConfig, ProjectScope
 from .serializers import (
     ProjectSerializer,
     ProjectConfigSerializer,
@@ -16,9 +17,12 @@ from .serializers import (
     ProjectConfigUpdateSerializer,
     ProjectConfigImportSerializer,
     ProjectConfigCreateFromTemplateSerializer,
+    ProjectScopeSerializer,
+    ProjectScopeListSerializer,
     ConfigValidationSerializer,
 )
 from .services.bep_defaults import BEPDefaults, get_bep_template
+from .services.scope_assignment import assign_files_to_scope
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -43,6 +47,90 @@ class ProjectViewSet(viewsets.ModelViewSet):
         models = project.models.all()
         serializer = ModelSerializer(models, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='search')
+    def search(self, request, pk=None):
+        """
+        Universal search across project documents (Phase 6, Sprint 6.1).
+
+        Query params:
+          ?q=<phrase>             required, case-insensitive
+          ?format=pdf,docx,xlsx   optional comma-separated SourceFile.format filter
+          ?scope=<uuid>           optional ProjectScope filter
+
+        Returns a flat list of {source_file, format, page, snippet, scope, relevance}
+        ordered by simple relevance score (substring count). The intent is to
+        give agents and the eventual frontend a single endpoint that returns
+        actionable hits across every document Sprucelab has parsed for this
+        project. Search-engine-grade ranking can be added later once usage
+        patterns are clearer.
+        """
+        from apps.entities.models import DocumentContent
+
+        project = self.get_object()
+        query = (request.query_params.get('q') or '').strip()
+        if not query:
+            return Response(
+                {'error': "Query param 'q' is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        formats_csv = request.query_params.get('format') or ''
+        formats = [f.strip().lower() for f in formats_csv.split(',') if f.strip()]
+        scope_id = request.query_params.get('scope')
+
+        qs = DocumentContent.objects.filter(
+            source_file__project=project,
+        ).select_related('source_file', 'scope')
+
+        if formats:
+            qs = qs.filter(source_file__format__in=formats)
+        if scope_id:
+            qs = qs.filter(scope_id=scope_id)
+
+        needle = query.lower()
+        results = []
+        for doc in qs:
+            haystack = (doc.search_text or '').lower()
+            if not haystack and doc.markdown_content:
+                haystack = doc.markdown_content.lower()
+            if not haystack:
+                continue
+            count = haystack.count(needle)
+            if count == 0:
+                continue
+            snippet = self._build_snippet(
+                doc.markdown_content or doc.search_text or '',
+                query,
+            )
+            results.append({
+                'document_id': str(doc.id),
+                'source_file': str(doc.source_file_id),
+                'original_filename': doc.source_file.original_filename,
+                'format': doc.source_file.format,
+                'page': doc.page_index,
+                'scope': str(doc.scope_id) if doc.scope_id else None,
+                'snippet': snippet,
+                'relevance': count,
+            })
+
+        results.sort(key=lambda r: (-r['relevance'], r['original_filename'], r['page']))
+        return Response({'count': len(results), 'results': results})
+
+    @staticmethod
+    def _build_snippet(text: str, query: str, *, radius: int = 80) -> str:
+        """Return a small window around the first case-insensitive match of `query`."""
+        if not text:
+            return ''
+        idx = text.lower().find(query.lower())
+        if idx < 0:
+            return text[:radius * 2]
+        start = max(0, idx - radius)
+        end = min(len(text), idx + len(query) + radius)
+        snippet = text[start:end]
+        prefix = '…' if start > 0 else ''
+        suffix = '…' if end < len(text) else ''
+        return f'{prefix}{snippet}{suffix}'
 
     @action(detail=True, methods=['get'])
     def statistics(self, request, pk=None):
@@ -542,3 +630,105 @@ class ProjectConfigViewSet(viewsets.ModelViewSet):
             ProjectConfigDetailSerializer(new_config).data,
             status=status.HTTP_201_CREATED
         )
+
+
+class ProjectScopeViewSet(viewsets.ModelViewSet):
+    """
+    /api/projects/scopes/ — nestable organizational unit (Phase 3).
+
+    Filter by ``?project=<uuid>`` and optionally ``?parent=<uuid>`` (or
+    ``?parent__isnull=true`` for root scopes). Mirrors the flat-with-query-
+    param convention used by SourceFileViewSet, ViewerGroupViewSet, and
+    ExtractionRunViewSet — no nested-router library is in use.
+    """
+    queryset = ProjectScope.objects.all()
+    serializer_class = ProjectScopeSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProjectScopeListSerializer
+        return ProjectScopeSerializer
+
+    def get_queryset(self):
+        qs = ProjectScope.objects.select_related('project', 'parent')
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            qs = qs.filter(project_id=project_id)
+        parent_id = self.request.query_params.get('parent')
+        if parent_id is not None:
+            qs = qs.filter(parent_id=parent_id)
+        roots_only = self.request.query_params.get('parent__isnull')
+        if roots_only and roots_only.lower() in ('1', 'true', 'yes'):
+            qs = qs.filter(parent__isnull=True)
+        scope_type = self.request.query_params.get('scope_type')
+        if scope_type:
+            qs = qs.filter(scope_type=scope_type)
+        return qs.order_by('name')
+
+    @action(detail=True, methods=['post'], url_path='assign-files')
+    def assign_files(self, request, pk=None):
+        """Bulk-assign SourceFiles to this scope.
+
+        POST body: ``{"source_file_ids": ["<uuid>", ...]}``. Cross-project
+        files are rejected with 400.
+        """
+        scope = self.get_object()
+        ids = request.data.get('source_file_ids') or []
+        if not isinstance(ids, list):
+            return Response(
+                {'error': 'source_file_ids must be a list'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            updated = assign_files_to_scope(scope, ids)
+        except DjangoValidationError as exc:
+            return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'updated': updated, 'scope': str(scope.id)})
+
+    @action(detail=True, methods=['get'])
+    def files(self, request, pk=None):
+        """List SourceFiles assigned to this scope."""
+        from apps.models.models import SourceFile
+        from apps.models.serializers import SourceFileListSerializer
+
+        scope = self.get_object()
+        qs = SourceFile.objects.filter(scope=scope).select_related('project').order_by('-uploaded_at')
+        serializer = SourceFileListSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def tree(self, request):
+        """Return scopes as a denormalized tree per project.
+
+        ``GET /api/projects/scopes/tree/?project=<uuid>``. Returns a list of
+        root scopes with ``children`` recursively embedded. One DB query per
+        project — fine for the sizes we expect (tens, not thousands).
+        """
+        project_id = request.query_params.get('project')
+        if not project_id:
+            return Response(
+                {'error': 'project query param is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        scopes = list(
+            ProjectScope.objects.filter(project_id=project_id)
+            .order_by('name')
+            .values('id', 'parent_id', 'name', 'scope_type')
+        )
+        nodes = {
+            str(s['id']): {
+                'id': str(s['id']),
+                'parent': str(s['parent_id']) if s['parent_id'] else None,
+                'name': s['name'],
+                'scope_type': s['scope_type'],
+                'children': [],
+            }
+            for s in scopes
+        }
+        roots = []
+        for node in nodes.values():
+            if node['parent'] and node['parent'] in nodes:
+                nodes[node['parent']]['children'].append(node)
+            else:
+                roots.append(node)
+        return Response(roots)

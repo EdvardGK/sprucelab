@@ -11,6 +11,8 @@ from .models import (
     PipelineRun,
     PipelineStepRun,
     AgentRegistration,
+    WebhookSubscription,
+    WebhookDelivery,
 )
 
 
@@ -281,3 +283,58 @@ class AgentStepUpdateSerializer(serializers.Serializer):
     result_data = serializers.JSONField(required=False)
     error_message = serializers.CharField(required=False, allow_blank=True)
     output_files = serializers.ListField(child=serializers.CharField(), required=False)
+
+
+# Webhook subscriptions
+
+class WebhookSubscriptionSerializer(serializers.ModelSerializer):
+    """Read serializer for webhook subscriptions. Never exposes the secret."""
+    project_name = serializers.CharField(source='project.name', read_only=True, default=None)
+
+    class Meta:
+        model = WebhookSubscription
+        fields = [
+            'id', 'project', 'project_name', 'event_type', 'target_url',
+            'description', 'is_active',
+            'created_at', 'updated_at', 'last_fired_at',
+            'consecutive_failures',
+        ]
+        read_only_fields = [
+            'id', 'created_at', 'updated_at',
+            'last_fired_at', 'consecutive_failures',
+        ]
+
+
+class WebhookSubscriptionCreateSerializer(serializers.ModelSerializer):
+    """
+    Create serializer. Returns the generated ``secret`` once on creation —
+    never on retrieve. Mirrors the AgentRegistrationCreate pattern.
+    """
+    secret = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = WebhookSubscription
+        fields = [
+            'id', 'project', 'event_type', 'target_url',
+            'description', 'is_active', 'secret',
+        ]
+        read_only_fields = ['id', 'secret']
+
+
+class WebhookDeliverySerializer(serializers.ModelSerializer):
+    """Delivery log read serializer."""
+    subscription_event_type = serializers.CharField(
+        source='subscription.event_type', read_only=True, default=None,
+    )
+
+    class Meta:
+        model = WebhookDelivery
+        fields = [
+            'id', 'subscription', 'subscription_event_type',
+            'event_type', 'target_url',
+            'status', 'attempt_count',
+            'response_status_code', 'response_body', 'error',
+            'created_at', 'last_attempt_at', 'completed_at',
+            'payload',
+        ]
+        read_only_fields = fields

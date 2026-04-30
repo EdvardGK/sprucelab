@@ -16,6 +16,8 @@ from .models import (
     PipelineRun,
     PipelineStepRun,
     AgentRegistration,
+    WebhookSubscription,
+    WebhookDelivery,
 )
 from .serializers import (
     PipelineSerializer,
@@ -33,6 +35,9 @@ from .serializers import (
     AgentHeartbeatSerializer,
     AgentJobClaimSerializer,
     AgentStepUpdateSerializer,
+    WebhookSubscriptionSerializer,
+    WebhookSubscriptionCreateSerializer,
+    WebhookDeliverySerializer,
 )
 
 
@@ -507,3 +512,136 @@ class AgentRunCompleteView(APIView):
             })
         except PipelineRun.DoesNotExist:
             return Response({'error': 'Run not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# Webhook subscription + delivery API
+
+class WebhookSubscriptionViewSet(viewsets.ModelViewSet):
+    """
+    /api/automation/webhook-subscriptions/ — CRUD for HMAC-signed webhook
+    subscribers.
+
+    The plaintext ``secret`` is returned exactly once: on create and on
+    rotate-secret. After that, only ``last_fired_at`` and
+    ``consecutive_failures`` are visible — receivers must store the secret
+    locally to verify deliveries.
+    """
+    queryset = WebhookSubscription.objects.all()
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return WebhookSubscriptionCreateSerializer
+        return WebhookSubscriptionSerializer
+
+    def get_queryset(self):
+        qs = WebhookSubscription.objects.all()
+        project_id = self.request.query_params.get('project')
+        event_type = self.request.query_params.get('event_type')
+        is_active = self.request.query_params.get('is_active')
+        if project_id:
+            qs = qs.filter(project_id=project_id)
+        if event_type:
+            qs = qs.filter(event_type=event_type)
+        if is_active is not None:
+            qs = qs.filter(is_active=is_active.lower() in ('1', 'true', 'yes'))
+        return qs.select_related('project').order_by('event_type', 'target_url')
+
+    def perform_create(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        serializer.save(created_by=user)
+
+    @action(detail=True, methods=['post'], url_path='rotate-secret')
+    def rotate_secret(self, request, pk=None):
+        """Generate a new HMAC secret and return it once."""
+        subscription = self.get_object()
+        new_secret = subscription.rotate_secret()
+        return Response({
+            'id': str(subscription.id),
+            'secret': new_secret,
+            'message': 'New secret generated. Save it now — it will not be shown again.',
+        })
+
+    @action(detail=True, methods=['post'])
+    def test(self, request, pk=None):
+        """
+        Send a synthetic ``webhook.test`` event to the subscriber URL using
+        the same dispatcher path so signing + retry behavior matches a real
+        delivery. Useful right after creation to confirm the URL is reachable.
+        """
+        from .services.webhook_dispatcher import dispatch_event
+        subscription = self.get_object()
+
+        delivery = WebhookDelivery.objects.create(
+            subscription=subscription,
+            event_type='webhook.test',
+            payload={
+                'event': 'webhook.test',
+                'subscription_id': str(subscription.id),
+                'message': 'This is a test event from Sprucelab.',
+            },
+            target_url=subscription.target_url,
+            status='pending',
+        )
+        from .tasks import deliver_webhook_task
+        deliver_webhook_task.delay(str(delivery.id))
+        return Response({
+            'delivery_id': str(delivery.id),
+            'status': 'queued',
+        }, status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=True, methods=['get'])
+    def deliveries(self, request, pk=None):
+        """Paginated delivery log for a single subscription."""
+        subscription = self.get_object()
+        qs = subscription.deliveries.order_by('-created_at')
+        page = self.paginate_queryset(qs)
+        serializer = WebhookDeliverySerializer(page or qs, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+
+class WebhookDeliveryViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    /api/automation/webhook-deliveries/ — read-only flat view across every
+    subscription. Useful for ops dashboards. ``redeliver`` re-queues the
+    original payload as a new delivery row (history is never mutated).
+    """
+    queryset = WebhookDelivery.objects.all()
+    serializer_class = WebhookDeliverySerializer
+
+    def get_queryset(self):
+        qs = WebhookDelivery.objects.all()
+        sub_id = self.request.query_params.get('subscription')
+        st = self.request.query_params.get('status')
+        event_type = self.request.query_params.get('event_type')
+        if sub_id:
+            qs = qs.filter(subscription_id=sub_id)
+        if st:
+            qs = qs.filter(status=st)
+        if event_type:
+            qs = qs.filter(event_type=event_type)
+        return qs.select_related('subscription').order_by('-created_at')
+
+    @action(detail=True, methods=['post'])
+    def redeliver(self, request, pk=None):
+        """Re-queue the original payload as a fresh delivery row."""
+        original = self.get_object()
+        if original.subscription is None or not original.subscription.is_active:
+            return Response(
+                {'error': 'subscription is gone or inactive'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        new_delivery = WebhookDelivery.objects.create(
+            subscription=original.subscription,
+            event_type=original.event_type,
+            payload=original.payload,
+            target_url=original.subscription.target_url,
+            status='pending',
+        )
+        from .tasks import deliver_webhook_task
+        deliver_webhook_task.delay(str(new_delivery.id))
+        return Response(
+            WebhookDeliverySerializer(new_delivery).data,
+            status=status.HTTP_202_ACCEPTED,
+        )

@@ -45,7 +45,7 @@
     "myRFIs": "Mine RFI-er",
     "projects": "Prosjekter",
     "models": "Modeller",
-    "documents": "Dokumenter",
+    "documents": "Dokumenter og krav",
     "drawings": "Tegninger",
     "viewer3d": "3D-visning",
     "viewer": "3D-visning",
@@ -607,6 +607,9 @@
     "unitsHelp": "Typer med måleenhet",
     "materials": "Materialer",
     "materialsHelp": "Typer med materiallag",
+    "verification": "Verifisering",
+    "verificationHelp": "Typer som består verifiseringsregler",
+    "actionItems": "Handlingspunkter",
     "models": "Modeller",
     "noTypes": "Ingen typer funnet",
     "complete": "fullført",
@@ -856,6 +859,10 @@
       "skipped": "{{count}} hoppet over"
     }
   },
+  "sandwich": {
+    "noLayers": "Ingen materiallag definert",
+    "totalThickness": "Totalt"
+  },
   "typeBank": {
     "title": "Typebank",
     "description": "Global typeklassifiseringsbibliotek på tvers av alle modeller",
@@ -1090,5 +1097,127 @@
     "quality": "Kvalitetsfunn",
     "typesWithIssues": "Typer med funn",
     "typesOnStorey": "typer på denne etasjen"
+  },
+  "admin": {
+    "title": "Adminpanel",
+    "accessDenied": "Tilgang nektet. Kun for administratorer.",
+    "totalUsers": "Brukere",
+    "approved": "Godkjent",
+    "pending": "Ventende",
+    "projects": "Prosjekter",
+    "models": "Modeller",
+    "storage": "Lagring",
+    "signups30d": "Registreringer (30 dager)",
+    "uploads30d": "Opplastinger (30 dager)",
+    "inLast30Days": "siste 30 dager",
+    "modelHealth": "Modellstatus",
+    "ready": "Klar",
+    "processing": "Behandler",
+    "error": "Feil",
+    "typeMappingRate": "Typeklassifiseringsgrad",
+    "userManagement": "Brukeradministrasjon",
+    "email": "E-post",
+    "name": "Navn",
+    "company": "Firma",
+    "role": "Rolle",
+    "status": "Status",
+    "registered": "Registrert",
+    "actions": "Handlinger",
+    "approve": "Godkjenn",
+    "reject": "Avvis",
+    "noUsers": "Ingen brukere funnet"
+  },
+  "claims": {
+    "title": "Kravinnboks",
+    "pageHeading": "Dokumenter og krav",
+    "pageSubheading": "Gjennomgå ekstraherte normative utsagn fra prosjektdokumenter",
+    "confidence": "tillit",
+    "keyboardLegend": "Hurtigtaster:",
+    "tabs": {
+      "unresolved": "Innboks",
+      "promoted": "Godkjent",
+      "rejected": "Avvist",
+      "superseded": "Erstattet",
+      "all": "Alle"
+    },
+    "status": {
+      "unresolved": "Uavklart",
+      "promoted": "Godkjent",
+      "rejected": "Avvist",
+      "superseded": "Erstattet"
+    },
+    "types": {
+      "rule": "Regel",
+      "spec": "Spesifikasjon",
+      "requirement": "Krav",
+      "constraint": "Begrensning",
+      "fact": "Faktum"
+    },
+    "predicates": {
+      "fire_resistance": "Brannmotstand",
+      "flow_rate": "Luftmengde",
+      "u_value": "U-verdi",
+      "acoustic": "Lyd",
+      "pressure": "Trykk"
+    },
+    "filters": {
+      "searchPlaceholder": "Søk i krav...",
+      "allPredicates": "Alle predikater",
+      "allDocuments": "Alle dokumenter",
+      "minConfidence": "Min. tillit"
+    },
+    "actions": {
+      "promote": "Godkjenn",
+      "reject": "Avvis",
+      "supersede": "Erstatt"
+    },
+    "detail": {
+      "noSelection": "Velg et krav for gjennomgang",
+      "normalized": "Normalisert",
+      "predicate": "Predikat",
+      "subject": "Subjekt",
+      "value": "Verdi",
+      "lang": "Språk",
+      "provenance": "Kilde",
+      "page": "side",
+      "charRange": "tegn {{start}}–{{end}}",
+      "decision": "Beslutningshistorikk",
+      "decidedAt": "Avgjort",
+      "configSection": "Konfigurasjonsseksjon",
+      "rejectedReason": "Årsak",
+      "supersededBy": "Erstattet av",
+      "conflicts": "Motstridende krav"
+    },
+    "rejectDialog": {
+      "title": "Avvis krav",
+      "description": "Gi en årsak. Avviste krav lagres som en bevisst beslutning og brukes ikke i verifisering.",
+      "placeholder": "f.eks. utenfor omfang, erstattet av spesifikasjon X, motstrider godkjent tegning..."
+    },
+    "supersedeDialog": {
+      "title": "Erstatt med nyere krav",
+      "description": "Velg et krav som overstyrer dette. Begge må tilhøre samme prosjekt.",
+      "replacing": "Erstatter",
+      "searchPlaceholder": "Søk i krav etter tekst...",
+      "noCandidates": "Ingen matchende krav i dette prosjektet"
+    },
+    "empty": {
+      "title": "Ingen krav",
+      "description": "Krav vises her så snart et dokument med normative utsagn er prosessert."
+    },
+    "toast": {
+      "promoted": "Krav godkjent",
+      "promoteFailed": "Godkjenning feilet",
+      "rejected": "Krav avvist",
+      "rejectFailed": "Avvisning feilet",
+      "superseded": "Krav erstattet",
+      "supersedeFailed": "Erstatting feilet"
+    }
+  },
+  "verificationClaims": {
+    "title": "Kravreferanser",
+    "description": "Informative regler avledet fra godkjente dokumentkrav.",
+    "viewClaim": "Vis krav",
+    "noReferences": "Ingen kravreferanser for denne typen.",
+    "inModel": "i {{model}}"
   }
 }

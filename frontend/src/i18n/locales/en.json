@@ -45,7 +45,7 @@
     "myRFIs": "My RFIs",
     "projects": "Projects",
     "models": "Models",
-    "documents": "Documents",
+    "documents": "Documents & Claims",
     "drawings": "Drawings",
     "viewer3d": "3D Viewer",
     "viewer": "3D Viewer",
@@ -607,6 +607,9 @@
     "unitsHelp": "Types with measurement unit",
     "materials": "Materials",
     "materialsHelp": "Types with material layers",
+    "verification": "Verification",
+    "verificationHelp": "Types passing verification rules",
+    "actionItems": "Action Items",
     "models": "Models",
     "noTypes": "No types found",
     "complete": "complete",
@@ -856,6 +859,10 @@
       "skipped": "{{count}} skipped"
     }
   },
+  "sandwich": {
+    "noLayers": "No material layers defined",
+    "totalThickness": "Total"
+  },
   "typeBank": {
     "title": "Type Bank",
     "description": "Global type classification library across all models",
@@ -1090,5 +1097,127 @@
     "quality": "Quality Issues",
     "typesWithIssues": "Types with issues",
     "typesOnStorey": "types on this storey"
+  },
+  "admin": {
+    "title": "Admin Dashboard",
+    "accessDenied": "Access denied. Staff only.",
+    "totalUsers": "Users",
+    "approved": "Approved",
+    "pending": "Pending",
+    "projects": "Projects",
+    "models": "Models",
+    "storage": "Storage",
+    "signups30d": "Signups (30 days)",
+    "uploads30d": "Uploads (30 days)",
+    "inLast30Days": "in last 30 days",
+    "modelHealth": "Model Health",
+    "ready": "Ready",
+    "processing": "Processing",
+    "error": "Error",
+    "typeMappingRate": "Type mapping rate",
+    "userManagement": "User Management",
+    "email": "Email",
+    "name": "Name",
+    "company": "Company",
+    "role": "Role",
+    "status": "Status",
+    "registered": "Registered",
+    "actions": "Actions",
+    "approve": "Approve",
+    "reject": "Reject",
+    "noUsers": "No users found"
+  },
+  "claims": {
+    "title": "Claim Inbox",
+    "pageHeading": "Documents & Claims",
+    "pageSubheading": "Review extracted normative statements from project documents",
+    "confidence": "conf.",
+    "keyboardLegend": "Shortcuts:",
+    "tabs": {
+      "unresolved": "Inbox",
+      "promoted": "Promoted",
+      "rejected": "Rejected",
+      "superseded": "Superseded",
+      "all": "All"
+    },
+    "status": {
+      "unresolved": "Unresolved",
+      "promoted": "Promoted",
+      "rejected": "Rejected",
+      "superseded": "Superseded"
+    },
+    "types": {
+      "rule": "Rule",
+      "spec": "Spec",
+      "requirement": "Requirement",
+      "constraint": "Constraint",
+      "fact": "Fact"
+    },
+    "predicates": {
+      "fire_resistance": "Fire resistance",
+      "flow_rate": "Flow rate",
+      "u_value": "U-value",
+      "acoustic": "Acoustic",
+      "pressure": "Pressure"
+    },
+    "filters": {
+      "searchPlaceholder": "Search claims...",
+      "allPredicates": "All predicates",
+      "allDocuments": "All documents",
+      "minConfidence": "Min conf."
+    },
+    "actions": {
+      "promote": "Promote",
+      "reject": "Reject",
+      "supersede": "Supersede"
+    },
+    "detail": {
+      "noSelection": "Select a claim to review",
+      "normalized": "Normalized",
+      "predicate": "Predicate",
+      "subject": "Subject",
+      "value": "Value",
+      "lang": "Language",
+      "provenance": "Source",
+      "page": "page",
+      "charRange": "chars {{start}}–{{end}}",
+      "decision": "Decision history",
+      "decidedAt": "Decided",
+      "configSection": "Config section",
+      "rejectedReason": "Reason",
+      "supersededBy": "Superseded by",
+      "conflicts": "Conflicting claims"
+    },
+    "rejectDialog": {
+      "title": "Reject claim",
+      "description": "Provide a reason. Rejected claims are kept as a deliberate decision and won't appear in verification.",
+      "placeholder": "e.g., out-of-scope, superseded by spec X, contradicts approved drawing..."
+    },
+    "supersedeDialog": {
+      "title": "Supersede with newer claim",
+      "description": "Pick a claim that overrides this one. Both claims must be in the same project.",
+      "replacing": "Replacing",
+      "searchPlaceholder": "Search claims by text...",
+      "noCandidates": "No matching claims found in this project"
+    },
+    "empty": {
+      "title": "No claims",
+      "description": "Claims appear here once a document with normative statements has been extracted."
+    },
+    "toast": {
+      "promoted": "Claim promoted",
+      "promoteFailed": "Promote failed",
+      "rejected": "Claim rejected",
+      "rejectFailed": "Reject failed",
+      "superseded": "Claim superseded",
+      "supersedeFailed": "Supersede failed"
+    }
+  },
+  "verificationClaims": {
+    "title": "Claim references",
+    "description": "Info-severity rules derived from promoted document claims.",
+    "viewClaim": "View claim",
+    "noReferences": "No claim references for this type.",
+    "inModel": "in {{model}}"
   }
 }

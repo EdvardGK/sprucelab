@@ -24,67 +24,8 @@ from collections import defaultdict
 import hashlib
 
 from repositories.ifc_repository import (
-    EntityData, PropertyData, SpatialData,
-    MaterialData, TypeData, TypeLayerData, SystemData, TypeAssignmentData
+    MaterialData, TypeData, TypeLayerData,
 )
-
-
-@dataclass
-class StageResult:
-    """Result of a processing stage."""
-    stage: str
-    status: str  # 'success', 'partial', 'failed'
-    processed: int = 0
-    skipped: int = 0
-    failed: int = 0
-    errors: List[str] = field(default_factory=list)
-    duration_ms: int = 0
-    message: str = ""
-
-
-@dataclass
-class ParseError:
-    """Error that occurred during parsing."""
-    stage: str
-    severity: str  # 'warning', 'error', 'critical'
-    message: str
-    element_guid: Optional[str] = None
-    element_type: Optional[str] = None
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-
-
-@dataclass
-class ParseResult:
-    """Complete result of parsing an IFC file."""
-    success: bool = False
-    ifc_schema: str = ""
-    file_size_bytes: int = 0
-
-    # Extracted data
-    entities: List[EntityData] = field(default_factory=list)
-    properties: List[PropertyData] = field(default_factory=list)
-    spatial_items: List[SpatialData] = field(default_factory=list)
-    materials: List[MaterialData] = field(default_factory=list)
-    types: List[TypeData] = field(default_factory=list)
-    systems: List[SystemData] = field(default_factory=list)
-    type_assignments: List[TypeAssignmentData] = field(default_factory=list)
-
-    # Counts
-    element_count: int = 0
-    storey_count: int = 0
-    property_count: int = 0
-    material_count: int = 0
-    type_count: int = 0
-    system_count: int = 0
-    type_assignment_count: int = 0
-
-    # Processing info
-    stage_results: List[Dict] = field(default_factory=list)
-    errors: List[Dict] = field(default_factory=list)
-    duration_seconds: float = 0.0
-
-    # Maps for cross-referencing (guid -> temp_id for linking)
-    storey_guid_to_temp_id: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -134,6 +75,18 @@ class TypesOnlyResult:
     material_count: int = 0
     element_count: int = 0  # Total elements (for stats, not stored)
     storey_count: int = 0
+
+    # Spatial data
+    storeys: List[Dict] = field(default_factory=list)  # [{guid, name, elevation}]
+    storey_type_distribution: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    # {storey_guid: {type_name: instance_count}}
+
+    # Structured processing log (machine-readable)
+    log_entries: List[Dict] = field(default_factory=list)
+    # Quality report (summary of data completeness)
+    quality_report: Dict = field(default_factory=dict)
+    # IfcGrid extraction (Phase 4): {"grids": [{name, guid, placement, u_axes, v_axes, w_axes}]}
+    discovered_grid: Dict = field(default_factory=dict)
 
     # Timing
     duration_seconds: float = 0.0
@@ -239,11 +192,22 @@ class IFCParserService:
         result = TypesOnlyResult()
         start_time = time.time()
 
+        def log(level: str, stage: str, message: str, **details):
+            """Append structured log entry."""
+            result.log_entries.append({
+                'timestamp': datetime.now().isoformat(),
+                'level': level,
+                'stage': stage,
+                'message': message,
+                **details,
+            })
+
         try:
             # Open the file
             ifc_file = ifcopenshell.open(file_path)
             result.ifc_schema = ifc_file.schema
             result.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+            log('info', 'open', f'Opened {result.ifc_schema} file ({result.file_size_bytes} bytes)')
 
             # Resolve the file's length unit so LayerThickness values can be
             # correctly normalized to meters (Revit exports are usually in mm).
@@ -251,6 +215,21 @@ class IFCParserService:
                 length_unit_scale = float(ifcopenshell.util.unit.calculate_unit_scale(ifc_file))
             except Exception:
                 length_unit_scale = 1.0
+            # Infer human-readable unit from scale
+            if abs(length_unit_scale - 0.001) < 1e-6:
+                discovered_unit = 'mm'
+            elif abs(length_unit_scale - 0.01) < 1e-6:
+                discovered_unit = 'cm'
+            elif abs(length_unit_scale - 0.3048) < 1e-4:
+                discovered_unit = 'ft'
+            elif abs(length_unit_scale - 0.0254) < 1e-5:
+                discovered_unit = 'in'
+            elif abs(length_unit_scale - 1.0) < 1e-6:
+                discovered_unit = 'm'
+            else:
+                discovered_unit = f'scale={length_unit_scale}'
+            log('info', 'units', f'Length unit: {discovered_unit} (scale={length_unit_scale})',
+                length_unit=discovered_unit, length_unit_scale=length_unit_scale)
             print(f"[Parser] Length unit scale (to meters): {length_unit_scale}")
 
             # Count elements for stats (quick scan)
@@ -260,8 +239,52 @@ class IFCParserService:
                     element_count += 1
             result.element_count = element_count
 
-            # Count storeys
-            result.storey_count = len(ifc_file.by_type('IfcBuildingStorey'))
+            # Extract storeys with elevations
+            storeys = []
+            storey_guid_map = {}  # guid -> storey dict
+            for storey in ifc_file.by_type('IfcBuildingStorey'):
+                elevation = getattr(storey, 'Elevation', None)
+                storey_data = {
+                    'guid': storey.GlobalId,
+                    'name': storey.Name or storey.GlobalId,
+                    'elevation': float(elevation) * length_unit_scale if elevation is not None else None,
+                }
+                storeys.append(storey_data)
+                storey_guid_map[storey.GlobalId] = storey_data
+            result.storeys = storeys
+            result.storey_count = len(storeys)
+            log('info', 'storeys', f'Found {len(storeys)} storeys',
+                storeys=[{'name': s['name'], 'elevation': s['elevation']} for s in storeys])
+
+            # Extract IfcGrid axes (Phase 4) — failure isolated; bad grid never fails parse.
+            try:
+                result.discovered_grid = self._extract_grids(ifc_file, length_unit_scale)
+                grid_count = len(result.discovered_grid.get('grids', []))
+                if grid_count:
+                    log('info', 'grids', f'Extracted {grid_count} grid(s)',
+                        grids=[
+                            {
+                                'name': g.get('name'),
+                                'u_axis_count': len(g.get('u_axes', [])),
+                                'v_axis_count': len(g.get('v_axes', [])),
+                                'w_axis_count': len(g.get('w_axes', [])),
+                            }
+                            for g in result.discovered_grid['grids']
+                        ])
+                else:
+                    log('info', 'grids', 'No IfcGrid entities in file')
+            except Exception as exc:
+                result.discovered_grid = {'grids': []}
+                log('warning', 'grids', f'Grid extraction failed: {exc}', error=str(exc))
+
+            # Parse IfcRelContainedInSpatialStructure to build storey->element mapping
+            # This tells us which elements are on which floor
+            element_to_storey = {}  # element_guid -> storey_guid
+            for rel in ifc_file.by_type('IfcRelContainedInSpatialStructure'):
+                structure = rel.RelatingStructure
+                if structure.is_a('IfcBuildingStorey'):
+                    for element in (rel.RelatedElements or []):
+                        element_to_storey[element.GlobalId] = structure.GlobalId
 
             # Extract types with instance counts
             types = []
@@ -308,6 +331,9 @@ class IFCParserService:
                     if not material and definition_layers:
                         material = definition_layers[0].material_name
 
+                    # Extract key properties from type Psets (IsExternal, LoadBearing, etc.)
+                    type_properties = self._extract_type_properties(type_element)
+
                     types.append(TypeData(
                         type_guid=type_element.GlobalId,
                         type_name=type_element.Name or '',
@@ -315,6 +341,7 @@ class IFCParserService:
                         predefined_type=predefined_type or 'NOTDEFINED',
                         material=material,
                         instance_count=instance_count,
+                        properties=type_properties or None,
                         representative_unit=representative_unit,
                         definition_layers=definition_layers,
                     ))
@@ -323,6 +350,108 @@ class IFCParserService:
                     # Log but continue - don't fail entire parse for one bad type
                     print(f"[Parser] Warning: Failed to extract type {getattr(type_element, 'GlobalId', 'unknown')}: {e}")
 
+            # ==================== Untyped Element Tracking ====================
+            # Find elements NOT covered by any IfcTypeObject. These are silently
+            # lost in many platforms. We create synthetic types for them so they
+            # appear in the type inventory with accurate counts.
+            typed_guids = set()
+            element_to_type_name = {}  # element_guid -> type_name (for storey distribution)
+            for type_element in ifc_file.by_type('IfcTypeObject'):
+                type_rels = None
+                if hasattr(type_element, 'Types') and type_element.Types:
+                    type_rels = type_element.Types
+                elif hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
+                    type_rels = type_element.ObjectTypeOf
+                if type_rels:
+                    t_name = type_element.Name or type_element.GlobalId
+                    for rel in type_rels:
+                        if rel.RelatedObjects:
+                            for obj in rel.RelatedObjects:
+                                typed_guids.add(obj.GlobalId)
+                                element_to_type_name[obj.GlobalId] = t_name
+
+            # Group untyped elements by (ifc_class, object_type)
+            untyped_groups = defaultdict(lambda: {'count': 0, 'first_element': None})
+            untyped_total = 0
+            for element in ifc_file.by_type('IfcElement'):
+                if element.GlobalId not in typed_guids:
+                    ifc_class = element.is_a()
+                    object_type = getattr(element, 'ObjectType', None) or '<untyped>'
+                    key = (ifc_class, object_type)
+                    group = untyped_groups[key]
+                    group['count'] += 1
+                    if group['first_element'] is None:
+                        group['first_element'] = element
+                    untyped_total += 1
+
+            # Create synthetic types for untyped groups
+            for (ifc_class, object_type), group in untyped_groups.items():
+                type_name = object_type if object_type != '<untyped>' else f'{ifc_class}::<untyped>'
+                ifc_type_class = ifc_class + 'Type' if not ifc_class.endswith('Type') else ifc_class
+                type_guid = 'synth_' + hashlib.md5(f'{ifc_class}:{object_type}'.encode()).hexdigest()[:18]
+
+                # Try to get material from representative element
+                material = ''
+                representative_element = group['first_element']
+                representative_unit = self._infer_representative_unit(ifc_type_class)
+                definition_layers = self._extract_type_layers(
+                    type_object=None,
+                    representative_element=representative_element,
+                    representative_unit=representative_unit,
+                    length_unit_scale=length_unit_scale,
+                )
+                if definition_layers:
+                    material = definition_layers[0].material_name
+
+                types.append(TypeData(
+                    type_guid=type_guid,
+                    type_name=type_name,
+                    ifc_type=ifc_type_class,
+                    predefined_type='NOTDEFINED',
+                    material=material,
+                    instance_count=group['count'],
+                    has_ifc_type_object=False,
+                    representative_unit=representative_unit,
+                    definition_layers=definition_layers,
+                ))
+
+            if untyped_total > 0:
+                # Add untyped elements to element_to_type_name for storey distribution
+                for element in ifc_file.by_type('IfcElement'):
+                    if element.GlobalId not in element_to_type_name:
+                        ifc_class = element.is_a()
+                        object_type = getattr(element, 'ObjectType', None) or '<untyped>'
+                        type_name = object_type if object_type != '<untyped>' else f'{ifc_class}::<untyped>'
+                        element_to_type_name[element.GlobalId] = type_name
+                log('warning', 'types', f'{untyped_total} elements have no IfcTypeObject assignment',
+                    untyped_element_count=untyped_total, synthetic_type_count=len(untyped_groups))
+                print(f"[Parser] Tracked {untyped_total} untyped elements across {len(untyped_groups)} synthetic types")
+
+            # ==================== Build Storey-Type Distribution ====================
+            # Cross-reference spatial containment with type assignments
+            storey_type_dist = defaultdict(lambda: defaultdict(int))
+            elements_with_storey = 0
+            for elem_guid, storey_guid in element_to_storey.items():
+                type_name = element_to_type_name.get(elem_guid)
+                if type_name:
+                    storey_type_dist[storey_guid][type_name] += 1
+                    elements_with_storey += 1
+
+            result.storey_type_distribution = {k: dict(v) for k, v in storey_type_dist.items()}
+            if storey_type_dist:
+                log('info', 'spatial', f'{elements_with_storey} elements mapped to storeys across {len(storey_type_dist)} storeys',
+                    elements_mapped=elements_with_storey, storeys_with_elements=len(storey_type_dist))
+
+            typed_type_count = len(types) - len(untyped_groups)
+            log('info', 'types', f'Extracted {len(types)} types ({typed_type_count} from IfcTypeObject, {len(untyped_groups)} synthetic)',
+                typed_count=typed_type_count, synthetic_count=len(untyped_groups))
+
+            # Count types with properties extracted
+            types_with_props = sum(1 for t in types if t.properties)
+            if types_with_props > 0:
+                log('info', 'properties', f'{types_with_props}/{len(types)} types have Pset properties',
+                    types_with_properties=types_with_props)
+
             result.types = types
             result.type_count = len(types)
 
@@ -330,12 +459,32 @@ class IFCParserService:
             materials, _ = self._extract_materials(ifc_file)
             result.materials = materials
             result.material_count = len(materials)
+            log('info', 'materials', f'Extracted {len(materials)} materials', count=len(materials))
 
             result.success = True
             result.duration_seconds = time.time() - start_time
 
+            # Build quality report
+            result.quality_report = {
+                'total_elements': element_count,
+                'typed_elements': element_count - untyped_total,
+                'untyped_elements': untyped_total,
+                'type_count': len(types),
+                'typed_type_count': typed_type_count,
+                'synthetic_type_count': len(untyped_groups),
+                'types_with_properties': types_with_props,
+                'material_count': len(materials),
+                'storey_count': result.storey_count,
+                'elements_with_storey': elements_with_storey,
+                'length_unit': discovered_unit,
+                'coverage_pct': round((element_count - untyped_total) / element_count * 100, 1) if element_count > 0 else 0,
+            }
+
+            log('info', 'complete', f'Extraction complete in {result.duration_seconds:.2f}s',
+                duration_seconds=round(result.duration_seconds, 2))
+
             print(f"[Parser] Types-only extraction complete in {result.duration_seconds:.2f}s")
-            print(f"  Types: {result.type_count} (with instance counts)")
+            print(f"  Types: {result.type_count} ({typed_type_count} from IfcTypeObject, {len(untyped_groups)} synthetic)")
             print(f"  Materials: {result.material_count}")
             print(f"  Total elements: {result.element_count}")
 
@@ -343,341 +492,112 @@ class IFCParserService:
             result.success = False
             result.error = str(e)
             result.duration_seconds = time.time() - start_time
+            log('error', 'fatal', f'Extraction failed: {str(e)}')
 
         return result
 
-    def parse_file(self, file_path: str) -> ParseResult:
+    def _extract_grids(self, ifc_file, length_unit_scale: float) -> Dict:
         """
-        Parse an IFC file and extract all metadata.
+        Extract every IfcGrid: name, guid, 4x4 placement, U/V/W axes.
 
-        This runs synchronously (ifcopenshell is blocking).
-        For async usage, run in a thread pool executor.
+        Each axis becomes:
+          {tag, curve_type, start: [x,y,z]|None, direction: [dx,dy,dz]|None}
 
-        Args:
-            file_path: Path to the IFC file
+        IfcLine: start = Pnt.Coordinates, direction = DirectionRatios * Magnitude.
+        IfcPolyline: start = first point, direction = (last - first).
+        Other curve types: curve_type recorded, start/direction = None.
 
-        Returns:
-            ParseResult with all extracted data
+        Coordinates and the placement translation column are converted to
+        meters via ``length_unit_scale`` so downstream consumers
+        (drawing-sheet axis registration, footprint containment) can compare
+        values without re-resolving units.
         """
-        result = ParseResult()
-        start_time = time.time()
-
         try:
-            # ==================== STAGE: File Open ====================
-            stage_start = time.time()
-            print(f"\n[Parser] Opening IFC file: {file_path}")
+            import ifcopenshell.util.placement
+        except Exception:
+            ifcopenshell.util.placement = None  # type: ignore[attr-defined]
 
+        result_grids: List[Dict] = []
+
+        def _scaled_point(coords) -> Optional[List[float]]:
+            if coords is None:
+                return None
             try:
-                ifc_file = ifcopenshell.open(file_path)
-                result.ifc_schema = ifc_file.schema
-                result.file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+                return [float(c) * length_unit_scale for c in coords]
+            except Exception:
+                return None
 
-                try:
-                    length_unit_scale = float(ifcopenshell.util.unit.calculate_unit_scale(ifc_file))
-                except Exception:
-                    length_unit_scale = 1.0
-
-                result.stage_results.append({
-                    'stage': 'file_open',
-                    'status': 'success',
-                    'processed': 1,
-                    'skipped': 0,
-                    'failed': 0,
-                    'errors': [],
-                    'duration_ms': int((time.time() - stage_start) * 1000),
-                    'message': f'Opened IFC file with schema {result.ifc_schema}'
-                })
-                print(f"[Parser] File opened: {result.ifc_schema} (length unit scale: {length_unit_scale})")
-
-            except Exception as e:
-                error_msg = f"Failed to open IFC file: {str(e)}"
-                result.errors.append({
-                    'stage': 'file_open',
-                    'severity': 'critical',
-                    'message': error_msg,
-                    'element_guid': None,
-                    'element_type': None,
-                    'timestamp': datetime.now().isoformat()
-                })
-                result.duration_seconds = time.time() - start_time
-                return result  # Can't continue without file
-
-            # ==================== STAGE: Spatial Hierarchy ====================
-            stage_start = time.time()
-            print("[Parser] Extracting spatial hierarchy...")
-            spatial_items, storey_count, stage_errors = self._extract_spatial_hierarchy(ifc_file)
-            result.spatial_items = spatial_items
-            result.storey_count = storey_count
-
-            # Build storey map for element linking
-            for item in spatial_items:
-                if item.hierarchy_level == 'storey':
-                    # Use a placeholder - will be replaced with real DB ID later
-                    pass
-
-            result.stage_results.append({
-                'stage': 'spatial_hierarchy',
-                'status': 'success' if len(stage_errors) == 0 else 'partial',
-                'processed': storey_count,
-                'skipped': 0,
-                'failed': len(stage_errors),
-                'errors': [e['message'] for e in stage_errors],
-                'duration_ms': int((time.time() - stage_start) * 1000),
-                'message': f"Extracted {storey_count} spatial elements"
-            })
-            result.errors.extend(stage_errors)
-            print(f"[Parser] Spatial hierarchy: {storey_count} elements")
-
-            # ==================== STAGE: Materials ====================
-            stage_start = time.time()
-            print("[Parser] Extracting materials...")
-            materials, stage_errors = self._extract_materials(ifc_file)
-            result.materials = materials
-            result.material_count = len(materials)
-
-            result.stage_results.append({
-                'stage': 'materials',
-                'status': 'success' if len(stage_errors) == 0 else 'partial',
-                'processed': len(materials),
-                'skipped': 0,
-                'failed': len(stage_errors),
-                'errors': [e['message'] for e in stage_errors],
-                'duration_ms': int((time.time() - stage_start) * 1000),
-                'message': f"Extracted {len(materials)} materials"
-            })
-            result.errors.extend(stage_errors)
-            print(f"[Parser] Materials: {len(materials)}")
-
-            # ==================== STAGE: Types ====================
-            stage_start = time.time()
-            print("[Parser] Extracting type definitions...")
-            types, stage_errors = self._extract_types(ifc_file, length_unit_scale=length_unit_scale)
-            result.types = types
-            result.type_count = len(types)
-
-            result.stage_results.append({
-                'stage': 'types',
-                'status': 'success' if len(stage_errors) == 0 else 'partial',
-                'processed': len(types),
-                'skipped': 0,
-                'failed': len(stage_errors),
-                'errors': [e['message'] for e in stage_errors],
-                'duration_ms': int((time.time() - stage_start) * 1000),
-                'message': f"Extracted {len(types)} type definitions"
-            })
-            result.errors.extend(stage_errors)
-            print(f"[Parser] Types: {len(types)}")
-
-            # ==================== STAGE: Systems ====================
-            stage_start = time.time()
-            print("[Parser] Extracting systems...")
-            systems, stage_errors = self._extract_systems(ifc_file)
-            result.systems = systems
-            result.system_count = len(systems)
-
-            result.stage_results.append({
-                'stage': 'systems',
-                'status': 'success' if len(stage_errors) == 0 else 'partial',
-                'processed': len(systems),
-                'skipped': 0,
-                'failed': len(stage_errors),
-                'errors': [e['message'] for e in stage_errors],
-                'duration_ms': int((time.time() - stage_start) * 1000),
-                'message': f"Extracted {len(systems)} systems"
-            })
-            result.errors.extend(stage_errors)
-            print(f"[Parser] Systems: {len(systems)}")
-
-            # ==================== STAGE: Elements ====================
-            stage_start = time.time()
-            print("[Parser] Extracting element metadata...")
-
-            # Build storey GUID map for fast lookup
-            storey_guids = set()
-            for item in spatial_items:
-                if item.hierarchy_level == 'storey':
-                    # The entity_id at this point is the ifc_guid (we don't have DB IDs yet)
-                    storey_guids.add(item.entity_id)
-
-            entities, stage_errors = self._extract_elements_metadata(ifc_file, storey_guids)
-            result.entities = entities
-            result.element_count = len(entities)
-
-            result.stage_results.append({
-                'stage': 'elements_metadata',
-                'status': 'success' if len(stage_errors) == 0 else 'partial',
-                'processed': len(entities),
-                'skipped': 0,
-                'failed': len(stage_errors),
-                'errors': [e['message'] for e in stage_errors],
-                'duration_ms': int((time.time() - stage_start) * 1000),
-                'message': f"Extracted {len(entities)} elements (metadata only)"
-            })
-            result.errors.extend(stage_errors)
-            print(f"[Parser] Elements: {len(entities)}")
-
-            # ==================== STAGE: Properties ====================
-            stage_start = time.time()
-            print("[Parser] Extracting property sets...")
-
-            # Build entity GUID set for fast lookup
-            entity_guids = {e.ifc_guid for e in entities}
-            # Also include spatial elements
-            for item in spatial_items:
-                entity_guids.add(item.entity_id)
-
-            properties, stage_errors = self._extract_property_sets(ifc_file, entity_guids)
-            result.properties = properties
-            result.property_count = len(properties)
-
-            result.stage_results.append({
-                'stage': 'properties',
-                'status': 'success' if len(stage_errors) == 0 else 'partial',
-                'processed': len(properties),
-                'skipped': 0,
-                'failed': len(stage_errors),
-                'errors': [e['message'] for e in stage_errors],
-                'duration_ms': int((time.time() - stage_start) * 1000),
-                'message': f"Extracted {len(properties)} properties"
-            })
-            result.errors.extend(stage_errors)
-            print(f"[Parser] Properties: {len(properties)}")
-
-            # ==================== STAGE: Type Assignments ====================
-            stage_start = time.time()
-            print("[Parser] Extracting type assignments...")
-
-            type_assignments, stage_errors = self._extract_type_assignments(
-                ifc_file, entity_guids, types
-            )
-            result.type_assignments = type_assignments
-            result.type_assignment_count = len(type_assignments)
-
-            result.stage_results.append({
-                'stage': 'type_assignments',
-                'status': 'success' if len(stage_errors) == 0 else 'partial',
-                'processed': len(type_assignments),
-                'skipped': 0,
-                'failed': len(stage_errors),
-                'errors': [e['message'] for e in stage_errors],
-                'duration_ms': int((time.time() - stage_start) * 1000),
-                'message': f"Extracted {len(type_assignments)} type assignments"
-            })
-            result.errors.extend(stage_errors)
-            print(f"[Parser] Type Assignments: {len(type_assignments)}")
-
-            # ==================== Complete ====================
-            result.success = True
-            result.duration_seconds = time.time() - start_time
-
-            print(f"\n[Parser] Complete in {result.duration_seconds:.2f}s")
-            print(f"  Elements: {result.element_count}")
-            print(f"  Properties: {result.property_count}")
-            print(f"  Errors: {len(result.errors)}")
-
-            return result
-
-        except Exception as e:
-            result.duration_seconds = time.time() - start_time
-            result.errors.append({
-                'stage': 'unknown',
-                'severity': 'critical',
-                'message': f"Catastrophic parsing failure: {str(e)}",
-                'element_guid': None,
-                'element_type': None,
-                'timestamp': datetime.now().isoformat()
-            })
-            return result
-
-    def _extract_spatial_hierarchy(
-        self, ifc_file
-    ) -> Tuple[List[SpatialData], int, List[Dict]]:
-        """Extract project/site/building/storey hierarchy."""
-        items = []
-        errors = []
-
-        # We'll store entities as SpatialData with entity_id = ifc_guid
-        # The orchestrator will create IFCEntity records and update references
-
-        # Project
-        try:
-            projects = ifc_file.by_type('IfcProject')
-            if projects:
-                project = projects[0]
-                items.append(SpatialData(
-                    entity_id=project.GlobalId,  # Temporarily store GUID
-                    parent_id=None,
-                    hierarchy_level='project',
-                    path=[project.GlobalId]
-                ))
-        except Exception as e:
-            errors.append({
-                'stage': 'spatial_hierarchy',
-                'severity': 'error',
-                'message': f"Failed to extract IfcProject: {str(e)}",
-                'element_guid': None,
-                'element_type': 'IfcProject',
-                'timestamp': datetime.now().isoformat()
-            })
-
-        # Sites
-        for site in ifc_file.by_type('IfcSite'):
+        def _axis_dict(axis) -> Dict:
+            tag = getattr(axis, 'AxisTag', None)
+            curve = getattr(axis, 'AxisCurve', None)
+            entry: Dict = {
+                'tag': tag,
+                'curve_type': curve.is_a() if curve is not None else None,
+                'start': None,
+                'direction': None,
+            }
+            if curve is None:
+                return entry
             try:
-                items.append(SpatialData(
-                    entity_id=site.GlobalId,
-                    parent_id=None,  # Would need relationship lookup
-                    hierarchy_level='site',
-                    path=[site.GlobalId]
-                ))
-            except Exception as e:
-                errors.append({
-                    'stage': 'spatial_hierarchy',
-                    'severity': 'error',
-                    'message': f"Failed to extract IfcSite: {str(e)}",
-                    'element_guid': getattr(site, 'GlobalId', None),
-                    'element_type': 'IfcSite',
-                    'timestamp': datetime.now().isoformat()
-                })
+                if curve.is_a('IfcLine'):
+                    pnt = getattr(curve, 'Pnt', None)
+                    direction = getattr(curve, 'Dir', None)
+                    if pnt is not None:
+                        entry['start'] = _scaled_point(getattr(pnt, 'Coordinates', None))
+                    if direction is not None:
+                        # IfcLine.Dir is an IfcVector: Orientation (IfcDirection) + Magnitude.
+                        # Some authors hand back a raw IfcDirection — handle both.
+                        if direction.is_a('IfcVector'):
+                            orientation = getattr(direction, 'Orientation', None)
+                            magnitude = float(getattr(direction, 'Magnitude', 1.0) or 1.0)
+                            ratios = getattr(orientation, 'DirectionRatios', None) if orientation is not None else None
+                        else:
+                            magnitude = 1.0
+                            ratios = getattr(direction, 'DirectionRatios', None)
+                        if ratios is not None:
+                            # Direction ratios are unitless; the magnitude carries
+                            # the model's length unit, so scale it to meters.
+                            scaled_mag = magnitude * length_unit_scale
+                            entry['direction'] = [float(r) * scaled_mag for r in ratios]
+                elif curve.is_a('IfcPolyline'):
+                    points = list(getattr(curve, 'Points', []) or [])
+                    if len(points) >= 2:
+                        first = _scaled_point(getattr(points[0], 'Coordinates', None))
+                        last = _scaled_point(getattr(points[-1], 'Coordinates', None))
+                        entry['start'] = first
+                        if first is not None and last is not None:
+                            entry['direction'] = [last[i] - first[i] for i in range(len(first))]
+            except Exception:
+                # Curve geometry unreadable — keep tag + curve_type, drop coords.
+                entry['start'] = None
+                entry['direction'] = None
+            return entry
 
-        # Buildings
-        for building in ifc_file.by_type('IfcBuilding'):
+        for grid in ifc_file.by_type('IfcGrid'):
+            placement: Optional[List[List[float]]] = None
             try:
-                items.append(SpatialData(
-                    entity_id=building.GlobalId,
-                    parent_id=None,
-                    hierarchy_level='building',
-                    path=[building.GlobalId]
-                ))
-            except Exception as e:
-                errors.append({
-                    'stage': 'spatial_hierarchy',
-                    'severity': 'error',
-                    'message': f"Failed to extract IfcBuilding: {str(e)}",
-                    'element_guid': getattr(building, 'GlobalId', None),
-                    'element_type': 'IfcBuilding',
-                    'timestamp': datetime.now().isoformat()
-                })
+                if grid.ObjectPlacement is not None and ifcopenshell.util.placement is not None:
+                    matrix = ifcopenshell.util.placement.get_local_placement(grid.ObjectPlacement)
+                    if matrix is not None:
+                        # Numpy array; copy + scale translation column to meters.
+                        m = [[float(v) for v in row] for row in matrix]
+                        for r in range(3):
+                            m[r][3] = m[r][3] * length_unit_scale
+                        placement = m
+            except Exception:
+                placement = None
 
-        # Storeys
-        for storey in ifc_file.by_type('IfcBuildingStorey'):
-            try:
-                items.append(SpatialData(
-                    entity_id=storey.GlobalId,
-                    parent_id=None,
-                    hierarchy_level='storey',
-                    path=[storey.GlobalId]
-                ))
-            except Exception as e:
-                errors.append({
-                    'stage': 'spatial_hierarchy',
-                    'severity': 'error',
-                    'message': f"Failed to extract IfcBuildingStorey: {str(e)}",
-                    'element_guid': getattr(storey, 'GlobalId', None),
-                    'element_type': 'IfcBuildingStorey',
-                    'timestamp': datetime.now().isoformat()
-                })
+            grid_entry: Dict = {
+                'name': getattr(grid, 'Name', None),
+                'guid': getattr(grid, 'GlobalId', None),
+                'placement': placement,
+                'u_axes': [_axis_dict(a) for a in (getattr(grid, 'UAxes', None) or [])],
+                'v_axes': [_axis_dict(a) for a in (getattr(grid, 'VAxes', None) or [])],
+                'w_axes': [_axis_dict(a) for a in (getattr(grid, 'WAxes', None) or [])],
+            }
+            result_grids.append(grid_entry)
 
-        return items, len(items), errors
+        return {'grids': result_grids}
 
     def _extract_materials(self, ifc_file) -> Tuple[List[MaterialData], List[Dict]]:
         """Extract materials."""
@@ -703,178 +623,6 @@ class IFCParserService:
                 })
 
         return materials, errors
-
-    def _extract_types(self, ifc_file, length_unit_scale: float = 1.0) -> Tuple[List[TypeData], List[Dict]]:
-        """
-        Extract types by grouping elements by their ObjectType attribute.
-
-        ObjectType is the PRIMARY source for type enumeration:
-        - Always populated by Revit regardless of export settings
-        - More reliable than IfcTypeObject which depends on export configuration
-
-        IfcTypeObject is SECONDARY - used to enrich type data when available:
-        - GlobalId, PredefinedType, Material associations
-        - When ObjectType matches IfcTypeObject.Name, link them
-
-        This approach ensures:
-        - No empty types (only created when ObjectType exists)
-        - No unused types (instance count from actual elements)
-        - Better coverage (elements without IfcRelDefinesByType included)
-        """
-        types = []
-        errors = []
-
-        # ==================== PASS 1: Group elements by ObjectType ====================
-        # Key: ObjectType string, Value: dict with element GUIDs and IFC class info.
-        # Also captures the first element seen for each ObjectType as a representative
-        # sample — used later to extract material layers when the type's own
-        # IfcTypeObject lacks material associations (common in Revit exports).
-        object_type_groups = defaultdict(lambda: {
-            'guids': [],
-            'ifc_classes': set(),  # Track which IFC classes use this type
-            'first_element': None,
-        })
-
-        try:
-            for element in ifc_file.by_type('IfcElement'):
-                object_type = getattr(element, 'ObjectType', None)
-                if object_type:  # Only count typed elements
-                    group = object_type_groups[object_type]
-                    group['guids'].append(element.GlobalId)
-                    group['ifc_classes'].add(element.is_a())
-                    if group['first_element'] is None:
-                        group['first_element'] = element
-        except Exception as e:
-            errors.append({
-                'stage': 'types',
-                'severity': 'warning',
-                'message': f"Error grouping elements by ObjectType: {str(e)}",
-                'element_guid': None,
-                'element_type': 'IfcElement',
-                'timestamp': datetime.now().isoformat()
-            })
-
-        # ==================== PASS 2: Build IfcTypeObject lookup ====================
-        # Key: IfcTypeObject.Name, Value: IfcTypeObject entity
-        type_object_lookup = {}
-
-        try:
-            for type_element in ifc_file.by_type('IfcTypeObject'):
-                type_name = type_element.Name
-                if type_name:
-                    # If multiple IfcTypeObjects have same name, prefer the one with instances
-                    if type_name not in type_object_lookup:
-                        type_object_lookup[type_name] = type_element
-                    else:
-                        # Check which one has instances linked
-                        existing = type_object_lookup[type_name]
-                        existing_instances = self._count_type_instances(existing)
-                        new_instances = self._count_type_instances(type_element)
-                        if new_instances > existing_instances:
-                            type_object_lookup[type_name] = type_element
-        except Exception as e:
-            errors.append({
-                'stage': 'types',
-                'severity': 'warning',
-                'message': f"Error building IfcTypeObject lookup: {str(e)}",
-                'element_guid': None,
-                'element_type': 'IfcTypeObject',
-                'timestamp': datetime.now().isoformat()
-            })
-
-        # ==================== PASS 3: Create TypeData for each unique ObjectType ====================
-        for object_type, group_data in object_type_groups.items():
-            try:
-                type_object = type_object_lookup.get(object_type)
-                instance_count = len(group_data['guids'])
-                ifc_classes = group_data['ifc_classes']
-                representative_element = group_data['first_element']
-
-                # Determine IFC type class (e.g., IfcWallType from IfcWall)
-                if type_object:
-                    # Use actual IfcTypeObject class
-                    ifc_type_class = type_object.is_a()
-                    type_guid = type_object.GlobalId
-                    has_ifc_type_object = True
-                else:
-                    # Infer type class from element class (IfcWall -> IfcWallType)
-                    # Use most common element class in this group
-                    most_common_class = max(ifc_classes, key=lambda c: sum(1 for e in group_data['guids']))
-                    ifc_type_class = most_common_class + 'Type' if not most_common_class.endswith('Type') else most_common_class
-                    # Generate synthetic GUID from ObjectType (deterministic)
-                    type_guid = 'synth_' + hashlib.md5(object_type.encode()).hexdigest()[:18]
-                    has_ifc_type_object = False
-
-                # Extract metadata from IfcTypeObject if available
-                predefined_type = 'NOTDEFINED'
-                material = ''
-
-                if type_object:
-                    if hasattr(type_object, 'PredefinedType') and type_object.PredefinedType:
-                        predefined_type = str(type_object.PredefinedType)
-                    material = self._extract_type_material(type_object)
-
-                # Extract layer stack for Materials Browser / LCA / Balance Sheet.
-                # Prefer the IfcTypeObject's material association; fall back to the
-                # representative element (Revit exports often attach material to
-                # elements, not to the type).
-                representative_unit = self._infer_representative_unit(ifc_type_class)
-                definition_layers = self._extract_type_layers(
-                    type_object=type_object,
-                    representative_element=representative_element,
-                    representative_unit=representative_unit,
-                    length_unit_scale=length_unit_scale,
-                )
-
-                # If we got layers but `material` (primary string for TypeBank identity)
-                # is still empty, populate it from the first layer for consistency.
-                if not material and definition_layers:
-                    material = definition_layers[0].material_name
-
-                types.append(TypeData(
-                    type_guid=type_guid,
-                    type_name=object_type,  # Use ObjectType as canonical name
-                    ifc_type=ifc_type_class,
-                    predefined_type=predefined_type,
-                    material=material,
-                    instance_count=instance_count,
-                    has_ifc_type_object=has_ifc_type_object,
-                    representative_unit=representative_unit,
-                    definition_layers=definition_layers,
-                ))
-
-            except Exception as e:
-                errors.append({
-                    'stage': 'types',
-                    'severity': 'warning',
-                    'message': f"Failed to create type for ObjectType '{object_type}': {str(e)}",
-                    'element_guid': None,
-                    'element_type': 'TypeData',
-                    'timestamp': datetime.now().isoformat()
-                })
-
-        return types, errors
-
-    def _count_type_instances(self, type_element) -> int:
-        """Count instances linked to an IfcTypeObject via inverse relationship.
-
-        IFC2X3 uses 'ObjectTypeOf', IFC4 uses 'Types' as the inverse attribute name.
-        """
-        try:
-            type_rels = None
-            if hasattr(type_element, 'Types') and type_element.Types:
-                type_rels = type_element.Types
-            elif hasattr(type_element, 'ObjectTypeOf') and type_element.ObjectTypeOf:
-                type_rels = type_element.ObjectTypeOf
-            if type_rels:
-                count = 0
-                for rel in type_rels:
-                    if hasattr(rel, 'RelatedObjects') and rel.RelatedObjects:
-                        count += len(rel.RelatedObjects)
-                return count
-        except Exception:
-            pass
-        return 0
 
     def _extract_type_material(self, type_element) -> str:
         """
@@ -925,6 +673,53 @@ class IFCParserService:
 
         except Exception:
             return ''
+
+    # Key properties to extract from type-level Psets (Pset_*Common).
+    # These define what a type IS and feed into TypeBankEntry statistics.
+    _TYPE_PROPERTY_KEYS = {
+        'IsExternal', 'LoadBearing', 'FireRating',
+        'ThermalTransmittance', 'AcousticRating', 'Reference',
+    }
+
+    def _extract_type_properties(self, type_object) -> Dict[str, Any]:
+        """
+        Extract key properties from IfcTypeObject's property sets.
+
+        Looks for Pset_*Common property sets and extracts predefined
+        properties (IsExternal, LoadBearing, FireRating, etc.).
+
+        Returns dict of property_name -> value (typed: bool, float, or str).
+        Never raises.
+        """
+        props = {}
+        if type_object is None:
+            return props
+
+        try:
+            # IfcTypeObject stores properties via HasPropertySets (direct attribute)
+            psets = getattr(type_object, 'HasPropertySets', None)
+            if not psets:
+                return props
+
+            for pset in psets:
+                if not pset.is_a('IfcPropertySet'):
+                    continue
+                for prop in (pset.HasProperties or []):
+                    if prop.Name not in self._TYPE_PROPERTY_KEYS:
+                        continue
+                    if prop.is_a('IfcPropertySingleValue') and prop.NominalValue is not None:
+                        raw = prop.NominalValue.wrappedValue
+                        # Preserve typed values
+                        if isinstance(raw, bool):
+                            props[prop.Name] = raw
+                        elif isinstance(raw, (int, float)):
+                            props[prop.Name] = float(raw)
+                        else:
+                            props[prop.Name] = str(raw)
+        except Exception:
+            pass
+
+        return props
 
     # Representative unit inference for types, used to populate TypeMapping.representative_unit
     # when the parser creates a mapping. Matches the conventions in the seed command and the
@@ -1106,284 +901,6 @@ class IFCParserService:
         except Exception:
             return None
         return None
-
-    def _extract_systems(self, ifc_file) -> Tuple[List[SystemData], List[Dict]]:
-        """Extract systems."""
-        systems = []
-        errors = []
-
-        for system in ifc_file.by_type('IfcSystem'):
-            try:
-                systems.append(SystemData(
-                    system_guid=system.GlobalId,
-                    system_name=system.Name or 'Unnamed System',
-                    system_type=system.is_a(),
-                    description=getattr(system, 'Description', None),
-                ))
-            except Exception as e:
-                errors.append({
-                    'stage': 'systems',
-                    'severity': 'warning',
-                    'message': f"Failed to extract system: {str(e)}",
-                    'element_guid': getattr(system, 'GlobalId', None),
-                    'element_type': getattr(system, 'is_a', lambda: 'IfcSystem')(),
-                    'timestamp': datetime.now().isoformat()
-                })
-
-        return systems, errors
-
-    def _extract_quantities(self, element) -> Dict[str, Optional[float]]:
-        """
-        Extract quantities from element (area, volume, length, height, perimeter).
-
-        Reads from Qto_*BaseQuantities property sets.
-        """
-        quantities = {
-            'area': None,
-            'volume': None,
-            'length': None,
-            'height': None,
-            'perimeter': None,
-        }
-
-        try:
-            if not hasattr(element, 'IsDefinedBy') or not element.IsDefinedBy:
-                return quantities
-
-            for definition in element.IsDefinedBy:
-                if definition.is_a('IfcRelDefinesByProperties'):
-                    prop_set = definition.RelatingPropertyDefinition
-
-                    if prop_set.is_a('IfcElementQuantity'):
-                        for quantity in prop_set.Quantities:
-                            quantity_name = (quantity.Name or '').lower()
-
-                            if 'netfloorarea' in quantity_name or 'area' in quantity_name:
-                                if quantity.is_a('IfcQuantityArea'):
-                                    quantities['area'] = float(quantity.AreaValue)
-
-                            elif 'netvolume' in quantity_name or 'volume' in quantity_name:
-                                if quantity.is_a('IfcQuantityVolume'):
-                                    quantities['volume'] = float(quantity.VolumeValue)
-
-                            elif 'length' in quantity_name:
-                                if quantity.is_a('IfcQuantityLength'):
-                                    quantities['length'] = float(quantity.LengthValue)
-
-                            elif 'height' in quantity_name:
-                                if quantity.is_a('IfcQuantityLength'):
-                                    quantities['height'] = float(quantity.LengthValue)
-
-                            elif 'perimeter' in quantity_name:
-                                if quantity.is_a('IfcQuantityLength'):
-                                    quantities['perimeter'] = float(quantity.LengthValue)
-
-        except Exception:
-            pass  # If quantity extraction fails, return nulls
-
-        return quantities
-
-    def _extract_elements_metadata(
-        self, ifc_file, storey_guids: set
-    ) -> Tuple[List[EntityData], List[Dict]]:
-        """
-        Extract element metadata (no geometry).
-
-        Args:
-            ifc_file: Open IFC file
-            storey_guids: Set of storey GUIDs for fast lookup
-        """
-        entities = []
-        errors = []
-
-        elements = ifc_file.by_type('IfcElement')
-        print(f"  Found {len(elements)} elements in IFC file")
-
-        for element in elements:
-            try:
-                quantities = self._extract_quantities(element)
-
-                # Get storey GUID if assigned
-                storey_guid = None
-                if hasattr(element, 'ContainedInStructure') and element.ContainedInStructure:
-                    for rel in element.ContainedInStructure:
-                        if rel.RelatingStructure.is_a('IfcBuildingStorey'):
-                            storey_guid = rel.RelatingStructure.GlobalId
-                            break
-
-                # Get element metadata
-                element_name = element.Name or ''
-                element_type = element.is_a()
-                object_type = getattr(element, 'ObjectType', None) or ''
-
-                # Detect geometry-only entities (no meaningful metadata)
-                # These are typically IfcBuildingElementProxy with no name, type, or properties
-                is_geometry_only = (
-                    not element_name and
-                    not object_type and
-                    element_type == 'IfcBuildingElementProxy'
-                )
-
-                entities.append(EntityData(
-                    ifc_guid=element.GlobalId,
-                    ifc_type=element_type,
-                    name=element_name,
-                    description=getattr(element, 'Description', None),
-                    storey_id=storey_guid,  # Store GUID, will be converted to UUID by orchestrator
-                    area=quantities['area'],
-                    volume=quantities['volume'],
-                    length=quantities['length'],
-                    height=quantities['height'],
-                    perimeter=quantities['perimeter'],
-                    is_geometry_only=is_geometry_only,
-                ))
-
-            except Exception as e:
-                errors.append({
-                    'stage': 'elements_metadata',
-                    'severity': 'error',
-                    'message': f"Failed to process element: {str(e)}",
-                    'element_guid': getattr(element, 'GlobalId', None),
-                    'element_type': getattr(element, 'is_a', lambda: 'IfcElement')(),
-                    'timestamp': datetime.now().isoformat()
-                })
-
-        return entities, errors
-
-    def _extract_property_sets(
-        self, ifc_file, entity_guids: set
-    ) -> Tuple[List[PropertyData], List[Dict]]:
-        """
-        Extract property sets.
-
-        Args:
-            ifc_file: Open IFC file
-            entity_guids: Set of entity GUIDs that we have in our database
-        """
-        properties = []
-        errors = []
-
-        elements = ifc_file.by_type('IfcElement')
-
-        for element in elements:
-            if element.GlobalId not in entity_guids:
-                continue
-
-            if not hasattr(element, 'IsDefinedBy'):
-                continue
-
-            for definition in element.IsDefinedBy:
-                try:
-                    if definition.is_a('IfcRelDefinesByProperties'):
-                        property_set = definition.RelatingPropertyDefinition
-
-                        if property_set.is_a('IfcPropertySet'):
-                            pset_name = property_set.Name
-
-                            for prop in property_set.HasProperties:
-                                try:
-                                    if prop.is_a('IfcPropertySingleValue'):
-                                        prop_value = None
-                                        prop_type = 'string'
-
-                                        if prop.NominalValue:
-                                            prop_value = str(prop.NominalValue.wrappedValue)
-                                            prop_type = type(prop.NominalValue.wrappedValue).__name__
-
-                                        properties.append(PropertyData(
-                                            entity_id=element.GlobalId,  # Store GUID, convert later
-                                            pset_name=pset_name,
-                                            property_name=prop.Name,
-                                            property_value=prop_value,
-                                            property_type=prop_type,
-                                        ))
-
-                                except Exception as e:
-                                    errors.append({
-                                        'stage': 'properties',
-                                        'severity': 'warning',
-                                        'message': f"Failed to extract property: {str(e)}",
-                                        'element_guid': element.GlobalId,
-                                        'element_type': element.is_a(),
-                                        'timestamp': datetime.now().isoformat()
-                                    })
-
-                except Exception as e:
-                    errors.append({
-                        'stage': 'properties',
-                        'severity': 'warning',
-                        'message': f"Failed to process property definition: {str(e)}",
-                        'element_guid': getattr(element, 'GlobalId', None),
-                        'element_type': getattr(element, 'is_a', lambda: 'IfcElement')(),
-                        'timestamp': datetime.now().isoformat()
-                    })
-
-        return properties, errors
-
-    def _extract_type_assignments(
-        self, ifc_file, entity_guids: set, types: List[TypeData]
-    ) -> Tuple[List[TypeAssignmentData], List[Dict]]:
-        """
-        Extract type->entity assignments by matching ObjectType attribute.
-
-        This replaces the previous approach of using IfcRelDefinesByType.
-        Elements are assigned to types based on their ObjectType value matching
-        the type_name (which is derived from ObjectType in _extract_types).
-
-        Args:
-            ifc_file: Open IFC file
-            entity_guids: Set of entity GUIDs we've extracted
-            types: List of TypeData from _extract_types (ObjectType-primary)
-        """
-        assignments = []
-        errors = []
-
-        # Build lookup: ObjectType -> type_guid
-        object_type_to_guid = {t.type_name: t.type_guid for t in types}
-
-        try:
-            for element in ifc_file.by_type('IfcElement'):
-                entity_guid = element.GlobalId
-
-                # Skip elements we don't have in our entity set
-                if entity_guid not in entity_guids:
-                    continue
-
-                # Get ObjectType and match to type
-                object_type = getattr(element, 'ObjectType', None)
-                if not object_type:
-                    continue  # Element has no type - skip
-
-                type_guid = object_type_to_guid.get(object_type)
-                if not type_guid:
-                    # This shouldn't happen if _extract_types worked correctly
-                    errors.append({
-                        'stage': 'type_assignments',
-                        'severity': 'warning',
-                        'message': f"ObjectType '{object_type}' not found in types list",
-                        'element_guid': entity_guid,
-                        'element_type': element.is_a(),
-                        'timestamp': datetime.now().isoformat()
-                    })
-                    continue
-
-                assignments.append(TypeAssignmentData(
-                    entity_guid=entity_guid,
-                    type_guid=type_guid,
-                ))
-
-        except Exception as e:
-            errors.append({
-                'stage': 'type_assignments',
-                'severity': 'error',
-                'message': f"Failed to extract type assignments: {str(e)}",
-                'element_guid': None,
-                'element_type': 'IfcElement',
-                'timestamp': datetime.now().isoformat()
-            })
-
-        return assignments, errors
-
 
 # Singleton instance
 ifc_parser = IFCParserService()

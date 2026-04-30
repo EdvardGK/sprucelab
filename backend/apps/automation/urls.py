@@ -58,6 +58,8 @@ from .views import (
     AgentStepStartView,
     AgentStepCompleteView,
     AgentRunCompleteView,
+    WebhookSubscriptionViewSet,
+    WebhookDeliveryViewSet,
 )
 
 # Main router for top-level resources
@@ -66,6 +68,8 @@ router.register(r'pipelines', PipelineViewSet, basename='pipelines')
 router.register(r'cde-connections', CDEConnectionViewSet, basename='cde-connections')
 router.register(r'project-configs', ProjectPipelineConfigViewSet, basename='project-configs')
 router.register(r'runs', PipelineRunViewSet, basename='runs')
+router.register(r'webhook-subscriptions', WebhookSubscriptionViewSet, basename='webhook-subscriptions')
+router.register(r'webhook-deliveries', WebhookDeliveryViewSet, basename='webhook-deliveries')
 
 # Nested steps under pipelines (using explicit paths)
 steps_list = PipelineStepViewSet.as_view({

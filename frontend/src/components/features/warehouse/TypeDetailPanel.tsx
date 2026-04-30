@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Box, Tag, Layers, Package, Eye, Shield,
   Check, Flag, RotateCcw, X,
+  AlertCircle, AlertTriangle, Info, ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,15 +25,18 @@ import {
   useResetVerification,
   type GlobalTypeLibraryEntry,
 } from '@/hooks/use-warehouse';
+import { useTypeClaimIssues } from '@/hooks/use-claim-issues';
+import type { ClaimIssue, ClaimIssueSeverity } from '@/lib/claim-issues-types';
 import { cn } from '@/lib/utils';
 
 interface TypeDetailPanelProps {
   type: GlobalTypeLibraryEntry | null;
+  projectId?: string;
   onClose?: () => void;
   className?: string;
 }
 
-export function TypeDetailPanel({ type, onClose, className }: TypeDetailPanelProps) {
+export function TypeDetailPanel({ type, projectId, onClose, className }: TypeDetailPanelProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('classification');
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
@@ -211,7 +216,7 @@ export function TypeDetailPanel({ type, onClose, className }: TypeDetailPanelPro
 
           {/* Verification Tab */}
           <TabsContent value="verification" className="mt-0 h-full">
-            <VerificationTabContent type={type} />
+            <VerificationTabContent type={type} projectId={projectId} />
           </TabsContent>
         </div>
       </Tabs>
@@ -371,7 +376,10 @@ function ObservationsTabContent({ type }: { type: GlobalTypeLibraryEntry }) {
 }
 
 // Verification tab content
-function VerificationTabContent({ type }: { type: GlobalTypeLibraryEntry }) {
+function VerificationTabContent({
+  type,
+  projectId,
+}: { type: GlobalTypeLibraryEntry; projectId?: string }) {
   const { t } = useTranslation();
 
   return (
@@ -403,6 +411,97 @@ function VerificationTabContent({ type }: { type: GlobalTypeLibraryEntry }) {
         {type.verification_status === 'verified' && t('typeLibrary.verification.verifiedDesc')}
         {type.verification_status === 'flagged' && t('typeLibrary.verification.flaggedDesc')}
       </div>
+
+      <ClaimIssuesSection projectId={projectId} typeName={type.type_name} />
     </div>
+  );
+}
+
+const SEVERITY_ICON: Record<ClaimIssueSeverity, typeof Info> = {
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+};
+
+const SEVERITY_CLASS: Record<ClaimIssueSeverity, string> = {
+  error: 'text-red-600 dark:text-red-400',
+  warning: 'text-amber-600 dark:text-amber-400',
+  info: 'text-sky-600 dark:text-sky-400',
+};
+
+function ClaimIssuesSection({
+  projectId,
+  typeName,
+}: { projectId?: string; typeName: string | null }) {
+  const { t } = useTranslation();
+  const { data: allIssues = [], isLoading } = useTypeClaimIssues(projectId, typeName);
+  // Section is titled "Claim references"; filter out operator-authored
+  // engine rules so the UI matches the title. Non-claim issues are still
+  // returned by the endpoint for agent consumers.
+  const issues = allIssues.filter((i) => i.rule_id.startsWith('claim:'));
+
+  if (!projectId || !typeName) return null;
+
+  return (
+    <div className="border-t pt-4">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-medium">{t('verificationClaims.title')}</h4>
+        {!isLoading && issues.length > 0 && (
+          <Badge variant="secondary">{issues.length}</Badge>
+        )}
+      </div>
+
+      {isLoading && (
+        <div className="space-y-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-12 bg-muted/40 rounded animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {!isLoading && issues.length === 0 && (
+        <p className="text-sm text-muted-foreground italic">
+          {t('verificationClaims.noReferences')}
+        </p>
+      )}
+
+      {!isLoading && issues.length > 0 && (
+        <ul className="space-y-2">
+          {issues.map((issue, idx) => (
+            <ClaimIssueRow key={`${issue.rule_id}-${issue.model_id}-${idx}`} issue={issue} projectId={projectId} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ClaimIssueRow({ issue, projectId }: { issue: ClaimIssue; projectId: string }) {
+  const { t } = useTranslation();
+  const Icon = SEVERITY_ICON[issue.severity] ?? Info;
+  const severityClass = SEVERITY_CLASS[issue.severity] ?? SEVERITY_CLASS.info;
+
+  return (
+    <li className="border rounded-md p-3 bg-background">
+      <div className="flex items-start gap-2">
+        <Icon className={cn('h-4 w-4 mt-0.5 flex-shrink-0', severityClass)} />
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium">{issue.rule_name || issue.rule_id}</div>
+          <p className="text-sm text-muted-foreground mt-0.5 break-words">{issue.message}</p>
+          <div className="text-xs text-muted-foreground mt-1.5">
+            {t('verificationClaims.inModel', { model: issue.model_name })}
+          </div>
+          {issue.claim && (
+            <Link
+              to={`/projects/${projectId}/documents?claim=${issue.claim.id}`}
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+            >
+              {t('verificationClaims.viewClaim')}
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          )}
+        </div>
+      </div>
+    </li>
   );
 }

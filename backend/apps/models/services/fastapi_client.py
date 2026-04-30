@@ -55,6 +55,8 @@ class IFCServiceClient:
         file_url: str,
         skip_geometry: bool = True,
         callback_url: Optional[str] = None,
+        source_file_id: Optional[str] = None,
+        extraction_run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Start IFC processing - returns quick stats immediately.
@@ -101,6 +103,10 @@ class IFCServiceClient:
 
         if callback_url:
             payload["django_callback_url"] = callback_url
+        if source_file_id:
+            payload["source_file_id"] = str(source_file_id)
+        if extraction_run_id:
+            payload["extraction_run_id"] = str(extraction_run_id)
 
         with httpx.Client(timeout=self.timeout) as client:
             response = client.post(
@@ -341,6 +347,78 @@ class IFCServiceClient:
             response = client.get(
                 url,
                 headers={"X-API-Key": self.api_key},
+            )
+            response.raise_for_status()
+            return response.json()
+
+    def extract_drawing(
+        self,
+        file_url: str,
+        fmt: str,
+    ) -> Dict[str, Any]:
+        """
+        Extract drawing metadata (DWG/DXF/PDF) from a remote file.
+
+        Synchronous: returns the full extraction result inline. Drawings
+        extract fast enough that a background callback is unnecessary.
+        """
+        url = f"{self.base_url}/api/v1/drawings/extract"
+        payload = {"file_url": file_url, "format": fmt}
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                url,
+                json=payload,
+                headers={
+                    "X-API-Key": self.api_key,
+                    "Content-Type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            return response.json()
+
+    def extract_document(
+        self,
+        file_url: str,
+        fmt: str,
+    ) -> Dict[str, Any]:
+        """
+        Extract document content (PDF/DOCX/XLSX/PPTX) from a remote file.
+
+        Synchronous: returns full payloads inline. Document extraction is
+        fast (~50ms for a 10-page PDF), no callback needed.
+        """
+        url = f"{self.base_url}/api/v1/documents/extract"
+        payload = {"file_url": file_url, "format": fmt}
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                url,
+                json=payload,
+                headers={
+                    "X-API-Key": self.api_key,
+                    "Content-Type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            return response.json()
+
+    def extract_claims(self, markdown: str) -> Dict[str, Any]:
+        """
+        Run heuristic claim extraction over a markdown body.
+
+        Stateless: Django sends the parsed markdown, gets back candidate
+        claims with predicate/subject/value/units/confidence. Heuristics
+        finish in milliseconds.
+        """
+        url = f"{self.base_url}/api/v1/claims/extract"
+        payload = {"markdown": markdown}
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.post(
+                url,
+                json=payload,
+                headers={
+                    "X-API-Key": self.api_key,
+                    "Content-Type": "application/json",
+                },
             )
             response.raise_for_status()
             return response.json()

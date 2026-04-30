@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layers, Loader2 } from 'lucide-react';
 import { useTypeInstances, type TypeDefinitionLayer } from '@/hooks/use-warehouse';
@@ -16,11 +16,10 @@ import {
   NoGeometryOverlay,
 } from '../warehouse/instance-hud/HUDOverlays';
 
-// Lazy-load the heavy ThatOpen viewer for "See in Model"
-const TypeInstanceViewer = lazy(() =>
-  import('../warehouse/TypeInstanceViewer').then((m) => ({
-    default: m.TypeInstanceViewer,
-  }))
+// Lazy-load the heavy ThatOpen viewer for "See in Model".
+// All three pages now share UnifiedBIMViewer; type-page isolation is a prop.
+const UnifiedBIMViewer = lazy(() =>
+  import('./UnifiedBIMViewer').then((m) => ({ default: m.UnifiedBIMViewer }))
 );
 
 interface InlineViewerProps {
@@ -161,7 +160,9 @@ export function InlineViewer({
     );
   }
 
-  // Full-model view (TypeInstanceViewer)
+  // Full-model view: render the unified viewer with GUID isolation pinned to
+  // this type's instances. Prev/next is just incrementing currentIndex which
+  // updates the isolation prop — no imperative API call needed.
   if (showModel) {
     return (
       <div className={`relative h-full bg-zinc-950 overflow-hidden ${className || ''}`}>
@@ -172,10 +173,10 @@ export function InlineViewer({
             </div>
           }
         >
-          <TypeInstanceViewer
+          <ShowModelViewer
             modelId={modelId}
-            typeId={typeId}
-            className="h-full"
+            instances={instances}
+            currentIndex={currentIndex}
           />
         </Suspense>
         {/* Back button */}
@@ -185,6 +186,19 @@ export function InlineViewer({
         >
           {t('common.back')}
         </button>
+        {/* Instance nav still works — see InstanceNav rendered below the model view? */}
+        {/* Match TypeInstanceViewer's UX: keep prev/next available while in model view */}
+        {totalCount > 0 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
+            <InstanceNav
+              currentIndex={currentIndex}
+              totalCount={totalCount}
+              onPrev={goToPrev}
+              onNext={goToNext}
+              onSeeInModel={() => setShowModel(false)}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -273,5 +287,39 @@ function DimensionToggle({
         3D
       </button>
     </div>
+  );
+}
+
+// --- Show-model wrapper ---
+// Renders the unified BIM viewer with GUID isolation pinned to the type's
+// instances. Replaces the old standalone TypeInstanceViewer.
+function ShowModelViewer({
+  modelId,
+  instances,
+  currentIndex,
+}: {
+  modelId: string;
+  instances: { ifc_guid: string }[];
+  currentIndex: number;
+}) {
+  const isolation = useMemo(
+    () => ({
+      guids: instances.map((i) => i.ifc_guid),
+      mode: 'single' as const,
+      currentGuid: instances[currentIndex]?.ifc_guid ?? null,
+      zoomOnChange: true,
+    }),
+    [instances, currentIndex]
+  );
+
+  return (
+    <UnifiedBIMViewer
+      modelId={modelId}
+      isolation={isolation}
+      showPropertiesPanel={true}
+      showModelInfo={false}
+      showControls={false}
+      showFilterHUD={false}
+    />
   );
 }

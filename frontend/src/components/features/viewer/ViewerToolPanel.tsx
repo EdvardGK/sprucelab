@@ -30,7 +30,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ElementPropertiesPanel, type ElementProperties } from './ElementPropertiesPanel';
+import { type ElementProperties } from './ElementPropertiesPanel';
+import { IFCPropertiesPanel } from './IFCPropertiesPanel';
 import { SectionPlanesPanel } from './SectionPlanesPanel';
 import type { SectionPlane } from '@/hooks/useSectionPlanes';
 
@@ -354,8 +355,8 @@ function PropertiesTab({
   }
 
   return (
-    <div className="p-5">
-      <ElementPropertiesPanel element={element} onClose={onClose} className="shadow-none border-0" />
+    <div className="h-full">
+      <IFCPropertiesPanel element={element} onClose={onClose} className="h-full" />
     </div>
   );
 }

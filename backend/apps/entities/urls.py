@@ -1,16 +1,17 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    ProcessingReportViewSet, IFCEntityViewSet,
+    IFCEntityViewSet,
     NS3451CodeViewSet, SemanticTypeViewSet, IFCTypeViewSet, TypeMappingViewSet,
     TypeDefinitionLayerViewSet, MaterialViewSet, MaterialMappingViewSet,
     TypeBankEntryViewSet, TypeBankObservationViewSet, TypeBankAliasViewSet,
     MaterialLibraryViewSet, ProductLibraryViewSet, ProductCompositionViewSet,
     GlobalTypeLibraryViewSet, ModelAnalysisViewSet,
+    DrawingSheetViewSet, TitleBlockTemplateViewSet,
+    DocumentContentViewSet, ClaimViewSet,
 )
 
 router = DefaultRouter()
-router.register(r'processing-reports', ProcessingReportViewSet, basename='processing-report')
 router.register(r'entities', IFCEntityViewSet, basename='entity')
 
 # Warehouse routes (legacy - TypeMapping)
@@ -37,6 +38,16 @@ router.register(r'model-analysis', ModelAnalysisViewSet, basename='model-analysi
 router.register(r'material-library', MaterialLibraryViewSet, basename='material-library')
 router.register(r'product-library', ProductLibraryViewSet, basename='product-library')
 router.register(r'product-compositions', ProductCompositionViewSet, basename='product-composition')
+
+# Drawings (Phase 5)
+router.register(r'drawings', DrawingSheetViewSet, basename='drawing')
+router.register(r'title-block-templates', TitleBlockTemplateViewSet, basename='title-block-template')
+
+# Documents (Phase 6, Sprint 6.1)
+router.register(r'documents', DocumentContentViewSet, basename='document')
+
+# Claims (Phase 6, Sprint 6.2)
+router.register(r'claims', ClaimViewSet, basename='claim')
 
 urlpatterns = [
     path('', include(router.urls)),

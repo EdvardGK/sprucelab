@@ -282,6 +282,8 @@ class ProcessRequest(BaseModel):
     file_path: Optional[str] = Field(None, description="Local path to IFC file (for local development)")
     skip_geometry: bool = Field(True, description="Skip geometry extraction (always True for now)")
     django_callback_url: Optional[str] = Field(None, description="URL to call when processing completes")
+    source_file_id: Optional[str] = Field(None, description="UUID of the SourceFile (Layer 0) — Phase 2")
+    extraction_run_id: Optional[str] = Field(None, description="UUID of an existing ExtractionRun to write into; if omitted the orchestrator creates one")
 
 
 class ProcessResponse(BaseModel):
@@ -301,10 +303,120 @@ class ProcessResponse(BaseModel):
 
     # Processing info
     ifc_schema: Optional[str] = Field(None, description="IFC schema version")
-    processing_report_id: Optional[str] = Field(None, description="UUID of ProcessingReport")
+    extraction_run_id: Optional[str] = Field(None, description="UUID of the ExtractionRun (Layer 1)")
     duration_seconds: float = Field(0.0, description="Processing duration in seconds")
     error: Optional[str] = Field(None, description="Error message if failed")
 
     # Detailed results (optional, can be omitted for brief responses)
     stage_results: Optional[List[Dict[str, Any]]] = Field(None, description="Per-stage results")
     errors: Optional[List[Dict[str, Any]]] = Field(None, description="List of errors encountered")
+
+
+# ============================================================================
+# Drawing Extraction (Phase 5)
+# ============================================================================
+
+
+class DrawingExtractRequest(BaseModel):
+    """Request to extract drawing metadata (DWG/DXF/PDF) from a remote file."""
+
+    file_url: Optional[str] = Field(None, description="URL to download the drawing file from")
+    file_path: Optional[str] = Field(None, description="Local path (for tests / local dev)")
+    format: str = Field(..., description="Source format: 'dxf', 'dwg', or 'pdf'")
+
+
+class DrawingSheetPayload(BaseModel):
+    """One extracted sheet, ready to persist as a DrawingSheet."""
+
+    page_index: int
+    sheet_number: str = ""
+    sheet_name: str = ""
+    width_mm: Optional[float] = None
+    height_mm: Optional[float] = None
+    scale: str = ""
+    is_drawing: bool = True
+    title_block_data: Dict[str, Any] = Field(default_factory=dict)
+    raw_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DrawingExtractResponse(BaseModel):
+    """Stateless extraction result. Caller is responsible for persistence."""
+
+    success: bool
+    format: str
+    sheets: List[DrawingSheetPayload] = Field(default_factory=list)
+    log_entries: List[Dict[str, Any]] = Field(default_factory=list)
+    quality_report: Dict[str, Any] = Field(default_factory=dict)
+    duration_seconds: float = 0.0
+    error: Optional[str] = None
+
+
+# ============================================================================
+# Document Extraction (Phase 6)
+# ============================================================================
+
+
+class DocumentExtractRequest(BaseModel):
+    """Request to extract document content (PDF/DOCX/XLSX/PPTX) from a remote file."""
+
+    file_url: Optional[str] = Field(None, description="URL to download the document file from")
+    file_path: Optional[str] = Field(None, description="Local path (for tests / local dev)")
+    format: str = Field(..., description="Source format: 'pdf', 'docx', 'xlsx', or 'pptx'")
+
+
+class DocumentContentPayload(BaseModel):
+    """One extracted document body, ready to persist as a DocumentContent row."""
+
+    page_index: int = 0
+    markdown_content: str = ""
+    structured_data: Dict[str, Any] = Field(default_factory=dict)
+    page_count: int = 1
+    structure: Dict[str, Any] = Field(default_factory=dict)
+    extracted_images: List[Dict[str, Any]] = Field(default_factory=list)
+    search_text: str = ""
+    extraction_method: str = "structured"
+    is_document: bool = True
+
+
+class DocumentExtractResponse(BaseModel):
+    """Stateless extraction result. Caller is responsible for persistence."""
+
+    success: bool
+    format: str
+    documents: List[DocumentContentPayload] = Field(default_factory=list)
+    log_entries: List[Dict[str, Any]] = Field(default_factory=list)
+    quality_report: Dict[str, Any] = Field(default_factory=dict)
+    duration_seconds: float = 0.0
+    error: Optional[str] = None
+
+
+# ============================================================================
+# Claim Extraction (Phase 6, Sprint 6.2)
+# ============================================================================
+
+
+class ClaimExtractRequest(BaseModel):
+    """Request to extract normative claim candidates from a markdown body."""
+
+    markdown: str = Field(..., description="Document body (markdown) to scan for normative statements")
+
+
+class ClaimCandidatePayload(BaseModel):
+    """One claim candidate, ready to persist as a Claim row."""
+
+    statement: str = ""
+    normalized: Dict[str, Any] = Field(default_factory=dict)
+    claim_type: str = "rule"
+    confidence: float = 0.0
+    source_location: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ClaimExtractResponse(BaseModel):
+    """Stateless claim-extraction result."""
+
+    success: bool
+    claims: List[ClaimCandidatePayload] = Field(default_factory=list)
+    log_entries: List[Dict[str, Any]] = Field(default_factory=list)
+    quality_report: Dict[str, Any] = Field(default_factory=dict)
+    duration_seconds: float = 0.0
+    error: Optional[str] = None

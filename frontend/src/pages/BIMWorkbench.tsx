@@ -5,9 +5,7 @@ import { useProject } from '@/hooks/use-projects';
 import { Card, CardContent } from '@/components/ui/card';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { TypeAnalysisWorkbench } from '@/components/features/warehouse/workbench/TypeAnalysisWorkbench';
-import { MMITableMaker } from '@/components/features/bep/MMITableMaker';
-
-type ViewId = 'classify' | 'bep' | 'scripting';
+type ViewId = 'classify' | 'scripting';
 
 export default function BIMWorkbench() {
   const { t } = useTranslation();
@@ -44,23 +42,12 @@ export default function BIMWorkbench() {
         {/* Content - Full height, no scrolling at container level */}
         <div className="flex-1 overflow-hidden">
           {activeView === 'classify' && <TypeAnalysisWorkbench projectId={project.id} />}
-          {activeView === 'bep' && <BEPTab projectId={project.id} />}
           {activeView === 'scripting' && <ScriptingTab projectId={project.id} />}
         </div>
       </div>
     </AppLayout>
   );
 }
-
-// BEP Configuration Tab - Now uses MMI Table Maker
-function BEPTab({ projectId }: { projectId: string }) {
-  return (
-    <div className="p-6 overflow-y-auto h-full">
-      <MMITableMaker projectId={projectId} />
-    </div>
-  );
-}
-
 
 // Scripting Tab
 function ScriptingTab({ projectId: _projectId }: { projectId: string }) {

@@ -13,6 +13,155 @@ from apps.core.disciplines import (
 )
 
 
+class SourceFile(models.Model):
+    """
+    Layer 0: format-agnostic file record. Every uploaded file has one.
+
+    SourceFile is the universal entry point for the data foundation. Format
+    detection, checksum, and version tracking happen here. Downstream models
+    (e.g. `Model` for IFC) reference a SourceFile.
+
+    Dedup key: (project, checksum_sha256). Two uploads of the same bytes into
+    the same project produce one SourceFile with version_number bumped.
+    """
+
+    FORMAT_CHOICES = [
+        ('ifc', 'IFC'),
+        ('las', 'LAS Point Cloud'),
+        ('laz', 'LAZ Point Cloud'),
+        ('e57', 'E57 Point Cloud'),
+        ('dwg', 'AutoCAD DWG'),
+        ('dxf', 'AutoCAD DXF'),
+        ('pdf', 'PDF'),
+        ('docx', 'Word'),
+        ('xlsx', 'Excel'),
+        ('pptx', 'PowerPoint'),
+        ('csv', 'CSV'),
+        ('json', 'JSON'),
+        ('xml', 'XML'),
+        ('svg', 'SVG'),
+        ('other', 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        'projects.Project', on_delete=models.CASCADE, related_name='source_files'
+    )
+    scope = models.ForeignKey(
+        'projects.ProjectScope', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='source_files',
+    )
+
+    original_filename = models.CharField(max_length=255)
+    file_url = models.URLField(max_length=500, blank=True, null=True)
+    file_size = models.BigIntegerField(default=0, help_text="Bytes")
+    checksum_sha256 = models.CharField(max_length=64, blank=True, db_index=True)
+    format = models.CharField(max_length=10, choices=FORMAT_CHOICES, db_index=True)
+    mime_type = models.CharField(max_length=100, blank=True)
+
+    version_number = models.IntegerField(default=1)
+    parent_file = models.ForeignKey(
+        'self', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='versions',
+    )
+    is_current = models.BooleanField(default=True)
+
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        null=True, blank=True, related_name='uploaded_source_files',
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'source_files'
+        ordering = ['-uploaded_at']
+        indexes = [
+            models.Index(fields=['project', 'is_current']),
+        ]
+
+    def __str__(self):
+        return f"{self.original_filename} ({self.format} v{self.version_number})"
+
+    @staticmethod
+    def detect_format(filename: str) -> str:
+        """Pick a format choice from the filename extension."""
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        for code, _ in SourceFile.FORMAT_CHOICES:
+            if code == ext:
+                return code
+        return 'other'
+
+
+class ExtractionRun(models.Model):
+    """
+    Layer 1: a single extraction attempt over a SourceFile.
+
+    Replaces ProcessingReport. Status transitions pending -> running ->
+    completed|failed. Carries the structured log_entries and quality_report
+    that Phase 1 IFC hardening already produces.
+
+    A SourceFile may have many ExtractionRuns (re-extraction, format upgrades,
+    schema fixes). The latest completed run is the live truth for queries.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    source_file = models.ForeignKey(
+        SourceFile, on_delete=models.CASCADE, related_name='extraction_runs'
+    )
+
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.FloatField(null=True, blank=True)
+
+    discovered_crs = models.CharField(max_length=100, blank=True, null=True)
+    crs_source = models.CharField(
+        max_length=50, blank=True, null=True,
+        help_text="Where the CRS came from (IfcMapConversion | filename | manual)",
+    )
+    crs_confidence = models.FloatField(null=True, blank=True)
+    discovered_units = models.JSONField(
+        default=dict, blank=True,
+        help_text='{"length": "mm", "area": "m2", "angle": "deg"}',
+    )
+    discovered_grid = models.JSONField(
+        default=dict, blank=True,
+        help_text='{"grids": [{"name", "guid", "placement", "u_axes": [...], "v_axes": [...], "w_axes": [...]}]}',
+    )
+
+    quality_report = models.JSONField(
+        default=dict, blank=True,
+        help_text='{"total_elements": N, "typed": N, "untyped": N, "dropped": [...]}',
+    )
+    log_entries = models.JSONField(
+        default=list, blank=True,
+        help_text='List of {ts, level, stage, message, details} entries',
+    )
+
+    error_message = models.TextField(blank=True, null=True)
+    extractor_version = models.CharField(max_length=100, blank=True)
+    task_id = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        db_table = 'extraction_runs'
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['source_file', '-started_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.source_file.original_filename} :: {self.status} ({self.started_at:%Y-%m-%d %H:%M})"
+
+
 def infer_discipline_from_filename(filename: str) -> str | None:
     """
     Infer discipline from IFC filename patterns.
@@ -103,11 +252,21 @@ class Model(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='models')
+    scope = models.ForeignKey(
+        'projects.ProjectScope', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='models',
+    )
     name = models.CharField(max_length=255)
     original_filename = models.CharField(max_length=255)
     ifc_schema = models.CharField(max_length=50, blank=True, null=True)  # IFC2X3, IFC4, etc.
     file_url = models.URLField(max_length=500, blank=True, null=True)  # Supabase Storage URL
     file_size = models.BigIntegerField(default=0, help_text="File size in bytes")
+    checksum_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        help_text="SHA-256 checksum of the uploaded file (for integrity verification)"
+    )
 
     # ThatOpen Fragments storage (optimized binary format for 10-100x faster loading)
     fragments_url = models.URLField(
@@ -164,6 +323,14 @@ class Model(models.Model):
     version_number = models.IntegerField(default=1)
     parent_model = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='versions')
     is_published = models.BooleanField(default=False, help_text="Whether this version is the active/published version")
+
+    # Layer 0 link: every Model is derived from a SourceFile. Nullable for now
+    # because the data migration backfills existing rows; new uploads always
+    # populate it.
+    source_file = models.ForeignKey(
+        'SourceFile', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='derived_models',
+    )
 
     # Phase 1: identity attribution. Versioning audit log (ModelEvent) arrives in Phase 2.
     uploaded_by = models.ForeignKey(

@@ -241,47 +241,117 @@ class VerificationEngine:
             model_id, passed, checked, health_score,
         )
 
+        # Fire verification.complete webhook (non-blocking, never raises).
+        try:
+            from apps.automation.services.webhook_dispatcher import dispatch_event
+            dispatch_event(
+                'verification.complete',
+                {
+                    'event': 'verification.complete',
+                    'project_id': str(project_id) if project_id else None,
+                    'model_id': str(model_id),
+                    'health_score': round(health_score, 1),
+                    'total_types': total_types,
+                    'checked': checked,
+                    'passed': passed,
+                    'warnings': warnings,
+                    'failed': failed,
+                    'skipped': skipped,
+                    'rules_applied': rule_ids,
+                    'occurred_at': now.isoformat(),
+                },
+                project_id=str(project_id) if project_id else None,
+            )
+        except Exception:
+            logger.exception('webhook dispatch (verification.complete) failed')
+
         return result
 
     def _load_rules(self, project_id: str | None) -> list[dict]:
         """
         Load verification rules from ProjectConfig + defaults.
 
-        Custom rules from ProjectConfig.config['verification']['rules'] are
-        merged with DEFAULT_RULES. Custom rules with the same ID override defaults.
+        Three sources, merged in this order (later wins on id collision):
+        1. DEFAULT_RULES (defined above)
+        2. ``config['verification']['rules']`` — operator-authored custom rules
+        3. ``config['claim_derived_rules']`` — entries promoted from Claims
+           (Phase 6, Sprint 6.2). Only entries with a ``check`` key are
+           treated as rules; entries without are skipped silently — they
+           preserve Claim audit metadata for predicates the translator
+           doesn't know how to convert yet (forward-compat for Sprint 6.3
+           LLM-extracted claims).
+
+        ID collisions are resolved last-wins, so an operator can override a
+        claim-derived rule by adding one with the same ``id`` in
+        ``verification.rules``.
         """
         rules = list(DEFAULT_RULES)
 
-        if project_id:
-            try:
-                from apps.projects.models import ProjectConfig
-                config = ProjectConfig.objects.filter(
-                    project_id=project_id,
-                    is_active=True,
-                ).first()
+        if not project_id:
+            return rules
 
-                if config and config.config:
-                    custom_rules = (
-                        config.config
-                        .get('verification', {})
-                        .get('rules', [])
-                    )
-                    if custom_rules:
-                        # Custom rules override defaults with same ID
-                        default_ids = {r['id'] for r in rules}
-                        for cr in custom_rules:
-                            if cr.get('id') in default_ids:
-                                rules = [r for r in rules if r['id'] != cr['id']]
-                            rules.append(cr)
+        try:
+            from apps.projects.models import ProjectConfig
+            config = ProjectConfig.objects.filter(
+                project_id=project_id,
+                is_active=True,
+            ).first()
 
-                        logger.info(
-                            'Loaded %d custom rules from ProjectConfig for project %s',
-                            len(custom_rules), project_id,
+            if config and config.config:
+                # 2. Claim-derived rules — translated at promotion time.
+                #    Merged BEFORE operator custom rules so an operator can
+                #    override a claim rule by authoring one with the same id.
+                claim_entries = config.config.get('claim_derived_rules', []) or []
+                claim_rules: list[dict] = []
+                for entry in claim_entries:
+                    if not isinstance(entry, dict) or 'check' not in entry:
+                        continue
+                    try:
+                        # Strip audit-only `_`-prefixed keys before handing
+                        # the rule to the engine — they're not rule fields.
+                        rule = {k: v for k, v in entry.items() if not k.startswith('_')}
+                        claim_rules.append(rule)
+                    except Exception as inner:
+                        logger.warning(
+                            'Skipping malformed claim-derived rule %s: %s',
+                            entry.get('_claim_id', '<unknown>'), inner,
                         )
-            except Exception as e:
-                logger.warning('Failed to load ProjectConfig rules: %s', e)
+                if claim_rules:
+                    rules = self._merge_rules(rules, claim_rules)
+                    logger.info(
+                        'Loaded %d claim-derived rules from ProjectConfig for project %s',
+                        len(claim_rules), project_id,
+                    )
+
+                # 3. Operator custom rules — merged last, so an operator
+                #    override beats both defaults and claim rules.
+                custom_rules = (
+                    config.config
+                    .get('verification', {})
+                    .get('rules', [])
+                )
+                if custom_rules:
+                    rules = self._merge_rules(rules, custom_rules)
+                    logger.info(
+                        'Loaded %d custom rules from ProjectConfig for project %s',
+                        len(custom_rules), project_id,
+                    )
+        except Exception as e:
+            logger.warning('Failed to load ProjectConfig rules: %s', e)
 
         return rules
+
+    @staticmethod
+    def _merge_rules(existing: list[dict], incoming: list[dict]) -> list[dict]:
+        """Last-wins merge by ``id``."""
+        existing_ids = {r['id'] for r in existing if r.get('id')}
+        out = list(existing)
+        for cr in incoming:
+            cid = cr.get('id')
+            if cid and cid in existing_ids:
+                out = [r for r in out if r.get('id') != cid]
+            out.append(cr)
+        return out
 
     def _check_type(
         self,
@@ -411,5 +481,38 @@ class VerificationEngine:
                     severity=severity,
                     message=f'Field "{field_name}" value "{value}" not in allowed values',
                 )
+
+        elif check == 'claim_subject_match':
+            # Promoted-claim rule: regex-match the claim subject against a
+            # field on the IFCType (typically `type_name`). On a hit, surface
+            # the claim as an info issue so the user knows this type is in
+            # scope of a document-derived obligation. The value/units/
+            # statement live on the rule itself (set by the translator at
+            # promotion time) and never go through `.format()` — the message
+            # is built by string concatenation only.
+            subject_field = rule.get('subject_field') or 'type_name'
+            pattern = rule.get('subject_pattern')
+            if not pattern or not target:
+                return None
+            haystack = getattr(target, subject_field, '') or ''
+            try:
+                if not re.search(pattern, haystack, re.IGNORECASE):
+                    return None
+            except re.error:
+                return None
+            claim_value = rule.get('claim_value', '')
+            claim_units = rule.get('claim_units', '')
+            statement = rule.get('claim_statement', '') or ''
+            if len(statement) > 120:
+                statement = statement[:117] + '...'
+            value_part = f'{claim_value} {claim_units}'.strip()
+            message = f'Claim applies: {value_part} — {statement}' if statement \
+                else f'Claim applies: {value_part}'
+            return VerificationIssue(
+                rule_id=rule_id,
+                rule_name=rule_name,
+                severity=severity,
+                message=message,
+            )
 
         return None

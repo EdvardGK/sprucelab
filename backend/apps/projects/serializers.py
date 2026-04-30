@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, ProjectConfig
+from .models import Project, ProjectConfig, ProjectScope
 from .services.bep_defaults import BEPDefaults, get_bep_template
 
 
@@ -30,6 +30,42 @@ class ProjectSerializer(serializers.ModelSerializer):
                 'status': latest.status
             }
         return None
+
+
+class ProjectScopeSerializer(serializers.ModelSerializer):
+    """Full ProjectScope serializer."""
+
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    parent_name = serializers.CharField(source='parent.name', read_only=True)
+
+    class Meta:
+        model = ProjectScope
+        fields = [
+            'id', 'project', 'project_name', 'parent', 'parent_name',
+            'name', 'scope_type',
+            'axis_grid_bounds', 'storey_elevation_min', 'storey_elevation_max',
+            'footprint_polygon', 'storey_merge_tolerance_m',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'project_name', 'parent_name']
+
+    def validate(self, attrs):
+        parent = attrs.get('parent')
+        project = attrs.get('project') or getattr(self.instance, 'project', None)
+        if parent and project and parent.project_id != project.id:
+            raise serializers.ValidationError({
+                'parent': 'Parent scope must belong to the same project.',
+            })
+        return attrs
+
+
+class ProjectScopeListSerializer(serializers.ModelSerializer):
+    """Lightweight ProjectScope for tree/list responses."""
+
+    class Meta:
+        model = ProjectScope
+        fields = ['id', 'project', 'parent', 'name', 'scope_type']
+        read_only_fields = fields
 
 
 class ProjectConfigSerializer(serializers.ModelSerializer):

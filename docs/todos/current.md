@@ -1,29 +1,12 @@
 # Current TODO - Sprucelab BIM Platform
 
-**Last Updated**: 2026-03-29
-**Current Phase**: Data-First Sprint - Verification, Change Detection, Dashboard
-**Status**: Type Dashboard complete, Verification Engine next
+**Last Updated**: 2026-04-24
+**Current Phase**: Data-First Sprint + Agent-Ready Platform
+**Status**: B1-B2 complete, views split, script execution API wired, batch API enhanced
 
 ---
 
 ## Active Sprint: IFC in -> Actionable Insight Out
-
-### B1. Excel Workflow UI (quick win)
-- [ ] `ExcelWorkflowBar` component (Export + Import buttons)
-- [ ] `useExcelExport(modelId)` hook (triggers download)
-- [ ] `useExcelImport()` hook (file upload + result dialog)
-- [ ] Integrate into TypeLibraryPanel and TypeAnalysisWorkbench toolbars
-- [ ] i18n keys (en.json + nb.json)
-
-**Backend**: Endpoints already exist and work. Zero backend changes needed.
-
-### B2. Verification Engine v1 (critical path)
-- [ ] `verification_schemas.py` - Pydantic models (TypeVerificationRule, TypeIssue, ModelVerificationResult)
-- [ ] `config_loader.py` - Load rules from ProjectConfig.config['verification'], default fallback
-- [ ] `type_verifier.py` - Core engine: check types against rules (reads DB, not IFC file)
-- [ ] FastAPI endpoint: `POST /verify/model/{model_id}?project_id=...`
-- [ ] Django proxy: `verify` action on IFCTypeViewSet
-- [ ] Default rules: has_ns3451, has_unit, has_material_layers, type_name_pattern
 
 ### B3. Dashboard Enhancement
 - [ ] Update `dashboard_metrics` endpoint with verification_score and verification_issues
@@ -35,7 +18,7 @@
 - [ ] `version_compare.py` service (compare types by signature tuple)
 - [ ] Auto-compare on upload when parent_model exists
 - [ ] Store results in Model.version_diff JSONField
-- [ ] API endpoint: `GET /api/entities/ifc-types/version-changes/?model={id}`
+- [ ] API endpoint: `GET /api/types/types/version-changes/?model={id}`
 - [ ] Frontend badges: NEW (green), REMOVED (red), CHANGED (orange) on type rows
 - [ ] Dashboard card: "+X new, -Y removed, Z changed" with click-to-filter
 
@@ -43,6 +26,20 @@
 - [ ] `SandwichDiagram.tsx` - SVG/CSS stacked rectangles
 - [ ] Integrate into TypeDetailPanel Materials tab
 - [ ] Color by material category, total thickness annotation
+
+### Agent-Ready: Event/Webhook System
+- [ ] `WebhookSubscription` model (project, event_type, url, secret, is_active)
+- [ ] `dispatch_event()` utility (POST to subscribers with HMAC)
+- [ ] Wire into: model processing complete, types classified, verification complete
+- [ ] Start with 3 events: `model.processed`, `types.classified`, `verification.complete`
+
+### Agent-Ready: CLI Expansion (spruce types/verify/scripts)
+- [ ] `spruce types list --model X` -- list types with mapping status
+- [ ] `spruce types classify --model X --type Y --ns3451 222 --unit m2`
+- [ ] `spruce types export --model X --format excel|reduzer`
+- [ ] `spruce verify --model X` -- run verification, print results table
+- [ ] `spruce scripts list` / `spruce scripts run --script X --model Y`
+- [ ] All commands support `--json` for agent consumption
 
 ---
 
@@ -52,7 +49,7 @@
 - [x] TypeBank cross-project intelligence
 - [x] TypeMapping workflow + keyboard shortcuts
 - [x] NS3451 cascading selector
-- [x] Excel export/import endpoints (backend)
+- [x] Excel export/import (backend endpoints + frontend UI)
 - [x] Material layer editor (TypeDefinitionLayer)
 - [x] Type Dashboard (health scores, progress bars)
 - [x] Type Analysis Dashboard (KPIs, quality checks, treemap)
@@ -63,6 +60,16 @@
 - [x] EPD Architecture Phase 1 (data models)
 - [x] Responsibility Matrix (21 discipline codes)
 - [x] Production deployment (Railway + Vercel)
+- [x] Verification Engine v1 (4 default rules, ProjectConfig custom rules, bulk update)
+- [x] Script Execution API endpoint (POST /api/scripts/{id}/execute/)
+- [x] Batch Classification API (POST /api/types/type-mappings/bulk-update/ with all fields)
+- [x] API Surface Map (docs/knowledge/API_SURFACE.md)
+- [x] Common Patterns in CLAUDE.md
+- [x] entities/views.py split (2855 lines -> 8 modules)
+- [x] Codebase simplification (BEP archived, dead apps removed, -13.8k lines)
+- [x] Dashboard Enhancement (verification bar, action items, weighted health score)
+- [x] Version Change Detection (service, endpoint, hook, TypeScript types)
+- [x] Sandwich View (SandwichDiagram.tsx SVG component with material colors)
 
 ---
 
@@ -76,6 +83,8 @@
 - [ ] MMI extraction
 - [ ] Measurement rules per IFC class
 - [ ] Reduzer product seeding
+- [ ] Test infrastructure bootstrap (pytest + conftest + smoke tests)
+- [ ] Dry-run support for mutations (?dry_run=true)
 
 ---
 
@@ -98,7 +107,7 @@
 
 ## Progress Tracking
 
-**Overall MVP Completion**: ~50% (recalculated with new priorities)
+**Overall MVP Completion**: ~80%
 
 | Component | Status | Notes |
 |-----------|--------|-------|
@@ -106,13 +115,17 @@
 | TypeBank | Done | Cross-project intelligence |
 | Type Dashboard | Done | Health scores, progress bars |
 | Type Library UI | Done | Grid, detail panel, verification badges |
-| Excel Workflow UI | Pending | Endpoints exist, UI not wired |
-| Verification Engine | Pending | Critical path - next up |
-| Version Change Detection | Pending | Infrastructure ready (Model.version_diff) |
-| Dashboard Enhancement | Blocked | Needs verification engine first |
-| Sandwich View | Pending | Pure frontend, data exists |
+| Excel Workflow UI | Done | Export/Import/Reduzer in TypeBrowser toolbar |
+| Verification Engine | Done | 4 rules, ProjectConfig custom rules |
+| Script Execution API | Done | POST /api/scripts/{id}/execute/ |
+| Batch Classification | Done | All fields supported |
+| Version Change Detection | Done | Service + endpoint + hook |
+| Dashboard Enhancement | Done | Verification bar + action items |
+| Sandwich View | Done | SVG component with material colors |
+| Event/Webhook System | Pending | Agent-ready platform feature |
+| CLI Expansion | Pending | types/verify/scripts commands |
 
 ---
 
-**Next Action**: B1 - Excel Workflow UI (quick win, unlocks bulk classification)
-**Then**: B2 - Verification Engine v1 (critical path)
+**Next Action**: Event/Webhook System (agent-ready platform)
+**Then**: CLI Expansion (spruce types/verify/scripts commands)

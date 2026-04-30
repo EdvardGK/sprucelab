@@ -3,7 +3,7 @@ Build context for script execution.
 
 Provides scripts with access to:
 - Model data (entities, properties, systems, materials, types)
-- Helper functions (get_geometry, get_properties, save_output)
+- Helper functions (get_properties, save_output)
 - Whitelisted libraries (ifcopenshell, numpy, pandas, re)
 """
 import re
@@ -19,7 +19,6 @@ from apps.entities.models import (
     System,
     Material,
     IFCType,
-    Geometry,
     MaterialAssignment,
     SystemMembership,
 )
@@ -36,25 +35,6 @@ def build_script_context(model: Model, parameters: Dict[str, Any]) -> Dict[str, 
     Returns:
         Dictionary with model data and helper functions
     """
-
-    # Helper: Get geometry for an entity
-    def get_geometry(entity_id: str):
-        """Load geometry data for an entity."""
-        try:
-            geometry = Geometry.objects.get(entity_id=entity_id)
-
-            # Decode vertices and faces from binary
-            vertices = np.frombuffer(geometry.vertices_original, dtype=np.float64).reshape(-1, 3)
-            faces = np.frombuffer(geometry.faces_original, dtype=np.int32).reshape(-1, 3)
-
-            return {
-                'vertices': vertices,
-                'faces': faces,
-                'vertex_count': len(vertices),
-                'triangle_count': len(faces),
-            }
-        except Geometry.DoesNotExist:
-            return None
 
     # Helper: Get properties for an entity
     def get_properties(entity_id: str):
@@ -107,7 +87,6 @@ def build_script_context(model: Model, parameters: Dict[str, Any]) -> Dict[str, 
         'SystemMembership': SystemMembership,
 
         # Helper functions
-        'get_geometry': get_geometry,
         'get_properties': get_properties,
         'save_output': save_output,
 

@@ -8,9 +8,9 @@ import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QTODashboard } from '@/components/features/qto/QTODashboard';
-import { MMIDashboard } from '@/components/features/mmi/MMIDashboard';
 import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer';
-import { ElementPropertiesPanel, ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
+import { ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
+import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPanel';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
 import { treemapLayout } from '@/lib/treemap';
@@ -227,7 +227,7 @@ function OverviewTab({ model }: { model: Model }) {
       {/* Sub-tab content */}
       {subTab === 'dashboard' && <AnalysisDashboard analysis={analysis} model={model} />}
       {subTab === 'qto' && <QTODashboard modelId={model.id} />}
-      {subTab === 'mmi' && <MMIDashboard modelId={model.id} />}
+      {subTab === 'mmi' && <PlaceholderTab title="MMI" />}
       {subTab === 'statistics' && <PlaceholderTab title="Statistics" />}
       {subTab === 'properties' && <PlaceholderTab title="Properties" />}
     </div>
@@ -603,9 +603,10 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               />
             </div>
             <aside className="w-80 border-l border-border bg-background overflow-hidden flex-shrink-0">
-              <ElementPropertiesPanel
+              <IFCPropertiesPanel
                 element={selectedElement}
                 onClose={() => setSelectedElement(null)}
+                className="h-full"
               />
             </aside>
           </div>

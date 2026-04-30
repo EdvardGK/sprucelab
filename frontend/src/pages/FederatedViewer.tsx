@@ -22,15 +22,16 @@ import { type TypeInfo } from '@/components/features/viewer/ViewerFilterHUD';
 import { type ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { PlatformPanel, type ModelInfo, type VerificationSummary, type TypeClassificationItem } from '@/components/features/viewer/PlatformPanel';
 import {
-  TypeToolbar,
   SectionFloat,
   ViewerHUD,
   CanvasStatusPanel,
   type ActiveFilter,
-  type TypeFilterInfo,
   type ViewerTool,
   type ViewMode,
 } from '@/components/features/viewer/CanvasOverlays';
+import { ViewerFilterPanel } from '@/components/features/viewer/ViewerFilterPanel';
+import { useViewerFilterStore, deriveTypeVisibility } from '@/stores/useViewerFilterStore';
+import { useViewerFilterUrl } from '@/hooks/useViewerFilterUrl';
 import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPanel';
 import { AddModelsDialog } from '@/components/features/viewers/AddModelsDialog';
 
@@ -72,17 +73,29 @@ export default function FederatedViewer() {
   // Selected element
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
 
-  // Type filters (from viewer)
-  const [typeFilters, setTypeFilters] = useState<TypeInfo[]>([]);
+  // Discovered types/storeys from the viewer (used to populate filter panel)
+  const [discoveredTypes, setDiscoveredTypes] = useState<TypeInfo[]>([]);
+  const [discoveredStoreys, setDiscoveredStoreys] = useState<{ name: string; count: number }[]>([]);
 
-  // Storey selection
-  const [selectedStoreyId, setSelectedStoreyId] = useState<string | null>(null);
+  // Filter panel state — collapsed/expanded
+  const [filterPanelCollapsed, setFilterPanelCollapsed] = useState(false);
 
-  // Active filters for status panel
+  // Filter store — single source of truth for what's visible
+  const hiddenIfcClasses = useViewerFilterStore((s) => s.hiddenIfcClasses);
+  const storeyFilter = useViewerFilterStore((s) => s.storey);
+  const setScope = useViewerFilterStore((s) => s.setScope);
+  useViewerFilterUrl();
+
+  // Active filters for status panel (manual additions, not auto-derived)
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
   // Model load errors
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
+
+  // Reset filter scope when project changes (so switching projects clears facets).
+  useEffect(() => {
+    if (projectId) setScope(projectId);
+  }, [projectId, setScope]);
 
   // Memoize props passed to UnifiedBIMViewer. Without these, every FederatedViewer
   // re-render produces new object/array references, which makes UnifiedBIMViewer's
@@ -93,8 +106,8 @@ export default function FederatedViewer() {
     [group?.models]
   );
   const typeVisibilityMap = useMemo(
-    () => Object.fromEntries(typeFilters.map(f => [f.type, f.visible])),
-    [typeFilters]
+    () => deriveTypeVisibility(discoveredTypes.map((t) => t.type), hiddenIfcClasses),
+    [discoveredTypes, hiddenIfcClasses]
   );
 
   // Initialize model visibility when group loads
@@ -110,18 +123,12 @@ export default function FederatedViewer() {
     setModelVisibility(prev => ({ ...prev, [modelId]: !prev[modelId] }));
   }, []);
 
-  const handleToggleType = useCallback((type: string) => {
-    setTypeFilters(prev =>
-      prev.map(f => (f.type === type ? { ...f, visible: !f.visible } : f))
-    );
-  }, []);
-
-  const handleShowAllTypes = useCallback(() => {
-    setTypeFilters(prev => prev.map(f => ({ ...f, visible: true })));
-  }, []);
-
   const handleTypesDiscovered = useCallback((types: TypeInfo[]) => {
-    setTypeFilters(types);
+    setDiscoveredTypes(types);
+  }, []);
+
+  const handleStoreysDiscovered = useCallback((storeys: { name: string; count: number }[]) => {
+    setDiscoveredStoreys(storeys);
   }, []);
 
   const handleSelectPlane = useCallback((id: string | null) => {
@@ -134,8 +141,7 @@ export default function FederatedViewer() {
   }, []);
 
   const handleSelectStorey = useCallback((_modelId: string, storeyId: string | null) => {
-    setSelectedStoreyId(storeyId);
-    // TODO: Filter viewer to show only this storey's elements
+    useViewerFilterStore.getState().setStorey(storeyId);
   }, []);
 
   const handleFitView = useCallback(() => {
@@ -143,13 +149,20 @@ export default function FederatedViewer() {
   }, []);
 
   const handleRemoveFilter = useCallback((id: string) => {
+    if (id === 'storey') {
+      useViewerFilterStore.getState().setStorey(null);
+      return;
+    }
+    if (id.startsWith('type-')) {
+      useViewerFilterStore.getState().toggleIfcClass(id.slice(5));
+      return;
+    }
     setActiveFilters(prev => prev.filter(f => f.id !== id));
   }, []);
 
   const handleClearFilters = useCallback(() => {
     setActiveFilters([]);
-    setSelectedStoreyId(null);
-    setTypeFilters(prev => prev.map(f => ({ ...f, visible: true })));
+    useViewerFilterStore.getState().reset();
   }, []);
 
   // ── Derived data ──
@@ -157,20 +170,11 @@ export default function FederatedViewer() {
   // Build filter pills from hidden types + storey selection
   const computedFilters: ActiveFilter[] = [
     ...activeFilters,
-    ...typeFilters
-      .filter(f => !f.visible)
-      .map(f => ({ id: `type-${f.type}`, label: `-${f.type.replace('Ifc', '')}` })),
+    ...hiddenIfcClasses.map((cls) => ({ id: `type-${cls}`, label: `−${cls.replace('Ifc', '')}` })),
   ];
-  if (selectedStoreyId) {
-    computedFilters.unshift({ id: 'storey', label: selectedStoreyId });
+  if (storeyFilter) {
+    computedFilters.unshift({ id: 'storey', label: storeyFilter });
   }
-
-  // Convert type filters for canvas overlay
-  const typeFilterInfos: TypeFilterInfo[] = typeFilters.map(f => ({
-    type: f.type,
-    visible: f.visible,
-    count: f.count,
-  }));
 
   // Build model info for platform panel
   const modelLookup = new Map((models || []).map(m => [m.id, m]));
@@ -195,7 +199,10 @@ export default function FederatedViewer() {
 
   // Visible model/element counts for status panel
   const visibleModelCount = platformModels.filter(m => m.visible).length;
-  const visibleElementCount = typeFilters.reduce((sum, f) => sum + (f.visible ? f.count : 0), 0);
+  const visibleElementCount = discoveredTypes.reduce(
+    (sum, t) => sum + (hiddenIfcClasses.includes(t.type) ? 0 : t.count),
+    0,
+  );
 
   // View mode label for status panel
   const viewModeLabel = t(`viewer.toolbar.${viewMode}`);
@@ -240,7 +247,7 @@ export default function FederatedViewer() {
         models={platformModels}
         verification={verification}
         typeClassification={typeClassification}
-        selectedStoreyId={selectedStoreyId}
+        selectedStoreyId={storeyFilter}
         onBack={() => navigate(`/projects/${projectId}/viewer-groups`)}
         onToggleModelVisibility={handleModelVisibilityToggle}
         onSelectStorey={handleSelectStorey}
@@ -263,7 +270,9 @@ export default function FederatedViewer() {
                 onSectionPlanesChange={setSectionPlanes}
                 onSelectionChange={setSelectedElement}
                 onTypesDiscovered={handleTypesDiscovered}
+                onStoreysDiscovered={handleStoreysDiscovered}
                 typeVisibility={typeVisibilityMap}
+                storeyFilter={storeyFilter}
                 onError={(err) => setLoadErrors(prev => [...prev, err])}
               />
 
@@ -284,12 +293,13 @@ export default function FederatedViewer() {
                 </div>
               )}
 
-              {/* Type filter toolbar (left edge) */}
-              {typeFilterInfos.length > 0 && (
-                <TypeToolbar
-                  types={typeFilterInfos}
-                  onToggle={handleToggleType}
-                  onShowAll={handleShowAllTypes}
+              {/* Filter panel (left edge, replaces old TypeToolbar) */}
+              {discoveredTypes.length > 0 && (
+                <ViewerFilterPanel
+                  types={discoveredTypes}
+                  storeys={discoveredStoreys}
+                  collapsed={filterPanelCollapsed}
+                  onCollapseToggle={() => setFilterPanelCollapsed((v) => !v)}
                 />
               )}
 

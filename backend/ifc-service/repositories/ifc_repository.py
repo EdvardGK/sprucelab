@@ -19,41 +19,6 @@ from core.database import get_connection, get_transaction
 # =============================================================================
 
 @dataclass
-class EntityData:
-    """Data for a single IFC entity."""
-    ifc_guid: str
-    ifc_type: str
-    name: Optional[str] = None
-    description: Optional[str] = None
-    storey_id: Optional[str] = None
-    area: Optional[float] = None
-    volume: Optional[float] = None
-    length: Optional[float] = None
-    height: Optional[float] = None
-    perimeter: Optional[float] = None
-    is_geometry_only: bool = False  # True if entity has no type, name, or properties
-
-
-@dataclass
-class PropertyData:
-    """Data for a single property."""
-    entity_id: str
-    pset_name: str
-    property_name: str
-    property_value: Optional[str] = None
-    property_type: Optional[str] = None
-
-
-@dataclass
-class SpatialData:
-    """Data for spatial hierarchy entry."""
-    entity_id: str
-    parent_id: Optional[str]
-    hierarchy_level: str
-    path: List[str]
-
-
-@dataclass
 class MaterialData:
     """Data for a material."""
     material_guid: str
@@ -95,22 +60,6 @@ class TypeData:
     definition_layers: List[TypeLayerData] = field(default_factory=list)
 
 
-@dataclass
-class SystemData:
-    """Data for a system."""
-    system_guid: str
-    system_name: Optional[str]
-    system_type: Optional[str]
-    description: Optional[str] = None
-
-
-@dataclass
-class TypeAssignmentData:
-    """Data for a type→entity assignment (IfcRelDefinesByType)."""
-    entity_guid: str  # GUID of the element
-    type_guid: str    # GUID of the type object
-
-
 # =============================================================================
 # Repository Class
 # =============================================================================
@@ -121,9 +70,6 @@ class IFCRepository:
 
     All methods are async and use batched operations for performance.
     """
-
-    ENTITY_BATCH_SIZE = 500
-    PROPERTY_BATCH_SIZE = 1000
 
     async def update_model_status(
         self,
@@ -208,149 +154,6 @@ class IFCRepository:
         async with get_connection() as conn:
             result = await conn.execute(query, *values)
             return result == "UPDATE 1"
-
-    async def bulk_insert_entities(
-        self,
-        model_id: str,
-        entities: List[EntityData],
-    ) -> Dict[str, str]:
-        """
-        Bulk insert IFC entities.
-
-        Returns:
-            Dict mapping ifc_guid to entity_id (UUID)
-        """
-        if not entities:
-            return {}
-
-        guid_to_id = {}
-        model_uuid = uuid.UUID(model_id)
-
-        async with get_transaction() as conn:
-            for i in range(0, len(entities), self.ENTITY_BATCH_SIZE):
-                batch = entities[i:i + self.ENTITY_BATCH_SIZE]
-                records = []
-
-                for entity in batch:
-                    entity_id = uuid.uuid4()
-                    guid_to_id[entity.ifc_guid] = str(entity_id)
-
-                    # Convert storey_id string to UUID if present
-                    storey_uuid = uuid.UUID(entity.storey_id) if entity.storey_id else None
-
-                    records.append((
-                        entity_id,
-                        model_uuid,
-                        entity.ifc_guid,
-                        entity.ifc_type,
-                        entity.name,
-                        entity.description,
-                        storey_uuid,
-                        entity.area,
-                        entity.volume,
-                        entity.length,
-                        entity.height,
-                        entity.perimeter,
-                        False,  # is_removed - default to False for new entities
-                        entity.is_geometry_only,
-                    ))
-
-                await conn.executemany(
-                    """
-                    INSERT INTO ifc_entities (
-                        id, model_id, ifc_guid, ifc_type, name, description,
-                        storey_id, area, volume, length, height, perimeter, is_removed,
-                        is_geometry_only
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-                    ON CONFLICT (model_id, ifc_guid) DO NOTHING
-                    """,
-                    records
-                )
-
-        return guid_to_id
-
-    async def bulk_insert_properties(
-        self,
-        properties: List[PropertyData],
-    ) -> int:
-        """
-        Bulk insert property sets.
-
-        Returns:
-            Number of properties inserted
-        """
-        if not properties:
-            return 0
-
-        count = 0
-        async with get_transaction() as conn:
-            for i in range(0, len(properties), self.PROPERTY_BATCH_SIZE):
-                batch = properties[i:i + self.PROPERTY_BATCH_SIZE]
-                records = []
-
-                for prop in batch:
-                    records.append((
-                        uuid.uuid4(),
-                        uuid.UUID(prop.entity_id),
-                        prop.pset_name,
-                        prop.property_name,
-                        prop.property_value,
-                        prop.property_type,
-                    ))
-
-                await conn.executemany(
-                    """
-                    INSERT INTO property_sets (
-                        id, entity_id, pset_name, property_name, property_value, property_type
-                    ) VALUES ($1, $2, $3, $4, $5, $6)
-                    """,
-                    records
-                )
-                count += len(batch)
-
-        return count
-
-    async def bulk_insert_spatial_hierarchy(
-        self,
-        model_id: str,
-        items: List[SpatialData],
-    ) -> int:
-        """
-        Bulk insert spatial hierarchy entries.
-
-        Returns:
-            Number of entries inserted
-        """
-        if not items:
-            return 0
-
-        model_uuid = uuid.UUID(model_id)
-        records = []
-
-        for item in items:
-            entity_uuid = uuid.UUID(item.entity_id)
-            parent_uuid = uuid.UUID(item.parent_id) if item.parent_id else None
-
-            records.append((
-                uuid.uuid4(),
-                model_uuid,
-                entity_uuid,
-                parent_uuid,
-                item.hierarchy_level,
-                item.path,
-            ))
-
-        async with get_transaction() as conn:
-            await conn.executemany(
-                """
-                INSERT INTO spatial_hierarchy (
-                    id, model_id, entity_id, parent_id, hierarchy_level, path
-                ) VALUES ($1, $2, $3, $4, $5, $6)
-                """,
-                records
-            )
-
-        return len(items)
 
     async def bulk_insert_materials(
         self,
@@ -580,162 +383,95 @@ class IFCRepository:
 
         return stats
 
-    async def bulk_insert_systems(
+    # ---------------------------------------------------------------------
+    # ExtractionRun lifecycle
+    # ---------------------------------------------------------------------
+
+    async def create_extraction_run(
         self,
-        model_id: str,
-        systems: List[SystemData],
-    ) -> Dict[str, str]:
-        """
-        Bulk insert systems.
-
-        Returns:
-            Dict mapping system_guid to system_id (UUID)
-        """
-        if not systems:
-            return {}
-
-        guid_to_id = {}
-        model_uuid = uuid.UUID(model_id)
-        records = []
-
-        for system in systems:
-            system_id = uuid.uuid4()
-            guid_to_id[system.system_guid] = str(system_id)
-
-            records.append((
-                system_id,
-                model_uuid,
-                system.system_guid,
-                system.system_name,
-                system.system_type,
-                system.description,
-            ))
-
-        async with get_transaction() as conn:
-            await conn.executemany(
-                """
-                INSERT INTO systems (
-                    id, model_id, system_guid, system_name, system_type, description
-                ) VALUES ($1, $2, $3, $4, $5, $6)
-                ON CONFLICT (model_id, system_guid) DO NOTHING
-                """,
-                records
-            )
-
-        return guid_to_id
-
-    async def bulk_insert_type_assignments(
-        self,
-        assignments: List[TypeAssignmentData],
-        entity_guid_to_id: Dict[str, str],
-        type_guid_to_id: Dict[str, str],
-    ) -> int:
-        """
-        Bulk insert type→entity assignments.
-
-        Args:
-            assignments: List of type assignment data
-            entity_guid_to_id: Map of entity GUID to entity UUID
-            type_guid_to_id: Map of type GUID to type UUID
-
-        Returns:
-            Number of assignments inserted
-        """
-        if not assignments:
-            return 0
-
-        records = []
-        for assignment in assignments:
-            entity_id = entity_guid_to_id.get(assignment.entity_guid)
-            type_id = type_guid_to_id.get(assignment.type_guid)
-
-            if entity_id and type_id:
-                records.append((
-                    uuid.UUID(entity_id),
-                    uuid.UUID(type_id),
-                ))
-
-        if not records:
-            return 0
-
-        async with get_transaction() as conn:
-            await conn.executemany(
-                """
-                INSERT INTO type_assignments (entity_id, type_id)
-                VALUES ($1, $2)
-                ON CONFLICT (entity_id, type_id) DO NOTHING
-                """,
-                records
-            )
-
-        return len(records)
-
-    async def create_processing_report(
-        self,
-        model_id: str,
-        started_at: datetime,
-        completed_at: Optional[datetime] = None,
-        duration_seconds: Optional[float] = None,
-        overall_status: str = "failed",
-        ifc_schema: Optional[str] = None,
-        file_size_bytes: int = 0,
-        stage_results: Optional[List[Dict]] = None,
-        total_entities_processed: int = 0,
-        total_entities_skipped: int = 0,
-        total_entities_failed: int = 0,
-        errors: Optional[List[Dict]] = None,
-        catastrophic_failure: bool = False,
-        failure_stage: Optional[str] = None,
-        failure_exception: Optional[str] = None,
-        failure_traceback: Optional[str] = None,
-        summary: Optional[str] = None,
-        verification_data: Optional[Dict] = None,
+        *,
+        source_file_id: str,
+        status: str = "running",
+        extractor_version: str = "",
     ) -> str:
-        """
-        Create a processing report.
-
-        Returns:
-            The report ID (UUID string)
-        """
-        report_id = uuid.uuid4()
-        model_uuid = uuid.UUID(model_id)
-
+        """Create an ExtractionRun row in 'pending' / 'running' state."""
+        run_id = uuid.uuid4()
         async with get_connection() as conn:
             await conn.execute(
                 """
-                INSERT INTO processing_reports (
-                    id, model_id, started_at, completed_at, duration_seconds,
-                    overall_status, ifc_schema, file_size_bytes,
-                    stage_results, total_entities_processed, total_entities_skipped,
-                    total_entities_failed, errors, catastrophic_failure,
-                    failure_stage, failure_exception, failure_traceback, summary,
-                    verification_data
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+                INSERT INTO extraction_runs (
+                    id, source_file_id, status, started_at,
+                    discovered_units, quality_report, log_entries,
+                    extractor_version
                 )
+                VALUES ($1, $2, $3, NOW(), '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, $4)
                 """,
-                report_id,
-                model_uuid,
-                started_at,
-                completed_at,
-                duration_seconds,
-                overall_status,
-                ifc_schema,
-                file_size_bytes,
-                json.dumps(stage_results or []),
-                total_entities_processed,
-                total_entities_skipped,
-                total_entities_failed,
-                json.dumps(errors or []),
-                catastrophic_failure,
-                failure_stage,
-                failure_exception,
-                failure_traceback,
-                summary,
-                json.dumps(verification_data or {}),
+                run_id, uuid.UUID(source_file_id), status, extractor_version,
             )
+        return str(run_id)
 
-        return str(report_id)
+    async def update_extraction_run(
+        self,
+        run_id: str,
+        *,
+        status: Optional[str] = None,
+        completed_at: Optional[datetime] = None,
+        duration_seconds: Optional[float] = None,
+        discovered_crs: Optional[str] = None,
+        crs_source: Optional[str] = None,
+        crs_confidence: Optional[float] = None,
+        discovered_units: Optional[Dict] = None,
+        discovered_grid: Optional[Dict] = None,
+        quality_report: Optional[Dict] = None,
+        log_entries: Optional[List[Dict]] = None,
+        error_message: Optional[str] = None,
+        extractor_version: Optional[str] = None,
+        task_id: Optional[str] = None,
+    ) -> None:
+        """Update mutable fields on an ExtractionRun. Only writes provided fields."""
+        sets: List[str] = []
+        args: List[Any] = []
+
+        def add(col: str, val: Any, jsonb: bool = False) -> None:
+            args.append(json.dumps(val) if jsonb else val)
+            sets.append(f"{col} = ${len(args)}")
+
+        if status is not None:
+            add("status", status)
+        if completed_at is not None:
+            add("completed_at", completed_at)
+        if duration_seconds is not None:
+            add("duration_seconds", duration_seconds)
+        if discovered_crs is not None:
+            add("discovered_crs", discovered_crs)
+        if crs_source is not None:
+            add("crs_source", crs_source)
+        if crs_confidence is not None:
+            add("crs_confidence", crs_confidence)
+        if discovered_units is not None:
+            add("discovered_units", discovered_units, jsonb=True)
+        if discovered_grid is not None:
+            add("discovered_grid", discovered_grid, jsonb=True)
+        if quality_report is not None:
+            add("quality_report", quality_report, jsonb=True)
+        if log_entries is not None:
+            add("log_entries", log_entries, jsonb=True)
+        if error_message is not None:
+            add("error_message", error_message)
+        if extractor_version is not None:
+            add("extractor_version", extractor_version)
+        if task_id is not None:
+            add("task_id", task_id)
+
+        if not sets:
+            return
+
+        args.append(uuid.UUID(run_id))
+        async with get_connection() as conn:
+            await conn.execute(
+                f"UPDATE extraction_runs SET {', '.join(sets)} WHERE id = ${len(args)}",
+                *args,
+            )
 
     async def delete_model_data(self, model_id: str) -> Dict[str, int]:
         """
@@ -869,6 +605,7 @@ class IFCRepository:
             'entries_created': 0,
             'entries_reused': 0,
             'observations_created': 0,
+            'link_failures': 0,
         }
 
         if not types:
@@ -978,7 +715,7 @@ class IFCRepository:
                         )
 
                 except Exception as e:
-                    # Log error but continue processing
+                    stats['link_failures'] += 1
                     print(f"[TypeBank] Error linking type {type_data.type_guid}: {e}")
 
         return stats

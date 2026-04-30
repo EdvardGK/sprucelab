@@ -9,7 +9,6 @@ This will delete:
 - All models (and cascade delete all related data)
 - All entities, geometry, properties
 - All BEP configurations
-- All processing reports
 - All viewer groups
 - All scripts and workflows
 
@@ -22,12 +21,17 @@ from apps.models.models import Model
 from apps.entities.models import (
     IFCEntity, PropertySet, SpatialHierarchy,
     System, Material, IFCType, GraphEdge,
-    IFCValidationReport, ProcessingReport
+    IFCValidationReport,
 )
-from apps.bep.models import (
-    BEPConfiguration, TechnicalRequirement, MMIScaleDefinition,
-    NamingConvention, RequiredPropertySet, ValidationRule, SubmissionMilestone
-)
+# BEP app archived (2026-04)
+try:
+    from apps.bep.models import (
+        BEPConfiguration, TechnicalRequirement, MMIScaleDefinition,
+        NamingConvention, RequiredPropertySet, ValidationRule, SubmissionMilestone
+    )
+    HAS_BEP = True
+except ImportError:
+    HAS_BEP = False
 from apps.viewers.models import ViewerGroup, ViewerModel
 from apps.scripting.models import Script, ScriptExecution, AutomationWorkflow, WorkflowExecution
 
@@ -105,9 +109,6 @@ class Command(BaseCommand):
 
                 self.stdout.write('Deleting viewer groups...')
                 ViewerGroup.objects.all().delete()
-
-                self.stdout.write('Deleting processing reports...')
-                ProcessingReport.objects.all().delete()
 
                 self.stdout.write('Deleting validation reports...')
                 IFCValidationReport.objects.all().delete()

@@ -1,12 +1,14 @@
 from rest_framework import serializers
 from .models import (
     IFCEntity, SpatialHierarchy, PropertySet,
-    System, Material, IFCType, ProcessingReport,
+    System, Material, IFCType,
     NS3451Code, SemanticType, SemanticTypeIFCMapping,
     TypeMapping, TypeDefinitionLayer, MaterialMapping,
     TypeBankEntry, TypeBankObservation, TypeBankAlias, TypeBankScope,
     MaterialLibrary, ProductLibrary, ProductComposition,
     ModelAnalysis, AnalysisStorey, AnalysisType, AnalysisTypeStorey,
+    DrawingSheet, TitleBlockTemplate, DrawingRegistration,
+    DocumentContent, Claim,
 )
 
 
@@ -69,27 +71,6 @@ class SpatialHierarchySerializer(serializers.ModelSerializer):
     class Meta:
         model = SpatialHierarchy
         fields = ['id', 'model', 'entity', 'entity_name', 'entity_type', 'parent', 'hierarchy_level', 'path']
-
-
-class ProcessingReportSerializer(serializers.ModelSerializer):
-    """Serializer for IFC processing reports."""
-
-    model_name = serializers.CharField(source='model.name', read_only=True)
-    model_id = serializers.CharField(source='model.id', read_only=True)
-    project_id = serializers.CharField(source='model.project.id', read_only=True)
-    project_name = serializers.CharField(source='model.project.name', read_only=True)
-
-    class Meta:
-        model = ProcessingReport
-        fields = [
-            'id', 'model', 'model_name', 'model_id', 'project_id', 'project_name',
-            'started_at', 'completed_at', 'duration_seconds',
-            'overall_status', 'ifc_schema', 'file_size_bytes',
-            'stage_results', 'total_entities_processed', 'total_entities_skipped', 'total_entities_failed',
-            'errors', 'catastrophic_failure', 'failure_stage', 'failure_exception', 'failure_traceback',
-            'summary'
-        ]
-        read_only_fields = ['id', 'started_at']
 
 
 # =============================================================================
@@ -760,3 +741,151 @@ class ModelAnalysisSerializer(serializers.ModelSerializer):
             'project_name', 'site_name', 'building_name',
             'storeys', 'types',
         ]
+
+
+# =============================================================================
+# DRAWING SERIALIZERS (Phase 5)
+# =============================================================================
+
+
+class DrawingSheetSerializer(serializers.ModelSerializer):
+    """Full drawing-sheet view, including raw_metadata (text blocks etc.)."""
+
+    class Meta:
+        model = DrawingSheet
+        fields = [
+            'id', 'source_file', 'extraction_run', 'scope',
+            'page_index', 'sheet_number', 'sheet_name',
+            'width_mm', 'height_mm', 'scale',
+            'title_block_data', 'raw_metadata',
+        ]
+        read_only_fields = ['source_file', 'extraction_run', 'raw_metadata']
+
+
+class DrawingSheetListSerializer(serializers.ModelSerializer):
+    """Lightweight list view (no raw_metadata for bandwidth)."""
+
+    class Meta:
+        model = DrawingSheet
+        fields = [
+            'id', 'source_file', 'scope', 'page_index',
+            'sheet_number', 'sheet_name', 'width_mm', 'height_mm', 'scale',
+            'title_block_data',
+        ]
+
+
+class TitleBlockTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TitleBlockTemplate
+        fields = ['id', 'project', 'name', 'fields', 'is_default', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class DrawingRegistrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrawingRegistration
+        fields = [
+            'id', 'drawing_sheet',
+            'ref1_paper_x', 'ref1_paper_y', 'ref1_grid_u', 'ref1_grid_v',
+            'ref2_paper_x', 'ref2_paper_y', 'ref2_grid_u', 'ref2_grid_v',
+            'transform_matrix', 'grid_source_run', 'created_at',
+        ]
+        read_only_fields = ['transform_matrix', 'created_at']
+
+
+# =============================================================================
+# DOCUMENT SERIALIZERS (Phase 6)
+# =============================================================================
+
+
+class DocumentContentSerializer(serializers.ModelSerializer):
+    """Full document body, including markdown + structured payload."""
+
+    format = serializers.CharField(source='source_file.format', read_only=True)
+    original_filename = serializers.CharField(
+        source='source_file.original_filename', read_only=True,
+    )
+
+    class Meta:
+        model = DocumentContent
+        fields = [
+            'id', 'source_file', 'extraction_run', 'scope',
+            'page_index', 'page_count', 'extraction_method',
+            'markdown_content', 'structured_data',
+            'structure', 'extracted_images',
+            'format', 'original_filename',
+        ]
+        read_only_fields = ['source_file', 'extraction_run']
+
+
+class DocumentContentListSerializer(serializers.ModelSerializer):
+    """Lightweight list view: omit markdown_content + structured_data for bandwidth."""
+
+    format = serializers.CharField(source='source_file.format', read_only=True)
+    original_filename = serializers.CharField(
+        source='source_file.original_filename', read_only=True,
+    )
+    char_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DocumentContent
+        fields = [
+            'id', 'source_file', 'scope',
+            'page_index', 'page_count', 'extraction_method',
+            'format', 'original_filename', 'char_count',
+        ]
+
+    def get_char_count(self, obj: DocumentContent) -> int:
+        return len(obj.markdown_content or '')
+
+
+# =============================================================================
+# CLAIM SERIALIZERS (Phase 6, Sprint 6.2)
+# =============================================================================
+
+
+class ClaimSerializer(serializers.ModelSerializer):
+    """Full claim view, including provenance and decision state."""
+
+    project = serializers.UUIDField(source='source_file.project_id', read_only=True)
+    original_filename = serializers.CharField(
+        source='source_file.original_filename', read_only=True,
+    )
+
+    class Meta:
+        model = Claim
+        fields = [
+            'id', 'source_file', 'document', 'extraction_run', 'scope',
+            'project', 'original_filename',
+            'statement', 'normalized', 'source_location',
+            'claim_type', 'confidence',
+            'status', 'promoted_to_config', 'config_section', 'config_payload',
+            'superseded_by', 'rejected_reason',
+            'extracted_at', 'decided_at', 'decided_by',
+        ]
+        read_only_fields = [
+            'source_file', 'document', 'extraction_run',
+            'promoted_to_config', 'config_section', 'config_payload',
+            'superseded_by', 'rejected_reason',
+            'extracted_at', 'decided_at', 'decided_by',
+        ]
+
+
+class ClaimListSerializer(serializers.ModelSerializer):
+    """Lightweight list view: drops full statement / config_payload for bandwidth."""
+
+    project = serializers.UUIDField(source='source_file.project_id', read_only=True)
+    snippet = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Claim
+        fields = [
+            'id', 'project', 'source_file', 'document', 'scope',
+            'snippet', 'normalized',
+            'claim_type', 'confidence', 'status',
+            'extracted_at',
+        ]
+
+    def get_snippet(self, obj: Claim) -> str:
+        text = obj.statement or ''
+        return text if len(text) <= 160 else text[:157] + '…'

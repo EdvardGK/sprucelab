@@ -307,6 +307,104 @@ class ProjectConfig(models.Model):
         self.config['bep']['target_mmi'] = level
 
 
+class ProjectScope(models.Model):
+    """
+    Nestable organizational unit within a project.
+
+    A scope groups files (any format), models, and viewer-groups under a shared
+    spatial/logical context: a building, wing, floor, zone, or custom slice.
+    Scopes form a tree (parent self-FK), so a project can hold multiple
+    buildings, each holding multiple floors, etc.
+
+    Why scopes exist (Phase 3 of the data-foundation migration): multi-building
+    projects need scoped storey resolution. Building A floor 1 at +0.00m and
+    Building B floor 1 at +0.30m must stay separate. ``storey_merge_tolerance_m``
+    applies WITHIN a scope and is never crossed.
+
+    All spatial fields (``axis_grid_bounds``, ``footprint_polygon``,
+    ``storey_elevation_min/max``) are nullable because they're populated by
+    later phases (IfcGrid extraction in Phase 4, drawing-sheet registration
+    in Phase 5). A bare scope with just a name and ``scope_type`` is a valid
+    Phase-3 row.
+    """
+
+    SCOPE_TYPE_CHOICES = [
+        ('project', 'Project'),
+        ('building', 'Building'),
+        ('wing', 'Wing'),
+        ('floor', 'Floor'),
+        ('zone', 'Zone'),
+        ('custom', 'Custom'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='scopes',
+    )
+    parent = models.ForeignKey(
+        'self', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='children',
+    )
+
+    name = models.CharField(max_length=255)
+    scope_type = models.CharField(
+        max_length=20,
+        choices=SCOPE_TYPE_CHOICES,
+        default='custom',
+    )
+
+    axis_grid_bounds = models.JSONField(
+        null=True, blank=True,
+        help_text="Grid bounds: {from_u, to_u, from_v, to_v}",
+    )
+    storey_elevation_min = models.FloatField(null=True, blank=True)
+    storey_elevation_max = models.FloatField(null=True, blank=True)
+    footprint_polygon = models.JSONField(
+        null=True, blank=True,
+        help_text="Polygon ring as [[x, y], ...] in project coordinates",
+    )
+    storey_merge_tolerance_m = models.FloatField(
+        default=0.2,
+        help_text="Max storey-elevation delta (m) treated as the same floor WITHIN this scope",
+    )
+
+    canonical_floors = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Canonical floor list for this scope. List of "
+            "{code, name, elevation_m, aliases[], _promoted_from_claim, _promoted_at}. "
+            "Populated by promoting storey_list claims through the Claim Inbox."
+        ),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'project_scopes'
+        ordering = ['name']
+        constraints = [
+            # nulls_distinct=False so two ROOT scopes (parent IS NULL) with the
+            # same name in the same project still collide. Postgres' default
+            # NULLS-distinct behavior would otherwise allow duplicates at the
+            # root level. Requires Postgres 15+ / Django 5+.
+            models.UniqueConstraint(
+                fields=['project', 'parent', 'name'],
+                name='uniq_project_scope_name',
+                nulls_distinct=False,
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['project', 'parent']),
+        ]
+
+    def __str__(self):
+        return f"{self.project.name} / {self.name} ({self.scope_type})"
+
+
 class ResponsibilityMatrix(models.Model):
     """
     Project-level responsibility matrix override.

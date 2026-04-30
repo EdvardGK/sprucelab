@@ -142,6 +142,8 @@ async def process_ifc_file(
         callback_url,
         temp_dir,  # Pass temp_dir for cleanup
         request.file_url,  # Pass file_url for fragment generation
+        request.source_file_id,
+        request.extraction_run_id,
     )
 
     # Return quick stats immediately
@@ -167,6 +169,8 @@ async def _process_full(
     callback_url: str,
     temp_dir: Optional[str] = None,
     file_url: Optional[str] = None,
+    source_file_id: Optional[str] = None,
+    extraction_run_id: Optional[str] = None,
 ):
     """
     Background task for full processing.
@@ -196,6 +200,8 @@ async def _process_full(
         result = await processing_orchestrator.process_model_types_only(
             model_id=model_id,
             file_path=file_path,
+            source_file_id=source_file_id,
+            extraction_run_id=extraction_run_id,
         )
 
         _processing_status[model_id] = {
@@ -241,9 +247,21 @@ async def _process_full(
             "material_count": result.material_count if result else 0,
             "type_count": result.type_count if result else 0,
             "ifc_schema": result.ifc_schema if result else None,
-            "processing_report_id": result.processing_report_id if result else None,
+            "extraction_run_id": (result.extraction_run_id if result else None),
             "duration_seconds": result.duration_seconds if result else 0,
             "error": error_msg or (result.error if result else None),
+            # Storey list with elevations — Django emits a storey_list Claim
+            # from this so the Claim Inbox can adjudicate canonical floors.
+            # Normalize field names to the Claim contract: elevation_m + guid.
+            "storeys": [
+                {
+                    "guid": s.get("guid"),
+                    "name": s.get("name"),
+                    "elevation_m": s.get("elevation"),
+                }
+                for s in (getattr(result, 'storeys', None) or [])
+                if isinstance(s, dict)
+            ] if result else [],
         }
 
         async with httpx.AsyncClient() as client:
@@ -298,7 +316,7 @@ async def get_processing_status(
                 material_count=result.material_count,
                 type_count=result.type_count,
                 ifc_schema=result.ifc_schema,
-                processing_report_id=result.processing_report_id,
+                extraction_run_id=result.extraction_run_id,
                 duration_seconds=result.duration_seconds,
                 error=result.error,
                 stage_results=result.stage_results,
@@ -370,6 +388,8 @@ async def process_ifc_file_sync(
         result = await processing_orchestrator.process_model_types_only(
             model_id=request.model_id,
             file_path=file_path,
+            source_file_id=request.source_file_id,
+            extraction_run_id=request.extraction_run_id,
         )
 
         return ProcessResponse(
@@ -383,7 +403,7 @@ async def process_ifc_file_sync(
             material_count=result.material_count,
             type_count=result.type_count,
             ifc_schema=result.ifc_schema,
-            processing_report_id=result.processing_report_id,
+            extraction_run_id=result.extraction_run_id,
             duration_seconds=result.duration_seconds,
             error=result.error,
             stage_results=result.stage_results,

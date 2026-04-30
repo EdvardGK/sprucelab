@@ -29,7 +29,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, Box, Layers } from 'lucide-react';
 import { useSectionPlanes, type SectionPlane } from '@/hooks/useSectionPlanes';
-import { ElementPropertiesPanel, type ElementProperties } from './ElementPropertiesPanel';
+import { type ElementProperties } from './ElementPropertiesPanel';
+import { IFCPropertiesPanel } from './IFCPropertiesPanel';
 import { ViewerFilterHUD, type TypeInfo } from './ViewerFilterHUD';
 import * as ifcService from '@/lib/ifc-service-client';
 import { authedFetch } from '@/lib/authed-fetch';
@@ -87,6 +88,16 @@ function getCamera(world: OBC.SimpleWorld<any, any, any> | null): OBC.OrthoPersp
 // View mode types
 export type ViewerViewMode = 'perspective' | 'wireframe' | 'xray';
 
+// GUID-based isolation: show only specific instances, optionally highlight one.
+// Takes priority over typeVisibility / storeyFilter while active. When set back
+// to null, delta-tracking refs reset so the other facets re-sync from scratch.
+export interface IsolationConfig {
+  guids: string[];                     // GUIDs to keep visible (empty = nothing visible)
+  mode: 'single' | 'all';              // 'all' shows the set; 'single' also highlights currentGuid
+  currentGuid?: string | null;         // for orange highlight in 'single' mode
+  zoomOnChange?: boolean;              // if true, fit camera to isolated set when guids change
+}
+
 // Imperative handle interface for parent components
 export interface UnifiedBIMViewerHandle {
   deleteSectionPlane: (planeId: string) => void;
@@ -110,6 +121,9 @@ interface UnifiedBIMViewerProps {
   // Storey Filtering — show only elements on this storey (null = show all)
   storeyFilter?: string | null;
 
+  // GUID isolation (used by the Type page to show only instances of a single type)
+  isolation?: IsolationConfig | null;
+
   // Section Planes
   enableSectionPlanes?: boolean;    // Default: true
 
@@ -126,6 +140,7 @@ interface UnifiedBIMViewerProps {
   onSectionPlanesChange?: (planes: SectionPlane[]) => void;
   onElementTypesDiscovered?: (types: string[]) => void;
   onTypesDiscovered?: (types: TypeInfo[]) => void;  // New: full type info with counts
+  onStoreysDiscovered?: (storeys: { name: string; count: number }[]) => void;
 
   // Camera
   autoFitToView?: boolean;          // Default: true
@@ -154,6 +169,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   modelVisibility,
   typeVisibility: typeVisibilityProp,  // Controlled type filtering from parent
   storeyFilter,
+  isolation = null,
   enableSectionPlanes = true,
   showPropertiesPanel = true,
   showModelInfo = false,    // Minimal by default
@@ -165,6 +181,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   onSectionPlanesChange,
   onElementTypesDiscovered,
   onTypesDiscovered,        // New callback with full type info
+  onStoreysDiscovered,
   autoFitToView = true,
   initialCameraPosition,
   classColorMap,
@@ -247,6 +264,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       onTypesDiscovered?.(typesArray);
     }
   }, [typeInfo, typeVisibility, onElementTypesDiscovered, onTypesDiscovered]);
+
+  // Notify parent of discovered storeys (for filter panel)
+  useEffect(() => {
+    if (storeyInfo.size === 0) return;
+    const storeysArray = Array.from(storeyInfo.entries())
+      .map(([name, data]) => ({ name, count: data.count }))
+      .sort((a, b) => b.count - a.count);
+    onStoreysDiscovered?.(storeysArray);
+  }, [storeyInfo, onStoreysDiscovered]);
 
   // Reset load guard when modelIds change
   useEffect(() => {
@@ -406,7 +432,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const world = worlds.create<
           OBC.SimpleScene,
           OBC.OrthoPerspectiveCamera,
-          OBC.SimpleRenderer
+          OBCF.PostproductionRenderer
         >();
         worldRef.current = world;
 
@@ -415,8 +441,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         world.scene.setup();
         world.scene.three.background = new THREE.Color(0x202932);
 
-        // 4. Setup Renderer
-        world.renderer = new OBC.SimpleRenderer(components, container);
+        // 4. Setup Renderer (post-processing for SSAO + edges + clean outlines).
+        // Falls back to no-AO mode if URL has ?ao=off (large federated escape hatch).
+        world.renderer = new OBCF.PostproductionRenderer(components, container);
         // Cap pixel ratio: HiDPI/4K displays otherwise render 2-4x the fragments,
         // tanking framerate on federated loads. 1.5 keeps edges acceptable.
         world.renderer.three.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -426,6 +453,23 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         // 6. Initialize Components (MUST be called before accessing scene via components.get())
         components.init();
+
+        // 6b. Enable post-processing (after components.init so the renderer's
+        // composer is fully wired). AO + custom edges pass + gamma correction.
+        const ppParams = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search)
+          : null;
+        const aoDisabled = ppParams?.get('ao') === 'off';
+        try {
+          world.renderer.postproduction.enabled = true;
+          world.renderer.postproduction.setPasses({
+            ao: !aoDisabled,
+            gamma: true,
+            custom: true,
+          });
+        } catch (err) {
+          console.warn('[Viewer] Postproduction setup failed, continuing without AO:', err);
+        }
 
         // Configure camera controls for better user experience
         const controls = world.camera.controls;
@@ -525,9 +569,29 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         // @ts-ignore
         if ('zoomFactor' in highlighter) highlighter.zoomFactor = 0;
 
-        // Add selection style with green color
-        const green = new THREE.Color(0x00ff00);
-        highlighter.add('selection', green);
+        // Click-selection: no per-mesh color paint (we draw an outline instead).
+        // Passing null tells the highlighter to skip the material override and
+        // just track the selection set — the Outliner does the visual feedback.
+        highlighter.add('selection', null);
+
+        // Orange highlight for the "current" GUID-isolation cursor (Type page).
+        // Separate style so isolation cursor doesn't fight with click-selection.
+        const orange = new THREE.Color(0xff6600);
+        highlighter.add('current', orange);
+
+        // Setup Outliner — bright cyan outline on top of the selected meshes.
+        // Requires PostproductionRenderer (it injects a custom-effects pass).
+        const outliner = components.get(OBCF.Outliner);
+        outliner.world = world;
+        outliner.enabled = true;
+        outliner.create(
+          'selection',
+          new THREE.MeshBasicMaterial({
+            color: 0x88ccff,
+            transparent: true,
+            opacity: 1,
+          }),
+        );
 
         // Listen for selection events
         const handleSelection = async () => {
@@ -648,8 +712,19 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           onSelectionChange?.(element);
         };
 
-        highlighter.events.select.onHighlight.add(handleSelection);
+        highlighter.events.select.onHighlight.add((map) => {
+          // Mirror the selection into the Outliner so the user sees an outline,
+          // not a flat color override. The map is FragmentIdMap (same shape).
+          try {
+            outliner.clear('selection');
+            if (map && Object.keys(map).length > 0) {
+              outliner.add('selection', map);
+            }
+          } catch { /* outliner may not be ready on first event */ }
+          handleSelection();
+        });
         highlighter.events.select.onClear.add(() => {
+          try { outliner.clear('selection'); } catch { /* */ }
           setSelectedElement(null);
           onSelectionChange?.(null);
         });
@@ -690,15 +765,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           }
 
           try {
-
-            // Call highlight with correct parameters:
+            // Multi-select: shift/ctrl/meta keeps previous selection alive.
             // highlight(name, removePrevious, zoomToSelection, exclude)
-            // - name: 'selection' (our highlight style)
-            // - removePrevious: true (clear old selection)
-            // - zoomToSelection: false (NEVER auto-zoom camera)
-            // - exclude: null (don't exclude any fragments)
-            // Note: Raycaster automatically tracks mouse position from DOM events
-            await highlighter.highlight('selection', true, false);
+            const multi = event.shiftKey || event.ctrlKey || event.metaKey;
+            await highlighter.highlight('selection', /* removePrevious */ !multi, /* zoom */ false);
           } catch (err) {
             console.error('Selection error:', err);
           }
@@ -919,10 +989,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               break;
             case 'f':
             case 'F':
-              // Flip plane direction
+              // Active section plane → flip its direction.
+              // No active plane → fit camera to all loaded models (BIM convention).
               if (sp.activePlaneId) {
                 event.preventDefault();
                 sp.flipPlane(sp.activePlaneId);
+              } else {
+                event.preventDefault();
+                fitAllModelsToView();
               }
               break;
             case 'q':
@@ -1339,6 +1413,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // clicks into one Hider operation.
   useEffect(() => {
     if (!hiderRef.current || typeInfo.size === 0) return;
+    // GUID isolation takes priority — skip type-visibility while active.
+    if (isolation && isolation.guids.length > 0) return;
 
     const rafId = requestAnimationFrame(() => {
       const hider = hiderRef.current;
@@ -1372,7 +1448,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     });
 
     return () => cancelAnimationFrame(rafId);
-  }, [typeVisibility, typeInfo]);
+  }, [typeVisibility, typeInfo, isolation]);
 
   // Reset delta tracking when the set of loaded types changes out from under us
   // (e.g. new model loaded). The next visibility effect run will re-sync from
@@ -1386,10 +1462,16 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     prevTypeVisibilityRef.current = next;
   }, [typeInfo]);
 
+  // Tracks whether isolation was active on the previous run, so the restore
+  // branch only fires on the null transition (not every typeInfo update).
+  const wasIsolatedRef = useRef(false);
+
   // Apply storey filter — show only elements on the selected storey.
   // When storeyFilter is null/undefined, show all (reset).
   useEffect(() => {
     if (!hiderRef.current || storeyInfo.size === 0) return;
+    // GUID isolation takes priority — skip storey filter while active.
+    if (isolation && isolation.guids.length > 0) return;
 
     const prev = prevStoreyFilterRef.current;
     // Skip if nothing changed
@@ -1425,7 +1507,91 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     });
 
     return () => cancelAnimationFrame(rafId);
-  }, [storeyFilter, storeyInfo]);
+  }, [storeyFilter, storeyInfo, isolation]);
+
+  // GUID-based isolation (Type page). When active, hide all then show only the
+  // matching fragments; in 'single' mode, also paint currentGuid orange. When
+  // toggled back to null, restore visibility and reset the type/storey delta
+  // refs so those effects re-sync from scratch.
+  //
+  // Triggers on isolation prop OR when models finish loading (loadedModelsRef
+  // mutation isn't reactive — we proxy via typeInfo.size which updates on load).
+  useEffect(() => {
+    if (!hiderRef.current || !viewerState.components) return;
+    if (typeInfo.size === 0) return; // wait for at least one model load
+
+    const components = viewerState.components;
+    const hider = hiderRef.current;
+    const fragmentsManager = components.get(OBC.FragmentsManager);
+    const highlighter = components.get(OBCF.Highlighter);
+
+    const isActive = !!(isolation && isolation.guids.length > 0);
+    const wasActive = wasIsolatedRef.current;
+
+    // Skip when not active and never has been — leaves type/storey effects free.
+    if (!isActive && !wasActive) return;
+
+    const rafId = requestAnimationFrame(() => {
+      try {
+        if (isActive) {
+          const map = fragmentsManager.guidToFragmentIdMap(isolation!.guids);
+          const hasMatches = Object.keys(map).length > 0;
+
+          hider.set(false);
+          if (hasMatches) hider.set(true, map);
+
+          try { highlighter.clear('current'); } catch { /* style not registered yet */ }
+          if (isolation!.mode === 'single' && isolation!.currentGuid) {
+            const cur = fragmentsManager.guidToFragmentIdMap([isolation!.currentGuid]);
+            if (Object.keys(cur).length > 0) {
+              highlighter.highlightByID('current', cur, false, false);
+            }
+          }
+
+          // Optional zoom-to-isolated, useful for prev/next instance navigation.
+          if (isolation!.zoomOnChange && hasMatches && worldRef.current) {
+            const bbox = new THREE.Box3();
+            let hasGeometry = false;
+            for (const fragId of Object.keys(map)) {
+              const fragment = fragmentsManager.list.get(fragId);
+              if (fragment?.mesh) {
+                const meshBbox = new THREE.Box3().setFromObject(fragment.mesh);
+                if (!meshBbox.isEmpty()) { bbox.union(meshBbox); hasGeometry = true; }
+              }
+            }
+            const zoomCam = getCamera(worldRef.current as OBC.SimpleWorld<any, any, any> | null);
+            if (hasGeometry && !bbox.isEmpty() && zoomCam?.controls) {
+              const center = new THREE.Vector3(); bbox.getCenter(center);
+              const size = new THREE.Vector3(); bbox.getSize(size);
+              const maxDim = Math.max(size.x, size.y, size.z, 2);
+              const distance = Math.max(maxDim * 2.0, 5);
+              const dir = new THREE.Vector3();
+              zoomCam.three.getWorldDirection(dir);
+              const camPos = center.clone().sub(dir.multiplyScalar(distance));
+              zoomCam.controls.setLookAt(camPos.x, camPos.y, camPos.z, center.x, center.y, center.z, true);
+            }
+          }
+        } else {
+          // Transitioning back from active isolation: show all, clear cursor,
+          // reset delta refs so type/storey re-sync from scratch.
+          hider.set(true);
+          try { highlighter.clear('current'); } catch { /* */ }
+          prevTypeVisibilityRef.current = {};
+          prevStoreyFilterRef.current = undefined;
+        }
+
+        if (cullerRef.current) {
+          cullerRef.current.needsUpdate = true;
+        }
+      } catch (err) {
+        console.error('[Viewer] Isolation failed:', err);
+      }
+
+      wasIsolatedRef.current = isActive;
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [isolation, typeInfo.size, viewerState.components]);
 
   // Apply class-based coloring when classColorMap is provided.
   // Uses the FragmentIdMap stored directly in typeInfo — no GUID round-trip.
@@ -1568,15 +1734,16 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         </Card>
       )}
 
-      {/* Properties Panel (Right) - Using organized BIM coordinator panel */}
+      {/* Properties Panel (Right) — single canonical IFCPropertiesPanel. */}
       {showPropertiesPanel && (
-        <div className="absolute right-4 top-4 w-80">
-          <ElementPropertiesPanel
+        <div className="absolute right-4 top-4 bottom-4 w-80 max-h-[calc(100%-32px)] z-20 rounded-lg overflow-hidden shadow-lg">
+          <IFCPropertiesPanel
             element={selectedElement}
             onClose={() => {
               setSelectedElement(null);
               onSelectionChange?.(null);
             }}
+            className="h-full"
           />
         </div>
       )}

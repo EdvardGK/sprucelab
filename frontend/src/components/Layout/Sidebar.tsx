@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Home,
-  Target,
   FileText,
   Folder,
   Search,
@@ -12,7 +11,6 @@ import {
   Settings,
   HelpCircle,
   BarChart3,
-  Code,
   User,
   Layers,
   FileStack,
@@ -115,30 +113,6 @@ export function Sidebar() {
               <User className="h-4 w-4" />
               <span>{t('nav.myPage')}</span>
             </Link>
-            <Link
-              to="/my-issues"
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                isActive('/my-issues')
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-              )}
-            >
-              <Target className="h-4 w-4" />
-              <span>{t('nav.myIssues')}</span>
-            </Link>
-            <Link
-              to="/my-rfis"
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                isActive('/my-rfis')
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-              )}
-            >
-              <FileText className="h-4 w-4" />
-              <span>{t('nav.myRFIs')}</span>
-            </Link>
           </div>
         )}
 
@@ -182,10 +156,10 @@ export function Sidebar() {
             {/* Project Overview */}
             <div className="mt-4 space-y-0.5">
               <Link
-                to={`/projects/${projectId}`}
+                to={`/projects/${projectId}/dashboard`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  location.pathname === `/projects/${projectId}`
+                  location.pathname === `/projects/${projectId}/dashboard`
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                 )}
@@ -270,30 +244,6 @@ export function Sidebar() {
                   <Box className="h-4 w-4" />
                   <span>{t('nav.materialLibrary')}</span>
                 </Link>
-                <Link
-                  to={`/projects/${projectId}/spaces`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/spaces`)
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <Folder className="h-4 w-4" />
-                  <span>{t('nav.spaces')}</span>
-                </Link>
-                <Link
-                  to={`/projects/${projectId}/qto`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/qto`)
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  <span>{t('nav.qto')}</span>
-                </Link>
               </div>
             </div>
           </div>
@@ -329,18 +279,6 @@ export function Sidebar() {
               >
                 <PenLine className="h-4 w-4" />
                 <span>{t('workbench.ifcEditing')}</span>
-              </Link>
-              <Link
-                to={`/projects/${projectId}/bep`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/bep`)
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Settings className="h-4 w-4" />
-                <span>{t('nav.bep')}</span>
               </Link>
             </div>
           </div>
@@ -399,30 +337,6 @@ export function Sidebar() {
                 <Folder className="h-4 w-4" />
                 <span>{t('nav.projects')}</span>
               </Link>
-              <Link
-                to="/scripts"
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 pl-8 text-sm transition-colors',
-                  isActive('/scripts')
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Code className="h-4 w-4" />
-                <span>{t('nav.scriptsLibrary')}</span>
-              </Link>
-              <Link
-                to="/stats"
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 pl-8 text-sm transition-colors',
-                  isActive('/stats')
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span>{t('nav.quickStats')}</span>
-              </Link>
             </div>
           )}
           </div>
@@ -479,15 +393,6 @@ export function Sidebar() {
 
         <div className="mt-1 flex items-center gap-1">
           <LanguageSelector />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label={t('common.settings')}
-            onClick={() => navigate('/settings')}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"

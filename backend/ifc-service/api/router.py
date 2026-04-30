@@ -12,6 +12,9 @@ from api.ifc_validate import router as validate_router
 from api.ifc_health_check import router as health_check_router
 from api.crs_lookup import router as crs_router
 from api.ifc_ids import router as ids_router
+from api.drawings import router as drawings_router
+from api.documents import router as documents_router
+from api.claims import router as claims_router
 
 api_router = APIRouter()
 
@@ -38,3 +41,12 @@ api_router.include_router(crs_router)
 
 # IDS validation (buildingSMART Information Delivery Specification)
 api_router.include_router(ids_router)
+
+# Drawing extraction (DWG/DXF/PDF)
+api_router.include_router(drawings_router)
+
+# Document extraction (PDF/DOCX/XLSX/PPTX)
+api_router.include_router(documents_router)
+
+# Claim extraction (heuristic — Sprint 6.2)
+api_router.include_router(claims_router)

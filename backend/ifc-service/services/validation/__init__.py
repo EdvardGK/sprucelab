@@ -1,10 +1,10 @@
 """
 Validation engine for IFC models.
 
-Executes BEP-defined validation rules against IFC files.
+BEP-driven rules were archived during the codebase simplification; the loader
+import is removed but the orchestrator stays.
 """
 
 from .orchestrator import ValidationOrchestrator, validation_orchestrator
-from .bep_loader import BEPRulesLoader
 
-__all__ = ['ValidationOrchestrator', 'validation_orchestrator', 'BEPRulesLoader']
+__all__ = ['ValidationOrchestrator', 'validation_orchestrator']

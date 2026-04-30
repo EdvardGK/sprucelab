@@ -19,19 +19,14 @@ import ProjectDocuments from './pages/ProjectDocuments';
 import ProjectDrawings from './pages/ProjectDrawings';
 import BIMWorkbench from './pages/BIMWorkbench';
 import ModelWorkspace from './pages/ModelWorkspace';
-import MyIssues from './pages/MyIssues';
-import MyRFIs from './pages/MyRFIs';
-import ScriptsLibrary from './pages/ScriptsLibrary';
-import QuickStats from './pages/QuickStats';
-import Settings from './pages/Settings';
 import FederatedViewer from './pages/FederatedViewer';
 import ViewerGroups from './pages/ViewerGroups';
 import TypeLibraryPage from './pages/TypeLibraryPage';
 import ProjectTypeLibrary from './pages/ProjectTypeLibrary';
 import ProjectTypesPage from './pages/ProjectTypesPage';
 import ProjectMaterialLibrary from './pages/ProjectMaterialLibrary';
-import ProjectBEP from './pages/ProjectBEP';
 import ProjectField from './pages/ProjectField';
+import AdminDashboard from './pages/AdminDashboard';
 import ProcessingReports from './pages/dev/ProcessingReports';
 import ProcessingReportDetail from './pages/dev/ProcessingReportDetail';
 
@@ -45,7 +40,7 @@ const router = createBrowserRouter([
   { path: "/", element: guard(<ProjectsGallery />) },
   { path: "/my-page", element: guard(<MyPage />) },
   { path: "/projects", element: guard(<ProjectsGallery />) },
-  { path: "/projects/:id", element: guard(<ProjectModels />) },
+  { path: "/projects/:id", element: guard(<ProjectDashboard />) },
   { path: "/projects/:id/dashboard", element: guard(<ProjectDashboard />) },
   { path: "/projects/:id/models", element: guard(<ProjectModels />) },
   { path: "/projects/:id/my-page", element: guard(<ProjectMyPage />) },
@@ -56,16 +51,11 @@ const router = createBrowserRouter([
   { path: "/projects/:id/types", element: guard(<ProjectTypesPage />) },
   { path: "/projects/:id/type-library", element: guard(<ProjectTypeLibrary />) },
   { path: "/projects/:id/material-library", element: guard(<ProjectMaterialLibrary />) },
-  { path: "/projects/:id/bep", element: guard(<ProjectBEP />) },
   { path: "/projects/:id/field", element: guard(<ProjectField />) },
   { path: "/projects/:id/workbench", element: guard(<BIMWorkbench />) },
   { path: "/projects/:id/models/:modelId", element: guard(<ModelWorkspace />) },
-  { path: "/my-issues", element: guard(<MyIssues />) },
-  { path: "/my-rfis", element: guard(<MyRFIs />) },
-  { path: "/scripts", element: guard(<ScriptsLibrary />) },
-  { path: "/stats", element: guard(<QuickStats />) },
-  { path: "/settings", element: guard(<Settings />) },
   { path: "/type-library", element: guard(<TypeLibraryPage />) },
+  { path: "/admin", element: guard(<AdminDashboard />) },
   { path: "/dev/processing-reports", element: guard(<ProcessingReports />) },
   { path: "/dev/processing-reports/:id", element: guard(<ProcessingReportDetail />) },
 ]);

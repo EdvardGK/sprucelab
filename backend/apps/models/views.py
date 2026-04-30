@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from datetime import datetime
 
-from .models import Model
+from .models import ExtractionRun, Model, SourceFile
 from .serializers import (
     ModelSerializer,
     ModelDetailSerializer,
@@ -20,6 +20,7 @@ from .serializers import (
 from .tasks import revert_model_task
 from apps.projects.models import Project
 from apps.entities.models import IFCValidationReport, IFCEntity
+from .files_views import get_or_create_source_file
 import json
 
 
@@ -210,6 +211,28 @@ class ModelViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+        # Compute SHA-256 checksum (streaming, no OOM risk)
+        import hashlib
+        uploaded_file.seek(0)
+        sha256 = hashlib.sha256()
+        for chunk in uploaded_file.chunks():
+            sha256.update(chunk)
+        file_checksum = sha256.hexdigest()
+        uploaded_file.seek(0)
+
+        # Phase 2 Layer 0: ensure a SourceFile exists for this upload so every
+        # file is addressable via /api/files/, regardless of which upload
+        # endpoint was used.
+        source_file = get_or_create_source_file(
+            project=project,
+            original_filename=uploaded_file.name,
+            file_url=file_url,
+            file_size=uploaded_file.size,
+            checksum=file_checksum,
+            uploaded_by=request.user if request.user.is_authenticated else None,
+            mime_type=getattr(uploaded_file, 'content_type', '') or '',
+        )
+
         # Skip timestamp extraction to avoid OOM on large files
         # FastAPI will extract metadata after downloading
         new_ifc_timestamp = None
@@ -240,11 +263,21 @@ class ModelViewSet(viewsets.ModelViewSet):
             original_filename=uploaded_file.name,
             file_url=file_url,
             file_size=uploaded_file.size,  # Save file size in bytes
+            checksum_sha256=file_checksum,
             version_number=version_number,
             parent_model=parent_model,  # Link to previous version
             ifc_timestamp=new_ifc_timestamp,  # Store IFC timestamp
             status='processing',  # Set to processing immediately
             uploaded_by=request.user if request.user.is_authenticated else None,
+            source_file=source_file,
+        )
+
+        # Phase 2 Layer 1: an ExtractionRun row is created up-front so the
+        # orchestrator can flip it through running -> completed/failed without
+        # racing other concurrent runs against the same SourceFile.
+        extraction_run = ExtractionRun.objects.create(
+            source_file=source_file,
+            status='pending',
         )
 
         # Start IFC processing via FastAPI
@@ -279,6 +312,8 @@ class ModelViewSet(viewsets.ModelViewSet):
                 file_url=file_url,
                 skip_geometry=True,
                 callback_url=callback_url,
+                source_file_id=str(source_file.id),
+                extraction_run_id=str(extraction_run.id),
             )
 
             if quick_stats.get('success'):
@@ -502,6 +537,23 @@ class ModelViewSet(viewsets.ModelViewSet):
         ).values_list('version_number', flat=True)
         next_version = max(existing_versions, default=0) + 1
 
+        # Phase 2 Layer 0: SourceFile for this direct upload. Checksum is
+        # empty here because the bytes are in cloud storage already and we
+        # don't download to compute it; backfilled later if needed.
+        source_file = get_or_create_source_file(
+            project=project,
+            original_filename=filename,
+            file_url=file_url,
+            file_size=file_size or 0,
+            checksum="",
+            uploaded_by=request.user if request.user.is_authenticated else None,
+            mime_type="",
+        )
+        extraction_run = ExtractionRun.objects.create(
+            source_file=source_file,
+            status='pending',
+        )
+
         # Create model record
         model = Model.objects.create(
             project=project,
@@ -513,6 +565,7 @@ class ModelViewSet(viewsets.ModelViewSet):
             status='processing',
             parsing_status='pending',
             uploaded_by=request.user if request.user.is_authenticated else None,
+            source_file=source_file,
         )
 
         print(f"✅ Model created: {model.name} v{model.version_number}")
@@ -540,6 +593,8 @@ class ModelViewSet(viewsets.ModelViewSet):
                 file_url=file_url,
                 skip_geometry=True,
                 callback_url=callback_url,
+                source_file_id=str(source_file.id),
+                extraction_run_id=str(extraction_run.id),
             )
 
             if quick_stats.get('success'):
@@ -638,6 +693,43 @@ class ModelViewSet(viewsets.ModelViewSet):
             saved_path = default_storage.save(file_path, file)
             file_url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else saved_path
 
+            # Streaming SHA-256 (re-read from saved storage)
+            import hashlib
+            file.seek(0)
+            sha = hashlib.sha256()
+            for chunk in file.chunks():
+                sha.update(chunk)
+            file_checksum = sha.hexdigest()
+
+            # Phase 2 Layer 0/1: SourceFile + a synthetic completed
+            # ExtractionRun. web-ifc already produced metadata client-side, so
+            # there's nothing to extract server-side — we just record the run.
+            source_file = get_or_create_source_file(
+                project=project,
+                original_filename=file.name,
+                file_url=file_url,
+                file_size=file.size,
+                checksum=file_checksum,
+                uploaded_by=request.user if request.user.is_authenticated else None,
+                mime_type=getattr(file, 'content_type', '') or '',
+            )
+            from django.utils import timezone as _tz
+            now = _tz.now()
+            ExtractionRun.objects.create(
+                source_file=source_file,
+                status='completed',
+                completed_at=now,
+                duration_seconds=0.0,
+                quality_report={
+                    'total_elements': element_count,
+                    'storey_count': storey_count,
+                    'system_count': system_count,
+                    'ifc_schema': ifc_schema,
+                    'extraction_method': 'web-ifc-client',
+                },
+                extractor_version='web-ifc-client',
+            )
+
             # Create model record with pre-parsed metadata
             model = Model.objects.create(
                 project=project,
@@ -646,6 +738,7 @@ class ModelViewSet(viewsets.ModelViewSet):
                 version_number=version_number,
                 file_url=file_url,
                 file_size=file.size,
+                checksum_sha256=file_checksum,
                 ifc_schema=ifc_schema,
                 element_count=element_count,
                 storey_count=storey_count,
@@ -656,6 +749,7 @@ class ModelViewSet(viewsets.ModelViewSet):
                 validation_status='pending',
                 status='ready',  # Model is ready to use immediately!
                 uploaded_by=request.user if request.user.is_authenticated else None,
+                source_file=source_file,
             )
 
             # Optionally: Store entities from metadata (bulk insert)
@@ -1452,7 +1546,7 @@ class ModelViewSet(viewsets.ModelViewSet):
             - material_count: int
             - type_count: int
             - ifc_schema: str
-            - processing_report_id: UUID
+            - extraction_run_id: UUID
             - duration_seconds: float
             - error: str (if failed)
 
@@ -1487,6 +1581,52 @@ class ModelViewSet(viewsets.ModelViewSet):
             duration = request.data.get('duration_seconds', 0)
             type_count = request.data.get('type_count', 0)
             print(f"✅ Processing complete for {model.name}: {model.element_count} elements, {type_count} types in {duration:.1f}s")
+
+            # Emit storey_list Claim from the discovered storeys so the Claim
+            # Inbox can adjudicate the canonical floor list. Failure-isolated.
+            run_id = request.data.get('extraction_run_id')
+            storeys_payload = request.data.get('storeys') or []
+            if run_id and storeys_payload and model.source_file_id:
+                try:
+                    from apps.models.models import ExtractionRun
+                    from apps.entities.services.storey_claim_emitter import emit_storey_list_claim
+                    run = ExtractionRun.objects.filter(id=run_id).first()
+                    if run is not None:
+                        emit_storey_list_claim(
+                            source_file=model.source_file,
+                            extraction_run=run,
+                            storeys=storeys_payload,
+                            extraction_method='ifc_lite',
+                        )
+                except Exception as exc:
+                    print(f"⚠️  storey_list claim emission failed: {exc}")
+
+            # Fire model.processed webhook event (non-blocking)
+            try:
+                from apps.automation.services.webhook_dispatcher import dispatch_event
+                dispatch_event(
+                    'model.processed',
+                    {
+                        'event': 'model.processed',
+                        'project_id': str(model.project_id) if model.project_id else None,
+                        'model_id': str(model.id),
+                        'source_file_id': str(model.source_file_id) if model.source_file_id else None,
+                        'format': 'ifc',
+                        'extraction_run_id': request.data.get('extraction_run_id'),
+                        'stats': {
+                            'element_count': model.element_count,
+                            'storey_count': model.storey_count,
+                            'system_count': model.system_count,
+                            'type_count': type_count,
+                            'ifc_schema': model.ifc_schema,
+                            'duration_seconds': duration,
+                        },
+                        'occurred_at': timezone.now().isoformat(),
+                    },
+                    project_id=str(model.project_id) if model.project_id else None,
+                )
+            except Exception as exc:
+                print(f"⚠️  webhook dispatch (model.processed) failed: {exc}")
 
             # Auto-trigger model analysis in background
             try:
