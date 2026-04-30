@@ -43,7 +43,7 @@ class IFCServiceClient:
         self,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        timeout: float = 300.0,  # 5 minutes default
+        timeout: float = 90.0,  # MUST stay below gunicorn --timeout (120s)
     ):
         self.base_url = base_url or getattr(settings, 'IFC_SERVICE_URL', 'http://localhost:8001')
         self.api_key = api_key or getattr(settings, 'IFC_SERVICE_API_KEY', 'sprucelab-ifc-service-dev-key-change-in-production')
