@@ -52,6 +52,25 @@ def capabilities(request):
                 'claim:': 'derived from a promoted Claim — see /api/types/types/claim-issues/',
             },
         },
+        'events': {
+            'wired': [
+                'model.processed',
+                'document.processed',
+                'claim.extracted',
+                'verification.complete',
+            ],
+            'planned': [
+                'types.classified',
+                'quantities.extracted',
+            ],
+            'signing': 'hmac-sha256',
+            'signature_header': 'X-Webhook-Signature',
+            'timestamp_header': 'X-Webhook-Timestamp',
+            'event_header': 'X-Webhook-Event',
+            'delivery_id_header': 'X-Webhook-Delivery-Id',
+            'subscription_endpoint': '/api/automation/webhook-subscriptions/',
+            'delivery_log_endpoint': '/api/automation/webhook-deliveries/',
+        },
     })
 
 

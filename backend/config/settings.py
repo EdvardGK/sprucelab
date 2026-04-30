@@ -388,6 +388,15 @@ CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 
 
+# Webhook subscriptions
+# HMAC-signed POSTs are dispatched from apps.automation.tasks.deliver_webhook_task.
+# Receivers MUST validate X-Webhook-Signature against the stored secret.
+WEBHOOK_REQUEST_TIMEOUT_SECONDS = int(os.getenv('WEBHOOK_REQUEST_TIMEOUT_SECONDS', '15'))
+WEBHOOK_AUTO_DISABLE_THRESHOLD = int(os.getenv('WEBHOOK_AUTO_DISABLE_THRESHOLD', '20'))
+WEBHOOK_RESPONSE_BODY_TRUNCATE_BYTES = int(os.getenv('WEBHOOK_RESPONSE_BODY_TRUNCATE_BYTES', '4096'))
+WEBHOOK_MAX_DELIVERY_RETRIES = int(os.getenv('WEBHOOK_MAX_DELIVERY_RETRIES', '3'))
+
+
 # File Upload Settings
 MAX_UPLOAD_SIZE = 1024 * 1024 * 1024  # 1GB max file size
 DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE

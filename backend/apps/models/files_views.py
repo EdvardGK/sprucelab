@@ -12,6 +12,7 @@ extractor the legacy /api/models/upload/ uses). Future formats hook in here.
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 from pathlib import Path
 
@@ -34,6 +35,21 @@ from .serializers import (
     SourceFileUploadSerializer,
 )
 from .services.fastapi_client import IFCServiceClient
+
+logger = logging.getLogger(__name__)
+
+
+def _fire_event(event_type: str, payload: dict, project_id: str | None) -> None:
+    """
+    Fire-and-forget webhook dispatch. Imported lazily so circular import
+    issues during app startup never break the extraction flow, and wrapped
+    in try/except so a dispatcher bug never propagates into extraction.
+    """
+    try:
+        from apps.automation.services.webhook_dispatcher import dispatch_event
+        dispatch_event(event_type, payload, project_id=project_id)
+    except Exception:
+        logger.exception('webhook dispatch (%s) failed', event_type)
 
 
 def store_uploaded_file(project: Project, uploaded_file) -> tuple[str, str, str, int]:
@@ -346,6 +362,20 @@ class SourceFileViewSet(viewsets.ModelViewSet):
             'status', 'duration_seconds', 'log_entries',
             'quality_report', 'error_message', 'completed_at',
         ])
+
+        if run.status == 'completed':
+            _fire_event('model.processed', {
+                'event': 'model.processed',
+                'project_id': str(source_file.project_id) if source_file.project_id else None,
+                'source_file_id': str(source_file.id),
+                'format': source_file.format,
+                'extraction_run_id': str(run.id),
+                'stats': {
+                    'sheet_count': len(sheets),
+                    **(run.quality_report or {}),
+                },
+                'occurred_at': _dt.now(_tz.utc).isoformat(),
+            }, project_id=str(source_file.project_id) if source_file.project_id else None)
         return run
 
     def _dispatch_document_extraction(self, source_file: SourceFile, file_url: str):
@@ -401,6 +431,20 @@ class SourceFileViewSet(viewsets.ModelViewSet):
             'status', 'duration_seconds', 'log_entries',
             'quality_report', 'error_message', 'completed_at',
         ])
+
+        if run.status == 'completed':
+            _fire_event('document.processed', {
+                'event': 'document.processed',
+                'project_id': str(source_file.project_id) if source_file.project_id else None,
+                'source_file_id': str(source_file.id),
+                'format': source_file.format,
+                'extraction_run_id': str(run.id),
+                'stats': {
+                    'document_count': len(documents),
+                    **(quality_report or {}),
+                },
+                'occurred_at': _dt.now(_tz.utc).isoformat(),
+            }, project_id=str(source_file.project_id) if source_file.project_id else None)
         return run
 
     def _dispatch_pdf_extraction(self, source_file: SourceFile, file_url: str):
@@ -528,6 +572,42 @@ class SourceFileViewSet(viewsets.ModelViewSet):
             'status', 'duration_seconds', 'log_entries',
             'quality_report', 'error_message', 'completed_at',
         ])
+
+        if run.status == 'completed':
+            now = _dt.now(_tz.utc).isoformat()
+            project_id_str = str(source_file.project_id) if source_file.project_id else None
+            base = {
+                'project_id': project_id_str,
+                'source_file_id': str(source_file.id),
+                'format': source_file.format,
+                'extraction_run_id': str(run.id),
+                'occurred_at': now,
+            }
+            # PDFs can carry both drawing pages and document pages — emit both
+            # roots iff their respective extractor produced rows. An agent
+            # subscribed to one root never has to filter on payload.format.
+            sheet_count = merged_quality.get('sheet_count', 0)
+            if sheet_count:
+                _fire_event('model.processed', {
+                    **base,
+                    'event': 'model.processed',
+                    'stats': {
+                        'sheet_count': sheet_count,
+                        'drawing_pages': merged_quality.get('drawing_pages', 0),
+                    },
+                }, project_id=project_id_str)
+            doc_count = merged_quality.get('document_count', 0)
+            if doc_count:
+                _fire_event('document.processed', {
+                    **base,
+                    'event': 'document.processed',
+                    'stats': {
+                        'document_count': doc_count,
+                        'document_pages': merged_quality.get('document_pages', 0),
+                        'total_chars': merged_quality.get('total_chars', 0),
+                        'claim_count': merged_quality.get('claim_count', 0),
+                    },
+                }, project_id=project_id_str)
         return run
 
     @staticmethod
@@ -582,12 +662,14 @@ class SourceFileViewSet(viewsets.ModelViewSet):
         can roll it into ``run.quality_report``.
         """
         from apps.entities.models import Claim
+        from datetime import datetime as _dt, timezone as _tz
 
         if not documents:
             return 0
 
         client = IFCServiceClient()
         total_claims = 0
+        new_claim_ids: list[str] = []
         for doc in documents:
             markdown = doc.markdown_content or ''
             if not markdown.strip():
@@ -598,7 +680,7 @@ class SourceFileViewSet(viewsets.ModelViewSet):
                 # Don't fail the run on claim extraction errors — log only.
                 continue
             for cand in response.get('claims') or []:
-                Claim.objects.create(
+                claim = Claim.objects.create(
                     source_file=source_file,
                     document=doc,
                     extraction_run=run,
@@ -613,7 +695,19 @@ class SourceFileViewSet(viewsets.ModelViewSet):
                         'page': doc.page_index,
                     },
                 )
+                new_claim_ids.append(str(claim.id))
                 total_claims += 1
+        if total_claims:
+            project_id_str = str(source_file.project_id) if source_file.project_id else None
+            _fire_event('claim.extracted', {
+                'event': 'claim.extracted',
+                'project_id': project_id_str,
+                'source_file_id': str(source_file.id),
+                'extraction_run_id': str(run.id),
+                'claim_count': total_claims,
+                'claim_ids': new_claim_ids,
+                'occurred_at': _dt.now(_tz.utc).isoformat(),
+            }, project_id=project_id_str)
         return total_claims
 
 

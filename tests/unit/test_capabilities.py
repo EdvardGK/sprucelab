@@ -60,3 +60,19 @@ def test_capabilities_is_public(client):
     # No auth required — capability discovery is itself a feature.
     resp = client.get('/api/capabilities/')
     assert resp.status_code == 200
+
+
+def test_capabilities_advertises_webhook_events(client):
+    body = client.get('/api/capabilities/').json()
+    events = body['events']
+    assert {'wired', 'planned', 'signing'} <= set(events.keys())
+    assert 'model.processed' in events['wired']
+    assert 'document.processed' in events['wired']
+    assert 'claim.extracted' in events['wired']
+    assert 'verification.complete' in events['wired']
+    # Planned events advertised so subscribers can opt-in early.
+    assert 'types.classified' in events['planned']
+    assert 'quantities.extracted' in events['planned']
+    assert events['signing'] == 'hmac-sha256'
+    assert events['signature_header'] == 'X-Webhook-Signature'
+    assert events['subscription_endpoint'] == '/api/automation/webhook-subscriptions/'

@@ -1582,6 +1582,33 @@ class ModelViewSet(viewsets.ModelViewSet):
             type_count = request.data.get('type_count', 0)
             print(f"✅ Processing complete for {model.name}: {model.element_count} elements, {type_count} types in {duration:.1f}s")
 
+            # Fire model.processed webhook event (non-blocking)
+            try:
+                from apps.automation.services.webhook_dispatcher import dispatch_event
+                dispatch_event(
+                    'model.processed',
+                    {
+                        'event': 'model.processed',
+                        'project_id': str(model.project_id) if model.project_id else None,
+                        'model_id': str(model.id),
+                        'source_file_id': str(model.source_file_id) if model.source_file_id else None,
+                        'format': 'ifc',
+                        'extraction_run_id': request.data.get('extraction_run_id'),
+                        'stats': {
+                            'element_count': model.element_count,
+                            'storey_count': model.storey_count,
+                            'system_count': model.system_count,
+                            'type_count': type_count,
+                            'ifc_schema': model.ifc_schema,
+                            'duration_seconds': duration,
+                        },
+                        'occurred_at': timezone.now().isoformat(),
+                    },
+                    project_id=str(model.project_id) if model.project_id else None,
+                )
+            except Exception as exc:
+                print(f"⚠️  webhook dispatch (model.processed) failed: {exc}")
+
             # Auto-trigger model analysis in background
             try:
                 from apps.entities.tasks import run_model_analysis_task

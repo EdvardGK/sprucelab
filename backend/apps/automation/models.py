@@ -398,3 +398,119 @@ class AgentRegistration(models.Model):
         """Verify an API key against the stored hash."""
         key_hash = hashlib.sha256(key.encode()).hexdigest()
         return key_hash == self.api_key_hash
+
+
+# =============================================================================
+# Webhook subscriptions + delivery log
+# =============================================================================
+
+class WebhookSubscription(models.Model):
+    """
+    External subscriber for platform events (model.processed,
+    document.processed, claim.extracted, verification.complete, etc).
+
+    A null ``project`` subscribes across every project the creating user has
+    access to. ``event_type`` is intentionally a free-form string so future
+    events (types.classified, quantities.extracted, ...) need no schema
+    migration.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='webhook_subscriptions',
+    )
+    event_type = models.CharField(max_length=80)
+    target_url = models.URLField(max_length=500)
+    secret = models.CharField(max_length=128, blank=True)
+    description = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='webhook_subscriptions',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_fired_at = models.DateTimeField(null=True, blank=True)
+    consecutive_failures = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'automation_webhook_subscriptions'
+        ordering = ['event_type', 'target_url']
+        unique_together = [('project', 'event_type', 'target_url')]
+        indexes = [
+            models.Index(fields=['event_type', 'is_active']),
+            models.Index(fields=['project', 'is_active']),
+        ]
+
+    def __str__(self):
+        scope = self.project.name if self.project else 'all-projects'
+        return f"{self.event_type} → {self.target_url} ({scope})"
+
+    def save(self, *args, **kwargs):
+        if not self.secret:
+            self.secret = secrets.token_urlsafe(48)
+        super().save(*args, **kwargs)
+
+    def rotate_secret(self) -> str:
+        """Generate a new secret, persist it, and return the plaintext once."""
+        new_secret = secrets.token_urlsafe(48)
+        self.secret = new_secret
+        self.save(update_fields=['secret', 'updated_at'])
+        return new_secret
+
+
+class WebhookDelivery(models.Model):
+    """
+    Per-attempt delivery log. Created by ``dispatch_event`` before the Celery
+    task runs and updated as it progresses. Kept after the subscription is
+    deleted (FK SET_NULL) so audit history survives subscription churn.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('delivering', 'Delivering'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('retrying', 'Retrying'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subscription = models.ForeignKey(
+        WebhookSubscription,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deliveries',
+    )
+    event_type = models.CharField(max_length=80)
+    payload = models.JSONField(default=dict)
+    target_url = models.URLField(max_length=500)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+    )
+    attempt_count = models.PositiveIntegerField(default=0)
+    response_status_code = models.IntegerField(null=True, blank=True)
+    response_body = models.TextField(blank=True)
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'automation_webhook_deliveries'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['subscription', '-created_at']),
+            models.Index(fields=['event_type', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type} → {self.target_url} ({self.status})"

@@ -103,6 +103,31 @@ Quick reference for all REST endpoints. Django serves `/api/`, FastAPI serves `/
 | CRUD | `/api/automation/cde-connections/` | `CDEConnectionViewSet` | `test`, `sync` |
 | CRUD | `/api/automation/project-configs/` | `ProjectPipelineConfigViewSet` | `enable`, `disable` |
 | CRUD | `/api/automation/runs/` | `PipelineRunViewSet` | `cancel`, `logs` |
+| CRUD | `/api/automation/webhook-subscriptions/` | `WebhookSubscriptionViewSet` | `test`, `deliveries`, `rotate-secret` (each returns secret once) |
+| RO | `/api/automation/webhook-deliveries/` | `WebhookDeliveryViewSet` | `redeliver` (queues fresh delivery row, never mutates history) |
+
+**Webhook Events** (HMAC-SHA256 signed POSTs from Sprucelab to subscribers):
+
+Sprucelab signs `f"{X-Webhook-Timestamp}.{raw_body}"` with the per-subscription
+secret and sends `X-Webhook-Signature: sha256=<hex>`. Receivers MUST verify
+the signature and SHOULD reject timestamps outside a tolerance window to
+prevent replay attacks. Standard headers on every delivery:
+
+- `X-Webhook-Event` — event type (e.g. `model.processed`)
+- `X-Webhook-Delivery-Id` — UUID, idempotency key
+- `X-Webhook-Timestamp` — ISO 8601 UTC; included in the signed message
+- `X-Webhook-Signature` — `sha256=<hex>`
+
+Wired events (firing today):
+
+| Event | Fired when | Key payload fields |
+|-------|------------|--------------------|
+| `model.processed` | IFC parsed; DXF/DWG drawing extraction completes; PDF mixed pipeline emits this when at least one drawing sheet was produced | `project_id`, `model_id` (IFC only), `source_file_id`, `format`, `extraction_run_id`, `stats` |
+| `document.processed` | DOCX/XLSX/PPTX extraction completes; PDF mixed pipeline emits this when at least one document page was produced | `project_id`, `source_file_id`, `format`, `extraction_run_id`, `stats` |
+| `claim.extracted` | Document extraction yields ≥1 claim — batched once per ExtractionRun | `project_id`, `source_file_id`, `extraction_run_id`, `claim_count`, `claim_ids` |
+| `verification.complete` | `POST /api/types/types/verify/?model={id}` finishes | `project_id`, `model_id`, `health_score`, `passed`, `warnings`, `failed`, `skipped`, `rules_applied` |
+
+Planned events (advertised in `/api/capabilities/`, not yet wired): `types.classified`, `quantities.extracted`. `WebhookSubscription.event_type` is a free-form string so subscribing to a planned event today is safe — deliveries will start once the producer ships.
 
 **Agent API** (for spruce CLI):
 

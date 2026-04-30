@@ -241,6 +241,30 @@ class VerificationEngine:
             model_id, passed, checked, health_score,
         )
 
+        # Fire verification.complete webhook (non-blocking, never raises).
+        try:
+            from apps.automation.services.webhook_dispatcher import dispatch_event
+            dispatch_event(
+                'verification.complete',
+                {
+                    'event': 'verification.complete',
+                    'project_id': str(project_id) if project_id else None,
+                    'model_id': str(model_id),
+                    'health_score': round(health_score, 1),
+                    'total_types': total_types,
+                    'checked': checked,
+                    'passed': passed,
+                    'warnings': warnings,
+                    'failed': failed,
+                    'skipped': skipped,
+                    'rules_applied': rule_ids,
+                    'occurred_at': now.isoformat(),
+                },
+                project_id=str(project_id) if project_id else None,
+            )
+        except Exception:
+            logger.exception('webhook dispatch (verification.complete) failed')
+
         return result
 
     def _load_rules(self, project_id: str | None) -> list[dict]:
