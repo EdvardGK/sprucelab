@@ -41,6 +41,13 @@ ALLOWED_HOSTS = os.getenv(
     'localhost,127.0.0.1,sprucelab-production.up.railway.app,api.sprucelab.io',
 ).split(',')
 
+# Railway sends Host: healthcheck.railway.app for its deploy health probe.
+# Always allow it regardless of env var content — without this, deploys
+# fail healthcheck and never replace the previous (potentially broken)
+# deployment. Idempotent if it's already present.
+if 'healthcheck.railway.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('healthcheck.railway.app')
+
 
 # --- Security headers ------------------------------------------------------
 # These are all free and apply to every response via SecurityMiddleware +
