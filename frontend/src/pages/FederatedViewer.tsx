@@ -32,6 +32,7 @@ import {
 import { ViewerFilterPanel } from '@/components/features/viewer/ViewerFilterPanel';
 import { useViewerFilterStore, deriveTypeVisibility } from '@/stores/useViewerFilterStore';
 import { useViewerFilterUrl } from '@/hooks/useViewerFilterUrl';
+import { useProjectScopes, useScopeFloors } from '@/hooks/use-scopes';
 import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPanel';
 import { AddModelsDialog } from '@/components/features/viewers/AddModelsDialog';
 
@@ -82,9 +83,28 @@ export default function FederatedViewer() {
 
   // Filter store — single source of truth for what's visible
   const hiddenIfcClasses = useViewerFilterStore((s) => s.hiddenIfcClasses);
-  const storeyFilter = useViewerFilterStore((s) => s.storey);
+  const floorCodeFilter = useViewerFilterStore((s) => s.floor_code);
   const setScope = useViewerFilterStore((s) => s.setScope);
   useViewerFilterUrl();
+
+  // Canonical floors for this project's root scope (when present) — drives
+  // the storey facet labels and resolves codes to per-IFC storey-name aliases
+  // for the viewer's hide/show logic.
+  const { data: scopes } = useProjectScopes(projectId);
+  const rootScopeId = useMemo(
+    () => scopes?.find((s) => s.parent === null)?.id ?? null,
+    [scopes],
+  );
+  const { data: scopeFloors } = useScopeFloors(rootScopeId);
+  const canonicalFloors = scopeFloors?.canonical_floors ?? [];
+  const floorAliases = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const f of canonicalFloors) {
+      const aliases = [f.name, ...(f.aliases ?? [])].filter(Boolean) as string[];
+      if (aliases.length > 0) map[f.code] = aliases;
+    }
+    return map;
+  }, [canonicalFloors]);
 
   // Active filters for status panel (manual additions, not auto-derived)
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
@@ -141,7 +161,7 @@ export default function FederatedViewer() {
   }, []);
 
   const handleSelectStorey = useCallback((_modelId: string, storeyId: string | null) => {
-    useViewerFilterStore.getState().setStorey(storeyId);
+    useViewerFilterStore.getState().setFloorCode(storeyId);
   }, []);
 
   const handleFitView = useCallback(() => {
@@ -149,8 +169,8 @@ export default function FederatedViewer() {
   }, []);
 
   const handleRemoveFilter = useCallback((id: string) => {
-    if (id === 'storey') {
-      useViewerFilterStore.getState().setStorey(null);
+    if (id === 'floor') {
+      useViewerFilterStore.getState().setFloorCode(null);
       return;
     }
     if (id.startsWith('type-')) {
@@ -167,13 +187,15 @@ export default function FederatedViewer() {
 
   // ── Derived data ──
 
-  // Build filter pills from hidden types + storey selection
+  // Build filter pills from hidden types + floor selection
   const computedFilters: ActiveFilter[] = [
     ...activeFilters,
     ...hiddenIfcClasses.map((cls) => ({ id: `type-${cls}`, label: `−${cls.replace('Ifc', '')}` })),
   ];
-  if (storeyFilter) {
-    computedFilters.unshift({ id: 'storey', label: storeyFilter });
+  if (floorCodeFilter) {
+    const canonical = canonicalFloors.find((f) => f.code === floorCodeFilter);
+    const label = canonical ? `${canonical.code} ${canonical.name}` : floorCodeFilter;
+    computedFilters.unshift({ id: 'floor', label });
   }
 
   // Build model info for platform panel
@@ -247,7 +269,7 @@ export default function FederatedViewer() {
         models={platformModels}
         verification={verification}
         typeClassification={typeClassification}
-        selectedStoreyId={storeyFilter}
+        selectedStoreyId={floorCodeFilter}
         onBack={() => navigate(`/projects/${projectId}/viewer-groups`)}
         onToggleModelVisibility={handleModelVisibilityToggle}
         onSelectStorey={handleSelectStorey}
@@ -272,7 +294,8 @@ export default function FederatedViewer() {
                 onTypesDiscovered={handleTypesDiscovered}
                 onStoreysDiscovered={handleStoreysDiscovered}
                 typeVisibility={typeVisibilityMap}
-                storeyFilter={storeyFilter}
+                floorCodeFilter={floorCodeFilter}
+                floorAliases={floorAliases}
                 onError={(err) => setLoadErrors(prev => [...prev, err])}
               />
 
@@ -298,6 +321,7 @@ export default function FederatedViewer() {
                 <ViewerFilterPanel
                   types={discoveredTypes}
                   storeys={discoveredStoreys}
+                  canonicalFloors={canonicalFloors}
                   collapsed={filterPanelCollapsed}
                   onCollapseToggle={() => setFilterPanelCollapsed((v) => !v)}
                 />

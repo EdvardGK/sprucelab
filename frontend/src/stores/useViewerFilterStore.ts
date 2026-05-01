@@ -26,7 +26,12 @@ export interface ViewerFilterState {
 
   // Facets. Empty = "no constraint on this axis".
   hiddenIfcClasses: string[];          // IFC classes to hide (others show)
-  storey: string | null;               // single storey selection (null = all)
+  // Floor selection. Stores either a canonical Scope.canonical_floors[].code
+  // when canonical floors exist for the project, or a raw IFC storey name
+  // otherwise. UnifiedBIMViewer accepts an optional alias map to resolve
+  // codes to per-model storey names; without that map the value is matched
+  // against discovered storey names directly.
+  floor_code: string | null;
   ns3451: string[];                    // NS3451 codes to keep
   verification: VerificationStatus[];  // statuses to keep (empty = all)
   systems: string[];                   // system names to keep
@@ -38,7 +43,7 @@ export interface ViewerFilterState {
   setHiddenIfcClasses: (classes: string[]) => void;
   showAllIfcClasses: () => void;
   hideAllIfcClasses: (allKnownClasses: string[]) => void;
-  setStorey: (storey: string | null) => void;
+  setFloorCode: (code: string | null) => void;
   setNs3451: (codes: string[]) => void;
   setVerification: (statuses: VerificationStatus[]) => void;
   setSystems: (systems: string[]) => void;
@@ -50,7 +55,7 @@ export interface ViewerFilterState {
 const initial = {
   scope: null,
   hiddenIfcClasses: [] as string[],
-  storey: null as string | null,
+  floor_code: null as string | null,
   ns3451: [] as string[],
   verification: [] as VerificationStatus[],
   systems: [] as string[],
@@ -76,7 +81,7 @@ export const useViewerFilterStore = create<ViewerFilterState>()(
       showAllIfcClasses: () => set({ hiddenIfcClasses: [] }),
       hideAllIfcClasses: (all) => set({ hiddenIfcClasses: all }),
 
-      setStorey: (storey) => set({ storey }),
+      setFloorCode: (code) => set({ floor_code: code }),
       setNs3451: (codes) => set({ ns3451: codes }),
       setVerification: (statuses) => set({ verification: statuses }),
       setSystems: (systems) => set({ systems }),
@@ -93,12 +98,15 @@ export const useViewerFilterStore = create<ViewerFilterState>()(
       reset: () => set((s) => ({ ...initial, scope: s.scope })),
     }),
     {
-      name: 'sprucelab-viewer-filter',
+      // v2: schema rename of `storey` -> `floor_code`. Bumping the persist
+      // key drops stale localStorage so a returning user with a v1 selection
+      // doesn't rehydrate into the renamed field as undefined.
+      name: 'sprucelab-viewer-filter-v2',
       storage: createJSONStorage(() => localStorage),
       // Persist facets but not the scope (it's set per-mount).
       partialize: (s) => ({
         hiddenIfcClasses: s.hiddenIfcClasses,
-        storey: s.storey,
+        floor_code: s.floor_code,
         ns3451: s.ns3451,
         verification: s.verification,
         systems: s.systems,

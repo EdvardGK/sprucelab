@@ -89,7 +89,7 @@ function getCamera(world: OBC.SimpleWorld<any, any, any> | null): OBC.OrthoPersp
 export type ViewerViewMode = 'perspective' | 'wireframe' | 'xray';
 
 // GUID-based isolation: show only specific instances, optionally highlight one.
-// Takes priority over typeVisibility / storeyFilter while active. When set back
+// Takes priority over typeVisibility / floorCodeFilter while active. When set back
 // to null, delta-tracking refs reset so the other facets re-sync from scratch.
 export interface IsolationConfig {
   guids: string[];                     // GUIDs to keep visible (empty = nothing visible)
@@ -118,8 +118,15 @@ interface UnifiedBIMViewerProps {
   // Type Filtering (controlled by parent)
   typeVisibility?: Record<string, boolean>;   // { 'IfcWall': true, 'IfcDoor': false }
 
-  // Storey Filtering — show only elements on this storey (null = show all)
-  storeyFilter?: string | null;
+  // Floor filtering — show only elements on this floor (null = show all).
+  // The value is matched against discovered IFC storey names directly,
+  // unless `floorAliases[floorCodeFilter]` resolves it to a list of names.
+  floorCodeFilter?: string | null;
+  // Canonical-floor alias map: { code -> [storey names that count as this code] }.
+  // Built by FederatedViewer from `useScopeFloors(scope).canonical_floors` so a
+  // single canonical "L1" can hide/show the right storeys across federated
+  // models that use different name conventions (Plan 01 / Etg 1 / GF / …).
+  floorAliases?: Record<string, string[]>;
 
   // GUID isolation (used by the Type page to show only instances of a single type)
   isolation?: IsolationConfig | null;
@@ -168,7 +175,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   modelId: singleModelId,
   modelVisibility,
   typeVisibility: typeVisibilityProp,  // Controlled type filtering from parent
-  storeyFilter,
+  floorCodeFilter,
+  floorAliases,
   isolation = null,
   enableSectionPlanes = true,
   showPropertiesPanel = true,
@@ -1466,48 +1474,54 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // branch only fires on the null transition (not every typeInfo update).
   const wasIsolatedRef = useRef(false);
 
-  // Apply storey filter — show only elements on the selected storey.
-  // When storeyFilter is null/undefined, show all (reset).
+  // Apply floor filter — show only elements on the selected floor.
+  // When floorCodeFilter is null/undefined, show all (reset). When the value
+  // resolves through `floorAliases`, show the union of all matched storey
+  // names; otherwise treat the value as a literal storey name.
   useEffect(() => {
     if (!hiderRef.current || storeyInfo.size === 0) return;
-    // GUID isolation takes priority — skip storey filter while active.
+    // GUID isolation takes priority — skip floor filter while active.
     if (isolation && isolation.guids.length > 0) return;
 
     const prev = prevStoreyFilterRef.current;
     // Skip if nothing changed
-    if (storeyFilter === prev) return;
+    if (floorCodeFilter === prev) return;
 
     const rafId = requestAnimationFrame(() => {
       const hider = hiderRef.current;
       if (!hider) return;
 
       try {
-        if (storeyFilter == null) {
-          // Show everything
+        if (floorCodeFilter == null) {
           hider.set(true);
         } else {
-          // Hide all, then show only the selected storey
           hider.set(false);
-          const storeyData = storeyInfo.get(storeyFilter);
-          if (storeyData) {
-            hider.set(true, storeyData.map);
+          const aliasNames = floorAliases?.[floorCodeFilter];
+          const targetNames = aliasNames && aliasNames.length > 0
+            ? aliasNames
+            : [floorCodeFilter];
+          // Match case-insensitively to absorb minor name-casing differences.
+          const targetSet = new Set(targetNames.map((n) => n.toLowerCase()));
+          for (const [storeyName, data] of storeyInfo) {
+            if (targetSet.has(storeyName.toLowerCase())) {
+              hider.set(true, data.map);
+            }
           }
         }
       } catch (err) {
-        console.error('[Viewer] Storey filter failed:', err);
+        console.error('[Viewer] Floor filter failed:', err);
         hider.set(true);
       }
 
-      prevStoreyFilterRef.current = storeyFilter;
+      prevStoreyFilterRef.current = floorCodeFilter;
 
-      // Poke culler after visibility change
       if (cullerRef.current) {
         cullerRef.current.needsUpdate = true;
       }
     });
 
     return () => cancelAnimationFrame(rafId);
-  }, [storeyFilter, storeyInfo, isolation]);
+  }, [floorCodeFilter, floorAliases, storeyInfo, isolation]);
 
   // GUID-based isolation (Type page). When active, hide all then show only the
   // matching fragments; in 'single' mode, also paint currentGuid orange. When

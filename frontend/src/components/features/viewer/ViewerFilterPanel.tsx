@@ -23,6 +23,7 @@ import { ChevronDown, ChevronRight, Eye, EyeOff, Filter, RotateCcw, Search, X } 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useViewerFilterStore } from '@/stores/useViewerFilterStore';
+import type { CanonicalFloor } from '@/hooks/use-scopes';
 import type { TypeInfo } from './ViewerFilterHUD';
 
 interface StoreyInfo { name: string; count: number }
@@ -30,6 +31,10 @@ interface StoreyInfo { name: string; count: number }
 interface ViewerFilterPanelProps {
   types: TypeInfo[];
   storeys?: StoreyInfo[];
+  /** When provided, the Storey section renders canonical floor entries
+   *  (button label = floor name, value = canonical code) instead of the
+   *  per-IFC discovered storey names. */
+  canonicalFloors?: CanonicalFloor[];
   collapsed?: boolean;
   onCollapseToggle?: () => void;
   className?: string;
@@ -38,16 +43,17 @@ interface ViewerFilterPanelProps {
 export function ViewerFilterPanel({
   types,
   storeys = [],
+  canonicalFloors,
   collapsed = false,
   onCollapseToggle,
   className,
 }: ViewerFilterPanelProps) {
   const hiddenIfcClasses = useViewerFilterStore((s) => s.hiddenIfcClasses);
-  const storey = useViewerFilterStore((s) => s.storey);
+  const floorCode = useViewerFilterStore((s) => s.floor_code);
   const toggleIfcClass = useViewerFilterStore((s) => s.toggleIfcClass);
   const showAllIfcClasses = useViewerFilterStore((s) => s.showAllIfcClasses);
   const hideAllIfcClasses = useViewerFilterStore((s) => s.hideAllIfcClasses);
-  const setStorey = useViewerFilterStore((s) => s.setStorey);
+  const setFloorCode = useViewerFilterStore((s) => s.setFloorCode);
   const reset = useViewerFilterStore((s) => s.reset);
 
   const [classSearch, setClassSearch] = useState('');
@@ -76,7 +82,7 @@ export function ViewerFilterPanel({
 
   const activeFacetCount =
     (hiddenIfcClasses.length > 0 ? 1 : 0) +
-    (storey ? 1 : 0);
+    (floorCode ? 1 : 0);
 
   if (collapsed) {
     return (
@@ -225,8 +231,54 @@ export function ViewerFilterPanel({
           </div>
         </Section>
 
-        {/* Storey facet */}
-        {storeys.length > 0 && (
+        {/* Storey facet — prefers canonical floors when the project has them. */}
+        {(canonicalFloors && canonicalFloors.length > 0) ? (
+          <Section
+            title="Storey"
+            count={canonicalFloors.length}
+            isOpen={openSections.storey}
+            onToggle={() => setOpenSections((s) => ({ ...s, storey: !s.storey }))}
+          >
+            <div className="space-y-0.5">
+              <button
+                onClick={() => setFloorCode(null)}
+                className={cn(
+                  'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
+                  floorCode === null
+                    ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30'
+                    : 'text-white/60 hover:bg-white/10 border border-transparent',
+                )}
+              >
+                <span>All storeys</span>
+              </button>
+              {canonicalFloors.map(({ code, name, elevation_m }) => {
+                const active = floorCode === code;
+                return (
+                  <button
+                    key={code}
+                    onClick={() => setFloorCode(active ? null : code)}
+                    className={cn(
+                      'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
+                      active
+                        ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30'
+                        : 'text-white/60 hover:bg-white/10 border border-transparent',
+                    )}
+                  >
+                    <span className="truncate text-left">
+                      <span className="font-mono text-white/40 mr-1.5">{code}</span>
+                      {name}
+                    </span>
+                    {elevation_m !== null && elevation_m !== undefined && (
+                      <span className="tabular-nums shrink-0 text-white/40">
+                        {elevation_m.toFixed(2)}m
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+        ) : storeys.length > 0 ? (
           <Section
             title="Storey"
             count={storeys.length}
@@ -235,10 +287,10 @@ export function ViewerFilterPanel({
           >
             <div className="space-y-0.5">
               <button
-                onClick={() => setStorey(null)}
+                onClick={() => setFloorCode(null)}
                 className={cn(
                   'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
-                  storey === null
+                  floorCode === null
                     ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30'
                     : 'text-white/60 hover:bg-white/10 border border-transparent',
                 )}
@@ -246,11 +298,11 @@ export function ViewerFilterPanel({
                 <span>All storeys</span>
               </button>
               {storeys.map(({ name, count }) => {
-                const active = storey === name;
+                const active = floorCode === name;
                 return (
                   <button
                     key={name}
-                    onClick={() => setStorey(active ? null : name)}
+                    onClick={() => setFloorCode(active ? null : name)}
                     className={cn(
                       'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
                       active
@@ -265,7 +317,7 @@ export function ViewerFilterPanel({
               })}
             </div>
           </Section>
-        )}
+        ) : null}
 
         {/* Generic property filters — NS3451, MMI, LoadBearing, FireRating,
             Materials, IsExternal, etc. all live here uniformly. */}
