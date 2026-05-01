@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { TypeDashboard } from '@/components/features/warehouse/TypeDashboard';
 import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
+import { ProjectFloorsTab } from '@/components/features/projects/ProjectFloorsTab';
 import {
   useDashboardMetrics,
   type ModelHealthMetrics,
@@ -123,6 +124,7 @@ export default function ProjectDashboard() {
               <TabsTrigger value="overview">{t('dashboard.tabs.overview')}</TabsTrigger>
               <TabsTrigger value="models">{t('nav.models')}</TabsTrigger>
               <TabsTrigger value="bim">{t('dashboard.tabs.bim')}</TabsTrigger>
+              <TabsTrigger value="floors">{t('floors.tab')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="flex-1 min-h-0 overflow-y-auto">
@@ -142,6 +144,10 @@ export default function ProjectDashboard() {
 
             <TabsContent value="bim" className="flex-1 min-h-0 overflow-hidden">
               <TypeDashboard projectId={id!} />
+            </TabsContent>
+
+            <TabsContent value="floors" className="flex-1 min-h-0 overflow-y-auto">
+              <ProjectFloorsTab projectId={id!} />
             </TabsContent>
           </Tabs>
         </div>

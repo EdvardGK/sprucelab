@@ -14,12 +14,12 @@ import { useViewerFilterStore } from '@/stores/useViewerFilterStore';
 import type { VerificationStatus } from '@/stores/useViewerFilterStore';
 
 interface EncodedFilters {
-  h?: string[];      // hiddenIfcClasses
-  s?: string | null; // storey
-  n?: string[];      // ns3451
+  h?: string[];       // hiddenIfcClasses
+  fc?: string | null; // floor_code (was `s` for storey, pre-F-3)
+  n?: string[];       // ns3451
   v?: VerificationStatus[];
-  sy?: string[];     // systems
-  hm?: string[];     // hiddenModels
+  sy?: string[];      // systems
+  hm?: string[];      // hiddenModels
 }
 
 function encode(state: EncodedFilters): string {
@@ -45,7 +45,7 @@ function decode(encoded: string): EncodedFilters | null {
 function isEmpty(s: EncodedFilters): boolean {
   return (
     !s.h?.length &&
-    !s.s &&
+    !s.fc &&
     !s.n?.length &&
     !s.v?.length &&
     !s.sy?.length &&
@@ -71,7 +71,7 @@ export function useViewerFilterUrl(): void {
 
     const state = useViewerFilterStore.getState();
     if (decoded.h) state.setHiddenIfcClasses(decoded.h);
-    if (decoded.s !== undefined) state.setStorey(decoded.s);
+    if (decoded.fc !== undefined) state.setFloorCode(decoded.fc);
     if (decoded.n) state.setNs3451(decoded.n);
     if (decoded.v) state.setVerification(decoded.v);
     if (decoded.sy) state.setSystems(decoded.sy);
@@ -84,7 +84,7 @@ export function useViewerFilterUrl(): void {
     const unsubscribe = useViewerFilterStore.subscribe((s) => {
       const payload: EncodedFilters = {
         h: s.hiddenIfcClasses,
-        s: s.storey,
+        fc: s.floor_code,
         n: s.ns3451,
         v: s.verification,
         sy: s.systems,

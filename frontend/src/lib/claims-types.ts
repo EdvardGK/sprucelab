@@ -2,7 +2,7 @@
 // Shapes match backend serializers in apps/entities/serializers.py.
 
 export type ClaimStatus = 'unresolved' | 'promoted' | 'rejected' | 'superseded';
-export type ClaimType = 'rule' | 'spec' | 'requirement' | 'constraint' | 'fact';
+export type ClaimType = 'rule' | 'spec' | 'requirement' | 'constraint' | 'fact' | 'storey_list';
 
 export interface ClaimNormalized {
   predicate?: string;
@@ -10,7 +10,15 @@ export interface ClaimNormalized {
   value?: string | number;
   units?: string;
   lang?: string;
+  // storey_list claims carry a `floors` array — see StoreyListClaimPanel.
+  floors?: StoreyListProposal[];
   [key: string]: unknown;
+}
+
+export interface StoreyListProposal {
+  name: string;
+  elevation_m?: number | null;
+  source_guid?: string;
 }
 
 export interface ClaimSourceLocation {

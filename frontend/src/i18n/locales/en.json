@@ -1086,6 +1086,42 @@
     "deviations": "deviations",
     "remaining": "remaining"
   },
+  "floors": {
+    "tab": "Floors",
+    "canonical": "Canonical",
+    "proposed": "Proposed",
+    "scope": "Scope",
+    "noCanonical": "No canonical floors yet — promote a storey_list claim to populate.",
+    "code": "Code",
+    "name": "Name",
+    "elevation": "Elevation",
+    "aliases": "Aliases",
+    "models": "Deviating models",
+    "noDeviations": "All models match the canonical floor list.",
+    "settings": {
+      "title": "Verification gates",
+      "blockOnDeviation": "Block publish on storey deviation",
+      "blockOnDeviationHint": "When enabled, models with storey_match errors cannot be published.",
+      "mergeTolerance": "Merge tolerance (m)",
+      "mergeToleranceHint": "Max storey-elevation delta treated as the same floor within this scope.",
+      "saved": "Saved",
+      "saveError": "Save failed"
+    },
+    "diff": {
+      "title": "Canonical vs proposed",
+      "tolerance": "Tolerance",
+      "status": "Status",
+      "empty": "Claim has no proposed floors.",
+      "noScope": "Claim has no scope — assign a scope to compare against canonical floors.",
+      "kind": {
+        "match": "match",
+        "alias_merge": "alias",
+        "rename": "rename",
+        "new": "new",
+        "missing": "missing"
+      }
+    }
+  },
   "drill": {
     "noData": "No data",
     "exportCsv": "CSV",
@@ -1151,7 +1187,8 @@
       "spec": "Spec",
       "requirement": "Requirement",
       "constraint": "Constraint",
-      "fact": "Fact"
+      "fact": "Fact",
+      "storey_list": "Storey list"
     },
     "predicates": {
       "fire_resistance": "Fire resistance",

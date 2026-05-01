@@ -1086,6 +1086,42 @@
     "deviations": "avvik",
     "remaining": "gjenstår"
   },
+  "floors": {
+    "tab": "Etasjer",
+    "canonical": "Kanonisk",
+    "proposed": "Foreslått",
+    "scope": "Område",
+    "noCanonical": "Ingen kanoniske etasjer ennå — promoter en etasjelistepåstand for å fylle inn.",
+    "code": "Kode",
+    "name": "Navn",
+    "elevation": "Høyde",
+    "aliases": "Alias",
+    "models": "Modeller med avvik",
+    "noDeviations": "Alle modeller samsvarer med den kanoniske etasjelisten.",
+    "settings": {
+      "title": "Verifikasjonsporter",
+      "blockOnDeviation": "Blokker publisering ved etasjeavvik",
+      "blockOnDeviationHint": "Når aktivert, kan modeller med etasjefeil ikke publiseres.",
+      "mergeTolerance": "Sammenslåingstoleranse (m)",
+      "mergeToleranceHint": "Maksimalt avvik i etasjehøyde som behandles som samme etasje innenfor dette området.",
+      "saved": "Lagret",
+      "saveError": "Lagring feilet"
+    },
+    "diff": {
+      "title": "Kanonisk vs foreslått",
+      "tolerance": "Toleranse",
+      "status": "Status",
+      "empty": "Påstanden har ingen foreslåtte etasjer.",
+      "noScope": "Påstanden har ingen tilknyttet område — tilordne et område for å sammenligne mot kanoniske etasjer.",
+      "kind": {
+        "match": "samsvar",
+        "alias_merge": "alias",
+        "rename": "navnebytte",
+        "new": "ny",
+        "missing": "mangler"
+      }
+    }
+  },
   "drill": {
     "noData": "Ingen data",
     "exportCsv": "CSV",
@@ -1151,7 +1187,8 @@
       "spec": "Spesifikasjon",
       "requirement": "Krav",
       "constraint": "Begrensning",
-      "fact": "Faktum"
+      "fact": "Faktum",
+      "storey_list": "Etasjeliste"
     },
     "predicates": {
       "fire_resistance": "Brannmotstand",

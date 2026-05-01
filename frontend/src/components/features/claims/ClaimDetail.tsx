@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useClaimDetail, useClaimConflicts } from '@/hooks/use-claims';
 import type { ClaimListItem, ClaimStatus } from '@/lib/claims-types';
+import { StoreyListClaimPanel } from './StoreyListClaimPanel';
 
 interface ClaimDetailProps {
   claimId: string | null;
@@ -125,25 +126,28 @@ export function ClaimDetail({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* Normalized triple */}
-        <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-            {t('claims.detail.normalized')}
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <Field label={t('claims.detail.predicate')} value={normalized.predicate as string} />
-            <Field label={t('claims.detail.subject')} value={normalized.subject as string} />
-            <Field
-              label={t('claims.detail.value')}
-              value={
-                normalized.value !== undefined
-                  ? `${normalized.value}${normalized.units ? ` ${normalized.units}` : ''}`
-                  : null
-              }
-            />
-            <Field label={t('claims.detail.lang')} value={normalized.lang as string} />
-          </div>
-        </section>
+        {claim.claim_type === 'storey_list' ? (
+          <StoreyListClaimPanel claim={claim} />
+        ) : (
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              {t('claims.detail.normalized')}
+            </h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Field label={t('claims.detail.predicate')} value={normalized.predicate as string} />
+              <Field label={t('claims.detail.subject')} value={normalized.subject as string} />
+              <Field
+                label={t('claims.detail.value')}
+                value={
+                  normalized.value !== undefined
+                    ? `${normalized.value}${normalized.units ? ` ${normalized.units}` : ''}`
+                    : null
+                }
+              />
+              <Field label={t('claims.detail.lang')} value={normalized.lang as string} />
+            </div>
+          </section>
+        )}
 
         {/* Provenance */}
         <section>
