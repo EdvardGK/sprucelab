@@ -79,7 +79,8 @@ class ProjectConfigSerializer(serializers.ModelSerializer):
         model = ProjectConfig
         fields = [
             'id', 'project', 'project_name', 'version', 'is_active', 'name',
-            'config', 'created_by', 'created_at', 'updated_at', 'notes'
+            'config', 'phase', 'block_on_new_types', 'block_on_storey_deviation',
+            'created_by', 'created_at', 'updated_at', 'notes'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -139,7 +140,10 @@ class ProjectConfigUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProjectConfig
-        fields = ['name', 'config', 'is_active', 'notes']
+        fields = [
+            'name', 'config', 'is_active', 'notes',
+            'phase', 'block_on_new_types', 'block_on_storey_deviation',
+        ]
 
 
 class ProjectConfigImportSerializer(serializers.Serializer):
@@ -224,7 +228,8 @@ class ProjectConfigDetailSerializer(serializers.ModelSerializer):
         model = ProjectConfig
         fields = [
             'id', 'project', 'project_name', 'version', 'is_active', 'name',
-            'config', 'created_by', 'created_at', 'updated_at', 'notes',
+            'config', 'phase', 'block_on_new_types', 'block_on_storey_deviation',
+            'created_by', 'created_at', 'updated_at', 'notes',
             # Computed fields
             'has_eir', 'has_bep', 'has_tfm', 'target_mmi',
             'mmi_levels_defined', 'validation_rule_count',

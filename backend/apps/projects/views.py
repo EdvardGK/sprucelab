@@ -696,6 +696,89 @@ class ProjectScopeViewSet(viewsets.ModelViewSet):
         serializer = SourceFileListSerializer(qs, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def floors(self, request, pk=None):
+        """Canonical floors plus per-model proposed lists with deviation issues.
+
+        ``GET /api/projects/scopes/{id}/floors/`` powers two F-3 surfaces:
+        the Project Floors tab (canonical-vs-deviating-models view) and the
+        Claim Inbox storey_list diff renderer.
+
+        The deviation logic comes from
+        ``verification_engine.check_storey_deviation``; this endpoint adds
+        the proposed-floors payload (latest ``storey_list`` Claim per model's
+        source_file) so the UI can render the diff without a second round
+        trip per model.
+        """
+        from apps.entities.models import Claim
+        from apps.entities.services.verification_engine import (
+            check_storey_deviation,
+        )
+        from apps.models.models import Model
+
+        scope = self.get_object()
+        canonical = list(scope.canonical_floors or [])
+        models_qs = (
+            Model.objects.filter(scope=scope)
+            .select_related('source_file')
+            .order_by('name')
+        )
+
+        models_payload = []
+        for model in models_qs:
+            proposed_floors: list[dict] = []
+            if model.source_file_id is not None:
+                claim = (
+                    Claim.objects
+                    .filter(source_file_id=model.source_file_id, claim_type='storey_list')
+                    .order_by('-extracted_at')
+                    .first()
+                )
+                if claim is not None and isinstance(claim.normalized, dict):
+                    raw = claim.normalized.get('floors')
+                    if isinstance(raw, list):
+                        for entry in raw:
+                            if not isinstance(entry, dict):
+                                continue
+                            name = entry.get('name')
+                            if not isinstance(name, str) or not name.strip():
+                                continue
+                            elev = entry.get('elevation_m')
+                            try:
+                                elev_m = float(elev) if elev is not None else None
+                            except (TypeError, ValueError):
+                                elev_m = None
+                            proposed_floors.append({
+                                'name': name.strip(),
+                                'elevation_m': elev_m,
+                                'source_guid': entry.get('source_guid'),
+                            })
+
+            issues = [
+                {
+                    'rule_id': i.rule_id,
+                    'rule_name': i.rule_name,
+                    'severity': i.severity,
+                    'message': i.message,
+                }
+                for i in check_storey_deviation(model)
+            ]
+            models_payload.append({
+                'model_id': str(model.id),
+                'model_name': model.name or model.original_filename or '',
+                'source_file_id': str(model.source_file_id) if model.source_file_id else None,
+                'proposed_floors': proposed_floors,
+                'issues': issues,
+            })
+
+        return Response({
+            'scope_id': str(scope.id),
+            'scope_name': scope.name,
+            'storey_merge_tolerance_m': float(scope.storey_merge_tolerance_m or 0.0),
+            'canonical_floors': canonical,
+            'models': models_payload,
+        })
+
     @action(detail=False, methods=['get'])
     def tree(self, request):
         """Return scopes as a denormalized tree per project.
