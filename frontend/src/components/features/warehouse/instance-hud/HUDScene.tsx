@@ -976,12 +976,14 @@ export default function HUDScene({
       secH = size.y;
     }
 
-    console.log('[HUDScene] Section setup:', {
-      longestAxis: longest,
-      size: { x: size.x, y: size.y, z: size.z },
-      camDist,
-      sectionDims: { w: secW, h: secH },
-    });
+    if (import.meta.env.DEV) {
+      console.log('[HUDScene] Section setup:', {
+        longestAxis: longest,
+        size: { x: size.x, y: size.y, z: size.z },
+        camDist,
+        sectionDims: { w: secW, h: secH },
+      });
+    }
 
     sectionRef.current = {
       clipPlane: new THREE.Plane(clipNormal, 0),
@@ -1042,12 +1044,14 @@ export default function HUDScene({
     profileGroupRef.current = group;
     hasProfileRef.current = true;
 
-    console.log('[HUDScene] Profile outline built:', {
-      type: profileData.profile_type,
-      points: profileData.outline.length,
-      voids: profileData.inner_outlines?.length || 0,
-      size: { w: size.x.toFixed(1), h: size.y.toFixed(1) },
-    });
+    if (import.meta.env.DEV) {
+      console.log('[HUDScene] Profile outline built:', {
+        type: profileData.profile_type,
+        points: profileData.outline.length,
+        voids: profileData.inner_outlines?.length || 0,
+        size: { w: size.x.toFixed(1), h: size.y.toFixed(1) },
+      });
+    }
 
     // If currently in 2D, apply profile camera view
     if (viewDimRef.current === '2d') {
@@ -1082,10 +1086,12 @@ export default function HUDScene({
     sandwichGroupRef.current = group;
     hasSandwichRef.current = true;
 
-    console.log('[HUDScene] Sandwich diagram built:', {
-      layers: validLayers.length,
-      totalThickness: validLayers.reduce((s, l) => s + (l.thickness_mm || 0), 0),
-    });
+    if (import.meta.env.DEV) {
+      console.log('[HUDScene] Sandwich diagram built:', {
+        layers: validLayers.length,
+        totalThickness: validLayers.reduce((s, l) => s + (l.thickness_mm || 0), 0),
+      });
+    }
 
     if (viewDimRef.current === '2d') {
       applySandwichView();
