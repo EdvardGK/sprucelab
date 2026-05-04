@@ -262,6 +262,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'config.authentication.DevBypassAuthentication',  # No-op unless DEV_AUTH_BYPASS=1 + DEBUG=True
         'config.authentication.SupabaseAuthentication',
         'rest_framework.authentication.SessionAuthentication',  # Keep for Django admin
     ],
@@ -295,9 +296,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React dev server
     "http://localhost:5173",  # Vite dev server
     "http://localhost:5174",  # Vite fallback port
+    "http://localhost:4173",  # Vite preview server (`yarn preview`)
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
+    "http://127.0.0.1:4173",
     "https://sprucelab.vercel.app",  # Production frontend (Vercel alias)
     "https://sprucelab.io",          # Production custom domain
     "https://www.sprucelab.io",
@@ -357,6 +360,15 @@ if os.getenv('FRONTEND_URL'):
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET')  # Found in Supabase Dashboard > Settings > API
+
+# Dev-only auth bypass.
+#
+# When DEV_AUTH_BYPASS=1 AND DEBUG=True, every request authenticates as the
+# dev superuser DEV_AUTH_BYPASS_EMAIL (auto-created with an approved profile).
+# Both gates are required — production has DEBUG=False, so the env var alone
+# cannot enable the bypass on Railway. Default is OFF.
+DEV_AUTH_BYPASS = os.getenv('DEV_AUTH_BYPASS', '').lower() in ('1', 'true', 'yes')
+DEV_AUTH_BYPASS_EMAIL = os.getenv('DEV_AUTH_BYPASS_EMAIL', 'dev@local.test')
 
 
 # FastAPI IFC Service Configuration

@@ -5,6 +5,8 @@ const baseURL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api';
 
+const DEV_AUTH_BYPASS = import.meta.env.VITE_DEV_AUTH_BYPASS === '1';
+
 const apiClient = axios.create({
   baseURL,
   headers: {
@@ -14,6 +16,7 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  if (DEV_AUTH_BYPASS) return config;
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (token) {
@@ -25,7 +28,7 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error?.response?.status === 401) {
+    if (error?.response?.status === 401 && !DEV_AUTH_BYPASS) {
       // Backend rejected our token. Ask Supabase to refresh; if that fails
       // or still yields no session, sign out hard and bounce to /login so
       // the user doesn't sit on a zombie app shell.
