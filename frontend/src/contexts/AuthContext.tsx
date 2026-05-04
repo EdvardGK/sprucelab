@@ -10,6 +10,29 @@ import {
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+// Local dev only. When `VITE_DEV_AUTH_BYPASS=1` is set in the build env (see
+// `.env.development`), Supabase is skipped entirely and a synthetic session
+// is returned synchronously. Pair with backend `DEV_AUTH_BYPASS=1`.
+export const DEV_AUTH_BYPASS = import.meta.env.VITE_DEV_AUTH_BYPASS === '1';
+
+const DEV_BYPASS_USER = {
+  id: '00000000-0000-0000-0000-000000000dev',
+  email: 'dev@local.test',
+  app_metadata: {},
+  user_metadata: { display_name: 'Dev (local bypass)' },
+  aud: 'authenticated',
+  created_at: '2026-01-01T00:00:00Z',
+} as unknown as User;
+
+const DEV_BYPASS_SESSION = {
+  user: DEV_BYPASS_USER,
+  access_token: 'dev-bypass',
+  refresh_token: 'dev-bypass',
+  token_type: 'bearer',
+  expires_in: 86400 * 365,
+  expires_at: Math.floor(Date.now() / 1000) + 86400 * 365,
+} as unknown as Session;
+
 export interface SignUpInput {
   email: string;
   password: string;
@@ -37,11 +60,14 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(
+    DEV_AUTH_BYPASS ? DEV_BYPASS_SESSION : null,
+  );
+  const [loading, setLoading] = useState(!DEV_AUTH_BYPASS);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (DEV_AUTH_BYPASS) return undefined;
     let mounted = true;
 
     supabase.auth
