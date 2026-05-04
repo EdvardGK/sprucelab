@@ -1,578 +1,603 @@
 # Wireframes — Sprucelab dashboards subsystem (Skiplum first consumer)
 
-ASCII wireframes for the gated dashboards subsystem proposed in #1. Designed to be marked
-up inline — quote-and-replace any block, push edits to this branch, or comment in PR #2.
+ASCII wireframes for the dashboards subsystem proposed in #1, aligned with the
+plan docs landed on `main`:
 
-> **Status**: v0.1 — rewritten after a systematic review of the sprucelab codebase. Earlier
-> v0 made incorrect assumptions about scope schema, Company existence, and what was already
-> shipped. This draft maps every wireframe to actual files and flags net-new work.
+- `docs/plans/2026-05-03-21-15_Forward-Deployed-Embed.md`
+- `docs/plans/2026-05-03-21-30_ISO19650-Framework.md`
+
+And the edkjo response to omarchy's open questions:
+
+- `docs/plans/2026-05-04-02-00_Embed-Open-Questions-Edkjo-Pass.md`
+
+> **Status**: v0.2 — rewritten around omarchy's cross-filter / tile model.
+> v0.1's "page per data type" structure was the wrong frame. Dashboards are
+> now single cross-filtering surfaces composed of tiles, with the 3D viewer
+> as one of the tiles. v0 and v0.1 are in git history.
 
 ---
 
-## 0. Reality check — what's already shipped vs. what this proposal adds
+## What changed from v0.1
 
-Reviewed against `main` at `85f9212` (F-3 merged 2026-05-01).
+| v0.1 (now wrong) | v0.2 (aligned with omarchy's plans) |
+|---|---|
+| Models / Types / Materials / Floors as separate pages | One dashboard surface; those are tile compositions on it |
+| Sidebar `Data` section lists 5 routes | Sidebar `Dashboards` section lists 3 pre-built dashboards |
+| BIM-krav block on Project Overview | Requirements Fulfillment is the primary dashboard, replacing Overview |
+| Quality issues as `health_score` failures | Quality tiles nested inside the requirements they violate; `health_score` retired |
+| Model Workspace as a dedicated page with viewer pinned right | ViewerTile cross-filters with chart tiles on the same surface |
+| No filter UI in the layout | Filter chip strip + highlight/filter mode toggle in dashboard header |
 
-| Concern | Existing in sprucelab | Net-new for this proposal |
-|---|---|---|
-| **Auth (Supabase magic link)** | ✅ `frontend/src/contexts/AuthContext.tsx`, `pages/Login.tsx`, `pages/AuthCallback.tsx`. Works. | Skiplum-flavor branding on login/sent screens; copy in NB. |
-| **Sidebar shell** | ✅ `frontend/src/components/Layout/Sidebar.tsx` (project-context aware, glassmorphic, lucide icons) | Add Firma section above Project; render `ProjectScope` subtree under "Omfang" when project has scopes. |
-| **Project dashboard** | ✅ `pages/ProjectDashboard.tsx` with 4 tabs: Overview, Models, **Floors** (F-3), Types/Warehouse | Skiplum-flavor Overview tab (discipline cards, NS3451/TFM/MMI coverage bars, requirements matrix). |
-| **Models index + workspace** | ✅ `pages/ProjectModels.tsx`, `pages/ModelWorkspace.tsx`, `UnifiedBIMViewer` with floor_code + alias filtering | No structural changes; existing workspace covers Skiplum's model-page needs. |
-| **Type browser** | ✅ `pages/ProjectTypeLibrary.tsx`, `components/features/warehouse/{TypeDashboard,TypeBrowser,TypeMappingWorkspace}` | Bring Skiplum's per-type classification rendering (per-`type_coverage` config, not hardcoded NS3451). |
-| **Materials browser** | ✅ `pages/ProjectMaterialLibrary.tsx`, `components/features/{warehouse,materials}/MaterialBrowserView` | Wire `EPDMapping` + `ProductComposition` into existing browser. |
-| **ProjectScope tree** | ✅ `apps/projects/models.py:314` `ProjectScope` (parent FK, scope_type, canonical_floors). `useProjectScopes` hook. | Render the tree in the sidebar; allow scope-level drill into Models/Types/Materials. |
-| **Federated viewer** | ✅ `pages/FederatedViewer.tsx` consumes `useScopeFloors`; `floorAliases` resolves canonical→names | No changes needed; scope dashboards link into this. |
-| **Claim inbox** | ✅ `components/features/claims/{ClaimInbox,ClaimDetail,StoreyListClaimPanel}` | Out of scope here — used by authoring, not by client portal. |
-| **Field checklists** | ✅ `pages/ProjectField.tsx` + `apps/field/` | Out of scope. |
-| **Company concept** | ❌ Not modeled. UserProfile has `signup_metadata.company` (string in JSON). | **NEW**: `apps/companies/` with `Company` model; `Project` gets nullable `company` FK; existing UserProfile carries optional `Company` FK. |
-| **Per-project / per-scope ACL** | ❌ Only global `UserProfile.approval_status`. | **NEW**: `ProjectUser` M2M with role; or `ScopeAccess` for finer granularity. Middleware filters `Project`/`ProjectScope`/`Model` querysets by current user's allowed set. |
-| **Embed routes** | ❌ Not present. | **NEW**: `/embed/dashboard/<token>` and `/embed/viewer/<token>` chromeless. HMAC-signed tokens with TTL + per-domain frame-ancestors. |
-| **Static HTML export** | ❌ Sprucelab is live-only (SPA). Skiplum has it via `skiplum-automation/scripts/python/acc/html_reports.py`. | **NEW (Track A.5)**: `spruce dashboards build --project <slug> --out <dir>` writes static tree. Backend Django app `apps.dashboards` renders Jinja2 to disk; CLI is the trigger. |
-| **GitHub Pages / S3 push** | ❌ | **NEW**: Output adapters in the CLI (`--push-gh-pages`, `--push-s3`). |
-| **Skiplum data sources** | ❌ Skiplum's 8 projects live in `dalux-ifc-copy.json` (skiplum-automation). | **ETL**: One-off importer mapping Skiplum projects → sprucelab `Project` rows. |
+The ISO 19650 framework plan reframes the metric — "X of Y EIRs fulfilled"
+replaces `health_score`. The embed plan makes cross-filter the interaction
+model. v0.2 reflects both.
 
 ---
 
 ## 1. Hierarchy
 
-The Skiplum framing the user articulated — **Company → Project → Scope → Data** — maps onto
-existing sprucelab models with two additions:
+Unchanged from v0.1: **Company → Project → Scope → Dashboard surface**.
+
+Scope (`apps.projects.ProjectScope`, already shipped) is a tree of spatial
+groupings (project / building / wing / floor / zone / custom). Every dashboard
+surface is rooted in either a project or a scope; the filter context carries
+`project_id` (always) plus optional `scope_id`.
 
 ```
-Company           Project           Scope (tree)               Data
-NEW               EXISTS            EXISTS (ProjectScope)      EXISTS + 1 NEW
-                                    apps/projects/models.py:314
-─────────         ──────────────    ────────────────────       ─────────────────
-Magna             Grønland 55       Grønland 55 (root)         Models   ← apps/models
-                                                                Types    ← apps/entities
-Vedal             Landbrukskvartalet  ├ Bygg ABD (building)    Materials ← apps/entities
-                                       ├ Bygg C  (building)    Floors   ← F-3 just shipped
-Fokus Rådg.        Henrik Ibsens 90    │  ├ Etg 1 (floor)      BIM-krav (req matrix, NEW)
+Company           Project           Scope (tree, existing)     Dashboards (tile compositions)
+NEW               EXISTS            EXISTS                     NEW (3 MVP)
+─────────         ──────────────    ────────────────────       ────────────────────────────
+Magna             Grønland 55       G55 (root)                 1. Requirements Fulfillment
+                                                                2. Type Browser
+Vedal             Landbrukskvartalet  ├ Bygg ABD (building)    3. Floors Overview
+                                       ├ Bygg C  (building)
+Fokus Rådg.        Henrik Ibsens 90    │  ├ Etg 1 (floor)
                                        │  ├ Etg 2 (floor)
-Skiplum (intern.)  Kistefos             │  └ Etg 3 (floor)
-                                        ├ Bygg E  (building)
-                                        ├ Bygg F1 (building)
-                                        ├ Bygg F2 (building)
-                                        ├ Bygg H5/H7 (building)
-                                        └ Felles  (building)
+Skiplum (intern.)  Kistefos             ├ Bygg E  (building)
+                                        └ ...
 ```
-
-- **Company** — new model. `apps/companies/Company`: `id`, `name`, `slug`, `description`. `Project` gets a nullable `company` FK. `UserProfile` gets an optional `company` FK so a magic-link user is auto-scoped to one company unless they're staff.
-- **Project** — existing `apps.projects.Project`. No schema changes for the wireframes layer (only `company` FK).
-- **Scope** — existing `ProjectScope` tree. Skiplum's per-building dashboards (Landbrukskvartalet's 7 buildings, Kystbyen's 6) become a populated tree of `scope_type='building'` rows under the project root.
-- **Data** — Models, Types, Materials, **Floors** (F-3), and a new "BIM-krav" requirements matrix (probably re-using the Claim model with `claim_type='requirement'`).
 
 ### URL structure
 
 ```
-/                                              ProjectsGallery (existing) — filtered by user's company
+/                                              ProjectsGallery, filtered to user's company
 /companies/<co>/                               NEW — company landing
-/projects/<id>/                                EXISTS — ProjectDashboard tabs
-/projects/<id>/scopes/<scope-id>/              NEW — scope-level drill (filtered tabs)
-/projects/<id>/models/<model-id>/              EXISTS — ModelWorkspace
-/projects/<id>/viewer/<group-id>               EXISTS — FederatedViewer
-/projects/<id>/types/                          EXISTS — ProjectTypeLibrary
-/projects/<id>/material-library                EXISTS — ProjectMaterialLibrary
-/projects/<id>/field                           EXISTS — ProjectField (out of scope here)
-/embed/dashboard/<token>                       NEW — chromeless project/scope dashboard
-/embed/viewer/<token>                          NEW — chromeless viewer
+/projects/<id>/                                ProjectDashboard — defaults to Requirements
+/projects/<id>/dashboards/requirements         Requirements Fulfillment surface
+/projects/<id>/dashboards/types                Type Browser surface
+/projects/<id>/dashboards/floors               Floors Overview surface
+/projects/<id>/dashboards/<id>?scope=<sid>     same dashboards filtered to a scope
+/projects/<id>/dashboards/<id>?<filters>       same dashboards with filter context in URL
+/projects/<id>/models/<model-id>/              EXISTS — single-model workspace
+/projects/<id>/viewer/<group-id>               EXISTS — federated viewer (no chrome)
+/embed/dashboards/<dashboard-id>?token=<t>     NEW — chromeless dashboard for iframe consumers
 ```
 
-The `<co>` segment is only present where company context is meaningful (the company landing).
-Project-level URLs stay flat; the company is recovered from `Project.company` and shown in
-breadcrumbs/sidebar. This avoids a giant URL refactor and matches the existing route shape.
-
-### Scope semantics
-
-What `ProjectScope` already provides (`apps/projects/models.py:314–410`):
-- Tree of `{project, building, wing, floor, zone, custom}` rows
-- `canonical_floors` JSON list (populated from `storey_list` claims)
-- `storey_merge_tolerance_m` per scope
-- Spatial fields (`axis_grid_bounds`, `footprint_polygon`, `storey_elevation_min/max`)
-- Endpoint `GET /api/projects/scopes/<id>/floors/` returns canonical + per-model proposed + issues
-
-What "scope" gets used for in the dashboards UI:
-- **Navigation**: sidebar tree, scope picker
-- **Filtering**: scope-level Models/Types/Materials views (querysets filtered by `Model.scope` ancestry)
-- **Federated viewer scoping**: existing pattern, no changes
-
-What scopes do NOT do in this proposal:
-- They are NOT used as "type filters" (e.g. "only walls"). That's a separate `view`/`preset` concept and is out of v0.
-- They are NOT a free-form curation layer. The taxonomy (project/building/wing/floor/zone/custom) reflects spatial/organizational reality.
+The filter context lives in the URL querystring. Bookmarking + sharing a
+filtered view = sharing the URL. (See §9 cross-filter interaction.)
 
 ---
 
-## 2. Universal sidebar
+## 2. Sidebar
 
-Existing `Sidebar.tsx` is already 270-ish lines: glassmorphic, lucide icons, project-context
-detection, language selector at bottom. Two additions for the dashboards subsystem:
+Same structure as v0.1, with `Data` collapsed into `Dashboards`:
 
 ```
 ┌─────────────────────────┐
-│ [SF] Spruce Forge   🏠  │  ← existing brand (Skiplum-flavor: swap brand label/logo when host = site.skiplum.no)
+│ [SF] Spruce Forge   🏠  │  ← Skiplum-flavor when host = site.skiplum.no
 ├─────────────────────────┤
-│ 🔍  Søk         [+]     │  ← existing search + create
+│ 🔍  Søk         [+]     │
 ├─────────────────────────┤
-│ FIRMA              ▾    │  ← NEW section, only renders when user has a Company FK
-│   Magna              ●  │     ● = active company (multi-co users only)
+│ FIRMA              ▾    │  ← only when user has Company FK
+│   Magna              ●  │
 ├─────────────────────────┤
-│ 👤 Min side             │  ← existing /my-page (only when not in project)
-│                         │
-│ — or, when in project: —│
-│                         │
 │ Grønland 55             │  ← existing project label
 │                         │
-│ ▾ Omfang                │  ← NEW scope tree, expandable
-│   ▢ Hele prosjektet     │     "All scopes" reset
-│   ▾ Bygg ABD            │     scope_type=building
-│   ▾ Bygg C              │
-│      ▢ Etg 1            │     scope_type=floor (children)
+│ ▾ Omfang                │  ← ProjectScope tree (existing data, new UI)
+│   ▢ Hele prosjektet     │
+│   ▾ Bygg ABD            │
+│      ▢ Etg 1            │
 │      ▢ Etg 2            │
-│   ▢ Bygg E              │
-│   ▢ Felles              │
+│   ▢ Bygg C              │
 │                         │
-│ DATA                    │
-│ 📊 Dashboard            │  ← existing ProjectDashboard
-│ 📦 Modeller             │  ← existing ProjectModels
-│ 📋 Typer                │  ← existing ProjectTypeLibrary
-│ 🧱 Materialer           │  ← existing ProjectMaterialLibrary
-│ 🏢 Etasjer              │  ← F-3 Floors tab (currently nested in Dashboard; promote to top?)
-│ ✓  BIM-krav             │  ← NEW requirements matrix tab
-│ 📐 Tegninger            │  ← existing ProjectDrawings (Phase 5)
-│ 🔍 Workbench            │  ← existing BIMWorkbench (authoring; staff-only)
-│ ✅ Felt                 │  ← existing ProjectField (staff-only)
+│ DASHBOARDS              │
+│ ✓ Krav-oppfyllelse  ●   │  ← Requirements Fulfillment (default landing)
+│ 📋 Typer                │  ← Type Browser
+│ 🏢 Etasjer              │  ← Floors Overview
+│                         │
+│ MER                     │  ← collapsed by default
+│ 📦 Modeller             │  ← still navigable (existing ProjectModels)
+│ 🧱 Materialer           │
+│ 📐 Tegninger            │
+│ 🔍 Workbench (intern)   │
+│ ✅ Felt    (intern)     │
 │                         │
 ├─────────────────────────┤
-│ NO | EN                 │  ← existing LanguageSelector
-│ user@…    ↗ Logg ut     │  ← existing user dropdown
+│ NO | EN                 │
+│ user@…    ↗ Logg ut     │
 └─────────────────────────┘
 ```
 
-Implementation notes:
-- Firma section: pulls from new `useCurrentCompany()` hook; collapses for single-company users.
-- Omfang section: pulls `useProjectScopes(projectId)` (already exists, F-3) and renders the tree. Active scope from URL `?scope=<id>` or path `/projects/<id>/scopes/<id>/`.
-- Workbench / Felt sections hidden for client-tenant users (gated by role on `ProjectUser`).
-- The "Skiplum-flavor branding" (label, logo, primary color) is theme-driven; one CSS-vars switch keyed off domain or company.
+The three MVP dashboards (Requirements / Types / Floors) are first-class.
+`Modeller`, `Materialer`, etc. stay reachable but de-emphasized — they're
+navigation-only and will get rebuilt as tile compositions over time.
 
 ---
 
 ## 3. Auth flow
 
-Existing pages already render this flow (`Login.tsx`, `AuthCallback.tsx`). The wireframes
-below are Skiplum-flavor copy adjustments, not new screens.
+Unchanged from v0.1. Existing `Login.tsx` + `AuthCallback.tsx` already cover
+this. Skiplum-flavor copy adjustments only.
 
-### 3a. Login (Skiplum-tenant flavor)
-
-```
-┌──────────────────────────────────────────────────────────┐
-│         ╔══════════════════════════════════════╗         │
-│         ║  ▣ Skiplum                            ║         │
-│         ║                                       ║         │
-│         ║  Logg inn på rapportportalen          ║         │
-│         ║                                       ║         │
-│         ║  Vi sender en lenke til e-posten      ║         │
-│         ║  som er registrert hos Skiplum.       ║         │
-│         ║                                       ║         │
-│         ║  ┌──────────────────────────────┐    ║         │
-│         ║  │ navn@firma.no                │    ║         │
-│         ║  └──────────────────────────────┘    ║         │
-│         ║                                       ║         │
-│         ║  ┌──────────────────────────────┐    ║         │
-│         ║  │     Send påloggingslenke      │    ║         │
-│         ║  └──────────────────────────────┘    ║         │
-│         ║                                       ║         │
-│         ║  Mangler tilgang? Kontakt              ║         │
-│         ║  post@skiplum.no                       ║         │
-│         ╚══════════════════════════════════════╝         │
-└──────────────────────────────────────────────────────────┘
-```
-
-Existing `Login.tsx` has password+magic-link toggle. Skiplum tenant disables password (passwordless only).
-
-### 3b. Magic-link sent
-
-```
-┌──────────────────────────────────────────────────────────┐
-│         ╔══════════════════════════════════════╗         │
-│         ║  ✉  Sjekk e-posten din                ║         │
-│         ║                                       ║         │
-│         ║  Vi har sendt en lenke til             ║         │
-│         ║  navn@firma.no.                        ║         │
-│         ║                                       ║         │
-│         ║  Klikk lenken for å logge inn.        ║         │
-│         ║  Lenken er gyldig i 60 minutter.       ║         │
-│         ║                                       ║         │
-│         ║  Ikke fått e-posten? Sjekk søppelpost  ║         │
-│         ║  eller ‹send på nytt›.                 ║         │
-│         ╚══════════════════════════════════════╝         │
-└──────────────────────────────────────────────────────────┘
-```
-
-### 3c. Callback (existing — `AuthCallback.tsx`)
-
-Spinner while Supabase exchanges code for session, then redirect. Already works.
-
-### 3d. 403 / no access
-
-Renders when Supabase user is authenticated but has no `Company`/`ProjectUser` rows binding them to anything visible. New page; reuses login-card styling.
-
-```
-┌──────────────────────────────────────────────────────────┐
-│         ╔══════════════════════════════════════╗         │
-│         ║  Ingen tilgang                        ║         │
-│         ║                                       ║         │
-│         ║  Du er logget inn som                  ║         │
-│         ║  navn@firma.no, men har ikke tilgang  ║         │
-│         ║  til denne rapporten.                  ║         │
-│         ║                                       ║         │
-│         ║  Kontakt post@skiplum.no for å få      ║         │
-│         ║  tilgang.                              ║         │
-│         ║                                       ║         │
-│         ║  ‹Logg ut›                             ║         │
-│         ╚══════════════════════════════════════╝         │
-└──────────────────────────────────────────────────────────┘
-```
+(See v0.1 history for the auth wireframes; not duplicated here.)
 
 ---
 
-## 4. Home / projects gallery
+## 4. Home + company landing
 
-Existing `pages/ProjectsGallery.tsx`. Tenant filter on top of the existing query: when the
-current user has a `company` FK and is not staff, list only `Project.objects.filter(company=user.company)`.
-
-For staff (`*` access via `is_staff` or membership in a Skiplum-internal company): show
-projects grouped by company (current grouping or a new card-grid wrapper).
-
-```
-┌─────────────────────────┬───────────────────────────────────────────┐
-│ [SIDEBAR]               │  Dine prosjekter                           │
-│  Spruce Forge           │  ─────────────────────────────────────────│
-│                         │                                            │
-│  FIRMA           ▾      │  Magna                                     │
-│   Magna ●               │  ┌────────────────┐  ┌────────────────┐  │
-│                         │  │ Grønland 55    │  │ Henrik Ibsens  │  │
-│  Min side               │  │ ▰▰▰▰▰▰▰▰▱▱   │  │ ▰▰▰▰▰▰▱▱▱▱   │  │
-│                         │  │ 14 modeller    │  │ 6 modeller     │  │
-│                         │  └────────────────┘  └────────────────┘  │
-│                         │  ┌────────────────┐                       │
-│                         │  │ Palehaven      │                       │
-│                         │  │ ▰▰▰▰▰▰▰▱▱▱   │                       │
-│                         │  │ 6 modeller     │                       │
-│                         │  └────────────────┘                       │
-│                         │                                            │
-└─────────────────────────┴───────────────────────────────────────────┘
-```
-
-Cards are clickable → existing project dashboard route.
+Unchanged from v0.1. Existing `ProjectsGallery.tsx` filters to user's company;
+new `pages/CompanyLanding.tsx` adds a per-company landing with project cards.
 
 ---
 
-## 5. Company landing — NEW page
+## 5. Universal dashboard surface
 
-`/companies/<co>/`. Shows the active company plus its full project list — separate from the
-projects gallery so company-level metadata (contact, logo, billing) can grow here later.
+Every dashboard (Requirements / Types / Floors) shares this layout. Tiles are
+composed inside the same `DashboardFilterProvider`; clicking a tile updates
+the filter context, all other tiles re-project.
 
 ```
-┌─────────────────────────┬───────────────────────────────────────────┐
-│ [SIDEBAR]               │  Magna                                     │
-│  Spruce Forge           │  3 prosjekter                              │
-│                         │  Kontakt: kontakt@magna.no                 │
-│  FIRMA           ▾      │  ─────────────────────────────────────────│
-│   Magna ●               │                                            │
-│                         │  ┌─────────────────────────────────────┐ │
-│                         │  │ Grønland 55                          │ │
-│                         │  │ ARK · RIB · RIE · RIV · BIMK         │ │
-│                         │  │ ▰▰▰▰▰▰▰▰▱▱  82 % BIM-krav            │ │
-│                         │  │ 14 modeller · 87 typer · 23 mat.     │ │
-│                         │  └─────────────────────────────────────┘ │
-│                         │  ┌─────────────────────────────────────┐ │
-│                         │  │ Henrik Ibsens gate 90                │ │
-│                         │  │ ARK · RIB · RIE · RIV                │ │
-│                         │  │ ▰▰▰▰▰▰▱▱▱▱  61 % BIM-krav            │ │
-│                         │  └─────────────────────────────────────┘ │
-└─────────────────────────┴───────────────────────────────────────────┘
+┌─────────────────────┬──────────────────────────────────────────────────────┐
+│ [SIDEBAR]           │  Magna ▸ Grønland 55 ▸ Krav-oppfyllelse              │
+│                     │  ┌────────────────────────────────────────────────┐ │
+│  Magna              │  │ FILTER:                                        │ │
+│  Grønland 55        │  │  [Bygg ABD ✕]  [IfcWall ✕]  [Etg 03 ✕]  +Add  │ │  ← chip strip
+│                     │  │                                                │ │
+│  ▾ Omfang           │  │  Modus: ◉ Marker  ◯ Filter   [Tøm filter]      │ │  ← mode toggle
+│   ▢ Hele prosj.     │  └────────────────────────────────────────────────┘ │
+│   ▣ Bygg ABD ●      │                                                      │
+│   ▢ Bygg C          │  ┌──────────┬──────────┬────────────────────────────┐│
+│                     │  │ Tile A   │ Tile B   │   Tile C (ViewerTile)      ││
+│  DASHBOARDS         │  │ MetricC. │ Coverage │                            ││
+│  ✓ Krav ●           │  │          │ bars     │  [3D viewer w/ isolation   ││
+│  📋 Typer           │  ├──────────┼──────────┤   on filter context]       ││
+│  🏢 Etasjer         │  │ Tile D   │ Tile E   │                            ││
+│                     │  │ Type     │ Floor    │  [⛶][▣][✂][👁][🎨]        ││
+│                     │  │ dist.    │ dist.    │                            ││
+│                     │  └──────────┴──────────┴────────────────────────────┘│
+│                     │                                                      │
+└─────────────────────┴──────────────────────────────────────────────────────┘
 ```
 
-Net-new: `apps/companies/views.py CompanyViewSet`, `apps/companies/serializers.py`, frontend
-`pages/CompanyLanding.tsx`, hook `use-company.ts`.
+Common chrome:
+
+- **Breadcrumb**: Company ▸ Project ▸ Dashboard. Active scope appended when
+  filter has `scope_id`.
+- **Filter chip strip**: every active filter rendered as a removable chip.
+  `+Add` opens a popover for picking new dimensions. Chips are labelled with
+  the filter dimension and value (e.g. `Bygg ABD`, `IfcWall`, `MMI ≥ 350`).
+- **Mode toggle**: `Marker` (highlight — non-selected ghost-dimmed) /
+  `Filter` (non-selected removed entirely). Per omarchy plan §Highlight-vs-filter.
+- **Clear filter**: empties everything except `project_id` (and `scope_id` if
+  set in URL).
+- **Tile grid**: CSS grid `repeat(auto-fill, minmax(<min-px>, 1fr))` for
+  responsive layout. Tiles declare their `min_width` via CSS custom prop;
+  grid auto-collapses below.
+
+ViewerTile placement: by default occupies a 2×2 cell in the right column.
+On narrow viewports (< 600px), hides per Robustness #8 ("degraded mode"); a
+small button replaces it ("Åpne i Sprucelab"). Other tiles still render and
+cross-filter normally.
 
 ---
 
-## 6. Project dashboard
+## 6. Dashboard 1 — Requirements Fulfillment (the primary surface)
 
-Existing `pages/ProjectDashboard.tsx` has 4 tabs (Overview, Models, Floors, Types/Warehouse).
-Skiplum's flavor wants the Overview tab fleshed out and a new BIM-krav tab.
+Lands at `/projects/<id>/dashboards/requirements`. Default surface for the
+project — replaces every `health_score` UI per the ISO 19650 plan.
 
 ```
-┌─────────────────────────┬───────────────────────────────────────────┐
-│ [SIDEBAR]               │  Magna  ›  Grønland 55                    │
-│  Spruce Forge           │                                            │
-│                         │  [Oversikt] [Modeller] [Etasjer] [Typer]  │
-│  Magna                  │           [Materialer] [BIM-krav]  ← +new │
-│  Grønland 55 ●          │  ─────────────────────────────────────────│
-│                         │                                            │
-│  ▾ Omfang               │  ┌──────────┬──────────┬──────────┬─────┐│
-│   ▢ Hele prosjektet     │  │ Modeller │ Typer    │ Mat.     │ MMI ││
-│   ▢ Bygg ABD            │  │  14      │  87      │  23      │ 750 ││
-│   ▢ Bygg C              │  └──────────┴──────────┴──────────┴─────┘│
-│   ...                   │                                            │
-│                         │  Etter fag                                 │
-│  📊 Dashboard ●         │  ┌─────┬─────┬─────┬─────┬─────┐         │
-│  📦 Modeller            │  │ ARK │ RIB │ RIE │ RIV │ BIMK│         │
-│  📋 Typer               │  │  5  │  2  │  4  │  1  │  1  │         │
-│  🧱 Materialer          │  │ ●●● │ ●●  │ ●●● │  ●  │  ●  │         │
-│  🏢 Etasjer             │  └─────┴─────┴─────┴─────┴─────┘         │
-│  ✓  BIM-krav            │                                            │
-│                         │  Klassifiseringer                          │
-│                         │  ──────────────────                        │
-│                         │  NS3451  ▰▰▰▰▰▰▰▰▱▱  78 %  234 / 892     │
-│                         │  TFM     ▰▰▰▰▰▰▱▱▱▱  62 %  195 / 892     │
-│                         │  MMI     ▰▰▰▰▰▰▰▰▰▱  91 %  811 / 892     │
-│                         │                                            │
-│                         │  BIM-krav                       82 %      │
-│                         │  ──────────────────                        │
-│                         │  ✓ Schema       ✓ Authoring     ⚠ CRS    │
-│                         │  ✓ Units mm     ✓ Storeys       ✓ Spatial│
-│                         │  ✓ Typed prod.  ✗ Orphan typ.   ⚠ Proxy  │
-│                         │  ✓ GUID unique                            │
-└─────────────────────────┴───────────────────────────────────────────┘
+┌─────────────────────┬──────────────────────────────────────────────────────┐
+│ [SIDEBAR]           │  Magna ▸ Grønland 55 ▸ Krav-oppfyllelse              │
+│                     │  [FILTER chip strip]                                 │
+│                     │                                                      │
+│                     │  ┌──────────────────────────────────────────────────┐│
+│                     │  │ Krav-oppfyllelse                  9 av 13 (69 %)││  ← RequirementFulfillmentSummaryTile
+│                     │  │ ─────────────────────────────────                ││
+│                     │  │ ▰▰▰▰▰▰▰▱▱  per fulfilled                         ││
+│                     │  │ Per status:                                       ││
+│                     │  │   ✓ 9 oppfylt   ⚠ 3 delvis   ✗ 1 mangler         ││
+│                     │  └──────────────────────────────────────────────────┘│
+│                     │                                                      │
+│                     │  ┌─────────────────────────────────┬────────────────┐│
+│                     │  │ Krav-liste (RequirementListTile)│ ViewerTile     ││
+│                     │  │ ─────────────────────────────── │                ││
+│                     │  │ EIR-01  ✓  Schema IFC4  10/10   │ [3D scene,     ││
+│                     │  │ EIR-02  ✓  Authoring     8/8    │  isolated to   ││
+│                     │  │ EIR-03  ⚠  NS3451       6/8    │  current       ││
+│                     │  │   ↳  Bygg C: 2 walls untyped    │  filter]       ││
+│                     │  │ EIR-04  ✓  Storeys      6/6    │                ││
+│                     │  │ EIR-05  ⚠  TFM          4/8    │ Click a wall   ││
+│                     │  │   ↳  Bygg E: 4 missing TFM      │ here →         ││
+│                     │  │ EIR-06  ✗  Coord. CRS   0/1    │  cross-filter  ││
+│                     │  │   ↳  Project basepoint unset    │  to that       ││
+│                     │  │ EIR-07  ✓  GUID unique  ✓       │  ifc_class     ││
+│                     │  │ ...                              │                ││
+│                     │  └─────────────────────────────────┴────────────────┘│
+│                     │                                                      │
+│                     │  ┌─────────────────────────────────────────────────┐ │
+│                     │  │ Avvik (RequirementGapsTile)                     │ │
+│                     │  │ ───────────────────────────────                  │ │
+│                     │  │  187 vegger uten type-referanse (EIR-03, -07)   │ │  ← clicking row
+│                     │  │  12 etasjer uten elevation (EIR-04)             │ │     cross-filters
+│                     │  │   3 Pset_WallCommon mangler (EIR-08)            │ │     to that gap
+│                     │  │  ...                                             │ │
+│                     │  └─────────────────────────────────────────────────┘ │
+└─────────────────────┴──────────────────────────────────────────────────────┘
 ```
 
-What's added on top of existing ProjectDashboard:
-- Discipline cards row (`apps/core/disciplines.py` already enumerates ARK/RIB/RIE/RIV/BIMK/etc.)
-- Classifications coverage block — driven by `ProjectConfig.config.type_coverage`
-- BIM-krav block — surfaces `Claim` records of `claim_type='requirement'` (or similar) with traffic-light status
-- New BIM-krav tab — full requirements matrix
+Tiles:
 
-What's preserved:
-- Floors tab (F-3) stays where it is
-- Models, Types tabs — unchanged
+- **RequirementFulfillmentSummaryTile** — KPI bar with EIR fulfillment count.
+  No `health_score`.
+- **RequirementListTile** — every EIR with traffic-light status, fulfilled-of-
+  total counts, drill-in. Clicking an EIR row sets the filter context to
+  match that requirement's instances + scopes.
+- **RequirementGapsTile** — flat list of unmet items across active filters.
+  Each row carries the requirement(s) it violates. Clicking → filter the
+  rest of the dashboard to that gap (e.g. "187 untyped walls" →
+  `quality.untyped + ifc_class=IfcWall`).
+- **ViewerTile** — geometry, isolated/highlighted to current filter. Click a
+  wall in the scene → filter context gets `type_id=<wall-type>` set; all
+  other tiles re-project.
 
-Skiplum's existing `requirements_page.html.j2` and `project_dashboard.html.j2` content fields
-(model_count, type_count, material_count, NS3451/TFM/MMI percentages, requirements with severity)
-all map to existing `/api/projects/<id>/statistics/` (`apps/projects/views.py:135`) — which
-already returns most of these numbers.
+Quality tiles (Untyped / Orphan / Empty / etc.) live INSIDE the requirements
+they violate, not as standalone metrics. The expanded EIR-03 row is where
+"187 untyped walls" surfaces — it's what makes the requirement unfulfilled.
+
+This is the "bad models are the product" framing: a model is never wrong, it
+has gaps against specific requirements. The dashboard narrates that.
 
 ---
 
-## 7. Scope dashboard — drill-down
+## 7. Dashboard 2 — Type Browser (cross-filter demo surface)
 
-`/projects/<id>/scopes/<scope-id>/`. Same shape as the project dashboard, but the queryset is
-filtered to the scope subtree. Sidebar shows the scope as active.
+Lands at `/projects/<id>/dashboards/types`. The existing `TypeBrowser` reframed
+as a tile composition. The cross-filter loop ships its first end-to-end demo
+here per omarchy plan PR 6.
 
 ```
-┌─────────────────────────┬───────────────────────────────────────────┐
-│ [SIDEBAR]               │  Magna › Landbrukskvartalet › Bygg ABD     │
-│  Spruce Forge           │  ─────────────────────────────────────────│
-│                         │                                            │
-│  Vedal                  │  [Oversikt] [Modeller] [Etasjer] [Typer]  │
-│  Landbrukskvartalet     │  Filter aktivt: Bygg ABD                   │
-│                         │                                            │
-│  ▾ Omfang               │  ┌──────────┬──────────┬──────────┐       │
-│   ▢ Hele prosjektet     │  │ Modeller │ Typer    │ Mat.     │       │
-│   ▣ Bygg ABD ●          │  │  6       │  31      │  12      │       │
-│   ▢ Bygg C              │  └──────────┴──────────┴──────────┘       │
-│                         │                                            │
-│  📊 Dashboard           │  Modeller i omfang                         │
-│  📦 Modeller (6)        │  ──────────────────                        │
-│  📋 Typer (31)          │  LBK_ABD_ARK.ifc           2 421 elem.     │
-│  🧱 Mat. (12)           │  LBK_ABD_RIB.ifc           1 105 elem.     │
-│  🏢 Etasjer (4)         │  LBK_ABD_RIE.ifc             687 elem.     │
-│                         │  ...                                       │
-│                         │                                            │
-│                         │  Etasjer (canonical_floors)                │
-│                         │  ──────────────────                        │
-│                         │  -1 K  Kjeller                             │
-│                         │   1    1. etg                              │
-│                         │   2    2. etg                              │
-│                         │   3    3. etg                              │
-└─────────────────────────┴───────────────────────────────────────────┘
+┌─────────────────────┬──────────────────────────────────────────────────────┐
+│ [SIDEBAR]           │  Magna ▸ Grønland 55 ▸ Typer                          │
+│                     │  [FILTER:  Bygg ABD ✕  IfcWall ✕   +Add ]            │
+│                     │                                                      │
+│                     │  ┌─────────────────────────────────┬────────────────┐│
+│                     │  │ Type-fordeling (TypeDistChart)  │ ViewerTile     ││
+│                     │  │ ─────────────────────────────── │                ││
+│                     │  │ IfcWall          892 inst       │ [scene shows   ││
+│                     │  │ ▰▰▰▰▰▰▰▰▰▰  ●●●  ←active        │  walls only,   ││
+│                     │  │ IfcSlab          188 inst       │  rest dimmed   ││
+│                     │  │ ▰▰▰▱▱▱▱▱▱▱                       │  (Marker mode) ││
+│                     │  │ IfcWindow        281 inst       │                ││
+│                     │  │ ▰▰▰▰▱▱▱▱▱▱                       │                ││
+│                     │  │ IfcDoor          148 inst       │                ││
+│                     │  │ ▰▰▱▱▱▱▱▱▱▱                       │                ││
+│                     │  │ IfcCurtainWall   116 inst       │                ││
+│                     │  └─────────────────────────────────┴────────────────┘│
+│                     │                                                      │
+│                     │  ┌──────────────────────────────────────────────────┐│
+│                     │  │ Type-detalj (TypeDetailTile, follows selection)  ││
+│                     │  │ ──────────────────────────────                    ││
+│                     │  │ IfcWall                              892 inst     ││
+│                     │  │ NS3451  ▰▰▰▰▰▰▰▰▱▱   83 %    234 / 892            ││
+│                     │  │ TFM     ▰▰▰▰▰▰▱▱▱▱   62 %    195 / 892            ││
+│                     │  │ MMI     ▰▰▰▰▰▰▰▰▰▱   91 %    811 / 892            ││
+│                     │  │ FireRating    92 %     Pset_WallCommon            ││
+│                     │  │ LoadBearing   78 %     Pset_WallCommon            ││
+│                     │  │ IsExternal   100 %     Pset_WallCommon            ││
+│                     │  │  Modeller med denne typen: G55_ARK_main (412), … ││
+│                     │  └──────────────────────────────────────────────────┘│
+│                     │                                                      │
+│                     │  ┌──────────────────────────────────────────────────┐│
+│                     │  │ Kvalitet for valgt type (Quality tiles, scoped)  ││
+│                     │  │ ───────────────────────────────                   ││
+│                     │  │ ☐ Uten type-ref (untyped):     12 /  892          ││
+│                     │  │ ☐ Foreldreløs geometri:         3 /  892          ││
+│                     │  │ ☐ Mangler Pset_WallCommon:     61 /  892          ││
+│                     │  │ Click any →  filter context gains quality.<...>   ││
+│                     │  └──────────────────────────────────────────────────┘│
+└─────────────────────┴──────────────────────────────────────────────────────┘
 ```
 
-The Etasjer block reuses the F-3 Floors tab content (`useScopeFloors(scopeId)`) — it's
-already a per-scope endpoint, so a sub-scope just hits a different ID.
+Cross-filter behavior:
 
-Implementation: a new route `/projects/<id>/scopes/<scope-id>/` that mounts ProjectDashboard
-with a scope filter prop. Existing tabs respect the prop and apply ancestry-based filtering
-on Models/Types/Materials querysets.
+- Click `IfcSlab` row in TypeDistChart → filter context gets `ifc_class=['IfcSlab']`,
+  ViewerTile isolates slabs, TypeDetailTile re-projects to slab properties,
+  Quality tile re-projects to slab quality issues.
+- Click a wall in ViewerTile → filter gets `type_id=<that-wall-type>`, charts
+  re-project, TypeDetailTile shows that specific wall type.
+- Click `Uten type-ref: 12 / 892` quality row → filter gets
+  `quality.untyped=true` AND keeps `ifc_class=IfcWall`; ViewerTile isolates
+  the 12 untyped walls.
+
+The classifications row (`NS3451 / TFM / MMI`) is driven by
+`ProjectConfig.config.type_coverage` — projects with different coverage
+configs see different rows. This is the "not locked into legacy NS3451"
+property EdvardGK called out as a Skiplum strength.
 
 ---
 
-## 8. Model workspace (existing — `pages/ModelWorkspace.tsx`)
+## 8. Dashboard 3 — Floors Overview
 
-Already shipped. Inline `UnifiedBIMViewer` + properties panel + filter HUD + section planes.
-F-3 wired floor_code + alias support. Skiplum's `model_workspace.html.j2` data fields
-(element count, type count, material count, schema, authoring tool, NS3451/MMI/TFM coverage)
-map cleanly onto what's already rendered.
+Lands at `/projects/<id>/dashboards/floors`. F-3 work (`canonical_floors` +
+`/api/projects/scopes/<id>/floors/`) reframed as a dashboard.
 
 ```
-┌──────────────────┬─────────────────────────────────────────────────┐
-│ [SIDEBAR]        │  Magna › Grønland 55 › G55_ARK_main.ifc          │
-│                  │  ─────────────────────────────────────────────── │
-│                  │                                                  │
-│  Magna           │  ┌─ Sammendrag ──────┐  ┌──────────────────────┐│
-│  Grønland 55     │  │ 2 421 elementer   │  │                      ││
-│                  │  │ 87 typer          │  │   UnifiedBIMViewer   ││
-│  Omfang          │  │ 23 materialer     │  │   (existing)         ││
-│  Bygg ABD ●      │  │ Schema IFC4       │  │                      ││
-│                  │  │ Revit 2025        │  │   ThatOpen Fragments ││
-│  📦 Modeller     │  │ NS3451: 81 %      │  │                      ││
-│   ▣ G55_ARK_main │  │ MMI: 91 %         │  │  [⛶][▣][✂][👁][🎨]  ││
-│   ▢ G55_ARK_eks. │  │ TFM: 67 %         │  │  ↑ Tools (existing)  ││
-│   ▢ G55_RIB      │  └───────────────────┘  └──────────────────────┘│
-│  📋 Typer        │                                                  │
-│  🧱 Materialer   │  Typer i denne modellen                          │
-│                  │  ────────────────────                            │
-│                  │  IfcWall    412   →                              │
-│                  │  IfcSlab    188   →                              │
-│                  │  IfcWindow  281   →                              │
-└──────────────────┴─────────────────────────────────────────────────┘
+┌─────────────────────┬──────────────────────────────────────────────────────┐
+│ [SIDEBAR]           │  Magna ▸ Grønland 55 ▸ Etasjer                       │
+│                     │  [FILTER:  (none) ]                                  │
+│                     │                                                      │
+│                     │  ┌──────────────────────────────────┬───────────────┐│
+│                     │  │ Etasjer (FloorsTable)            │ ViewerTile    ││
+│                     │  │ ─────────────────────────────────│               ││
+│                     │  │ Code  Navn       Elevation  Avvik│ [scene with   ││
+│                     │  │ K     Kjeller     -3.10 m   ✓    │  active floor ││
+│                     │  │ 01    1. etg       0.00 m   ✓    │  highlighted; ││
+│                     │  │ 02    2. etg      +3.40 m   ⚠ 1  │  click row →  ││
+│                     │  │ 03    3. etg      +6.80 m   ⚠ 2  │  isolate floor]││
+│                     │  │ 04    4. etg     +10.20 m   ✓    │               ││
+│                     │  │  Tolerance: 0.20 m (per scope)   │               ││
+│                     │  └──────────────────────────────────┴───────────────┘│
+│                     │                                                      │
+│                     │  ┌──────────────────────────────────────────────────┐│
+│                     │  │ Avvik (FloorDeviationsTile)                       ││
+│                     │  │ ─────────────────                                  ││
+│                     │  │ G55_ARK_main:  "Etasje 02" foreslått ved +3.46 m  ││
+│                     │  │   → kanonisk: 02 (+3.40 m), avvik 0.06 m  ✓ match ││
+│                     │  │ G55_RIB_main:  "PLAN 03" foreslått ved +6.92 m    ││
+│                     │  │   → kanonisk: 03 (+6.80 m), avvik 0.12 m  ⚠ rename││
+│                     │  │ G55_BIMK_fasade:  "Etasje 03" ved +6.81 m  ✓      ││
+│                     │  └──────────────────────────────────────────────────┘│
+│                     │                                                      │
+│                     │  ┌──────────────────────────────────────────────────┐│
+│                     │  │ Verifikasjon-gates (existing F-3 editor, reused) ││
+│                     │  │  [☑] Block on storey deviation                   ││
+│                     │  │   Tolerance: [0.20] m                             ││
+│                     │  └──────────────────────────────────────────────────┘│
+└─────────────────────┴──────────────────────────────────────────────────────┘
 ```
 
-No structural change. Skiplum-flavor polish at most: reorder summary fields,
-swap icons, ensure Norwegian labels.
+Tiles:
+
+- **FloorsTable** — canonical floors per scope, with deviation-count badges.
+  Click row → filter gets `floor_code=[<code>]`, ViewerTile isolates that
+  floor across all loaded models.
+- **ViewerTile** — federated across the scope, with `floorAliases` resolution
+  per F-3 (canonical code → list of per-model storey names → hide/show).
+- **FloorDeviationsTile** — per-model deviations with severity badges, lifted
+  from the existing `ProjectFloorsTab` content. Click a deviation → filter
+  to that model + floor for triage.
+- **Verification-gates editor** — preserved from the F-3 work. Lives at the
+  bottom for staff users; hidden for client tenants (gated by role).
+
+This dashboard demonstrates that the cross-filter model handles spatial
+selections (floor) the same way it handles type selections (IfcClass) — same
+filter context, same provider, same ViewerTile.
 
 ---
 
-## 9. Type browser
+## 9. Cross-filter interaction — worked example
 
-Existing `pages/ProjectTypeLibrary.tsx` + `components/features/warehouse/{TypeDashboard,TypeBrowser,TypeDetailPanel}` already does this. Skiplum's contribution: per-classification coverage rendering driven by `ProjectConfig.config.type_coverage` instead of hardcoded NS3451 — this matches EdvardGK's note that Skiplum's templates aren't locked into manual NS3451 mapping.
+Showing what "click in any tile, all tiles re-project" actually feels like.
+Starts on Type Browser, filter empty.
 
 ```
-┌──────────────────┬─────────────────────────────────────────────────┐
-│ [SIDEBAR]        │  Magna › Grønland 55 › Bygg ABD › Typer          │
-│                  │  31 typer i omfang                                │
-│                  │  ──────────────────────────────────────────────  │
-│  Omfang          │                                                  │
-│  Bygg ABD ●      │  Filter: [Alle disipliner ▾]  [Søk…         ]   │
-│                  │           [☐ kun typer med dekning < 80 %]       │
-│  📋 Typer ●      │                                                  │
-│                  │  ┌──────────────────────────────────────────────┐│
-│                  │  │ IfcWall                            (892 inst)││
-│                  │  │ ─────────────────────────────────────────────││
-│                  │  │ NS3451  ▰▰▰▰▰▰▰▰▱▱   83 %    234 / 892        ││
-│                  │  │ TFM     ▰▰▰▰▰▰▱▱▱▱   62 %    195 / 892        ││
-│                  │  │ MMI     ▰▰▰▰▰▰▰▰▰▱   91 %    811 / 892        ││
-│                  │  │ FireRating         92 %        Pset_WallCom.. ││
-│                  │  │ LoadBearing        78 %        Pset_WallCom.. ││
-│                  │  │ IsExternal         100 %       Pset_WallCom.. ││
-│                  │  │  ›  G55_Prosjektinfo.G55_MMI                  ││
-│                  │  │ Modeller med denne typen:                     ││
-│                  │  │   G55_ARK_main (412)  G55_BIMK_fasade (118)  ││
-│                  │  └──────────────────────────────────────────────┘│
-└──────────────────┴─────────────────────────────────────────────────┘
+Step 1: User clicks "IfcSlab" in TypeDistChart.
+
+Filter context changes:        URL becomes:
+{                              /projects/g55/dashboards/types
+  project_id: "g55",      →      ?ifc_class=IfcSlab
+  ifc_class: ["IfcSlab"]
+}
+
+What re-projects:
+  - TypeDistChart: bar for IfcSlab gets active state
+  - TypeDetailTile: switches to IfcSlab properties
+  - Quality tile: switches to IfcSlab quality issues
+  - ViewerTile: dispatches GET /api/embed/instances?project_id=g55&ifc_class=IfcSlab
+                receives express_ids list, isolates slabs in scene
+
+
+Step 2: User clicks a slab in ViewerTile.
+
+Filter context changes:        URL becomes:
+{                              /projects/g55/dashboards/types
+  project_id: "g55",      →      ?ifc_class=IfcSlab
+  ifc_class: ["IfcSlab"],          &type_id=8b3c2a1f-...
+  type_id: ["8b3c2a1f-..."]
+}
+
+What re-projects:
+  - TypeDistChart: hands off active highlight to that specific type
+  - TypeDetailTile: switches to that exact type (e.g. "Hulldekke 265")
+  - Quality tile: switches to that type's quality issues
+  - ViewerTile: re-isolates to instances of just that type
+  - URL is shareable — paste in another browser, you land on the same view
+
+
+Step 3: User flips Mode from Marker to Filter.
+
+Filter context changes:
+{
+  ...,
+  mode: "filter"
+}
+
+What re-projects:
+  - All tiles: count rows by current filter, but now hide non-matching
+    rows entirely (not just dim/ghost). E.g. the type-distribution chart
+    drops every IfcClass except IfcSlab from view. The viewer hides
+    everything except the selected type.
 ```
 
-Implementation: extend `TypeDetailPanel.tsx` to read coverage rows from a new
-`/api/types/{id}/coverage/?scope=<id>` endpoint that walks `ProjectConfig.config.type_coverage`
-to discover which property paths to count for. Falls back gracefully if config has no
-`type_coverage` key.
+The viewer does NOT know about charts; charts do NOT know about geometry.
+Both speak the same `FilterContext` vocabulary via `useFilterContext()` /
+`setFilter()`. The provider holds the URL-sync invariant.
 
 ---
 
-## 10. Embed: viewer (`/embed/viewer/<token>`) — NEW
+## 10. Embed variants
 
-Chromeless. Hosted by sprucelab; iframed by anyone with a valid token. Token carries:
-model_id, default isolation, color-by, allowed `frame-ancestors`, expiry. Token revocation
-via DB flag.
+Two new chromeless surfaces hosted at `embed.sprucelab.io`:
+
+### 10a. Embed dashboard (`/embed/dashboards/<dashboard-id>?token=<t>`)
 
 ```
-┌─────────────────────────────────────────────┐
-│                                             │
-│                                             │
-│            UnifiedBIMViewer                 │
-│            (chromeless mount)               │
-│                                             │
-│                                             │
-│  [⛶] [▣ fit] [✂ section] [👁 isolate] [🎨] │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ Magna ▸ Grønland 55 ▸ Krav-oppfyllelse                  │  ← minimal header
+│ [FILTER chip strip]   [Mode toggle]                     │
+│ ─────────────────────────────────────────────────────── │
+│                                                         │
+│  [Same tile composition as §6 / §7 / §8,                │
+│   but no sidebar, no nav]                               │
+│                                                         │
+│  Powered by Sprucelab · sprucelab.io                    │
+└─────────────────────────────────────────────────────────┘
 ```
 
-Net-new files:
-- `frontend/src/embed/Viewer.tsx` — strips AppLayout; mounts `UnifiedBIMViewer` only
-- Backend `apps/embed/` (or `apps/automation/embed/`): `EmbedToken` model + `EmbedViewSet` with `verify_token()` middleware
-- Vite route added at `App.tsx`: `/embed/viewer/:token` → `<EmbedViewer />`
-- CSP: `Content-Security-Policy: frame-ancestors <allowed_domains>;` set per request
+Token-scoped access. Iframed by skiplum-pages or any allowed origin.
+postMessage handshake per omarchy embed plan §Embed-mechanism.
+
+### 10b. Embed viewer (`/embed/viewer/<token>`)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│                                                         │
+│              UnifiedBIMViewer (chromeless)              │
+│                                                         │
+│                                                         │
+│  [⛶] [▣ fit] [✂ section] [👁 isolate] [🎨]             │
+└─────────────────────────────────────────────────────────┘
+```
+
+For consumers that just want the viewer, not the dashboard. Token carries
+default isolation, color-by, allowed `frame-ancestors`.
 
 ---
 
-## 11. Embed: dashboard (`/embed/dashboard/<token>`) — NEW
+## 11. Mobile / responsive
 
-Chromeless project (or scope) dashboard, iframed by external sites. Same data shape as §6 but
-no sidebar/header. Footer: "Powered by Sprucelab".
+Per Q7 of the open-questions doc — design for it now, ship for it later.
+
+Tiles are responsive via CSS Grid `auto-fill, minmax(<min-px>, 1fr)`. Tile
+declares its `min_width`; grid auto-stacks below.
+
+Below ~600px wide:
 
 ```
-┌─────────────────────────────────────────────┐
-│ Grønland 55                                 │  ← minimal header
-│ ─────────────────────────────────────────── │
-│                                             │
-│ [Same content as §6, sidebar removed]       │
-│                                             │
-│ Powered by Sprucelab · sprucelab.io         │
-└─────────────────────────────────────────────┘
+┌─────────────────────────┐
+│ [≡] Magna ▸ Grønland 55 │  ← hamburger, breadcrumb truncated
+│ [Krav-oppfyllelse ▾]    │  ← active dashboard as dropdown
+│ [Bygg ABD ✕] [+filter] │  ← chips wrap; collapse to "+3 more" past 3
+├─────────────────────────┤
+│ Krav-oppfyllelse        │
+│ 9 av 13 (69 %)          │
+│ ▰▰▰▰▰▰▰▱▱               │
+├─────────────────────────┤
+│ EIR-01 ✓ Schema  10/10  │  ← list tile, single column
+│ EIR-02 ✓ Auth     8/8   │
+│ EIR-03 ⚠ NS3451   6/8   │
+│ ...                     │
+├─────────────────────────┤
+│ ┌─────────────────────┐ │
+│ │ Åpne 3D-visning     │ │  ← ViewerTile hidden,
+│ │  (krever skjerm     │ │     deep-link to full UI
+│ │   600 px+)          │ │
+│ └─────────────────────┘ │
+└─────────────────────────┘
 ```
 
-Token can scope to: full project, single scope, or single tab. Allowed-domain restriction
-via the same token mechanism as §10.
+Robustness #8 (degraded mode without the viewer) is exactly this. Non-3D tiles
+keep cross-filtering normally on mobile.
 
 ---
 
-## 12. What's net-new (developer punchlist)
+## 12. Net-new — consolidated punchlist
+
+(Same items as v0.1 §12, refined now that omarchy's plans are in scope.)
 
 Backend:
 
-- [ ] `apps/companies/`: `Company` model, ViewSet, serializer, admin
+- [ ] `apps/companies/Company` model, ViewSet, serializer, admin
 - [ ] `Project.company` nullable FK; `UserProfile.company` nullable FK
-- [ ] `ProjectUser` M2M (or `CompanyUser` rolled up if simpler) for finer-than-company access. Decide A.4.
-- [ ] `apps/embed/`: `EmbedToken` model, `EmbedViewSet`, HMAC token utils, frame-ancestors middleware
-- [ ] `apps/dashboards/`: Jinja2 renderer that turns existing data into static HTML matching Skiplum templates. Endpoint or management command produces a tarball.
-- [ ] Querysets on `Project`, `ProjectScope`, `Model` filtered by current user's allowed set (use DRF permissions or middleware)
-- [ ] `/api/types/{id}/coverage/?scope=<id>` endpoint backing the type browser (reads `ProjectConfig.config.type_coverage`)
-- [ ] One-off ETL importer: `dalux-ifc-copy.json` → `Project` + `ProjectScope` rows for Skiplum's 8 projects
+- [ ] `ProjectUser` M2M with role for finer ACL
+- [ ] `apps/embed/EmbedToken` model + `EmbedViewSet` + HMAC token utils
+- [ ] `apps/embed/views.py /api/embed/instances` resolver (semantic→concrete express IDs)
+- [ ] `apps/embed/views.py /api/embed/capabilities` advertisement endpoint
+- [ ] Per-request `Content-Security-Policy: frame-ancestors` middleware for `/embed/...`
+- [ ] `apps/quality/ModelQualityIssue` model — see Q9 in open-questions doc
+- [ ] `apps/projects/views.py /api/projects/<id>/requirements/` reading EIR fulfillment
+- [ ] One-off ETL importer: `dalux-ifc-copy.json` → `Project` + `ProjectScope` + `ProjectConfig` rows for Skiplum's 8 projects
+- [ ] InformationRequirement + RequirementFulfillment + BEPSection models per the ISO 19650 plan (prerequisite for the Requirements dashboard)
 
 Frontend:
 
 - [ ] `pages/CompanyLanding.tsx`
-- [ ] `pages/embed/Dashboard.tsx`, `pages/embed/Viewer.tsx` (chromeless variants)
-- [ ] `Sidebar.tsx`: Firma section + Omfang scope-tree section
-- [ ] `ProjectDashboard.tsx` Overview tab: discipline cards, classifications block, BIM-krav block
-- [ ] `ProjectDashboard.tsx`: new BIM-krav tab
-- [ ] `TypeDetailPanel.tsx`: per-classification coverage rows
-- [ ] Skiplum-flavor theme tokens (CSS vars) keyed to host/company
-- [ ] Hooks: `use-company.ts`, `use-embed-tokens.ts`
+- [ ] `pages/embed/Dashboard.tsx`, `pages/embed/Viewer.tsx` (chromeless mounts)
+- [ ] `Sidebar.tsx`: Firma section + Omfang scope-tree section + Dashboards section
+- [ ] `components/dashboard-primitives/`: `MetricCard`, `KPIRow`, `CoverageBar`, `TrafficLightBadge`, `DisciplineRow`, `Sidebar.NavSection` — lifted from skiplum-pages per Q1
+- [ ] `contexts/DashboardFilterProvider.tsx` + `hooks/useFilterContext.ts` per omarchy plan PR 2
+- [ ] `lib/filter-url-codec.ts` — alphabetized JSON encode/decode for URL serialization
+- [ ] Tiles: `ViewerTile`, `TypeDistChart`, `TypeDetailTile`, `RequirementFulfillmentSummaryTile`, `RequirementListTile`, `RequirementGapsTile`, `FloorsTable`, `FloorDeviationsTile`, `QualityIssuesTile`
+- [ ] `pages/dashboards/Requirements.tsx`, `pages/dashboards/Types.tsx`, `pages/dashboards/Floors.tsx`
+- [ ] Skiplum-flavor theme tokens (CSS vars) keyed to host
 
-CLI (for static export, Track A.5):
+CLI:
 
-- [ ] `spruce dashboards build --project <slug> --out <dir>` → calls backend endpoint, untars to `--out`
-- [ ] `spruce dashboards build --push-gh-pages <repo>` → push to Ed-Skiplum/skiplum-reports
-- [ ] `spruce dashboards build --push-s3 <bucket>` (later)
+- [ ] `spruce embed pass {create,list,revoke,refresh}` per Q3
+- [ ] `spruce dashboards build --project <slug> --out <dir>` (static export, Track A.5; defer until embed POC ships and we see whether static export is still desired)
 
 Infra:
 
-- [ ] Vercel custom domain `site.skiplum.no` on the existing sprucelab project
-- [ ] Theme switch (CSS vars) keyed off domain
-- [ ] Supabase: ensure email templates work in NB; configure custom SMTP if deliverability is a concern
-- [ ] Vercel `frame-ancestors` headers for `/embed/...` (per-request, not project-wide)
+- [ ] Custom domain `site.skiplum.no` on existing sprucelab Vercel project
+- [ ] `embed.sprucelab.io` subdomain for chromeless embed routes
+- [ ] Theme switch keyed off `Host` header
+- [ ] Custom SMTP in Supabase for NB email deliverability
 
 ---
 
-## Open questions (for omarchy)
+## 13. Open questions (this draft)
 
-1. **Scope-tree expansion**: collapse-all-but-active by default, or remember user's expanded set?
-2. **Per-scope ACL granularity**: do clients need to be restricted at scope level (Magna sees only Building ABD of Landbrukskvartalet), or is project-level enough? Project-level is simpler; scope-level matches the data model better.
-3. **`apps/companies/` vs. extending `apps/accounts/`**: Company could live in accounts since it's a user-org concept, but a separate app keeps it cleaner if companies grow to have billing/contact data later. Your call.
-4. **BIM-krav tab vs. Claim Inbox**: are project-side BIM-krav statuses just promoted-Claims of `claim_type='requirement'`, or do they need a dedicated `Requirement` model? I'd reuse Claim if possible (already has status, severity, model linkage).
-5. **Embed token lifecycle**: per-issue tokens (each share generates a new one) vs. long-lived per-domain tokens. Speckle does both.
-6. **Static HTML export**: does sprucelab grow this even outside Skiplum? If yes, design it as a generic `apps/dashboards/` endpoint. If only Skiplum, keep it local in skiplum-automation and have it call sprucelab APIs.
-7. **CLI command name**: `spruce dashboards build` vs. `spruce export dashboard` vs. `spruce static`?
+Things omarchy's open-questions doc surfaced that need follow-up here:
+
+1. **Static HTML export vs. live embed**: with iframe + cross-filter as the
+   product, static export becomes a different product (no cross-filter, no
+   live data). Worth keeping? Skiplum-pages is currently static; if the embed
+   replaces it, static export is moot. Lean toward dropping static export
+   from the plan unless a customer explicitly asks for offline/PDF.
+2. **Dashboard authoring**: tiles are React components in this repo. How do
+   non-developer staff (Skiplum project lead) author a new project's dashboard
+   if it's just code? For v1 the answer is "the same dashboards on every
+   project, configured via ProjectConfig"; long-term might want a tile-config
+   layer. Out of v0.2 scope; flag for post-MVP.
+3. **Sidebar navigation when scope is active**: current draft shows the scope
+   tree always expanded. Omarchy plan implies scope is a filter dimension, not
+   a nav target — so scope tree maybe BELONGS in the chip strip, not the
+   sidebar? Or both — sidebar for selection, chip for current state? Lean
+   toward both, tested with users.
+4. **`/projects/<id>/` default**: should it be the Requirements dashboard
+   (default useful surface) or stay the existing Overview tab (back-compat)?
+   v0.2 picks Requirements. Existing in-app users get a different default
+   than today; embed users see Requirements first regardless.
 
 ---
 
-## Out of scope (this wireframe set)
+## Out of scope (v0.2)
 
-- Authoring UI for scopes (already exists for canonical_floors via Claim Inbox; out of dashboards subsystem)
+- Authoring UI for EIRs, BEPs, and `ProjectConfig.config.type_coverage`
+  (these are config artifacts that the ISO 19650 plan addresses elsewhere)
 - Notifications / activity feeds
 - Comments / collaboration
-- Per-element annotation (Speckle has it; sprucelab might add later)
-- Dark mode (single light theme to start)
+- Per-element annotation
+- Dark mode
