@@ -275,13 +275,21 @@ TaskList.
 regulations. It does NOT track which types have been installed on site. Balance
 Sheet v1.5 "installed" state needs its own `MaterialTransaction` log.
 
-### 3. Local dev reads production Supabase
+### 3. `backend/.env.local` still points at production Supabase
 
-`.env.local` points at `aws-1-eu-north-1.pooler.supabase.com:6543`. There is no
-local Postgres. Every Django write affects production. Be careful.
+The maintainer's checkout has `backend/.env.local` configured against
+`aws-1-eu-north-1.pooler.supabase.com:6543`. Sourcing that file from a Django
+shell will write to production.
 
-Future session: set up Docker Postgres + `skl db pull-prod` to snapshot production
-into local for safe experimentation.
+**Resolved for contributors and tests** (2026-05-03): `docker-compose.dev.yml`
++ `.env.dev.example` give a Docker-local Postgres (`sprucelab_dev`). `just up`
+brings it online and applies migrations. The Justfile's `_safety-check` and
+`tests/conftest.py` both abort if `DATABASE_URL` is non-localhost. PR
+contributors should `cp .env.dev.example .env.dev` and never source
+`backend/.env.local`.
+
+Still on the roadmap: `skl db pull-prod` to snapshot production into local for
+realistic-data experimentation.
 
 ### 4. Supabase JWT verification is delegated
 
