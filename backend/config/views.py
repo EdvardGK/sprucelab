@@ -72,6 +72,10 @@ def capabilities(request):
             'subscription_endpoint': '/api/automation/webhook-subscriptions/',
             'delivery_log_endpoint': '/api/automation/webhook-deliveries/',
         },
+        'embed': {
+            'capabilities_endpoint': '/api/embed/capabilities/',
+            'instances_endpoint': '/api/embed/instances/',
+        },
     })
 
 

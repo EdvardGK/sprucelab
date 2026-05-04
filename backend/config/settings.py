@@ -110,6 +110,7 @@ INSTALLED_APPS = [
     'apps.viewers',
     'apps.automation',
     'apps.field',
+    'apps.embed',
 ]
 
 MIDDLEWARE = [
