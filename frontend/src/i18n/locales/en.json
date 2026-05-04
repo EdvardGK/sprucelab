@@ -1256,5 +1256,10 @@
     "viewClaim": "View claim",
     "noReferences": "No claim references for this type.",
     "inModel": "in {{model}}"
+  },
+  "dashboardPrimitives": {
+    "metricCard": {
+      "fractionHelper": "{{count}} of {{total}}"
+    }
   }
 }
