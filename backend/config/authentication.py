@@ -255,3 +255,64 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
 
     def authenticate_header(self, request):
         return 'Bearer realm="api"'
+
+
+class DevBypassAuthentication(authentication.BaseAuthentication):
+    """
+    DEV-ONLY auth bypass for local development.
+
+    Returns a known dev superuser (DEV_AUTH_BYPASS_EMAIL, default
+    `dev@local.test`) without any token check, so /api/me/ + every protected
+    DRF endpoint accepts unauthenticated requests as that user.
+
+    Active only when BOTH `DEV_AUTH_BYPASS=1` AND `DEBUG=True`. Production has
+    DEBUG=False, so even if the env var leaked into a prod deploy, the bypass
+    cannot fire there. Returns None (chains to next auth class) when not
+    active.
+
+    Auto-creates the dev user + an approved UserProfile on first request, so
+    bypass works against a fresh local DB with no manual seeding.
+    """
+
+    def authenticate(self, request):
+        from django.conf import settings as _settings  # local for hot-reload friendliness
+        if not (_settings.DEBUG and getattr(_settings, 'DEV_AUTH_BYPASS', False)):
+            return None
+        return (self._get_or_create_dev_user(_settings.DEV_AUTH_BYPASS_EMAIL), None)
+
+    @staticmethod
+    @transaction.atomic
+    def _get_or_create_dev_user(email: str):
+        username = email.split('@', 1)[0][:150] or 'dev'
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                'username': username,
+                'is_active': True,
+                'is_staff': True,
+                'is_superuser': True,
+            },
+        )
+        if not created:
+            dirty = []
+            for attr in ('is_active', 'is_staff', 'is_superuser'):
+                if not getattr(user, attr):
+                    setattr(user, attr, True)
+                    dirty.append(attr)
+            if dirty:
+                user.save(update_fields=dirty)
+
+        profile = UserProfile.objects.filter(user=user).first()
+        if profile is None:
+            profile = UserProfile.objects.create(
+                user=user,
+                supabase_id=uuid.uuid4(),  # synthetic; never reaches Supabase
+                display_name='Dev (local bypass)',
+                approval_status=UserProfile.APPROVAL_APPROVED,
+                approved_at=timezone.now(),
+            )
+        elif profile.approval_status != UserProfile.APPROVAL_APPROVED:
+            profile.approval_status = UserProfile.APPROVAL_APPROVED
+            profile.approved_at = timezone.now()
+            profile.save(update_fields=['approval_status', 'approved_at', 'updated_at'])
+        return user
