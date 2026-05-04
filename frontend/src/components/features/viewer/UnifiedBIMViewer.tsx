@@ -426,7 +426,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
         // Wait for container to have valid dimensions
         if (container.clientWidth === 0 || container.clientHeight === 0) {
-          console.debug('[Viewer] Container has zero dimensions, waiting...');
+          if (import.meta.env.DEV) console.debug('[Viewer] Container has zero dimensions, waiting...');
           setTimeout(() => initViewer(), 100);
           return;
         }
@@ -1083,7 +1083,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           const logPerf = () => {
             if (cancelled) return;
             const now = performance.now();
-            if (now - lastLog > 1000) {
+            if (import.meta.env.DEV && now - lastLog > 1000) {
               try {
                 const info = (world.renderer as OBC.SimpleRenderer | null)?.three?.info;
                 if (info) {
@@ -1295,7 +1295,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 }
                 if (newStoreyMap.size > 0) {
                   setStoreyInfo(newStoreyMap);
-                  console.log('[Viewer] Storey classification:', newStoreyMap.size, 'storeys');
+                  if (import.meta.env.DEV) console.log('[Viewer] Storey classification:', newStoreyMap.size, 'storeys');
                 }
               })
               .catch(err => console.warn('[Viewer] Spatial structure classification failed:', err));

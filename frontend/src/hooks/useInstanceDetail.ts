@@ -30,5 +30,6 @@ export function useInstanceDetail(modelId: string, instanceGuid: string | null) 
     },
     enabled: !!model?.file_url && !!instanceGuid,
     staleTime: 5 * 60 * 1000, // 5 min - instance data doesn't change
+    retry: false,
   });
 }

@@ -162,6 +162,13 @@ class Claim(models.Model):
             models.Index(fields=['document']),
             models.Index(fields=['status', 'claim_type']),
             models.Index(fields=['scope']),
+            # Latest-claim-per-(source_file, claim_type) lookups: serves the
+            # bulk DISTINCT ON in ProjectScopeViewSet.floors and the per-call
+            # check_storey_deviation single-claim fetch with an index-only scan.
+            models.Index(
+                fields=['source_file', 'claim_type', '-extracted_at'],
+                name='claims_sf_type_extracted_idx',
+            ),
         ]
 
     def __str__(self) -> str:

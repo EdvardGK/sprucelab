@@ -79,7 +79,7 @@ export function Sidebar() {
           className="flex-1 justify-start gap-2"
           aria-label={t('common.search')}
           onClick={() => {
-            console.log('Search clicked - feature coming soon');
+            if (import.meta.env.DEV) console.log('Search clicked - feature coming soon');
           }}
         >
           <Search className="h-4 w-4" />
@@ -399,7 +399,7 @@ export function Sidebar() {
             className="h-8 w-8"
             aria-label={t('common.help')}
             onClick={() => {
-              console.log('Help clicked - feature coming soon');
+              if (import.meta.env.DEV) console.log('Help clicked - feature coming soon');
             }}
           >
             <HelpCircle className="h-4 w-4" />

@@ -212,52 +212,36 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def _get_top_types(self, model_ids, limit=5):
         """Get top types by quantity, using representative_unit from mapping."""
-        from apps.entities.models import IFCType, TypeMapping, TypeAssignment, IFCEntity
+        from apps.entities.models import IFCType
 
-        # Get all types with their mappings and instance counts
+        # Single annotated query: count assignments + sum entity dimensions per type.
+        # TypeAssignment is unique on (entity, type), so the JOIN doesn't double-count.
+        types = IFCType.objects.filter(model_id__in=model_ids).select_related('mapping').annotate(
+            entity_count=Count('assignments'),
+            total_volume=Coalesce(Sum('assignments__entity__volume'), 0.0),
+            total_area=Coalesce(Sum('assignments__entity__area'), 0.0),
+            total_length=Coalesce(Sum('assignments__entity__length'), 0.0),
+        ).filter(entity_count__gt=0)
+
         types_with_stats = []
-
-        types = IFCType.objects.filter(model_id__in=model_ids).select_related('mapping')
-
         for ifc_type in types:
-            # Get entities of this type
-            entity_ids = TypeAssignment.objects.filter(
-                type=ifc_type
-            ).values_list('entity_id', flat=True)
-
-            entities = IFCEntity.objects.filter(id__in=entity_ids)
-            count = entities.count()
-
-            if count == 0:
-                continue
-
-            # Determine unit and aggregate quantity
             unit = 'pcs'
-            quantity = count
+            quantity = ifc_type.entity_count
 
-            try:
-                mapping = ifc_type.mapping
-                if mapping and mapping.representative_unit:
-                    unit = mapping.representative_unit
-                    if unit == 'm3':
-                        quantity = entities.aggregate(
-                            total=Coalesce(Sum('volume'), 0.0)
-                        )['total'] or 0.0
-                    elif unit == 'm2':
-                        quantity = entities.aggregate(
-                            total=Coalesce(Sum('area'), 0.0)
-                        )['total'] or 0.0
-                    elif unit == 'm':
-                        quantity = entities.aggregate(
-                            total=Coalesce(Sum('length'), 0.0)
-                        )['total'] or 0.0
-            except TypeMapping.DoesNotExist:
-                pass
+            mapping = getattr(ifc_type, 'mapping', None)
+            if mapping and mapping.representative_unit:
+                unit = mapping.representative_unit
+                if unit == 'm3':
+                    quantity = ifc_type.total_volume
+                elif unit == 'm2':
+                    quantity = ifc_type.total_area
+                elif unit == 'm':
+                    quantity = ifc_type.total_length
 
             types_with_stats.append({
                 'name': ifc_type.type_name or ifc_type.ifc_type,
                 'ifc_type': ifc_type.ifc_type,
-                'count': count,
+                'count': ifc_type.entity_count,
                 'quantity': round(quantity, 2) if isinstance(quantity, float) else quantity,
                 'unit': unit,
             })
@@ -268,37 +252,42 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def _get_top_materials(self, model_ids, limit=5):
         """Get top materials by usage count and volume."""
-        from apps.entities.models import Material, MaterialAssignment, IFCEntity
+        from collections import defaultdict
+        from apps.entities.models import Material, MaterialAssignment
 
-        materials_with_stats = []
+        # Distinct entity count per material (a material can have multiple
+        # MaterialAssignment rows for the same entity at different layer_orders).
+        materials = list(Material.objects.filter(model_id__in=model_ids).annotate(
+            entity_count=Count('assignments__entity', distinct=True),
+        ).filter(entity_count__gt=0))
 
-        materials = Material.objects.filter(model_id__in=model_ids)
+        material_ids = [m.id for m in materials]
 
-        for material in materials:
-            # Get entities using this material
-            entity_ids = MaterialAssignment.objects.filter(
-                material=material
-            ).values_list('entity_id', flat=True)
-
-            entities = IFCEntity.objects.filter(id__in=entity_ids)
-            count = entities.count()
-
-            if count == 0:
+        # Sum volume across distinct entities per material (one query, dedupe in Python).
+        pair_rows = (
+            MaterialAssignment.objects
+            .filter(material_id__in=material_ids)
+            .values('material_id', 'entity_id', 'entity__volume')
+            .distinct()
+        )
+        volume_by_material = defaultdict(float)
+        seen_pairs = set()
+        for row in pair_rows:
+            key = (row['material_id'], row['entity_id'])
+            if key in seen_pairs:
                 continue
+            seen_pairs.add(key)
+            volume_by_material[row['material_id']] += row['entity__volume'] or 0.0
 
-            # Aggregate volume
-            volume = entities.aggregate(
-                total=Coalesce(Sum('volume'), 0.0)
-            )['total'] or 0.0
-
-            materials_with_stats.append({
+        materials_with_stats = [
+            {
                 'name': material.name,
                 'category': material.category,
-                'count': count,
-                'volume_m3': round(volume, 2),
-            })
-
-        # Sort by count
+                'count': material.entity_count,
+                'volume_m3': round(volume_by_material[material.id], 2),
+            }
+            for material in materials
+        ]
         materials_with_stats.sort(key=lambda x: x['count'], reverse=True)
         return materials_with_stats[:limit]
 
@@ -720,39 +709,49 @@ class ProjectScopeViewSet(viewsets.ModelViewSet):
         canonical = list(scope.canonical_floors or [])
         models_qs = (
             Model.objects.filter(scope=scope)
-            .select_related('source_file')
+            .select_related('source_file', 'scope')
             .order_by('name')
         )
+        models = list(models_qs)
+
+        # Bulk-fetch the latest storey_list claim per source_file in one query
+        # (Postgres DISTINCT ON), then pass the relevant claim into the
+        # deviation check to avoid the per-model claim lookup that the
+        # single-arg form of check_storey_deviation does internally.
+        source_file_ids = [m.source_file_id for m in models if m.source_file_id is not None]
+        latest_claim_by_sf: dict = {}
+        if source_file_ids:
+            latest_claims = (
+                Claim.objects
+                .filter(source_file_id__in=source_file_ids, claim_type='storey_list')
+                .order_by('source_file_id', '-extracted_at')
+                .distinct('source_file_id')
+            )
+            latest_claim_by_sf = {c.source_file_id: c for c in latest_claims}
 
         models_payload = []
-        for model in models_qs:
+        for model in models:
+            claim = latest_claim_by_sf.get(model.source_file_id) if model.source_file_id else None
             proposed_floors: list[dict] = []
-            if model.source_file_id is not None:
-                claim = (
-                    Claim.objects
-                    .filter(source_file_id=model.source_file_id, claim_type='storey_list')
-                    .order_by('-extracted_at')
-                    .first()
-                )
-                if claim is not None and isinstance(claim.normalized, dict):
-                    raw = claim.normalized.get('floors')
-                    if isinstance(raw, list):
-                        for entry in raw:
-                            if not isinstance(entry, dict):
-                                continue
-                            name = entry.get('name')
-                            if not isinstance(name, str) or not name.strip():
-                                continue
-                            elev = entry.get('elevation_m')
-                            try:
-                                elev_m = float(elev) if elev is not None else None
-                            except (TypeError, ValueError):
-                                elev_m = None
-                            proposed_floors.append({
-                                'name': name.strip(),
-                                'elevation_m': elev_m,
-                                'source_guid': entry.get('source_guid'),
-                            })
+            if claim is not None and isinstance(claim.normalized, dict):
+                raw = claim.normalized.get('floors')
+                if isinstance(raw, list):
+                    for entry in raw:
+                        if not isinstance(entry, dict):
+                            continue
+                        name = entry.get('name')
+                        if not isinstance(name, str) or not name.strip():
+                            continue
+                        elev = entry.get('elevation_m')
+                        try:
+                            elev_m = float(elev) if elev is not None else None
+                        except (TypeError, ValueError):
+                            elev_m = None
+                        proposed_floors.append({
+                            'name': name.strip(),
+                            'elevation_m': elev_m,
+                            'source_guid': entry.get('source_guid'),
+                        })
 
             issues = [
                 {
@@ -761,7 +760,7 @@ class ProjectScopeViewSet(viewsets.ModelViewSet):
                     'severity': i.severity,
                     'message': i.message,
                 }
-                for i in check_storey_deviation(model)
+                for i in check_storey_deviation(model, claim=claim)
             ]
             models_payload.append({
                 'model_id': str(model.id),

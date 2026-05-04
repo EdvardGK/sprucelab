@@ -245,7 +245,7 @@ export async function getElementGeometry(fileId: string, guid: string): Promise<
   if (!response.ok) {
     // 404 or geometry extraction errors are expected for some elements
     if (response.status === 404 || response.status === 422) {
-      console.debug(`[IFC] No geometry for element ${guid}`);
+      if (import.meta.env.DEV) console.debug(`[IFC] No geometry for element ${guid}`);
       return null;
     }
     const error = await response.text();
