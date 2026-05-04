@@ -9,7 +9,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import { RequireAuth } from './components/RequireAuth';
 
 const Login = lazy(() => import('./pages/Login'));
-const Signup = lazy(() => import('./pages/Signup'));
 const Welcome = lazy(() => import('./pages/Welcome'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 const MyPage = lazy(() => import('./pages/MyPage'));
@@ -45,11 +44,11 @@ const withSuspense = (element: ReactNode) => (
 );
 
 const router = createBrowserRouter([
-  { path: "/login", element: withSuspense(<Login />) },
-  { path: "/signup", element: withSuspense(<Signup />) },
+  { path: "/", element: withSuspense(<Welcome />) },
   { path: "/welcome", element: withSuspense(<Welcome />) },
+  { path: "/signup", element: withSuspense(<Welcome />) },
+  { path: "/login", element: withSuspense(<Login />) },
   { path: "/auth/callback", element: withSuspense(<AuthCallback />) },
-  { path: "/", element: withSuspense(guard(<ProjectsGallery />)) },
   { path: "/my-page", element: withSuspense(guard(<MyPage />)) },
   { path: "/projects", element: withSuspense(guard(<ProjectsGallery />)) },
   { path: "/projects/:id", element: withSuspense(guard(<ProjectDashboard />)) },

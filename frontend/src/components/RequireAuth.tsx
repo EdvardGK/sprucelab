@@ -43,7 +43,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
   }
 
   if (me?.profile?.approval_status !== 'approved') {
-    return <Navigate to="/welcome" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
