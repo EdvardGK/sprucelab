@@ -40,6 +40,8 @@ export function useInstanceProfile(modelId: string, instanceGuid: string | null)
     },
     enabled: !!model?.file_url && !!instanceGuid,
     staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
   });
 }
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useMemo, lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layers, Loader2 } from 'lucide-react';
 import { useTypeInstances, type TypeDefinitionLayer } from '@/hooks/use-warehouse';
@@ -31,7 +31,7 @@ interface InlineViewerProps {
   className?: string;
 }
 
-export function InlineViewer({
+function InlineViewerImpl({
   modelId,
   typeId,
   typeName,
@@ -69,16 +69,17 @@ export function InlineViewer({
     !showModel ? currentGuid : null
   );
 
-  // Debug: log data flow
-  console.log('[InlineViewer]', {
-    typeId, modelId, viewDimension, showModel,
-    instanceCount: instances.length,
-    currentGuid,
-    hasGeometry: !!geometry,
-    geometryLoading,
-    geometryError: geometryError?.message,
-    instanceError: instanceError?.message,
-  });
+  if (import.meta.env.DEV) {
+    console.log('[InlineViewer]', {
+      typeId, modelId, viewDimension, showModel,
+      instanceCount: instances.length,
+      currentGuid,
+      hasGeometry: !!geometry,
+      geometryLoading,
+      geometryError: geometryError?.message,
+      instanceError: instanceError?.message,
+    });
+  }
 
   // Reset index when type changes
   useEffect(() => {
@@ -254,6 +255,8 @@ export function InlineViewer({
     </div>
   );
 }
+
+export const InlineViewer = memo(InlineViewerImpl);
 
 // --- 2D/3D Toggle (top-center) ---
 

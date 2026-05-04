@@ -538,7 +538,10 @@ def _floor_name_keys(entry: dict) -> set[str]:
     return keys
 
 
-def check_storey_deviation(model) -> list[VerificationIssue]:
+_UNSET = object()
+
+
+def check_storey_deviation(model, *, claim=_UNSET) -> list[VerificationIssue]:
     """
     Compare a model's proposed storey list against its scope's canonical floors.
 
@@ -548,6 +551,10 @@ def check_storey_deviation(model) -> list[VerificationIssue]:
       - ``model.scope.storey_merge_tolerance_m`` — elevation tolerance.
       - Latest ``storey_list`` Claim for ``model.source_file`` — proposed list.
         If no claim exists, returns ``[]``.
+
+    Pass ``claim=`` (including ``None``) to skip the per-call DB lookup; bulk
+    callers like ``ProjectScopeViewSet.floors`` use that to fetch all relevant
+    claims in one query and avoid the N+1.
 
     Match rules (mirror ``claim_promotion._reconcile_floors``):
       1. proposed name or canonical alias match (case-insensitive) → no issue.
@@ -571,17 +578,18 @@ def check_storey_deviation(model) -> list[VerificationIssue]:
     if not canonical:
         return []
 
-    source_file = getattr(model, 'source_file', None)
-    if source_file is None:
-        return []
+    if claim is _UNSET:
+        source_file = getattr(model, 'source_file', None)
+        if source_file is None:
+            return []
+        from apps.entities.models import Claim
+        claim = (
+            Claim.objects
+            .filter(source_file=source_file, claim_type='storey_list')
+            .order_by('-extracted_at')
+            .first()
+        )
 
-    from apps.entities.models import Claim
-    claim = (
-        Claim.objects
-        .filter(source_file=source_file, claim_type='storey_list')
-        .order_by('-extracted_at')
-        .first()
-    )
     if claim is None:
         return []
 

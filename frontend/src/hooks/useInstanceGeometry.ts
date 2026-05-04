@@ -42,6 +42,8 @@ export function useInstanceGeometry(modelId: string, instanceGuid: string | null
     },
     enabled: !!model?.file_url && !!instanceGuid,
     staleTime: Infinity, // Geometry doesn't change
+    gcTime: Infinity,
+    retry: false,
   });
 }
 
