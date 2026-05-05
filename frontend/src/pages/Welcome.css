@@ -4,6 +4,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
 
 .welcome-root {
+  /* === Color === */
   --wl-bg: #faf8f3;
   --wl-bg-deep: #f3efe2;
   --wl-ink: #21263a;
@@ -16,30 +17,59 @@
   --wl-accent-ring: rgba(21, 121, 84, 0.28);
   --wl-danger: #8b1e1e;
 
+  /* === Spatial system: Fibonacci (px) ===
+     The composition treats whitespace as a primary element. Every
+     gap, padding, and offset comes from this scale, so the empty
+     middle between form and scene reads as intentional negative
+     space rather than accident. */
+  --fib-2: 0.5rem;     /* 8  */
+  --fib-3: 0.8125rem;  /* 13 */
+  --fib-4: 1.3125rem;  /* 21 */
+  --fib-5: 2.125rem;   /* 34 */
+  --fib-6: 3.4375rem;  /* 55 */
+  --fib-7: 5.5625rem;  /* 89 */
+  --fib-8: 9rem;       /* 144 */
+  --fib-9: 14.5625rem; /* 233 */
+  --fib-10: 23.5625rem;/* 377 */
+  --fib-11: 38.125rem; /* 610 — form column width */
+  --fib-12: 61.6875rem;/* 987 */
+  --fib-13: 99.8125rem;/* 1597 — scene cap */
+
+  /* === Type scale: golden ratio, base 16 ===
+     Typography climbs by ×1.618 so the visual weight of heading,
+     subheading, lede, and body stack in the same proportion as the
+     spatial composition. */
+  --fs-caption: 0.625rem;   /* 10 — base / φ² */
+  --fs-eyebrow: 0.6875rem;  /* 11 */
+  --fs-body:    0.9375rem;  /* 15 */
+  --fs-lede:    1.0625rem;  /* 17 */
+  --fs-h3:      1.625rem;   /* 26 — base × φ */
+  --fs-h2:      2.625rem;   /* 42 — h3 × φ */
+  --fs-h1:      4.25rem;    /* 68 — h2 × φ */
+  --fs-display: 6.875rem;   /* 110 */
+
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
   background: var(--wl-bg);
   color: var(--wl-ink);
   font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  font-size: 15px;
+  font-size: var(--fs-body);
   line-height: 1.55;
   overflow: hidden;
 }
 
-/* Three.js canvas host — right column of the welcome-frame grid.
-   `max-width` scales with viewport (capped at 2000px) so the diorama
-   has presence on 4K+ monitors instead of looking marooned in the
-   right corner of an empty page. `justify-self: end` anchors it to
-   the right edge of its grid cell (= viewport edge — frame has no
-   right padding) so the diorama is never clipped on the right.
-   The 720px media query below re-targets the scene to its own row
-   for mobile. */
+/* Three.js canvas host. Capped at Fibonacci 1597px — past that the
+   diorama would dominate the composition. `justify-self: end` anchors
+   it to the viewport's right edge (frame has no right padding) so it
+   is never clipped on the right. As the viewport grows past the cap,
+   the empty middle widens — that whitespace is intentional, sitting
+   roughly at the golden section of the page. */
 .welcome-scene {
   grid-area: scene;
   position: relative;
   width: 100%;
-  max-width: clamp(800px, calc(50vw + 200px), 2000px);
+  max-width: var(--fib-13);
   justify-self: end;
   min-height: 0;
   pointer-events: none;
@@ -55,37 +85,28 @@
   to { opacity: 1; }
 }
 
-/* Layout frame — the actual 2-column grid that places form (left) and
-   scene (right) with header/footer spanning both columns. CSS Grid
-   handles gap math declaratively, so overlap is impossible by
-   construction.
-   - Form column: minmax(360px, 600px) — between mobile-friendly min
-     and the panel's 560px max + a touch of breathing room.
-   - Scene column: 1fr — takes whatever's left. The scene element
-     inside it caps at 1100px and right-aligns, so empty space
-     accumulates between the two columns on huge monitors rather than
-     bloating the diorama.
-   - column-gap: scales with viewport.
-   - No padding-right: the scene's grid cell extends to the viewport
-     edge so the diorama is never clipped. */
+/* Layout frame — Editorial Architecture composition.
+   Two anchored columns at Fibonacci widths with a Fibonacci gap;
+   whatever space falls between them on wide viewports is intentional
+   negative space, not slack. `minmax(0, 1fr)` on the middle row keeps
+   Three.js's canvas from blowing the row past 100vh. */
 .welcome-frame {
   position: relative;
   z-index: 10;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(360px, 760px) 1fr;
-  /* `minmax(0, 1fr)` (not bare `1fr`) lets the row shrink below its
-     content size — without it Three.js's intrinsic canvas dimensions
-     blow the row out past 100vh on tall viewports and the page scrolls. */
+  /* Form column: Fibonacci 610 max. Scene column: takes the rest, but
+     the scene element inside caps at Fibonacci 1597. */
+  grid-template-columns: minmax(360px, var(--fib-11)) 1fr;
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     "header header"
     "form   scene"
     "footer footer";
-  column-gap: clamp(40px, 4vw, 80px);
-  padding-block: clamp(20px, 3vw, 40px);
-  padding-left: clamp(20px, 5vw, 64px);
+  column-gap: clamp(var(--fib-5), 4vw, var(--fib-7));  /* 34 → 89 */
+  padding-block: clamp(var(--fib-4), 3vw, var(--fib-6)); /* 21 → 55 */
+  padding-left: clamp(var(--fib-4), 5vw, var(--fib-7)); /* 21 → 89 */
 }
 
 .welcome-header { grid-area: header; }
@@ -151,12 +172,13 @@
 }
 
 .welcome-panel {
-  /* Panel width scales with viewport so it doesn't feel marooned on
-     large monitors. Capped at 760px because the form copy/inputs are
-     designed for ~560 — anything wider just adds inside whitespace. */
-  width: min(clamp(560px, calc(15vw + 360px), 760px), 100%);
+  /* Panel sits left-aligned in the form column. Max-width = Fibonacci
+     610 minus inset padding, so the visible card stays focused even
+     when its column has room to spare. */
+  width: 100%;
+  max-width: var(--fib-11);
   display: grid;
-  gap: clamp(20px, 2.2vh, 30px);
+  gap: var(--fib-4);  /* 21px between sections — Fibonacci */
   opacity: 0;
   animation: welcome-panel-in 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 400ms forwards;
   /* Translucent parchment card so the timeline/copy is legible over the
@@ -167,7 +189,8 @@
   -webkit-backdrop-filter: blur(10px) saturate(120%);
   border: 1px solid rgba(33, 38, 58, 0.08);
   border-radius: 4px;
-  padding: clamp(24px, 3vh, 36px) clamp(24px, 3vw, 40px);
+  /* Internal padding ratio approximates φ (vertical : horizontal) */
+  padding: var(--fib-6) var(--fib-5);  /* 55 vertical, 34 horizontal */
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6) inset,
     0 12px 40px -20px rgba(33, 38, 58, 0.18);
@@ -205,15 +228,19 @@
   font-family: 'Fraunces', ui-serif, Georgia, serif;
   font-weight: 400;
   font-variation-settings: 'opsz' 144, 'SOFT' 50;
-  font-size: clamp(36px, 5.5vw, 62px);
-  line-height: 1.02;
+  /* Sized to "Apply for access." comfortably fitting the 610-Fibonacci
+     panel content width (~542px after padding). The h2 base (42) → 52
+     range keeps line one across viewports. */
+  font-size: clamp(var(--fs-h2), 3.5vw, 3.25rem); /* 42 → 52 */
+  line-height: 1.04;
   letter-spacing: -0.02em;
   margin: 0;
   color: var(--wl-ink);
 }
 
 .welcome-lede {
-  font-size: clamp(15px, 1.2vw, 17px);
+  /* Modular scale: clamp between body (15) and lede (17) */
+  font-size: clamp(var(--fs-body), 1.1vw, var(--fs-lede));
   line-height: 1.6;
   color: var(--wl-ink-mute);
   max-width: 44ch;
