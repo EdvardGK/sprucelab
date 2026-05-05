@@ -16,6 +16,13 @@
   --wl-accent-ring: rgba(21, 121, 84, 0.28);
   --wl-danger: #8b1e1e;
 
+  /* Max width of the composed layout (wordmark + form + scene). Above
+     this viewport size, equal background margins appear on both sides
+     so the whole block stays centered instead of stretching. Form +
+     scene proportions remain identical to the laptop viewport. */
+  --wl-stage-max: 1800px;
+  --wl-stage-margin: max(0px, calc((100vw - var(--wl-stage-max)) / 2));
+
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
@@ -28,22 +35,29 @@
 }
 
 /* Three.js canvas host.
-   Scene width and position scale proportionally so the diorama is
-   neither lonely on a small canvas nor bloated across a 27" monitor.
-   `left` is the max of three constraints:
-     - 680px      floor — keeps clear of the form panel on laptops
-     - 50vw - 100 grows with viewport once big enough to matter
-     - 100vw-1100 caps scene width at 1100px on huge monitors
-   Net effect:
-     1366px: scene fills right ~50% of viewport (686px wide)
-     1920px: scene fills right ~55% (1060px wide)
-     2560px: scene capped at 1100px, leaves ~360px gap to form
-     3840px: scene capped at 1100px, sits in right third
+   The scene sits inside the centered stage:
+   - `right: var(--wl-stage-margin)` insets the scene from the viewport
+     edge by the same amount the frame is inset on the left, so above
+     the stage cap the scene ends with the centered block, not the
+     viewport.
+   - `left` is the max of two terms:
+     - `680px + stage-margin` floor — keeps clear of the form panel.
+     - `100vw - 1100px - stage-margin` caps scene width at 1100px once
+       the stage is centered.
+   Net effect (1100 scene + 560 form + 76 gap = 1736px composed block):
+     1366px: scene fills right ~50% (686px wide), stage-margin = 0
+     1920px: scene 1100px wide, stage-margin = 60px
+     2560px: scene 1100px wide, stage-margin = 380px (centered block)
+     3840px: scene 1100px wide, stage-margin = 1020px (centered block)
    The 720px media query below stacks scene + panel for mobile. */
 .welcome-scene {
   position: fixed;
   inset: 0;
-  left: max(680px, calc(50vw - 100px), calc(100vw - 1100px));
+  left: max(
+    calc(680px + var(--wl-stage-margin)),
+    calc(100vw - 1100px - var(--wl-stage-margin))
+  );
+  right: var(--wl-stage-margin);
   z-index: 0;
   pointer-events: none;
   opacity: 0;
@@ -81,19 +95,10 @@
 }
 
 /* Layout frame.
-   Vertical padding: standard fluid clamp.
-   Right padding: standard fluid clamp (the SIGN IN link is allowed to
-   float on the diorama side near the right edge).
-   Left padding: tracks the scene's left edge so the wordmark and form
-   panel drift right together with the viewport — three terms mirror
-   the .welcome-scene formula minus the form width and target gap.
-     scene_left = max(680px, 50vw - 100px, 100vw - 1100px)
-     padding-left = scene_left - 560 (form max-width) - 80 (gap)
-                  = max(64px, 50vw - 740px, 100vw - 1740px)
-   Below ~1608px viewport the 64px floor wins (matches right-side cap);
-   between ~1608 and ~2840px the 50vw term tracks viewport center;
-   above that the third term keeps the gap-to-scene constant at ~80px
-   even when the scene is capped at 1100px. */
+   Both side paddings inset by the stage margin so the wordmark + form
+   on the left and the SIGN IN link on the right both stay attached to
+   the centered stage block, not the viewport edge. Below the 1800px
+   stage cap the margin is zero and behaves like a normal padded layout. */
 .welcome-frame {
   position: relative;
   z-index: 10;
@@ -102,8 +107,8 @@
   display: grid;
   grid-template-rows: auto 1fr auto;
   padding-block: clamp(20px, 3vw, 40px);
-  padding-right: clamp(20px, 5vw, 64px);
-  padding-left: max(clamp(20px, 5vw, 64px), calc(50vw - 740px), calc(100vw - 1740px));
+  padding-left: calc(clamp(20px, 5vw, 64px) + var(--wl-stage-margin));
+  padding-right: calc(clamp(20px, 5vw, 64px) + var(--wl-stage-margin));
 }
 
 .welcome-header {
