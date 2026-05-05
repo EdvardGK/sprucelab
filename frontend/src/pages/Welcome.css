@@ -16,13 +16,6 @@
   --wl-accent-ring: rgba(21, 121, 84, 0.28);
   --wl-danger: #8b1e1e;
 
-  /* Max width of the composed layout (wordmark + form + scene). Above
-     this viewport size, equal background margins appear on both sides
-     so the whole block stays centered instead of stretching. Form +
-     scene proportions remain identical to the laptop viewport. */
-  --wl-stage-max: 1800px;
-  --wl-stage-margin: max(0px, calc((100vw - var(--wl-stage-max)) / 2));
-
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
@@ -34,31 +27,19 @@
   overflow: hidden;
 }
 
-/* Three.js canvas host.
-   The scene sits inside the centered stage:
-   - `right: var(--wl-stage-margin)` insets the scene from the viewport
-     edge by the same amount the frame is inset on the left, so above
-     the stage cap the scene ends with the centered block, not the
-     viewport.
-   - `left` is the max of two terms:
-     - `680px + stage-margin` floor — keeps clear of the form panel.
-     - `100vw - 1100px - stage-margin` caps scene width at 1100px once
-       the stage is centered.
-   Net effect (1100 scene + 560 form + 76 gap = 1736px composed block):
-     1366px: scene fills right ~50% (686px wide), stage-margin = 0
-     1920px: scene 1100px wide, stage-margin = 60px
-     2560px: scene 1100px wide, stage-margin = 380px (centered block)
-     3840px: scene 1100px wide, stage-margin = 1020px (centered block)
-   The 720px media query below stacks scene + panel for mobile. */
+/* Three.js canvas host — sits in the right column of the welcome-frame
+   grid. `max-width: 1100px` caps bloat on huge monitors; `justify-self:
+   end` anchors the diorama to the right edge of its grid cell (which
+   is the viewport edge — frame has no right padding). `min-height: 0`
+   lets the grid row size the cell freely. The 720px media query below
+   re-targets the scene to its own row for mobile. */
 .welcome-scene {
-  position: fixed;
-  inset: 0;
-  left: max(
-    calc(680px + var(--wl-stage-margin)),
-    calc(100vw - 1100px - var(--wl-stage-margin))
-  );
-  right: var(--wl-stage-margin);
-  z-index: 0;
+  grid-area: scene;
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  justify-self: end;
+  min-height: 0;
   pointer-events: none;
   opacity: 0;
   animation: welcome-scene-in 1400ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms forwards;
@@ -72,44 +53,39 @@
   to { opacity: 1; }
 }
 
-/* Soft radial vignette to anchor content over the scene */
-.welcome-veil {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      ellipse 70% 60% at 28% 55%,
-      rgba(250, 248, 243, 0.85) 0%,
-      rgba(250, 248, 243, 0.4) 40%,
-      rgba(250, 248, 243, 0) 70%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(250, 248, 243, 0.6) 0%,
-      rgba(250, 248, 243, 0) 20%,
-      rgba(250, 248, 243, 0) 80%,
-      rgba(250, 248, 243, 0.7) 100%
-    );
-}
-
-/* Layout frame.
-   Both side paddings inset by the stage margin so the wordmark + form
-   on the left and the SIGN IN link on the right both stay attached to
-   the centered stage block, not the viewport edge. Below the 1800px
-   stage cap the margin is zero and behaves like a normal padded layout. */
+/* Layout frame — the actual 2-column grid that places form (left) and
+   scene (right) with header/footer spanning both columns. CSS Grid
+   handles gap math declaratively, so overlap is impossible by
+   construction.
+   - Form column: minmax(360px, 600px) — between mobile-friendly min
+     and the panel's 560px max + a touch of breathing room.
+   - Scene column: 1fr — takes whatever's left. The scene element
+     inside it caps at 1100px and right-aligns, so empty space
+     accumulates between the two columns on huge monitors rather than
+     bloating the diorama.
+   - column-gap: scales with viewport.
+   - No padding-right: the scene's grid cell extends to the viewport
+     edge so the diorama is never clipped. */
 .welcome-frame {
   position: relative;
   z-index: 10;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
+  grid-template-columns: minmax(360px, 600px) 1fr;
   grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header header"
+    "form   scene"
+    "footer footer";
+  column-gap: clamp(40px, 6vw, 120px);
   padding-block: clamp(20px, 3vw, 40px);
-  padding-left: calc(clamp(20px, 5vw, 64px) + var(--wl-stage-margin));
-  padding-right: calc(clamp(20px, 5vw, 64px) + var(--wl-stage-margin));
+  padding-left: clamp(20px, 5vw, 64px);
 }
+
+.welcome-header { grid-area: header; }
+.welcome-main   { grid-area: form; }
+.welcome-footer { grid-area: footer; }
 
 .welcome-header {
   display: flex;
@@ -557,10 +533,23 @@
   color: var(--wl-ink-faint);
 }
 
-/* Small screens: simplify layout, keep the scene visible but less dominant */
+/* Small screens: stack form above scene, single column. */
 @media (max-width: 720px) {
   .welcome-frame {
-    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "form"
+      "scene"
+      "footer";
+    column-gap: 0;
+    padding-right: clamp(20px, 5vw, 64px);
+  }
+  .welcome-scene {
+    max-width: none;
+    justify-self: stretch;
+    height: 60vh;
+    min-height: 360px;
   }
   .welcome-panel {
     width: 100%;

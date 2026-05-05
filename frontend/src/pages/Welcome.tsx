@@ -195,9 +195,6 @@ export default function Welcome() {
   if (!user) {
     return (
       <div className="welcome-root">
-        <div ref={sceneContainerRef} className="welcome-scene" aria-hidden="true" />
-        <div className="welcome-veil" aria-hidden="true" />
-
         <div className="welcome-frame">
           <header className="welcome-header">
             <div className="welcome-wordmark">Sprucelab</div>
@@ -341,6 +338,8 @@ export default function Welcome() {
             )}
           </main>
 
+          <div ref={sceneContainerRef} className="welcome-scene" aria-hidden="true" />
+
           <footer className="welcome-footer">
             <div className="welcome-meta">
               <span>Closed beta · invitation only</span>
@@ -359,9 +358,6 @@ export default function Welcome() {
   // === Pending or rejected: queue/timeline panel (existing content) ===
   return (
     <div className={`welcome-root ${isRejected ? 'welcome-rejected' : ''}`}>
-      <div ref={sceneContainerRef} className="welcome-scene" aria-hidden="true" />
-      <div className="welcome-veil" aria-hidden="true" />
-
       <div className="welcome-frame">
         <header className="welcome-header">
           <div className="welcome-wordmark">Sprucelab</div>
@@ -463,6 +459,8 @@ export default function Welcome() {
             </section>
           )}
         </main>
+
+        <div ref={sceneContainerRef} className="welcome-scene" aria-hidden="true" />
 
         <footer className="welcome-footer">
           <div className="welcome-meta">
