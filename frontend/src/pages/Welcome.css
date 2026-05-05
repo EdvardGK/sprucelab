@@ -27,11 +27,21 @@
   overflow: hidden;
 }
 
-/* Three.js canvas host */
+/* Three.js canvas host.
+   The scene's left edge tracks the form's right edge with a gap that
+   grows as the viewport widens — so the visual relationship stays
+   coherent on a 1366px laptop and a 27" 2560px monitor.
+   - 680px floor: the form panel is `min(560px, 100%)` + frame padding,
+     so 680 keeps a ~50px gap from the form on laptop widths.
+   - `50vw - 100px` kicks in once the viewport is wide enough that 50vw
+     exceeds the floor (~1560px+); the scene then sits proportionally
+     to the right of center, leaving room for content to breathe on
+     large monitors instead of stretching across the whole screen.
+   The 720px media query below stacks scene + panel for mobile. */
 .welcome-scene {
   position: fixed;
   inset: 0;
-  left: 20%;
+  left: max(680px, calc(50vw - 100px));
   z-index: 0;
   pointer-events: none;
   opacity: 0;
