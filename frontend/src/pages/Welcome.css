@@ -89,7 +89,7 @@
 .welcome-wordmark {
   font-family: 'Fraunces', ui-serif, Georgia, serif;
   font-weight: 500;
-  font-variation-settings: 'opsz' 144, 'SOFT' 30;
+  font-variation-settings: 'opsz' 144, 'SOFT' 30, 'WONK' 0;
   font-size: clamp(18px, 1.4vw, 22px);
   letter-spacing: -0.01em;
   color: var(--wl-ink);
@@ -187,7 +187,7 @@
 .welcome-heading {
   font-family: 'Fraunces', ui-serif, Georgia, serif;
   font-weight: 400;
-  font-variation-settings: 'opsz' 144, 'SOFT' 50;
+  font-variation-settings: 'opsz' 144, 'SOFT' 50, 'WONK' 0;
   font-size: clamp(36px, 5.5vw, 62px);
   line-height: 1.02;
   letter-spacing: -0.02em;
