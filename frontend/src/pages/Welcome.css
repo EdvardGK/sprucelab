@@ -4,7 +4,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
 
 .welcome-root {
-  /* === Color === */
   --wl-bg: #faf8f3;
   --wl-bg-deep: #f3efe2;
   --wl-ink: #21263a;
@@ -17,71 +16,23 @@
   --wl-accent-ring: rgba(21, 121, 84, 0.28);
   --wl-danger: #8b1e1e;
 
-  /* === Spatial system: Fibonacci (px) ===
-     The composition treats whitespace as a primary element. Every
-     gap, padding, and offset comes from this scale, so the empty
-     middle between form and scene reads as intentional negative
-     space rather than accident. */
-  --fib-2: 0.5rem;     /* 8  */
-  --fib-3: 0.8125rem;  /* 13 */
-  --fib-4: 1.3125rem;  /* 21 */
-  --fib-5: 2.125rem;   /* 34 */
-  --fib-6: 3.4375rem;  /* 55 */
-  --fib-7: 5.5625rem;  /* 89 */
-  --fib-8: 9rem;       /* 144 */
-  --fib-9: 14.5625rem; /* 233 */
-  --fib-10: 23.5625rem;/* 377 */
-  --fib-11: 38.125rem; /* 610 — form column width */
-  --fib-12: 61.6875rem;/* 987 */
-  --fib-13: 99.8125rem;/* 1597 — scene cap */
-
-  /* === Type scale: golden ratio, base 16 ===
-     Typography climbs by ×1.618 so the visual weight of heading,
-     subheading, lede, and body stack in the same proportion as the
-     spatial composition. */
-  --fs-caption: 0.625rem;   /* 10 — base / φ² */
-  --fs-eyebrow: 0.6875rem;  /* 11 */
-  --fs-body:    0.9375rem;  /* 15 */
-  --fs-lede:    1.0625rem;  /* 17 */
-  --fs-h3:      1.625rem;   /* 26 — base × φ */
-  --fs-h2:      2.625rem;   /* 42 — h3 × φ */
-  --fs-h1:      4.25rem;    /* 68 — h2 × φ */
-  --fs-display: 6.875rem;   /* 110 */
-
-  /* === Breakpoint system ===
-     Documentation only — CSS @media queries can't read custom
-     properties, but having them in source documents the contract and
-     the values match the JS useViewportClass hook. */
-  --bp-xs:  480px;   /* Phone portrait                         */
-  --bp-sm:  720px;   /* Phone landscape, small tablet portrait */
-  --bp-md: 1024px;   /* Tablet landscape, small laptop         */
-  --bp-lg: 1440px;   /* Standard laptop / desktop              */
-  --bp-xl: 1920px;   /* Large desktop, 27" monitor             */
-
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
   background: var(--wl-bg);
   color: var(--wl-ink);
   font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  font-size: var(--fs-body);
+  font-size: 15px;
   line-height: 1.55;
   overflow: hidden;
 }
 
-/* Three.js canvas host. Capped at Fibonacci 1597px at the XL baseline.
-   `justify-self: end` anchors the diorama to the viewport's right edge
-   so it reads as a hard right anchor against the form's left anchor.
-   The 2XL breakpoint lifts the cap and switches to `justify-self: start`
-   so any leftover pixels at 4K become right-margin (perimeter
-   whitespace), not a hole between form and scene. */
+/* Three.js canvas host */
 .welcome-scene {
-  grid-area: scene;
-  position: relative;
-  width: 100%;
-  max-width: var(--fib-13);
-  justify-self: end;
-  min-height: 0;
+  position: fixed;
+  inset: 0;
+  left: 20%;
+  z-index: 0;
   pointer-events: none;
   opacity: 0;
   animation: welcome-scene-in 1400ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms forwards;
@@ -95,33 +46,38 @@
   to { opacity: 1; }
 }
 
-/* Layout frame — Editorial Architecture composition.
-   Two anchored columns at Fibonacci widths with a Fibonacci gap;
-   whatever space falls between them on wide viewports is intentional
-   negative space, not slack. `minmax(0, 1fr)` on the middle row keeps
-   Three.js's canvas from blowing the row past 100vh. */
+/* Soft radial vignette to anchor content over the scene */
+.welcome-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 70% 60% at 28% 55%,
+      rgba(250, 248, 243, 0.85) 0%,
+      rgba(250, 248, 243, 0.4) 40%,
+      rgba(250, 248, 243, 0) 70%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(250, 248, 243, 0.6) 0%,
+      rgba(250, 248, 243, 0) 20%,
+      rgba(250, 248, 243, 0) 80%,
+      rgba(250, 248, 243, 0.7) 100%
+    );
+}
+
+/* Layout frame */
 .welcome-frame {
   position: relative;
   z-index: 10;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
-  /* Form column: Fibonacci 610 max. Scene column: takes the rest, but
-     the scene element inside caps at Fibonacci 1597. */
-  grid-template-columns: minmax(360px, var(--fib-11)) 1fr;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    "header header"
-    "form   scene"
-    "footer footer";
-  column-gap: clamp(var(--fib-5), 4vw, var(--fib-7));  /* 34 → 89 */
-  padding-block: clamp(var(--fib-4), 3vw, var(--fib-6)); /* 21 → 55 */
-  padding-left: clamp(var(--fib-4), 5vw, var(--fib-7)); /* 21 → 89 */
+  grid-template-rows: auto 1fr auto;
+  padding: clamp(20px, 3vw, 40px) clamp(20px, 5vw, 64px);
 }
-
-.welcome-header { grid-area: header; }
-.welcome-main   { grid-area: form; }
-.welcome-footer { grid-area: footer; }
 
 .welcome-header {
   display: flex;
@@ -172,23 +128,18 @@
   transform: scaleX(1);
 }
 
-/* Form column — top-aligned so the panel sits just below the
-   wordmark on tall viewports rather than floating mid-page. */
+/* Main content column — anchored left, not centered */
 .welcome-main {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   padding-top: clamp(24px, 4vh, 48px);
   padding-bottom: clamp(24px, 4vh, 48px);
 }
 
 .welcome-panel {
-  /* Panel sits left-aligned in the form column. Max-width = Fibonacci
-     610 minus inset padding, so the visible card stays focused even
-     when its column has room to spare. */
-  width: 100%;
-  max-width: var(--fib-11);
+  width: min(560px, 100%);
   display: grid;
-  gap: var(--fib-4);  /* 21px between sections — Fibonacci */
+  gap: clamp(20px, 2.2vh, 30px);
   opacity: 0;
   animation: welcome-panel-in 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 400ms forwards;
   /* Translucent parchment card so the timeline/copy is legible over the
@@ -199,8 +150,7 @@
   -webkit-backdrop-filter: blur(10px) saturate(120%);
   border: 1px solid rgba(33, 38, 58, 0.08);
   border-radius: 4px;
-  /* Internal padding ratio approximates φ (vertical : horizontal) */
-  padding: var(--fib-6) var(--fib-5);  /* 55 vertical, 34 horizontal */
+  padding: clamp(24px, 3vh, 36px) clamp(24px, 3vw, 40px);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6) inset,
     0 12px 40px -20px rgba(33, 38, 58, 0.18);
@@ -238,20 +188,15 @@
   font-family: 'Fraunces', ui-serif, Georgia, serif;
   font-weight: 400;
   font-variation-settings: 'opsz' 144, 'SOFT' 50;
-  /* Sized to "Apply for access." comfortably fitting the 610-Fibonacci
-     panel content width (~542px after padding). The h2 base (42) → 52
-     range keeps line one across viewports. */
-  font-size: clamp(var(--fs-h2), 3.5vw, 3.25rem); /* 42 → 52 */
-  line-height: 1.04;
+  font-size: clamp(36px, 5.5vw, 62px);
+  line-height: 1.02;
   letter-spacing: -0.02em;
-  text-wrap: balance;
   margin: 0;
   color: var(--wl-ink);
 }
 
 .welcome-lede {
-  /* Modular scale: clamp between body (15) and lede (17) */
-  font-size: clamp(var(--fs-body), 1.1vw, var(--fs-lede));
+  font-size: clamp(15px, 1.2vw, 17px);
   line-height: 1.6;
   color: var(--wl-ink-mute);
   max-width: 44ch;
@@ -580,138 +525,13 @@
   color: var(--wl-ink-faint);
 }
 
-/* === Build hash cell — 2XL only ===
-   Hidden by default and when empty (dev / un-set env). Visible at
-   2XL when populated by VITE_BUILD_SHA at build time. Renders inside
-   the footer as a third grid cell. */
-.welcome-build-cell {
-  display: none;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  color: var(--wl-ink-faint);
-  text-align: center;
-}
-
-/* === LG+ refinements (>= 1025) ===
-   Editorial sidebar treatment: a hairline rule under the header
-   anchors page top, and a 1px right-border on the form column makes
-   the panel read as a sidebar against the diorama. Scoped to LG and
-   wider — at MD/SM/XS the composition's own anchors (hero band,
-   backdrop) play this role. */
-@media (min-width: 1025px) {
-  .welcome-header {
-    border-bottom: 1px solid var(--wl-line-soft);
-    padding-bottom: var(--fib-3);
-  }
-  .welcome-main {
-    border-right: 1px solid var(--wl-line-soft);
-    padding-right: var(--fib-5);
-  }
-}
-
-/* === LG laptop (1025–1440) ===
-   Tighter gutters than XL — the 89px gap is too generous on cramped
-   laptops. Padding-block tightens to Fibonacci 21. */
-@media (min-width: 1025px) and (max-width: 1440px) {
-  .welcome-frame {
-    column-gap: var(--fib-5);            /* 34 fixed, no clamp */
-    padding-block: var(--fib-4);         /* 21 fixed */
-  }
-}
-
-/* === 2XL theatrical (>= 1920) ===
-   Diorama scales past the Fibonacci-13 cap to fill available space up
-   to 2400px. `justify-self: start` so any leftover pixels become
-   right-margin (perimeter whitespace), not a hole between elements.
-   Footer expands to 3-cell grid so the build-hash cell can appear. */
-@media (min-width: 1920px) {
-  .welcome-scene {
-    max-width: min(2400px, calc(100vw - var(--fib-11) - var(--fib-7) - var(--fib-7)));
-    justify-self: start;
-  }
-  .welcome-footer {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    align-items: end;
-  }
-  .welcome-build-cell:not(:empty) {
-    display: block;
-  }
-}
-
-/* === MD tablet vertical-hero (721–1024) ===
-   Distinct composition: ART becomes a horizontal band on top (38vh,
-   golden minor of viewport height); LEAD + ACT stack below in a
-   single readable column at Fibonacci 610. Reads like an editorial
-   magazine spread. */
-@media (min-width: 721px) and (max-width: 1024px) {
-  .welcome-frame {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "header"
-      "scene"
-      "form"
-      "footer";
-    grid-template-rows: auto 38vh minmax(0, 1fr) auto;
-    column-gap: 0;
-    padding-left: clamp(var(--fib-4), 6vw, var(--fib-7));
-    padding-right: clamp(var(--fib-4), 6vw, var(--fib-7));
-  }
-  .welcome-scene {
-    grid-area: scene;
-    position: relative;
-    inset: auto;
-    width: 100%;
-    max-width: none;
-    justify-self: stretch;
-    height: 38vh;
-  }
-  .welcome-main {
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: var(--fib-5);
-  }
-  .welcome-panel {
-    margin: 0 auto;             /* center within full-width column */
-    max-width: var(--fib-11);
-  }
-}
-
-/* === SM/XS pocket (<= 720) ===
-   City as a zoomed-in fullscreen backdrop, form panel centered on top
-   with frosted glass for legibility. The grid collapses to a single
-   column so the scene escapes its grid cell via `position: absolute`
-   and fills the root. */
+/* Small screens: simplify layout, keep the scene visible but less dominant */
 @media (max-width: 720px) {
   .welcome-frame {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "header"
-      "form"
-      "footer";
-    column-gap: 0;
-    padding-right: clamp(20px, 5vw, 64px);
     grid-template-rows: auto 1fr auto;
-  }
-  .welcome-scene {
-    position: absolute;
-    inset: 0;
-    grid-area: unset;
-    max-width: none;
-    width: auto;
-    justify-self: unset;
-    z-index: 0;
-  }
-  .welcome-main {
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    z-index: 5;
   }
   .welcome-panel {
     width: 100%;
-    max-width: 480px;
   }
   .welcome-heading {
     font-size: clamp(32px, 8vw, 44px);
@@ -732,14 +552,6 @@
   }
   .welcome-coords {
     text-align: left;
-  }
-}
-
-/* === XS pocket-tight (<= 480) ===
-   Tighter panel padding so the form reads cleaner on phone portrait. */
-@media (max-width: 480px) {
-  .welcome-panel {
-    padding: var(--fib-5) var(--fib-4);  /* 34 / 21 */
   }
 }
 

@@ -2415,26 +2415,7 @@ function buildBuildings(ctx: SceneCtx): THREE.Group {
 // initDioramaScene — public entry, matches BlueprintCity signature
 // ---------------------------------------------------------------------------
 
-/* Camera framing presets — one per viewport class.
-   - pocket     (XS/SM): pulled in low-angle, reads as detail backdrop
-   - hero-band  (MD)   : lifted with wider FOV, horizontal sweep
-   - editorial  (LG/XL): default isometric, the design baseline
-   - theatrical (2XL)  : dolly-in for presence on huge monitors */
-export type FramingClass = 'pocket' | 'hero-band' | 'editorial' | 'theatrical';
-
-const FRAMING_TARGETS: Record<FramingClass, { pos: [number, number, number]; fov: number }> = {
-  pocket:      { pos: [60,  70,  60],  fov: 28 },
-  'hero-band': { pos: [110, 140, 110], fov: 34 },
-  editorial:   { pos: [94,  110, 94],  fov: 28 },
-  theatrical:  { pos: [83,  97,  83],  fov: 26 },
-};
-
-export interface DioramaController {
-  dispose: () => void;
-  setFraming: (cls: FramingClass) => void;
-}
-
-export function initDioramaScene(container: HTMLElement): DioramaController {
+export function initDioramaScene(container: HTMLElement): () => void {
   const tracker = new DisposalTracker();
   const windowTex = makeWindowColorTexture();
   tracker.track(windowTex);
@@ -2843,64 +2824,9 @@ export function initDioramaScene(container: HTMLElement): DioramaController {
   const resizeObserver = new ResizeObserver(handleResize);
   resizeObserver.observe(container);
 
-  // === Camera framing per viewport class ===
-  // First call snaps (initial mount); subsequent calls lerp 300ms.
-  // prefers-reduced-motion always snaps.
-  let currentFraming: FramingClass = 'editorial';
-  let framingInitialized = false;
-  let framingAnim: number | null = null;
-
-  const setFraming = (next: FramingClass): void => {
-    if (next === currentFraming && framingInitialized) return;
-
-    const target = FRAMING_TARGETS[next];
-    const targetPos = new THREE.Vector3(target.pos[0], target.pos[1], target.pos[2]);
-    const targetFov = target.fov;
-
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    // Snap on first call (initial mount) or when motion is reduced.
-    if (!framingInitialized || reducedMotion) {
-      camera.position.copy(targetPos);
-      camera.fov = targetFov;
-      camera.lookAt(0, 6, 0);
-      camera.updateProjectionMatrix();
-      currentFraming = next;
-      framingInitialized = true;
-      return;
-    }
-
-    if (framingAnim !== null) cancelAnimationFrame(framingAnim);
-
-    const startPos = camera.position.clone();
-    const startFov = camera.fov;
-    const startTime = performance.now();
-    const duration = 300;
-    // ease-out-quart: snappy start, gentle settle
-    const ease = (t: number): number => 1 - Math.pow(1 - t, 4);
-
-    const tick = (now: number): void => {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      const eased = ease(t);
-      camera.position.lerpVectors(startPos, targetPos, eased);
-      camera.fov = startFov + (targetFov - startFov) * eased;
-      camera.lookAt(0, 6, 0);
-      camera.updateProjectionMatrix();
-      if (t < 1) {
-        framingAnim = requestAnimationFrame(tick);
-      } else {
-        framingAnim = null;
-      }
-    };
-    framingAnim = requestAnimationFrame(tick);
-    currentFraming = next;
-  };
-
-  const dispose = (): void => {
+  return (): void => {
     running = false;
     cancelAnimationFrame(raf);
-    if (framingAnim !== null) cancelAnimationFrame(framingAnim);
     document.removeEventListener('visibilitychange', handleVisibility);
     resizeObserver.disconnect();
     renderer.dispose();
@@ -2909,6 +2835,4 @@ export function initDioramaScene(container: HTMLElement): DioramaController {
     }
     tracker.dispose();
   };
-
-  return { dispose, setFraming };
 }
