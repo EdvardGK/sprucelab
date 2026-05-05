@@ -165,6 +165,39 @@ Planned events (advertised in `/api/capabilities/`, not yet wired): `types.class
 | POST | `/api/admin/users/{id}/approve/` | `admin_approve_user` | Approve user |
 | POST | `/api/admin/users/{id}/reject/` | `admin_reject_user` | Reject user |
 
+### Embed (apps/embed/) -- prefix: `/api/embed/`
+
+Forward-deployed dashboard surface. Authenticates with project-scoped capability tokens (NOT Supabase sessions). Read-only resolver + token CRUD.
+
+**Auth scheme:** `Authorization: Embed <raw-token>`. The same token is also accepted as a `?token=<raw>` query-param for environments that can't set headers (only honored on `/api/embed/*` paths).
+
+| Method | Path | Handler | Purpose | Auth |
+|--------|------|---------|---------|------|
+| GET | `/api/embed/capabilities/` | `embed_capabilities` | Token-scoped capability manifest (project, allowed origins, filter surface) | Embed token (`read:capabilities` cap) |
+| GET | `/api/embed/instances/` | `embed_instances` | Resolve semantic filter context → `{type_ids, type_count, instance_count, truncated}`. Project derived from token. | Embed token (`read:instances` cap) |
+| POST | `/api/embed/tokens/` | `tokens_collection` | Issue a new embed token. Returns raw value once. | Supabase staff user |
+| GET | `/api/embed/tokens/?project_id=&include_revoked=` | `tokens_collection` | List tokens (no raw values). | Supabase staff user |
+| DELETE | `/api/embed/tokens/{id_or_prefix}/?reason=` | `tokens_detail` | Revoke a token. Idempotent. Accepts full UUID or 8-char prefix. | Supabase staff user |
+| POST | `/api/embed/tokens/refresh/` | `tokens_refresh` | Rotate a token: revoke old, mint new (same scope). 5-min grace after expiry. | Embed token (the OLD raw value) |
+
+**postMessage protocol (v1)** — used between the iframe page (`/embed/:dashboard?token=…`) and the embedding host:
+
+| Direction | Kind | Payload |
+|---|---|---|
+| host → embed | `set_filter` | partial `FilterContext` to merge |
+| host → embed | `request_height` | (none) |
+| embed → host | `ready` | `{protocol_versions: [1]}` (handshake, sent once on load) |
+| embed → host | `filter_changed` | full `FilterContext` after a user action |
+| embed → host | `selection_changed` | `{express_id, ifc_class, type_id}` or `null` |
+| embed → host | `height` | `{px}` for auto-resize |
+| embed → host | `error` | `{code, message, recoverable}` |
+
+Origin allowlist is per-token; messages from non-allowed origins are dropped silently in `frontend/src/lib/embed/messaging.ts`.
+
+**Operator surface:**
+- `python manage.py embed_token {create,list,revoke,refresh} [--json]` — local-only, bypasses Supabase auth.
+- `spruce embed pass {create,list,revoke,refresh} [--json]` — calls the HTTP endpoints. Set `$SPRUCELAB_ADMIN_TOKEN` to a Supabase staff access token, or rely on `DEV_AUTH_BYPASS=1` in dev.
+
 ---
 
 ## FastAPI IFC Service (backend/ifc-service/) -- prefix: `/api/v1/`

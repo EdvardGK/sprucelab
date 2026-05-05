@@ -104,16 +104,33 @@ export type FilterContextSeed = Pick<FilterContext, 'project_id'> &
   Partial<Omit<FilterContext, 'project_id'>>;
 
 /**
- * postMessage handshake envelope. Defined here so PR #4 (iframe page
- * route) imports the type from one place. Wiring is not in this PR.
+ * postMessage handshake envelope. The full v1 protocol surface — host and
+ * embed each emit a fixed subset.
+ *
+ * Direction summary:
+ *   host → embed:  set_filter, request_height
+ *   embed → host:  ready, filter_changed, selection_changed, height, error
  *
  * `kind: 'ready'` is the embed→host advertisement of supported protocol
  * versions; the host shim picks the highest version both sides speak.
  *
- * `kind: 'set_filter'` is the host→embed update. The embed may emit
- * `kind: 'filter_changed'` back when an in-tile click reprojects the
- * context (PR #6 work).
+ * Selection payload mirrors the IFCType-vs-instance distinction the embed
+ * cares about: a selection points to ONE express id but always arrives
+ * with the type id and ifc class so the host can drive a TypeBrowser-side
+ * cross-filter without a round-trip.
  */
+export interface SelectionPayload {
+  express_id: number;
+  ifc_class: string;
+  type_id: string;
+}
+
+export interface ErrorPayload {
+  code: string;
+  message: string;
+  recoverable: boolean;
+}
+
 export type EmbedHandshake =
   | {
       kind: 'ready';
@@ -125,9 +142,28 @@ export type EmbedHandshake =
       payload: Partial<Omit<FilterContext, 'protocol_version'>>;
     }
   | {
+      kind: 'request_height';
+      protocol_version: ProtocolVersion;
+    }
+  | {
       kind: 'filter_changed';
       protocol_version: ProtocolVersion;
       payload: FilterContext;
+    }
+  | {
+      kind: 'selection_changed';
+      protocol_version: ProtocolVersion;
+      payload: SelectionPayload | null;
+    }
+  | {
+      kind: 'height';
+      protocol_version: ProtocolVersion;
+      payload: { px: number };
+    }
+  | {
+      kind: 'error';
+      protocol_version: ProtocolVersion;
+      payload: ErrorPayload;
     };
 
 /**

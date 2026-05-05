@@ -75,6 +75,19 @@ def capabilities(request):
         'embed': {
             'capabilities_endpoint': '/api/embed/capabilities/',
             'instances_endpoint': '/api/embed/instances/',
+            'iframe_path': '/embed/{dashboard}?token={scoped_token}',
+            'protocol_version': 1,
+            'token_endpoints': {
+                'collection': '/api/embed/tokens/',
+                'detail': '/api/embed/tokens/{id_or_prefix}/',
+                'refresh': '/api/embed/tokens/refresh/',
+            },
+            'auth': {
+                'scheme': 'Embed',
+                'header': 'Authorization',
+                'query_param': 'token',
+                'admin_endpoints_require_staff': True,
+            },
         },
     })
 

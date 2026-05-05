@@ -30,6 +30,7 @@ const ProjectField = lazy(() => import('./pages/ProjectField'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ProcessingReports = lazy(() => import('./pages/dev/ProcessingReports'));
 const ProcessingReportDetail = lazy(() => import('./pages/dev/ProcessingReportDetail'));
+const EmbedDashboard = lazy(() => import('./pages/EmbedDashboard'));
 
 const guard = (element: ReactNode) => <RequireAuth>{element}</RequireAuth>;
 
@@ -69,6 +70,9 @@ const router = createBrowserRouter([
   { path: "/admin", element: withSuspense(guard(<AdminDashboard />)) },
   { path: "/dev/processing-reports", element: withSuspense(guard(<ProcessingReports />)) },
   { path: "/dev/processing-reports/:id", element: withSuspense(guard(<ProcessingReportDetail />)) },
+  // Forward-deployed embed surface — token-authenticated, no Supabase guard.
+  // The token rides on the URL (`?token=…`) and is the sole credential.
+  { path: "/embed/:dashboard", element: withSuspense(<EmbedDashboard />) },
 ]);
 
 function App() {
