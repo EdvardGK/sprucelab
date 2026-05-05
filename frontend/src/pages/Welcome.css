@@ -27,17 +27,19 @@
   overflow: hidden;
 }
 
-/* Three.js canvas host — sits in the right column of the welcome-frame
-   grid. `max-width: 1100px` caps bloat on huge monitors; `justify-self:
-   end` anchors the diorama to the right edge of its grid cell (which
-   is the viewport edge — frame has no right padding). `min-height: 0`
-   lets the grid row size the cell freely. The 720px media query below
-   re-targets the scene to its own row for mobile. */
+/* Three.js canvas host — right column of the welcome-frame grid.
+   `max-width` scales with viewport (capped at 2000px) so the diorama
+   has presence on 4K+ monitors instead of looking marooned in the
+   right corner of an empty page. `justify-self: end` anchors it to
+   the right edge of its grid cell (= viewport edge — frame has no
+   right padding) so the diorama is never clipped on the right.
+   The 720px media query below re-targets the scene to its own row
+   for mobile. */
 .welcome-scene {
   grid-area: scene;
   position: relative;
   width: 100%;
-  max-width: 1100px;
+  max-width: clamp(800px, calc(50vw + 200px), 2000px);
   justify-self: end;
   min-height: 0;
   pointer-events: none;
@@ -72,13 +74,16 @@
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(360px, 600px) 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(360px, 760px) 1fr;
+  /* `minmax(0, 1fr)` (not bare `1fr`) lets the row shrink below its
+     content size — without it Three.js's intrinsic canvas dimensions
+     blow the row out past 100vh on tall viewports and the page scrolls. */
+  grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     "header header"
     "form   scene"
     "footer footer";
-  column-gap: clamp(40px, 6vw, 120px);
+  column-gap: clamp(40px, 4vw, 80px);
   padding-block: clamp(20px, 3vw, 40px);
   padding-left: clamp(20px, 5vw, 64px);
 }
@@ -136,16 +141,20 @@
   transform: scaleX(1);
 }
 
-/* Main content column — anchored left, not centered */
+/* Form column — top-aligned so the panel sits just below the
+   wordmark on tall viewports rather than floating mid-page. */
 .welcome-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding-top: clamp(24px, 4vh, 48px);
   padding-bottom: clamp(24px, 4vh, 48px);
 }
 
 .welcome-panel {
-  width: min(560px, 100%);
+  /* Panel width scales with viewport so it doesn't feel marooned on
+     large monitors. Capped at 760px because the form copy/inputs are
+     designed for ~560 — anything wider just adds inside whitespace. */
+  width: min(clamp(560px, calc(15vw + 360px), 760px), 100%);
   display: grid;
   gap: clamp(20px, 2.2vh, 30px);
   opacity: 0;
@@ -533,26 +542,42 @@
   color: var(--wl-ink-faint);
 }
 
-/* Small screens: stack form above scene, single column. */
+/* Small screens: city as a zoomed-in fullscreen backdrop, form panel
+   centered on top with its frosted glass for legibility. The grid
+   collapses to a single column so the scene escapes its grid cell via
+   `position: absolute` and fills the root. */
 @media (max-width: 720px) {
   .welcome-frame {
     grid-template-columns: 1fr;
     grid-template-areas:
       "header"
       "form"
-      "scene"
       "footer";
     column-gap: 0;
     padding-right: clamp(20px, 5vw, 64px);
+    /* Form column gets the full middle row, vertically centered. */
+    grid-template-rows: auto 1fr auto;
   }
   .welcome-scene {
+    /* Backdrop: fill the entire root, behind the form panel. */
+    position: absolute;
+    inset: 0;
+    grid-area: unset;
     max-width: none;
-    justify-self: stretch;
-    height: 60vh;
-    min-height: 360px;
+    width: auto;
+    justify-self: unset;
+    z-index: 0;
+  }
+  .welcome-main {
+    /* Center the panel both axes, panel takes most of the view. */
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 5;
   }
   .welcome-panel {
     width: 100%;
+    max-width: 480px;
   }
   .welcome-heading {
     font-size: clamp(32px, 8vw, 44px);
