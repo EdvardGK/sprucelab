@@ -4,13 +4,21 @@ Tests for the embed semantic-to-concrete filter resolver.
 `/api/embed/instances/` and `/api/embed/capabilities/` are the contract the
 embed dashboards build against. These tests pin both the envelope shape
 and the resolver semantics for every supported filter.
+
+Both endpoints now require a project-scoped embed token. The ``api_client``
+fixture in this module wraps the default DRF client with the
+``Authorization: Embed <raw>`` header for the project under test, so each
+test reads like the resolver was still public — auth boilerplate stays
+out of the way.
 """
 from __future__ import annotations
 
 import uuid
 
 import pytest
+from rest_framework.test import APIClient
 
+from apps.embed.models import EmbedToken
 from apps.entities.models import (
     AnalysisStorey,
     AnalysisType,
@@ -32,6 +40,39 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def project(db):
     return Project.objects.create(name='embed-resolver-test')
+
+
+@pytest.fixture
+def project_token(project):
+    """Issue a token for `project` with the full read capability set."""
+    _, raw = EmbedToken.generate(
+        name='resolver-test',
+        project=project,
+        allowed_origins=['http://localhost:5173'],
+    )
+    return raw
+
+
+@pytest.fixture
+def api_client(project_token, settings):
+    """
+    DRF test client with embed-token auth wired up.
+
+    Re-enables ``EmbedTokenAuthentication`` on top of the open-permissions
+    fixture (which globally clears auth + permissions for unit tests), so
+    the resolver auth gate is exercised end-to-end without leaking other
+    auth backends into this test module.
+    """
+    settings.REST_FRAMEWORK = {
+        **settings.REST_FRAMEWORK,
+        'DEFAULT_AUTHENTICATION_CLASSES': [
+            'apps.embed.authentication.EmbedTokenAuthentication',
+        ],
+        'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
+    }
+    c = APIClient()
+    c.credentials(HTTP_AUTHORIZATION=f'Embed {project_token}')
+    return c
 
 
 @pytest.fixture
@@ -134,8 +175,8 @@ def analysis_with_storey(model, walls):
 # /api/embed/capabilities/
 # ---------------------------------------------------------------------------
 
-def test_capabilities_envelope_shape(client):
-    resp = client.get('/api/embed/capabilities/')
+def test_capabilities_envelope_shape(api_client):
+    resp = api_client.get('/api/embed/capabilities/')
     assert resp.status_code == 200
     body = resp.json()
 
@@ -152,40 +193,51 @@ def test_capabilities_envelope_shape(client):
     assert body['endpoints']['instances'] == '/api/embed/instances/'
 
 
-def test_capabilities_advertises_all_filters(client):
-    body = client.get('/api/embed/capabilities/').json()
+def test_capabilities_advertises_token_scope(api_client, project):
+    """The token block tells the iframe its project + allowed origins."""
+    body = api_client.get('/api/embed/capabilities/').json()
+    assert body['token']['project_id'] == str(project.id)
+    assert 'http://localhost:5173' in body['token']['allowed_origins']
+    assert 'read:instances' in body['token']['capabilities']
+
+
+def test_capabilities_advertises_all_filters(api_client):
+    body = api_client.get('/api/embed/capabilities/').json()
     filters = body['supported_filters']
-    assert {'project_id', 'ifc_class', 'type_id', 'floor_code'} <= set(filters.keys())
-    # project_id is the only required filter — agents need to know.
-    assert filters['project_id']['required'] is True
+    # project_id is no longer a request-time filter (token-bound), but the
+    # other dimensions still are.
+    assert {'ifc_class', 'type_id', 'floor_code'} <= set(filters.keys())
     assert filters['ifc_class']['required'] is False
 
 
-def test_capabilities_documents_truncation_and_omitted_express_ids(client):
-    body = client.get('/api/embed/capabilities/').json()
+def test_capabilities_documents_truncation_and_omitted_express_ids(api_client):
+    body = api_client.get('/api/embed/capabilities/').json()
     assert body['truncation']['threshold_instances'] == 2500
     assert body['truncation']['fallback_mode'] == 'highlight_by_class'
     # Stable contract: callers should NOT expect instance_express_ids back.
     assert 'instance_express_ids' in body['notes']
 
 
-def test_capabilities_is_public(client):
-    # No auth required — consistent with /api/capabilities/.
-    assert client.get('/api/embed/capabilities/').status_code == 200
+def test_capabilities_requires_token():
+    """Without auth, /capabilities/ now refuses."""
+    c = APIClient()
+    res = c.get('/api/embed/capabilities/')
+    assert res.status_code in (401, 403)
 
 
 # ---------------------------------------------------------------------------
 # /api/embed/instances/ — required params + base shape
 # ---------------------------------------------------------------------------
 
-def test_instances_requires_project_id(client):
-    resp = client.get('/api/embed/instances/')
-    assert resp.status_code == 400
-    assert 'project_id' in resp.json()['detail']
+def test_instances_requires_token():
+    """No token → no project scope → 401/403."""
+    c = APIClient()
+    res = c.get('/api/embed/instances/')
+    assert res.status_code in (401, 403)
 
 
-def test_instances_unfiltered_returns_all_project_types(client, project, walls, doors):
-    resp = client.get(f'/api/embed/instances/?project_id={project.id}')
+def test_instances_unfiltered_returns_all_project_types(api_client, project, walls, doors):
+    resp = api_client.get('/api/embed/instances/')
     assert resp.status_code == 200
     body = resp.json()
     assert body['type_count'] == 5  # 3 walls + 2 doors
@@ -197,23 +249,35 @@ def test_instances_unfiltered_returns_all_project_types(client, project, walls, 
     assert set(body['type_ids']) == {str(t.id) for t in walls + doors}
 
 
-def test_instances_unknown_project_returns_empty(client):
-    resp = client.get(f'/api/embed/instances/?project_id={uuid.uuid4()}')
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body['type_ids'] == []
-    assert body['type_count'] == 0
-    assert body['instance_count'] == 0
+def test_instances_token_scope_isolates_other_projects(api_client, project, walls, doors):
+    """Tokens scoped to project A don't leak data from project B."""
+    other = Project.objects.create(name='other')
+    sf = SourceFile.objects.create(
+        project=other, original_filename='o.ifc', format='ifc', file_size=1,
+    )
+    other_model = Model.objects.create(
+        project=other, source_file=sf, name='O', original_filename='o.ifc',
+    )
+    IFCType.objects.create(
+        model=other_model,
+        type_guid=str(uuid.uuid4()),
+        type_name='Other',
+        ifc_type='IfcWallType',
+        instance_count=999,
+    )
+
+    body = api_client.get('/api/embed/instances/').json()
+    # Only `project`'s 5 types come back; the 'Other' wall is hidden.
+    assert body['type_count'] == 5
+    assert body['instance_count'] == 70
 
 
 # ---------------------------------------------------------------------------
 # /api/embed/instances/ — semantic filters
 # ---------------------------------------------------------------------------
 
-def test_instances_filters_by_ifc_class(client, project, walls, doors):
-    resp = client.get(
-        f'/api/embed/instances/?project_id={project.id}&ifc_class=IfcWallType'
-    )
+def test_instances_filters_by_ifc_class(api_client, project, walls, doors):
+    resp = api_client.get('/api/embed/instances/?ifc_class=IfcWallType')
     body = resp.json()
     assert body['type_count'] == 3
     assert body['instance_count'] == 60
@@ -221,11 +285,9 @@ def test_instances_filters_by_ifc_class(client, project, walls, doors):
     assert set(body['type_ids']) == {str(w.id) for w in walls}
 
 
-def test_instances_filters_by_single_type_id(client, project, walls):
+def test_instances_filters_by_single_type_id(api_client, project, walls):
     target = walls[1]
-    resp = client.get(
-        f'/api/embed/instances/?project_id={project.id}&type_id={target.id}'
-    )
+    resp = api_client.get(f'/api/embed/instances/?type_id={target.id}')
     body = resp.json()
     assert body['type_count'] == 1
     assert body['instance_count'] == 20
@@ -233,11 +295,9 @@ def test_instances_filters_by_single_type_id(client, project, walls):
     assert body['applied_filters']['type_id'] == [str(target.id)]
 
 
-def test_instances_filters_by_csv_type_ids(client, project, walls):
+def test_instances_filters_by_csv_type_ids(api_client, project, walls):
     csv = ','.join(str(w.id) for w in walls[:2])
-    resp = client.get(
-        f'/api/embed/instances/?project_id={project.id}&type_id={csv}'
-    )
+    resp = api_client.get(f'/api/embed/instances/?type_id={csv}')
     body = resp.json()
     assert body['type_count'] == 2
     assert body['instance_count'] == 30
@@ -248,12 +308,10 @@ def test_instances_filters_by_csv_type_ids(client, project, walls):
 # ---------------------------------------------------------------------------
 
 def test_instances_filters_by_floor_code_when_analysis_present(
-    client, project, walls, scope_with_floors, analysis_with_storey,
+    api_client, project, walls, scope_with_floors, analysis_with_storey,
 ):
     placed = analysis_with_storey['placed_type']
-    resp = client.get(
-        f'/api/embed/instances/?project_id={project.id}&floor_code=02'
-    )
+    resp = api_client.get('/api/embed/instances/?floor_code=02')
     body = resp.json()
     assert body['applied_filters']['floor_code'] == '02'
     assert body['skipped_filters'] == []
@@ -262,23 +320,19 @@ def test_instances_filters_by_floor_code_when_analysis_present(
 
 
 def test_instances_floor_code_matches_alias(
-    client, project, walls, scope_with_floors, analysis_with_storey,
+    api_client, project, walls, scope_with_floors, analysis_with_storey,
 ):
     placed = analysis_with_storey['placed_type']
-    resp = client.get(
-        f'/api/embed/instances/?project_id={project.id}&floor_code=L02'
-    )
+    resp = api_client.get('/api/embed/instances/?floor_code=L02')
     body = resp.json()
     assert body['applied_filters']['floor_code'] == 'L02'
     assert body['type_ids'] == [str(placed.id)]
 
 
 def test_instances_skips_floor_filter_for_unknown_code(
-    client, project, walls, scope_with_floors, analysis_with_storey,
+    api_client, project, walls, scope_with_floors, analysis_with_storey,
 ):
-    resp = client.get(
-        f'/api/embed/instances/?project_id={project.id}&floor_code=99'
-    )
+    resp = api_client.get('/api/embed/instances/?floor_code=99')
     body = resp.json()
     assert 'floor_code' in body['skipped_filters']
     assert 'floor_code' not in body['applied_filters']
@@ -287,12 +341,10 @@ def test_instances_skips_floor_filter_for_unknown_code(
 
 
 def test_instances_skips_floor_filter_when_no_analysis(
-    client, project, walls, scope_with_floors,
+    api_client, project, walls, scope_with_floors,
 ):
     # Canonical floor exists but no AnalysisStorey rows are populated.
-    resp = client.get(
-        f'/api/embed/instances/?project_id={project.id}&floor_code=02'
-    )
+    resp = api_client.get('/api/embed/instances/?floor_code=02')
     body = resp.json()
     assert 'floor_code' in body['skipped_filters']
 
@@ -301,7 +353,7 @@ def test_instances_skips_floor_filter_when_no_analysis(
 # /api/embed/instances/ — truncation
 # ---------------------------------------------------------------------------
 
-def test_instances_truncates_above_threshold(client, project, model):
+def test_instances_truncates_above_threshold(api_client, project, model):
     # 3000 instances total > 2500 threshold.
     IFCType.objects.create(
         model=model,
@@ -310,7 +362,7 @@ def test_instances_truncates_above_threshold(client, project, model):
         ifc_type='IfcWallType',
         instance_count=3000,
     )
-    resp = client.get(f'/api/embed/instances/?project_id={project.id}')
+    resp = api_client.get('/api/embed/instances/')
     body = resp.json()
     assert body['truncated'] is True
     assert body['instance_count'] == 3000
@@ -319,7 +371,7 @@ def test_instances_truncates_above_threshold(client, project, model):
     assert body['type_count'] == 1
 
 
-def test_instances_at_threshold_is_not_truncated(client, project, model):
+def test_instances_at_threshold_is_not_truncated(api_client, project, model):
     IFCType.objects.create(
         model=model,
         type_guid=str(uuid.uuid4()),
@@ -327,5 +379,5 @@ def test_instances_at_threshold_is_not_truncated(client, project, model):
         ifc_type='IfcWallType',
         instance_count=2500,
     )
-    body = client.get(f'/api/embed/instances/?project_id={project.id}').json()
+    body = api_client.get('/api/embed/instances/').json()
     assert body['truncated'] is False

@@ -293,6 +293,10 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '60/min',
         'user': '600/min',
+        # Per-token bucket for the forward-deployed /api/embed/* surface.
+        # Embed dashboards refresh on user interaction, not just page load,
+        # so the rate is roughly 2x the human-session budget.
+        'embed_token': '1000/hour',
     },
 }
 

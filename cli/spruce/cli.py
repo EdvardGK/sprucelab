@@ -14,6 +14,7 @@ from .config import (
 )
 from .api_client import SprucelabClient
 from .dev import dev_app
+from .embed import embed_app
 
 app = typer.Typer(
     name="spruce",
@@ -21,6 +22,7 @@ app = typer.Typer(
     no_args_is_help=True
 )
 app.add_typer(dev_app, name="dev")
+app.add_typer(embed_app, name="embed")
 console = Console()
 
 # Config subcommand

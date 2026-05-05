@@ -7,16 +7,48 @@ express IDs are intentionally NOT returned: they aren't stored server-side
 (see CLAUDE.md "We DON'T store individual entities"), and the viewer derives
 them locally from ThatOpen fragment data.
 
-Both endpoints are public, read-only, and stable contract. See
-``/api/embed/capabilities/`` for the full filter surface.
+Both endpoints authenticate via ``EmbedTokenAuthentication`` and require a
+project-scoped capability token. The token's ``project_id`` is the source
+of truth — any caller-supplied ``project_id`` query param must match.
 """
 from __future__ import annotations
 
 from django.db.models import Sum
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from apps.embed.authentication import EmbedTokenAuthentication, EmbedTokenContext
+from apps.embed.throttling import ScopedTokenRateThrottle
+
+
+def _require_capability(request, capability: str) -> Response | None:
+    """
+    Inline capability gate. ``api_view`` doesn't propagate function
+    attributes onto the wrapping view class, so a permission-class with
+    ``view.required_capability`` lookup never sees the value. Inlining
+    keeps the gate readable and pinned to the endpoint that needs it.
+
+    Returns a 401/403 Response when access is denied, ``None`` when the
+    request may proceed.
+    """
+    ctx = request.auth
+    if not isinstance(ctx, EmbedTokenContext):
+        return Response(
+            {'detail': 'embed token required'},
+            status=401,
+        )
+    if not ctx.has_capability(capability):
+        return Response(
+            {'error': 'capability_missing', 'required': capability},
+            status=403,
+        )
+    return None
 from apps.entities.models import (
     AnalysisStorey,
     AnalysisTypeStorey,
@@ -25,7 +57,7 @@ from apps.entities.models import (
 from apps.projects.models import ProjectScope
 
 
-EMBED_API_VERSION = '1.0'
+EMBED_API_VERSION = '1.1'
 
 # Truncation threshold (per edkjo Q2 from the embed plan). When the matched
 # type set covers more than this many instances, the viewer should fall back
@@ -35,29 +67,38 @@ TRUNCATION_THRESHOLD_INSTANCES = 2500
 
 
 @api_view(['GET'])
+@authentication_classes([EmbedTokenAuthentication])
 @permission_classes([AllowAny])
-@throttle_classes([])
+@throttle_classes([ScopedTokenRateThrottle])
 def embed_capabilities(request):
     """
     Embed filter-resolver capability manifest.
 
-    Mirrors the shape of ``/api/capabilities/`` but scoped to the embed
-    surface — what filters the resolver understands, the response envelope
-    callers can rely on, and the truncation contract.
+    Token-bound: callers see only the surface their token allows. The
+    response includes the token's ``project_id`` and ``allowed_origins``
+    so the iframe page can short-circuit unauthorised parents on mount
+    without an extra round-trip.
     """
+    denied = _require_capability(request, 'read:capabilities')
+    if denied is not None:
+        return denied
+    ctx: EmbedTokenContext = request.auth
     return Response({
         'api_version': EMBED_API_VERSION,
         'service': 'sprucelab-embed-resolver',
+        'protocol_version': 1,
+        'token': {
+            'project_id': ctx.project_id,
+            'allowed_origins': ctx.allowed_origins,
+            'capabilities': ctx.capabilities,
+            'expires_at': ctx.token.expires_at.isoformat() if ctx.token.expires_at else None,
+        },
         'endpoints': {
             'instances': '/api/embed/instances/',
             'capabilities': '/api/embed/capabilities/',
+            'token_refresh': '/api/embed/tokens/refresh/',
         },
         'supported_filters': {
-            'project_id': {
-                'source': 'apps.models.Model.project_id',
-                'coverage': 'full',
-                'required': True,
-            },
             'ifc_class': {
                 'source': 'apps.entities.IFCType.ifc_type',
                 'coverage': 'full',
@@ -102,6 +143,11 @@ def embed_capabilities(request):
                 'instance — the per-instance render path stalls past this '
                 'count.'
             ),
+        },
+        'auth': {
+            'scheme': 'Embed',
+            'header': 'Authorization',
+            'query_param': 'token',
         },
         'notes': (
             'instance_express_ids intentionally omitted from the response. '
@@ -150,9 +196,6 @@ def _resolve_floor_to_type_ids(project_id: str, floor_code: str) -> list | None:
     if target_elevation is None:
         return None
 
-    # AnalysisStorey carries the elevation that landed during extraction.
-    # Match by absolute delta within the scope's merge tolerance — same band
-    # the canonical-floor promotion uses, so the lookup is symmetric.
     storey_qs = AnalysisStorey.objects.filter(
         analysis__model__project_id=project_id,
         elevation__isnull=False,
@@ -179,21 +222,29 @@ def _resolve_floor_to_type_ids(project_id: str, floor_code: str) -> list | None:
 
 
 @api_view(['GET'])
+@authentication_classes([EmbedTokenAuthentication])
 @permission_classes([AllowAny])
-@throttle_classes([])
+@throttle_classes([ScopedTokenRateThrottle])
 def embed_instances(request):
     """
     Resolve a semantic filter context to type-level data.
 
-    Required: ``project_id``. Optional: ``ifc_class``, ``type_id`` (csv),
-    ``floor_code``. Always returns 200 with the result envelope; missing
-    project_id is the only 400.
+    Project scope comes from the token. Optional: ``ifc_class``,
+    ``type_id`` (csv), ``floor_code``. Always returns 200 with the result
+    envelope. A caller-supplied ``project_id`` must match the token's
+    project; mismatched values return 403.
     """
-    project_id = request.query_params.get('project_id')
-    if not project_id:
+    denied = _require_capability(request, 'read:instances')
+    if denied is not None:
+        return denied
+    ctx: EmbedTokenContext = request.auth
+    project_id = ctx.project_id
+
+    supplied = request.query_params.get('project_id')
+    if supplied and supplied != project_id:
         return Response(
-            {'detail': 'project_id is required'},
-            status=400,
+            {'detail': 'project_id does not match token scope'},
+            status=403,
         )
 
     ifc_class = request.query_params.get('ifc_class')
