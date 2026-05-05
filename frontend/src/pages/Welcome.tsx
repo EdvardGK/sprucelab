@@ -3,8 +3,44 @@ import { Link, Navigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { fetchMe, updateMyProfile } from '../lib/me';
 import { useAuth } from '../contexts/AuthContext';
-import { initDioramaScene } from '../components/welcome/DioramaScene';
+import {
+  initDioramaScene,
+  type DioramaController,
+  type FramingClass,
+} from '../components/welcome/DioramaScene';
 import './Welcome.css';
+
+type ViewportClass = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+
+function classifyViewport(w: number): ViewportClass {
+  if (w <= 480) return 'xs';
+  if (w <= 720) return 'sm';
+  if (w <= 1024) return 'md';
+  if (w <= 1440) return 'lg';
+  if (w < 1920) return 'xl';
+  return '2xl';
+}
+
+function framingFor(vp: ViewportClass): FramingClass {
+  if (vp === 'xs' || vp === 'sm') return 'pocket';
+  if (vp === 'md') return 'hero-band';
+  if (vp === '2xl') return 'theatrical';
+  return 'editorial';
+}
+
+function useViewportClass(): ViewportClass {
+  const [cls, setCls] = useState<ViewportClass>(() =>
+    typeof window === 'undefined' ? 'xl' : classifyViewport(window.innerWidth),
+  );
+  useEffect(() => {
+    const handler = (): void => setCls(classifyViewport(window.innerWidth));
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return cls;
+}
+
+const BUILD_SHA = ((import.meta.env.VITE_BUILD_SHA as string | undefined) ?? '').slice(0, 7);
 
 function formatTimestamp(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -69,6 +105,8 @@ export default function Welcome() {
   const authLoading = DEV_PREVIEW ? false : realAuthLoading;
   const queryClient = useQueryClient();
   const sceneContainerRef = useRef<HTMLDivElement>(null);
+  const dioramaRef = useRef<DioramaController | null>(null);
+  const vpClass = useViewportClass();
 
   const { data: meReal, isLoading: meLoading } = useQuery({
     queryKey: ['me'],
@@ -108,9 +146,20 @@ export default function Welcome() {
   useEffect(() => {
     const container = sceneContainerRef.current;
     if (!container) return;
-    const cleanup = initDioramaScene(container);
-    return cleanup;
+    const controller = initDioramaScene(container);
+    dioramaRef.current = controller;
+    return () => {
+      dioramaRef.current = null;
+      controller.dispose();
+    };
   }, []);
+
+  // Re-frame the camera when viewport class changes. First call snaps;
+  // subsequent calls lerp 300ms. Independent of the resize-observer
+  // that handles canvas dimensions.
+  useEffect(() => {
+    dioramaRef.current?.setFraming(framingFor(vpClass));
+  }, [vpClass]);
 
   const saveProfile = useMutation({
     mutationFn: updateMyProfile,
@@ -123,7 +172,7 @@ export default function Welcome() {
 
   if (authLoading) {
     return (
-      <div className="welcome-root">
+      <div className="welcome-root" data-vp={vpClass}>
         <div className="welcome-frame" style={{ justifyItems: 'center', alignItems: 'center' }}>
           <p className="welcome-loading">Loading…</p>
         </div>
@@ -194,7 +243,7 @@ export default function Welcome() {
   // === Anonymous: signup form panel ===
   if (!user) {
     return (
-      <div className="welcome-root">
+      <div className="welcome-root" data-vp={vpClass}>
         <div className="welcome-frame">
           <header className="welcome-header">
             <div className="welcome-wordmark">Sprucelab</div>
@@ -345,6 +394,7 @@ export default function Welcome() {
               <span>Closed beta · invitation only</span>
               <span>{isLoading ? '' : 'Reviewed by hand · usually within 48h'}</span>
             </div>
+            <div className="welcome-build-cell">{BUILD_SHA}</div>
             <div className="welcome-coords">
               <div>sprucelab.io / apply</div>
               <div>{formatTimestamp(new Date().toISOString())}</div>
@@ -357,7 +407,7 @@ export default function Welcome() {
 
   // === Pending or rejected: queue/timeline panel (existing content) ===
   return (
-    <div className={`welcome-root ${isRejected ? 'welcome-rejected' : ''}`}>
+    <div className={`welcome-root ${isRejected ? 'welcome-rejected' : ''}`} data-vp={vpClass}>
       <div className="welcome-frame">
         <header className="welcome-header">
           <div className="welcome-wordmark">Sprucelab</div>
@@ -467,6 +517,7 @@ export default function Welcome() {
             <span>{emailDisplay}</span>
             <span>{isLoading ? 'Status: fetching…' : `Queue ID · ${me?.profile?.supabase_id?.slice(0, 8) ?? '—'}`}</span>
           </div>
+          <div className="welcome-build-cell">{BUILD_SHA}</div>
           <div className="welcome-coords">
             <div>sprucelab.io / welcome</div>
             <div>{formatTimestamp(new Date().toISOString())}</div>

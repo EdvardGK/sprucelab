@@ -48,6 +48,16 @@
   --fs-h1:      4.25rem;    /* 68 — h2 × φ */
   --fs-display: 6.875rem;   /* 110 */
 
+  /* === Breakpoint system ===
+     Documentation only — CSS @media queries can't read custom
+     properties, but having them in source documents the contract and
+     the values match the JS useViewportClass hook. */
+  --bp-xs:  480px;   /* Phone portrait                         */
+  --bp-sm:  720px;   /* Phone landscape, small tablet portrait */
+  --bp-md: 1024px;   /* Tablet landscape, small laptop         */
+  --bp-lg: 1440px;   /* Standard laptop / desktop              */
+  --bp-xl: 1920px;   /* Large desktop, 27" monitor             */
+
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
@@ -59,12 +69,12 @@
   overflow: hidden;
 }
 
-/* Three.js canvas host. Capped at Fibonacci 1597px — past that the
-   diorama would dominate the composition. `justify-self: end` anchors
-   it to the viewport's right edge (frame has no right padding) so it
-   is never clipped on the right. As the viewport grows past the cap,
-   the empty middle widens — that whitespace is intentional, sitting
-   roughly at the golden section of the page. */
+/* Three.js canvas host. Capped at Fibonacci 1597px at the XL baseline.
+   `justify-self: end` anchors the diorama to the viewport's right edge
+   so it reads as a hard right anchor against the form's left anchor.
+   The 2XL breakpoint lifts the cap and switches to `justify-self: start`
+   so any leftover pixels at 4K become right-margin (perimeter
+   whitespace), not a hole between form and scene. */
 .welcome-scene {
   grid-area: scene;
   position: relative;
@@ -234,6 +244,7 @@
   font-size: clamp(var(--fs-h2), 3.5vw, 3.25rem); /* 42 → 52 */
   line-height: 1.04;
   letter-spacing: -0.02em;
+  text-wrap: balance;
   margin: 0;
   color: var(--wl-ink);
 }
@@ -569,10 +580,109 @@
   color: var(--wl-ink-faint);
 }
 
-/* Small screens: city as a zoomed-in fullscreen backdrop, form panel
-   centered on top with its frosted glass for legibility. The grid
-   collapses to a single column so the scene escapes its grid cell via
-   `position: absolute` and fills the root. */
+/* === Build hash cell — 2XL only ===
+   Hidden by default and when empty (dev / un-set env). Visible at
+   2XL when populated by VITE_BUILD_SHA at build time. Renders inside
+   the footer as a third grid cell. */
+.welcome-build-cell {
+  display: none;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--wl-ink-faint);
+  text-align: center;
+}
+
+/* === LG+ refinements (>= 1025) ===
+   Editorial sidebar treatment: a hairline rule under the header
+   anchors page top, and a 1px right-border on the form column makes
+   the panel read as a sidebar against the diorama. Scoped to LG and
+   wider — at MD/SM/XS the composition's own anchors (hero band,
+   backdrop) play this role. */
+@media (min-width: 1025px) {
+  .welcome-header {
+    border-bottom: 1px solid var(--wl-line-soft);
+    padding-bottom: var(--fib-3);
+  }
+  .welcome-main {
+    border-right: 1px solid var(--wl-line-soft);
+    padding-right: var(--fib-5);
+  }
+}
+
+/* === LG laptop (1025–1440) ===
+   Tighter gutters than XL — the 89px gap is too generous on cramped
+   laptops. Padding-block tightens to Fibonacci 21. */
+@media (min-width: 1025px) and (max-width: 1440px) {
+  .welcome-frame {
+    column-gap: var(--fib-5);            /* 34 fixed, no clamp */
+    padding-block: var(--fib-4);         /* 21 fixed */
+  }
+}
+
+/* === 2XL theatrical (>= 1920) ===
+   Diorama scales past the Fibonacci-13 cap to fill available space up
+   to 2400px. `justify-self: start` so any leftover pixels become
+   right-margin (perimeter whitespace), not a hole between elements.
+   Footer expands to 3-cell grid so the build-hash cell can appear. */
+@media (min-width: 1920px) {
+  .welcome-scene {
+    max-width: min(2400px, calc(100vw - var(--fib-11) - var(--fib-7) - var(--fib-7)));
+    justify-self: start;
+  }
+  .welcome-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: end;
+  }
+  .welcome-build-cell:not(:empty) {
+    display: block;
+  }
+}
+
+/* === MD tablet vertical-hero (721–1024) ===
+   Distinct composition: ART becomes a horizontal band on top (38vh,
+   golden minor of viewport height); LEAD + ACT stack below in a
+   single readable column at Fibonacci 610. Reads like an editorial
+   magazine spread. */
+@media (min-width: 721px) and (max-width: 1024px) {
+  .welcome-frame {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "scene"
+      "form"
+      "footer";
+    grid-template-rows: auto 38vh minmax(0, 1fr) auto;
+    column-gap: 0;
+    padding-left: clamp(var(--fib-4), 6vw, var(--fib-7));
+    padding-right: clamp(var(--fib-4), 6vw, var(--fib-7));
+  }
+  .welcome-scene {
+    grid-area: scene;
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+    height: 38vh;
+  }
+  .welcome-main {
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: var(--fib-5);
+  }
+  .welcome-panel {
+    margin: 0 auto;             /* center within full-width column */
+    max-width: var(--fib-11);
+  }
+}
+
+/* === SM/XS pocket (<= 720) ===
+   City as a zoomed-in fullscreen backdrop, form panel centered on top
+   with frosted glass for legibility. The grid collapses to a single
+   column so the scene escapes its grid cell via `position: absolute`
+   and fills the root. */
 @media (max-width: 720px) {
   .welcome-frame {
     grid-template-columns: 1fr;
@@ -582,11 +692,9 @@
       "footer";
     column-gap: 0;
     padding-right: clamp(20px, 5vw, 64px);
-    /* Form column gets the full middle row, vertically centered. */
     grid-template-rows: auto 1fr auto;
   }
   .welcome-scene {
-    /* Backdrop: fill the entire root, behind the form panel. */
     position: absolute;
     inset: 0;
     grid-area: unset;
@@ -596,7 +704,6 @@
     z-index: 0;
   }
   .welcome-main {
-    /* Center the panel both axes, panel takes most of the view. */
     align-items: center;
     justify-content: center;
     position: relative;
@@ -625,6 +732,14 @@
   }
   .welcome-coords {
     text-align: left;
+  }
+}
+
+/* === XS pocket-tight (<= 480) ===
+   Tighter panel padding so the form reads cleaner on phone portrait. */
+@media (max-width: 480px) {
+  .welcome-panel {
+    padding: var(--fib-5) var(--fib-4);  /* 34 / 21 */
   }
 }
 
