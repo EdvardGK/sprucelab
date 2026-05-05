@@ -28,20 +28,22 @@
 }
 
 /* Three.js canvas host.
-   The scene's left edge tracks the form's right edge with a gap that
-   grows as the viewport widens — so the visual relationship stays
-   coherent on a 1366px laptop and a 27" 2560px monitor.
-   - 680px floor: the form panel is `min(560px, 100%)` + frame padding,
-     so 680 keeps a ~50px gap from the form on laptop widths.
-   - `50vw - 100px` kicks in once the viewport is wide enough that 50vw
-     exceeds the floor (~1560px+); the scene then sits proportionally
-     to the right of center, leaving room for content to breathe on
-     large monitors instead of stretching across the whole screen.
+   Scene width and position scale proportionally so the diorama is
+   neither lonely on a small canvas nor bloated across a 27" monitor.
+   `left` is the max of three constraints:
+     - 680px      floor — keeps clear of the form panel on laptops
+     - 50vw - 100 grows with viewport once big enough to matter
+     - 100vw-1100 caps scene width at 1100px on huge monitors
+   Net effect:
+     1366px: scene fills right ~50% of viewport (686px wide)
+     1920px: scene fills right ~55% (1060px wide)
+     2560px: scene capped at 1100px, leaves ~360px gap to form
+     3840px: scene capped at 1100px, sits in right third
    The 720px media query below stacks scene + panel for mobile. */
 .welcome-scene {
   position: fixed;
   inset: 0;
-  left: max(680px, calc(50vw - 100px));
+  left: max(680px, calc(50vw - 100px), calc(100vw - 1100px));
   z-index: 0;
   pointer-events: none;
   opacity: 0;
@@ -78,7 +80,20 @@
     );
 }
 
-/* Layout frame */
+/* Layout frame.
+   Vertical padding: standard fluid clamp.
+   Right padding: standard fluid clamp (the SIGN IN link is allowed to
+   float on the diorama side near the right edge).
+   Left padding: tracks the scene's left edge so the wordmark and form
+   panel drift right together with the viewport — three terms mirror
+   the .welcome-scene formula minus the form width and target gap.
+     scene_left = max(680px, 50vw - 100px, 100vw - 1100px)
+     padding-left = scene_left - 560 (form max-width) - 80 (gap)
+                  = max(64px, 50vw - 740px, 100vw - 1740px)
+   Below ~1608px viewport the 64px floor wins (matches right-side cap);
+   between ~1608 and ~2840px the 50vw term tracks viewport center;
+   above that the third term keeps the gap-to-scene constant at ~80px
+   even when the scene is capped at 1100px. */
 .welcome-frame {
   position: relative;
   z-index: 10;
@@ -86,7 +101,9 @@
   min-height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  padding: clamp(20px, 3vw, 40px) clamp(20px, 5vw, 64px);
+  padding-block: clamp(20px, 3vw, 40px);
+  padding-right: clamp(20px, 5vw, 64px);
+  padding-left: max(clamp(20px, 5vw, 64px), calc(50vw - 740px), calc(100vw - 1740px));
 }
 
 .welcome-header {
