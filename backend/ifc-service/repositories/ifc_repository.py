@@ -402,9 +402,9 @@ class IFCRepository:
                 INSERT INTO extraction_runs (
                     id, source_file_id, status, started_at,
                     discovered_units, quality_report, log_entries,
-                    extractor_version
+                    discovered_grid, extractor_version
                 )
-                VALUES ($1, $2, $3, NOW(), '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, $4)
+                VALUES ($1, $2, $3, NOW(), '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, '{}'::jsonb, $4)
                 """,
                 run_id, uuid.UUID(source_file_id), status, extractor_version,
             )
