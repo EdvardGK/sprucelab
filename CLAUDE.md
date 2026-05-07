@@ -135,32 +135,15 @@ Export:    LCA export via material layers (Django /api/types/export-*)
 
 ## Frontend Rules
 
-### Layout Constraints
-- **No max-width caps**: NEVER use `max-w-7xl` or similar with `mx-auto`. Content fills available space.
-- **No viewport locking**: No `h-[calc(100vh-X)]` with `overflow-hidden`. Pages scroll naturally.
-- **Cards**: Fixed heights (e.g. `h-[220px]`), `overflow-y-auto` for overflow.
-- **Content sizing with clamp()**: ALL text, icons, spacing use `clamp(min, preferred, max)`:
-  - Headings: `text-[clamp(1rem,3vw,1.5rem)]`
-  - Body: `text-[clamp(0.625rem,1.2vw,0.75rem)]`
-  - Small: `text-[clamp(0.5rem,1vw,0.625rem)]`
-  - Icons: `h-[clamp(1rem,2vw,1.25rem)] w-[clamp(1rem,2vw,1.25rem)]`
-  - Padding/gaps: `p-[clamp(0.5rem,1.5vw,1rem)]`
-  - Metrics: `text-[clamp(1.5rem,4vw,2rem)]`
+**Authoritative guide**: `docs/knowledge/frontend-design-guide.md`. Layout
+philosophy (grid-first inside dashboards, flow elsewhere), DashboardGrid +
+DashboardTile primitives, breakpoints, sizing with `clamp()`, density,
+i18n, role-gated features, and the embed surface all live there. Read
+that before writing layout code.
 
-### Internationalization (i18n)
-**CRITICAL**: ALL user-facing text MUST use the i18n system. NEVER hardcode strings.
-
-```tsx
-const { t } = useTranslation();
-return <p>{t('common.save')}</p>;  // Correct
-```
-
-- Locale files: `frontend/src/i18n/locales/` (`en.json` + `nb.json`)
-- Add keys to BOTH files. Use nested keys: `"section.subsection.key"`
-- Backend returns translation keys, not translated strings
-
-### 3D Viewer
-- Reference: `docs/knowledge/viewer-controls.md`
+Quick references:
+- **3D viewer**: `docs/knowledge/viewer-controls.md`
+- **Reference UI implementation we lift from**: `~/workspace/skiplum/dev/skiplumXge-react`
 
 ---
 
