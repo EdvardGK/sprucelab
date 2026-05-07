@@ -654,7 +654,6 @@ export default function HUDScene({
   const meshGroupRef = useRef<THREE.Group | null>(null);
   const frameIdRef = useRef<number>(0);
   const lightRef = useRef<THREE.DirectionalLight | null>(null);
-  const gridRef = useRef<THREE.GridHelper | null>(null);
   const viewDimRef = useRef<ViewDimension>(viewDimension);
   const sectionRef = useRef<SectionSetup | null>(null);
   const profileGroupRef = useRef<THREE.Group | null>(null);
@@ -691,12 +690,6 @@ export default function HUDScene({
     // Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-
-    // Grid (3D only)
-    const grid = new THREE.GridHelper(20, 40, 0x1a2a3a, 0x111820);
-    grid.position.y = -0.01;
-    scene.add(grid);
-    gridRef.current = grid;
 
     // Perspective camera (3D)
     const perspCamera = new THREE.PerspectiveCamera(45, width / height, 0.01, 500);
@@ -909,14 +902,6 @@ export default function HUDScene({
     group.position.set(-center.x, -center.y, -center.z);
 
     const maxDim = Math.max(size.x, size.y, size.z, 1);
-
-    // Position grid at bottom of object — scale to geometry
-    if (gridRef.current) {
-      const gridOffset = maxDim * 0.001;
-      gridRef.current.position.y = -size.y / 2 - gridOffset;
-      const gridScale = Math.max(size.x, size.z, maxDim) / 10;
-      gridRef.current.scale.set(gridScale, 1, gridScale);
-    }
 
     // Fit 3D camera — scale with geometry (handles mm or m units)
     const distance = maxDim * 2.5;
@@ -1221,11 +1206,6 @@ export default function HUDScene({
     // Toggle controls
     perspControls.enabled = is3D;
     orthoControls.enabled = !is3D;
-
-    // Grid: 3D only
-    if (gridRef.current) {
-      gridRef.current.visible = is3D;
-    }
 
     // Toggle mesh visibility
     const solid = group.getObjectByName('solid');
