@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, Calendar, Layers, AlertCircle, LayoutGrid, Table, ChevronRight, Trash2, CheckCircle2, MoreVertical, RefreshCw, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { useProject } from '@/hooks/use-projects';
-import { useModels } from '@/hooks/use-models';
+import { useModels, modelKeys } from '@/hooks/use-models';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ModelUploadDialog } from '@/components/ModelUploadDialog';
@@ -32,17 +33,29 @@ export default function ProjectModels() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [reprocessingModelId, setReprocessingModelId] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(id!);
   const { data: allModels, isLoading: modelsLoading, refetch: refetchModels } = useModels(id);
 
   const handleReprocess = async (modelId: string) => {
     setReprocessingModelId(modelId);
+
+    // Optimistic: flip status to 'processing' immediately so the badge updates
+    // on click instead of waiting for the synchronous FastAPI round-trip.
+    const listKey = modelKeys.list(id);
+    const previous = queryClient.getQueryData<Model[]>(listKey);
+    queryClient.setQueryData<Model[]>(listKey, (current) =>
+      current?.map((m) =>
+        m.id === modelId ? { ...m, status: 'processing', processing_error: null } : m
+      ) ?? current
+    );
+
     try {
       await apiClient.post(`/models/${modelId}/reprocess/`);
-      // Refetch models to update status
       await refetchModels();
     } catch (error) {
       console.error('Failed to reprocess model:', error);
+      if (previous) queryClient.setQueryData(listKey, previous);
     } finally {
       setReprocessingModelId(null);
     }
