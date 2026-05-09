@@ -67,24 +67,28 @@ export function ViewerFilterPanel({
   const floorCode = filter.floor_code?.[0] ?? null;
 
   // Inclusion model:
-  //   click a class                 → isolate (replace inclusion with [class])
-  //   cmd/ctrl-click                → toggle membership in current inclusion
-  //   click the only active class   → clear inclusion (back to all visible)
-  const handleIsolate = (cls: string, additive: boolean) => {
-    if (additive && includedClasses.length > 0) {
-      const next = includedClasses.includes(cls)
-        ? includedClasses.filter((c) => c !== cls)
-        : [...includedClasses, cls];
+  //   plain click   → switch inclusion to [class] (replace, always — even
+  //                   if the same class is clicked twice; idempotent)
+  //   shift-click   → toggle membership in the current inclusion
+  //                   (multi-select; click another to add, click an
+  //                   already-included class to remove it)
+  //   right-click   → toggle exclusion (subtract this class regardless of
+  //                   inclusion; see handleToggleExcluded below)
+  // To clear the inclusion entirely, use the "Show all" button. We
+  // deliberately do NOT clear-on-second-click of the only active chip —
+  // that path was confusing in PR 1.2 review and never an explicit ask.
+  const handleIsolate = (cls: string, multi: boolean) => {
+    if (multi) {
+      const current = includedClasses;
+      const next = current.includes(cls)
+        ? current.filter((c) => c !== cls)
+        : [...current, cls];
       setIfcClass(next.length === 0 ? undefined : next);
       return;
     }
-    if (includedClasses.length === 1 && includedClasses[0] === cls) {
-      setIfcClass(undefined);
-      return;
-    }
     setIfcClass([cls]);
-    // Also drop the class from the exclusion set if present, so a fresh
-    // isolate gesture doesn't immediately fight a stale right-click hide.
+    // Clear any matching exclusion so a fresh isolate gesture doesn't
+    // immediately fight a stale right-click hide on the same class.
     if (excludedClasses.includes(cls)) {
       const nextExcluded = excludedClasses.filter((c) => c !== cls);
       setExcludedIfcClass(nextExcluded.length === 0 ? undefined : nextExcluded);
@@ -270,7 +274,7 @@ export function ViewerFilterPanel({
                   <button
                     key={type}
                     onClick={(e: MouseEvent<HTMLButtonElement>) =>
-                      handleIsolate(type, e.metaKey || e.ctrlKey)
+                      handleIsolate(type, e.shiftKey)
                     }
                     onContextMenu={(e: MouseEvent<HTMLButtonElement>) => {
                       e.preventDefault();
@@ -279,9 +283,7 @@ export function ViewerFilterPanel({
                     title={
                       excluded
                         ? 'Right-click to unhide'
-                        : isolated
-                          ? 'Click to clear · cmd-click toggles · right-click hides'
-                          : 'Click to isolate · cmd-click adds · right-click hides'
+                        : 'Click to isolate · shift-click toggles in selection · right-click hides'
                     }
                     className={cn(
                       'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors border',
