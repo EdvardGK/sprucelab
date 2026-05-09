@@ -614,7 +614,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           new THREE.MeshBasicMaterial({
             color: 0x88ccff,
             transparent: true,
-            opacity: 0.4,
+            opacity: 0.2,
           }),
         );
 
