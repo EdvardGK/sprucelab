@@ -20,7 +20,7 @@ Domain-specific primitives for dashboard tile composition. Sibling to
   shadcn-CLI-generated.
 - Domain widgets coupled to a specific feature (e.g. warehouse-only
   type browser tile shape) — those live under `../features/`.
-- Tiles that read from `DashboardFilterProvider` and project filtered
+- Tiles that read from `ProjectFilterProvider` and project filtered
   data — those will live under `../features/dashboards/tiles/` (PR #6
   scaffolding).
 

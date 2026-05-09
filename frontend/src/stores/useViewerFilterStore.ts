@@ -17,8 +17,11 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { VerificationStatus } from '@/lib/embed/types';
 
-export type VerificationStatus = 'verified' | 'flagged' | 'pending' | 'auto';
+// Re-exported for existing consumers; canonical home is `lib/embed/types.ts`.
+// The re-export disappears with this store in PR 1.2.
+export type { VerificationStatus };
 
 export interface ViewerFilterState {
   // Scope key — switching projects clears facets. Set on viewer mount.

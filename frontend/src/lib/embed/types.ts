@@ -29,6 +29,21 @@ export const CURRENT_PROTOCOL_VERSION: ProtocolVersion = 1;
 export type Mode = 'filter' | 'highlight';
 
 /**
+ * Per-type verification states. Used by `verification[]` filter facet and by
+ * the warehouse type-status pills.
+ */
+export type VerificationStatus = 'verified' | 'flagged' | 'pending' | 'auto';
+
+/**
+ * Color-by lens. Orthogonal to filter facets — selects which dimension drives
+ * the viewer's per-element color. `null` = default material color.
+ */
+export interface ColorBy {
+  dimension: string;
+  palette?: string;
+}
+
+/**
  * Range filter for numeric dimensions (MMI, LCA stages, etc.).
  * Both bounds are inclusive. `null` on either side = unbounded.
  */
@@ -89,8 +104,24 @@ export interface FilterContext {
   /** MMI score range; both bounds inclusive. */
   mmi?: NumericRange;
   materials?: string[];
-  /** TypeBank / per-project type ids. */
+  /** TypeBank / per-project type ids (filter facet). */
   type_id?: string[];
+  /** NS3451 classification codes. */
+  ns3451?: string[];
+  /** Per-type verification states. */
+  verification?: VerificationStatus[];
+  /** System names (e.g. mechanical / electrical / plumbing systems). */
+  systems?: string[];
+
+  // ── Selection (multi) ─────────────────────────────────────────────
+  /** Multi-select type ids. Distinct from `type_id[]` (filter facet). */
+  selected_type_ids?: string[];
+  /** Multi-select instance GUIDs. Distinct from `selected_express_id`. */
+  selected_global_ids?: string[];
+
+  // ── Lens ──────────────────────────────────────────────────────────
+  /** Color-by lens. Orthogonal to filter facets; `null` = default. */
+  color_by?: ColorBy | null;
 
   // ── Nested namespaces ─────────────────────────────────────────────
   quality?: QualityFilter;
@@ -182,6 +213,12 @@ export function createFilterContext(seed: FilterContextSeed): FilterContext {
     ...(seed.mmi !== undefined ? { mmi: seed.mmi } : {}),
     ...(seed.materials !== undefined ? { materials: seed.materials } : {}),
     ...(seed.type_id !== undefined ? { type_id: seed.type_id } : {}),
+    ...(seed.ns3451 !== undefined ? { ns3451: seed.ns3451 } : {}),
+    ...(seed.verification !== undefined ? { verification: seed.verification } : {}),
+    ...(seed.systems !== undefined ? { systems: seed.systems } : {}),
+    ...(seed.selected_type_ids !== undefined ? { selected_type_ids: seed.selected_type_ids } : {}),
+    ...(seed.selected_global_ids !== undefined ? { selected_global_ids: seed.selected_global_ids } : {}),
+    ...(seed.color_by !== undefined ? { color_by: seed.color_by } : {}),
     ...(seed.quality !== undefined ? { quality: seed.quality } : {}),
   };
 }

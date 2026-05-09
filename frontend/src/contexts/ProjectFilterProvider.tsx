@@ -10,44 +10,61 @@ import {
 import {
   CURRENT_PROTOCOL_VERSION,
   createFilterContext,
+  type ColorBy,
   type FilterContext,
   type FilterContextSeed,
   type Mode,
+  type NumericRange,
   type QualityFilter,
+  type VerificationStatus,
 } from '../lib/embed/types';
 
 /**
- * Dashboard filter provider — the single shared cross-filter state every
- * embed-style tile (charts, tables, ViewerTile) reads from.
+ * Project-scoped filter provider — the single shared cross-filter state
+ * every dashboard tile, the federated viewer, and embed-style consumers
+ * read from. Mounted once at the project layout (`<ProjectShell />`) so
+ * route changes inside a project don't remount the store.
  *
- * Distinct from `useViewerFilterStore` (Zustand): that store is the
- * viewer's viz-level facets (hidden classes, model toggles, OBC.Hider
- * input). DashboardFilterProvider is the dashboard-level cross-filter
- * surface — a superset that the viewer subscribes to in PR #5.
+ * Distinct from `useViewerFilterStore` (Zustand): the legacy viewer store
+ * keeps owning the viewer's hide/show facets through PR 1.1; PR 1.2
+ * migrates `ViewerFilterPanel` + `FederatedViewer` onto this provider and
+ * deprecates the Zustand store.
  *
  * Structure mirrors `AuthContext.tsx`:
  *   - createContext + custom hook with not-mounted error
  *   - useReducer for explicit action shape (auditable, easy to log)
- *   - separate value/dispatch context surfaces so consumers don't
- *     re-render on dispatch identity changes
- *
- * Wiring into `/embed/:dashboard` route + postMessage handshake lands in
- * PR #4. URL synchronization lands when the first tile renders (PR #6).
- * In this PR the provider exists but is not mounted in the app tree.
+ *   - separate value/dispatch contexts so consumers don't re-render on
+ *     dispatch identity changes
  */
 
 // ── Action shape ──────────────────────────────────────────────────
+
+type ArrayDimensionKey =
+  | 'ifc_class'
+  | 'floor_code'
+  | 'discipline'
+  | 'materials'
+  | 'type_id'
+  | 'ns3451'
+  | 'verification'
+  | 'systems'
+  | 'selected_type_ids'
+  | 'selected_global_ids';
+
+type RangeDimensionKey = 'mmi';
+
+type DimensionKey = ArrayDimensionKey | RangeDimensionKey;
+
+type DimensionValue = string[] | VerificationStatus[] | NumericRange | undefined;
 
 export type FilterAction =
   | { type: 'set_mode'; mode: Mode }
   | { type: 'set_selected_express_id'; express_id: number | null }
   | { type: 'set_dimension'; key: DimensionKey; value: DimensionValue }
+  | { type: 'set_color_by'; value: ColorBy | null | undefined }
   | { type: 'merge_quality'; patch: Partial<QualityFilter> }
   | { type: 'replace'; next: FilterContext }
   | { type: 'clear_dimensions' };
-
-type DimensionKey = 'ifc_class' | 'floor_code' | 'discipline' | 'materials' | 'type_id' | 'mmi';
-type DimensionValue = string[] | { min: number | null; max: number | null } | undefined;
 
 // ── Reducer ───────────────────────────────────────────────────────
 
@@ -65,10 +82,17 @@ function reducer(state: FilterContext, action: FilterAction): FilterContext {
       if (action.value === undefined) {
         return rest as FilterContext;
       }
-      // The action type guarantees `value`'s shape matches `key`'s
-      // declared type; cast through unknown at the JSON-shape boundary.
       const patch = { [action.key]: action.value } as unknown as Partial<FilterContext>;
       return { ...rest, ...patch } as FilterContext;
+    }
+
+    case 'set_color_by': {
+      if (action.value === undefined) {
+        const { color_by: _drop, ...rest } = state;
+        void _drop;
+        return rest as FilterContext;
+      }
+      return { ...state, color_by: action.value };
     }
 
     case 'merge_quality': {
@@ -111,13 +135,13 @@ const FilterDispatchContext = createContext<Dispatch<FilterAction> | undefined>(
 
 // ── Provider ──────────────────────────────────────────────────────
 
-interface DashboardFilterProviderProps {
+interface ProjectFilterProviderProps {
   /** Required at construction; everything else is optional. */
   seed: FilterContextSeed;
   children: ReactNode;
 }
 
-export function DashboardFilterProvider({ seed, children }: DashboardFilterProviderProps) {
+export function ProjectFilterProvider({ seed, children }: ProjectFilterProviderProps) {
   const initial = useMemo(() => createFilterContext(seed), [seed]);
   const [state, dispatch] = useReducer(reducer, initial);
 
@@ -131,29 +155,29 @@ export function DashboardFilterProvider({ seed, children }: DashboardFilterProvi
 // ── Hooks ─────────────────────────────────────────────────────────
 
 /** Read the current filter context. Throws if used outside the provider. */
-export function useFilter(): FilterContext {
+export function useProjectFilter(): FilterContext {
   const ctx = useContext(FilterValueContext);
   if (ctx === undefined) {
-    throw new Error('useFilter must be used within a DashboardFilterProvider');
+    throw new Error('useProjectFilter must be used within a ProjectFilterProvider');
   }
   return ctx;
 }
 
 /** Get the dispatcher. Throws if used outside the provider. */
-export function useFilterDispatch(): Dispatch<FilterAction> {
+export function useProjectFilterDispatch(): Dispatch<FilterAction> {
   const dispatch = useContext(FilterDispatchContext);
   if (dispatch === undefined) {
-    throw new Error('useFilterDispatch must be used within a DashboardFilterProvider');
+    throw new Error('useProjectFilterDispatch must be used within a ProjectFilterProvider');
   }
   return dispatch;
 }
 
 /**
- * Convenience: action creators bound to the current dispatcher. Saves
- * tile authors from constructing action objects by hand.
+ * Action creators bound to the current dispatcher. Saves consumers from
+ * constructing action objects by hand.
  */
-export function useFilterActions() {
-  const dispatch = useFilterDispatch();
+export function useProjectFilterActions() {
+  const dispatch = useProjectFilterDispatch();
 
   const setMode = useCallback(
     (mode: Mode) => dispatch({ type: 'set_mode', mode }),
@@ -173,6 +197,55 @@ export function useFilterActions() {
       dispatch({ type: 'set_dimension', key: 'floor_code', value }),
     [dispatch],
   );
+  const setDiscipline = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'discipline', value }),
+    [dispatch],
+  );
+  const setMaterials = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'materials', value }),
+    [dispatch],
+  );
+  const setTypeId = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'type_id', value }),
+    [dispatch],
+  );
+  const setNs3451 = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'ns3451', value }),
+    [dispatch],
+  );
+  const setVerification = useCallback(
+    (value: VerificationStatus[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'verification', value }),
+    [dispatch],
+  );
+  const setSystems = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'systems', value }),
+    [dispatch],
+  );
+  const setSelectedTypeIds = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'selected_type_ids', value }),
+    [dispatch],
+  );
+  const setSelectedGlobalIds = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'selected_global_ids', value }),
+    [dispatch],
+  );
+  const setMmi = useCallback(
+    (value: NumericRange | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'mmi', value }),
+    [dispatch],
+  );
+  const setColorBy = useCallback(
+    (value: ColorBy | null | undefined) => dispatch({ type: 'set_color_by', value }),
+    [dispatch],
+  );
   const mergeQuality = useCallback(
     (patch: Partial<QualityFilter>) => dispatch({ type: 'merge_quality', patch }),
     [dispatch],
@@ -187,10 +260,45 @@ export function useFilterActions() {
   );
 
   return useMemo(
-    () => ({ setMode, setSelected, setIfcClass, setFloorCode, mergeQuality, clearDimensions, replace }),
-    [setMode, setSelected, setIfcClass, setFloorCode, mergeQuality, clearDimensions, replace],
+    () => ({
+      setMode,
+      setSelected,
+      setIfcClass,
+      setFloorCode,
+      setDiscipline,
+      setMaterials,
+      setTypeId,
+      setNs3451,
+      setVerification,
+      setSystems,
+      setSelectedTypeIds,
+      setSelectedGlobalIds,
+      setMmi,
+      setColorBy,
+      mergeQuality,
+      clearDimensions,
+      replace,
+    }),
+    [
+      setMode,
+      setSelected,
+      setIfcClass,
+      setFloorCode,
+      setDiscipline,
+      setMaterials,
+      setTypeId,
+      setNs3451,
+      setVerification,
+      setSystems,
+      setSelectedTypeIds,
+      setSelectedGlobalIds,
+      setMmi,
+      setColorBy,
+      mergeQuality,
+      clearDimensions,
+      replace,
+    ],
   );
 }
 
-// Re-export the protocol version for convenience.
 export { CURRENT_PROTOCOL_VERSION };

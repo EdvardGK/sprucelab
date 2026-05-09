@@ -13,6 +13,7 @@ const Welcome = lazy(() => import('./pages/Welcome'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 const MyPage = lazy(() => import('./pages/MyPage'));
 const ProjectsGallery = lazy(() => import('./pages/ProjectsGallery'));
+const ProjectShell = lazy(() => import('./pages/ProjectShell'));
 const ProjectDashboard = lazy(() => import('./pages/ProjectDashboard'));
 const ProjectModels = lazy(() => import('./pages/ProjectModels'));
 const ProjectMyPage = lazy(() => import('./pages/ProjectMyPage'));
@@ -53,20 +54,26 @@ const router = createBrowserRouter([
   { path: "/auth/callback", element: withSuspense(<AuthCallback />) },
   { path: "/my-page", element: withSuspense(guard(<MyPage />)) },
   { path: "/projects", element: withSuspense(guard(<ProjectsGallery />)) },
-  { path: "/projects/:id", element: withSuspense(guard(<ProjectDashboard />)) },
-  { path: "/projects/:id/dashboard", element: withSuspense(guard(<ProjectDashboard />)) },
-  { path: "/projects/:id/models", element: withSuspense(guard(<ProjectModels />)) },
-  { path: "/projects/:id/my-page", element: withSuspense(guard(<ProjectMyPage />)) },
-  { path: "/projects/:id/viewer-groups", element: withSuspense(guard(<ViewerGroups />)) },
-  { path: "/projects/:id/viewer/:groupId", element: withSuspense(guard(<FederatedViewer />)) },
-  { path: "/projects/:id/documents", element: withSuspense(guard(<ProjectDocuments />)) },
-  { path: "/projects/:id/drawings", element: withSuspense(guard(<ProjectDrawings />)) },
-  { path: "/projects/:id/types", element: withSuspense(guard(<ProjectTypesPage />)) },
-  { path: "/projects/:id/type-library", element: withSuspense(guard(<ProjectTypeLibrary />)) },
-  { path: "/projects/:id/material-library", element: withSuspense(guard(<ProjectMaterialLibrary />)) },
-  { path: "/projects/:id/field", element: withSuspense(guard(<ProjectField />)) },
-  { path: "/projects/:id/workbench", element: withSuspense(guard(<BIMWorkbench />)) },
-  { path: "/projects/:id/models/:modelId", element: withSuspense(guard(<ModelWorkspace />)) },
+  {
+    path: "/projects/:id",
+    element: withSuspense(guard(<ProjectShell />)),
+    children: [
+      { index: true, element: withSuspense(<ProjectDashboard />) },
+      { path: "dashboard", element: withSuspense(<ProjectDashboard />) },
+      { path: "models", element: withSuspense(<ProjectModels />) },
+      { path: "models/:modelId", element: withSuspense(<ModelWorkspace />) },
+      { path: "my-page", element: withSuspense(<ProjectMyPage />) },
+      { path: "viewer-groups", element: withSuspense(<ViewerGroups />) },
+      { path: "viewer/:groupId", element: withSuspense(<FederatedViewer />) },
+      { path: "documents", element: withSuspense(<ProjectDocuments />) },
+      { path: "drawings", element: withSuspense(<ProjectDrawings />) },
+      { path: "types", element: withSuspense(<ProjectTypesPage />) },
+      { path: "type-library", element: withSuspense(<ProjectTypeLibrary />) },
+      { path: "material-library", element: withSuspense(<ProjectMaterialLibrary />) },
+      { path: "field", element: withSuspense(<ProjectField />) },
+      { path: "workbench", element: withSuspense(<BIMWorkbench />) },
+    ],
+  },
   { path: "/type-library", element: withSuspense(guard(<TypeLibraryPage />)) },
   { path: "/admin", element: withSuspense(guard(<AdminDashboard />)) },
   { path: "/dev/processing-reports", element: withSuspense(guard(<ProcessingReports />)) },
