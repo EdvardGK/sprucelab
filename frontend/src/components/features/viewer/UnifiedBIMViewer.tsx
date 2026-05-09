@@ -597,8 +597,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const orange = new THREE.Color(0xff6600);
         highlighter.add('current', orange);
 
-        // Setup Outliner — bright cyan outline on top of the selected meshes.
+        // Setup Outliner — cool-blue silhouette on top of the selected meshes.
         // Requires PostproductionRenderer (it injects a custom-effects pass).
+        //
+        // ThatOpen's Outliner has a quirky API: in the MeshBasicMaterial below
+        // `color` controls the line color, but `opacity` controls the line
+        // THICKNESS (not transparency). Default `opacity: 1` was producing a
+        // chunky cartoonish outline — visible in the 2026-05-09 review. 0.4
+        // gives a clean ~1.5-2px silhouette that reads as a selection without
+        // overpowering the geometry.
         const outliner = components.get(OBCF.Outliner);
         outliner.world = world;
         outliner.enabled = true;
@@ -607,7 +614,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           new THREE.MeshBasicMaterial({
             color: 0x88ccff,
             transparent: true,
-            opacity: 1,
+            opacity: 0.4,
           }),
         );
 
