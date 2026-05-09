@@ -1275,7 +1275,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
           // Fire-and-forget: index relations and classify by spatial structure.
           // Populates storeyInfo for storey-based filtering from the dashboard.
-          {
+          //
+          // Skipped when the FragmentsGroup has no properties attached. The
+          // fragments fast path (fragments.load(buffer)) only loads geometry;
+          // properties must be supplied separately via setLocalProperties.
+          // Until the converter pipeline ships a properties sidecar (planned
+          // PR-B per the spatial-classifier investigation), fragment-loaded
+          // models won't populate storey facets and we deliberately skip
+          // the indexer instead of throwing a misleading warning.
+          if (group.hasProperties) {
             const indexer = components.get(OBC.IfcRelationsIndexer);
             indexer.process(group)
               .then(() => {
@@ -1299,6 +1307,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 }
               })
               .catch(err => console.warn('[Viewer] Spatial structure classification failed:', err));
+          } else if (import.meta.env.DEV) {
+            console.debug(
+              '[Viewer] Skipping spatial classification — FragmentsGroup has no properties (fast-path load without properties sidecar).',
+            );
           }
 
           // Fire-and-forget FastAPI open so click-to-inspect can resolve element props later.
