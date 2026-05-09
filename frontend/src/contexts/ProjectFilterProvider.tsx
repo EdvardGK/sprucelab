@@ -25,11 +25,6 @@ import {
  * read from. Mounted once at the project layout (`<ProjectShell />`) so
  * route changes inside a project don't remount the store.
  *
- * Distinct from `useViewerFilterStore` (Zustand): the legacy viewer store
- * keeps owning the viewer's hide/show facets through PR 1.1; PR 1.2
- * migrates `ViewerFilterPanel` + `FederatedViewer` onto this provider and
- * deprecates the Zustand store.
- *
  * Structure mirrors `AuthContext.tsx`:
  *   - createContext + custom hook with not-mounted error
  *   - useReducer for explicit action shape (auditable, easy to log)
@@ -41,6 +36,7 @@ import {
 
 type ArrayDimensionKey =
   | 'ifc_class'
+  | 'excluded_ifc_class'
   | 'floor_code'
   | 'discipline'
   | 'materials'
@@ -48,6 +44,7 @@ type ArrayDimensionKey =
   | 'ns3451'
   | 'verification'
   | 'systems'
+  | 'hidden_models'
   | 'selected_type_ids'
   | 'selected_global_ids';
 
@@ -192,6 +189,11 @@ export function useProjectFilterActions() {
       dispatch({ type: 'set_dimension', key: 'ifc_class', value }),
     [dispatch],
   );
+  const setExcludedIfcClass = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'excluded_ifc_class', value }),
+    [dispatch],
+  );
   const setFloorCode = useCallback(
     (value: string[] | undefined) =>
       dispatch({ type: 'set_dimension', key: 'floor_code', value }),
@@ -225,6 +227,11 @@ export function useProjectFilterActions() {
   const setSystems = useCallback(
     (value: string[] | undefined) =>
       dispatch({ type: 'set_dimension', key: 'systems', value }),
+    [dispatch],
+  );
+  const setHiddenModels = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'hidden_models', value }),
     [dispatch],
   );
   const setSelectedTypeIds = useCallback(
@@ -264,6 +271,7 @@ export function useProjectFilterActions() {
       setMode,
       setSelected,
       setIfcClass,
+      setExcludedIfcClass,
       setFloorCode,
       setDiscipline,
       setMaterials,
@@ -271,6 +279,7 @@ export function useProjectFilterActions() {
       setNs3451,
       setVerification,
       setSystems,
+      setHiddenModels,
       setSelectedTypeIds,
       setSelectedGlobalIds,
       setMmi,
@@ -283,6 +292,7 @@ export function useProjectFilterActions() {
       setMode,
       setSelected,
       setIfcClass,
+      setExcludedIfcClass,
       setFloorCode,
       setDiscipline,
       setMaterials,
@@ -290,6 +300,7 @@ export function useProjectFilterActions() {
       setNs3451,
       setVerification,
       setSystems,
+      setHiddenModels,
       setSelectedTypeIds,
       setSelectedGlobalIds,
       setMmi,

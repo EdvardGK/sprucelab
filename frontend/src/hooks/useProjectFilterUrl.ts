@@ -6,10 +6,6 @@
  * On state change: replace the search param via `history.replaceState`
  * (no nav).
  *
- * The legacy viewer-only URL channel (`?f=`, owned by `useViewerFilterUrl`
- * + Zustand `useViewerFilterStore`) coexists during PR 1.1 and is
- * deprecated in PR 1.2.
- *
  * Encoded payload omits the four invariants (`mode`, `project_id`,
  * `protocol_version`, `selected_express_id`) — those don't deeplink:
  *   - `project_id` rides on the route itself.
@@ -57,6 +53,8 @@ function decode(encoded: string): EncodedFilters | null {
 function projectToPayload(state: FilterContext): EncodedFilters {
   const payload: EncodedFilters = {};
   if (state.ifc_class !== undefined) payload.ifc_class = state.ifc_class;
+  if (state.excluded_ifc_class !== undefined)
+    payload.excluded_ifc_class = state.excluded_ifc_class;
   if (state.floor_code !== undefined) payload.floor_code = state.floor_code;
   if (state.discipline !== undefined) payload.discipline = state.discipline;
   if (state.mmi !== undefined) payload.mmi = state.mmi;
@@ -65,6 +63,7 @@ function projectToPayload(state: FilterContext): EncodedFilters {
   if (state.ns3451 !== undefined) payload.ns3451 = state.ns3451;
   if (state.verification !== undefined) payload.verification = state.verification;
   if (state.systems !== undefined) payload.systems = state.systems;
+  if (state.hidden_models !== undefined) payload.hidden_models = state.hidden_models;
   if (state.selected_type_ids !== undefined) payload.selected_type_ids = state.selected_type_ids;
   if (state.selected_global_ids !== undefined)
     payload.selected_global_ids = state.selected_global_ids;

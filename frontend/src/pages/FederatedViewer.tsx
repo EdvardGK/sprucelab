@@ -30,8 +30,11 @@ import {
   type ViewMode,
 } from '@/components/features/viewer/CanvasOverlays';
 import { ViewerFilterPanel } from '@/components/features/viewer/ViewerFilterPanel';
-import { useViewerFilterStore, deriveTypeVisibility } from '@/stores/useViewerFilterStore';
-import { useViewerFilterUrl } from '@/hooks/useViewerFilterUrl';
+import {
+  useProjectFilter,
+  useProjectFilterActions,
+} from '@/contexts/ProjectFilterProvider';
+import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
 import { useProjectScopes, useScopeFloors } from '@/hooks/use-scopes';
 import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPanel';
 import { AddModelsDialog } from '@/components/features/viewers/AddModelsDialog';
@@ -81,11 +84,22 @@ export default function FederatedViewer() {
   // Filter panel state — collapsed/expanded
   const [filterPanelCollapsed, setFilterPanelCollapsed] = useState(false);
 
-  // Filter store — single source of truth for what's visible
-  const hiddenIfcClasses = useViewerFilterStore((s) => s.hiddenIfcClasses);
-  const floorCodeFilter = useViewerFilterStore((s) => s.floor_code);
-  const setScope = useViewerFilterStore((s) => s.setScope);
-  useViewerFilterUrl();
+  // Filter store — single source of truth for what's visible. Project-scoped
+  // provider mounted at <ProjectShell />; URL + localStorage sync hooks are
+  // mounted there too.
+  const filter = useProjectFilter();
+  const { setIfcClass, setExcludedIfcClass, setFloorCode } =
+    useProjectFilterActions();
+
+  const includedClasses = useMemo(
+    () => filter.ifc_class ?? [],
+    [filter.ifc_class],
+  );
+  const excludedClasses = useMemo(
+    () => filter.excluded_ifc_class ?? [],
+    [filter.excluded_ifc_class],
+  );
+  const floorCodeFilter = filter.floor_code?.[0] ?? null;
 
   // Canonical floors for this project's root scope (when present) — drives
   // the storey facet labels and resolves codes to per-IFC storey-name aliases
@@ -106,16 +120,8 @@ export default function FederatedViewer() {
     return map;
   }, [canonicalFloors]);
 
-  // Active filters for status panel (manual additions, not auto-derived)
-  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
-
   // Model load errors
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
-
-  // Reset filter scope when project changes (so switching projects clears facets).
-  useEffect(() => {
-    if (projectId) setScope(projectId);
-  }, [projectId, setScope]);
 
   // Memoize props passed to UnifiedBIMViewer. Without these, every FederatedViewer
   // re-render produces new object/array references, which makes UnifiedBIMViewer's
@@ -126,8 +132,13 @@ export default function FederatedViewer() {
     [group?.models]
   );
   const typeVisibilityMap = useMemo(
-    () => deriveTypeVisibility(discoveredTypes.map((t) => t.type), hiddenIfcClasses),
-    [discoveredTypes, hiddenIfcClasses]
+    () =>
+      deriveTypeVisibility(
+        discoveredTypes.map((t) => t.type),
+        includedClasses,
+        excludedClasses,
+      ),
+    [discoveredTypes, includedClasses, excludedClasses],
   );
 
   // Initialize model visibility when group loads
@@ -160,37 +171,59 @@ export default function FederatedViewer() {
     viewerRef.current?.deleteSectionPlane(id);
   }, []);
 
-  const handleSelectStorey = useCallback((_modelId: string, storeyId: string | null) => {
-    useViewerFilterStore.getState().setFloorCode(storeyId);
-  }, []);
+  const handleSelectStorey = useCallback(
+    (_modelId: string, storeyId: string | null) => {
+      setFloorCode(storeyId ? [storeyId] : undefined);
+    },
+    [setFloorCode],
+  );
 
   const handleFitView = useCallback(() => {
     viewerRef.current?.fitToView();
   }, []);
 
-  const handleRemoveFilter = useCallback((id: string) => {
-    if (id === 'floor') {
-      useViewerFilterStore.getState().setFloorCode(null);
-      return;
-    }
-    if (id.startsWith('type-')) {
-      useViewerFilterStore.getState().toggleIfcClass(id.slice(5));
-      return;
-    }
-    setActiveFilters(prev => prev.filter(f => f.id !== id));
-  }, []);
+  const handleRemoveFilter = useCallback(
+    (id: string) => {
+      if (id === 'floor') {
+        setFloorCode(undefined);
+        return;
+      }
+      if (id.startsWith('include-')) {
+        const cls = id.slice(8);
+        const next = includedClasses.filter((c) => c !== cls);
+        setIfcClass(next.length === 0 ? undefined : next);
+        return;
+      }
+      if (id.startsWith('exclude-')) {
+        const cls = id.slice(8);
+        const next = excludedClasses.filter((c) => c !== cls);
+        setExcludedIfcClass(next.length === 0 ? undefined : next);
+        return;
+      }
+    },
+    [includedClasses, excludedClasses, setIfcClass, setExcludedIfcClass, setFloorCode],
+  );
 
   const handleClearFilters = useCallback(() => {
-    setActiveFilters([]);
-    useViewerFilterStore.getState().reset();
-  }, []);
+    setIfcClass(undefined);
+    setExcludedIfcClass(undefined);
+    setFloorCode(undefined);
+  }, [setIfcClass, setExcludedIfcClass, setFloorCode]);
 
   // ── Derived data ──
 
-  // Build filter pills from hidden types + floor selection
+  // Build filter pills directly from the project filter context. PR 1.3
+  // makes these chips interactive (DrillTarget); for now they remain
+  // display-only with delete affordance via handleRemoveFilter.
   const computedFilters: ActiveFilter[] = [
-    ...activeFilters,
-    ...hiddenIfcClasses.map((cls) => ({ id: `type-${cls}`, label: `−${cls.replace('Ifc', '')}` })),
+    ...includedClasses.map((cls) => ({
+      id: `include-${cls}`,
+      label: `+${cls.replace('Ifc', '')}`,
+    })),
+    ...excludedClasses.map((cls) => ({
+      id: `exclude-${cls}`,
+      label: `−${cls.replace('Ifc', '')}`,
+    })),
   ];
   if (floorCodeFilter) {
     const canonical = canonicalFloors.find((f) => f.code === floorCodeFilter);
@@ -221,10 +254,12 @@ export default function FederatedViewer() {
 
   // Visible model/element counts for status panel
   const visibleModelCount = platformModels.filter(m => m.visible).length;
-  const visibleElementCount = discoveredTypes.reduce(
-    (sum, t) => sum + (hiddenIfcClasses.includes(t.type) ? 0 : t.count),
-    0,
-  );
+  const visibleElementCount = discoveredTypes.reduce((sum, t) => {
+    const passesInclusion =
+      includedClasses.length === 0 || includedClasses.includes(t.type);
+    const passesExclusion = !excludedClasses.includes(t.type);
+    return sum + (passesInclusion && passesExclusion ? t.count : 0);
+  }, 0);
 
   // View mode label for status panel
   const viewModeLabel = t(`viewer.toolbar.${viewMode}`);

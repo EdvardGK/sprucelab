@@ -98,6 +98,13 @@ export interface FilterContext {
 
   // ── Open-ended dimensions ─────────────────────────────────────────
   ifc_class?: string[];
+  /**
+   * IFC classes that are subtracted from the visible set after `ifc_class`
+   * inclusion is applied. The right-click "hide this class" gesture
+   * writes here so it works whether or not an inclusion filter is
+   * active. Empty / undefined ⇒ no exclusion.
+   */
+  excluded_ifc_class?: string[];
   /** Canonical floor codes (matches Scope.canonical_floors[].code). */
   floor_code?: string[];
   discipline?: string[];
@@ -112,6 +119,11 @@ export interface FilterContext {
   verification?: VerificationStatus[];
   /** System names (e.g. mechanical / electrical / plumbing systems). */
   systems?: string[];
+  /**
+   * Per-model-link ids hidden in the federated viewer. The hide-eye
+   * toggle on the platform panel writes here.
+   */
+  hidden_models?: string[];
 
   // ── Selection (multi) ─────────────────────────────────────────────
   /** Multi-select type ids. Distinct from `type_id[]` (filter facet). */
@@ -208,6 +220,9 @@ export function createFilterContext(seed: FilterContextSeed): FilterContext {
     protocol_version: seed.protocol_version ?? CURRENT_PROTOCOL_VERSION,
     selected_express_id: seed.selected_express_id ?? null,
     ...(seed.ifc_class !== undefined ? { ifc_class: seed.ifc_class } : {}),
+    ...(seed.excluded_ifc_class !== undefined
+      ? { excluded_ifc_class: seed.excluded_ifc_class }
+      : {}),
     ...(seed.floor_code !== undefined ? { floor_code: seed.floor_code } : {}),
     ...(seed.discipline !== undefined ? { discipline: seed.discipline } : {}),
     ...(seed.mmi !== undefined ? { mmi: seed.mmi } : {}),
@@ -216,6 +231,7 @@ export function createFilterContext(seed: FilterContextSeed): FilterContext {
     ...(seed.ns3451 !== undefined ? { ns3451: seed.ns3451 } : {}),
     ...(seed.verification !== undefined ? { verification: seed.verification } : {}),
     ...(seed.systems !== undefined ? { systems: seed.systems } : {}),
+    ...(seed.hidden_models !== undefined ? { hidden_models: seed.hidden_models } : {}),
     ...(seed.selected_type_ids !== undefined ? { selected_type_ids: seed.selected_type_ids } : {}),
     ...(seed.selected_global_ids !== undefined ? { selected_global_ids: seed.selected_global_ids } : {}),
     ...(seed.color_by !== undefined ? { color_by: seed.color_by } : {}),

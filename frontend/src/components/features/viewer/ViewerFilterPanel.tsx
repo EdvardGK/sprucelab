@@ -7,8 +7,15 @@
  * Facets stack with AND:
  *   IFC class · Storey · NS3451 · Verification · System · Model
  *
- * Backed by `useViewerFilterStore` so state is shared between the panel and
- * the canvas overlay chips, and serialized to the URL via `useViewerFilterUrl`.
+ * Backed by `ProjectFilterProvider` (project-scoped, shared with every
+ * dashboard tile and the URL `?d=` sync) — the legacy Zustand store
+ * was retired in PR 1.2.
+ *
+ * Click semantics (capture-doc Item 014): toggle-isolate (inclusion
+ * model). Click a class → only that class visible; cmd/ctrl-click adds
+ * to the inclusion set; click an active class → removes it. Right-click
+ * subtracts the class via `excluded_ifc_class[]` so users can hide a
+ * single class without first selecting everything else.
  *
  * Properties (NS3451, MMI, LoadBearing, FireRating, Materials…) are filtered
  * uniformly via a generic facet group — none of them get a special UI inside
@@ -18,11 +25,14 @@
  * `ifc_guids` field on `/api/types/` lands (see plan §3.5).
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 import { ChevronDown, ChevronRight, Eye, EyeOff, Filter, RotateCcw, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useViewerFilterStore } from '@/stores/useViewerFilterStore';
+import {
+  useProjectFilter,
+  useProjectFilterActions,
+} from '@/contexts/ProjectFilterProvider';
 import type { CanonicalFloor } from '@/hooks/use-scopes';
 import type { TypeInfo } from './ViewerFilterHUD';
 
@@ -48,13 +58,52 @@ export function ViewerFilterPanel({
   onCollapseToggle,
   className,
 }: ViewerFilterPanelProps) {
-  const hiddenIfcClasses = useViewerFilterStore((s) => s.hiddenIfcClasses);
-  const floorCode = useViewerFilterStore((s) => s.floor_code);
-  const toggleIfcClass = useViewerFilterStore((s) => s.toggleIfcClass);
-  const showAllIfcClasses = useViewerFilterStore((s) => s.showAllIfcClasses);
-  const hideAllIfcClasses = useViewerFilterStore((s) => s.hideAllIfcClasses);
-  const setFloorCode = useViewerFilterStore((s) => s.setFloorCode);
-  const reset = useViewerFilterStore((s) => s.reset);
+  const filter = useProjectFilter();
+  const { setIfcClass, setExcludedIfcClass, setFloorCode } =
+    useProjectFilterActions();
+
+  const includedClasses = filter.ifc_class ?? [];
+  const excludedClasses = filter.excluded_ifc_class ?? [];
+  const floorCode = filter.floor_code?.[0] ?? null;
+
+  // Inclusion model:
+  //   click a class                 → isolate (replace inclusion with [class])
+  //   cmd/ctrl-click                → toggle membership in current inclusion
+  //   click the only active class   → clear inclusion (back to all visible)
+  const handleIsolate = (cls: string, additive: boolean) => {
+    if (additive && includedClasses.length > 0) {
+      const next = includedClasses.includes(cls)
+        ? includedClasses.filter((c) => c !== cls)
+        : [...includedClasses, cls];
+      setIfcClass(next.length === 0 ? undefined : next);
+      return;
+    }
+    if (includedClasses.length === 1 && includedClasses[0] === cls) {
+      setIfcClass(undefined);
+      return;
+    }
+    setIfcClass([cls]);
+    // Also drop the class from the exclusion set if present, so a fresh
+    // isolate gesture doesn't immediately fight a stale right-click hide.
+    if (excludedClasses.includes(cls)) {
+      const nextExcluded = excludedClasses.filter((c) => c !== cls);
+      setExcludedIfcClass(nextExcluded.length === 0 ? undefined : nextExcluded);
+    }
+  };
+
+  // Right-click → exclude / un-exclude.
+  const handleToggleExcluded = (cls: string) => {
+    const next = excludedClasses.includes(cls)
+      ? excludedClasses.filter((c) => c !== cls)
+      : [...excludedClasses, cls];
+    setExcludedIfcClass(next.length === 0 ? undefined : next);
+  };
+
+  // "Show all" — drop class facets only, preserve floor + property facets.
+  const handleShowAll = () => {
+    setIfcClass(undefined);
+    setExcludedIfcClass(undefined);
+  };
 
   const [classSearch, setClassSearch] = useState('');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -66,10 +115,19 @@ export function ViewerFilterPanel({
   });
 
   const totalElements = useMemo(() => types.reduce((s, t) => s + t.count, 0), [types]);
-  const visibleElements = useMemo(
-    () => types.filter((t) => !hiddenIfcClasses.includes(t.type)).reduce((s, t) => s + t.count, 0),
-    [types, hiddenIfcClasses],
-  );
+  const visibleElements = useMemo(() => {
+    const includeSet =
+      includedClasses.length > 0 ? new Set(includedClasses) : null;
+    const excludeSet =
+      excludedClasses.length > 0 ? new Set(excludedClasses) : null;
+    return types
+      .filter((t) => {
+        const passesInclusion = includeSet === null || includeSet.has(t.type);
+        const passesExclusion = excludeSet === null || !excludeSet.has(t.type);
+        return passesInclusion && passesExclusion;
+      })
+      .reduce((s, t) => s + t.count, 0);
+  }, [types, includedClasses, excludedClasses]);
 
   const filteredTypes = useMemo(() => {
     if (!classSearch.trim()) return types;
@@ -77,11 +135,12 @@ export function ViewerFilterPanel({
     return types.filter((t) => t.type.toLowerCase().includes(q));
   }, [types, classSearch]);
 
-  const allHidden = hiddenIfcClasses.length > 0 && types.every((t) => hiddenIfcClasses.includes(t.type));
-  const noneHidden = hiddenIfcClasses.length === 0;
+  const noneFiltered =
+    includedClasses.length === 0 && excludedClasses.length === 0;
 
   const activeFacetCount =
-    (hiddenIfcClasses.length > 0 ? 1 : 0) +
+    (includedClasses.length > 0 ? 1 : 0) +
+    (excludedClasses.length > 0 ? 1 : 0) +
     (floorCode ? 1 : 0);
 
   if (collapsed) {
@@ -129,7 +188,11 @@ export function ViewerFilterPanel({
         <div className="flex items-center gap-1">
           {activeFacetCount > 0 && (
             <button
-              onClick={reset}
+              onClick={() => {
+                setIfcClass(undefined);
+                setExcludedIfcClass(undefined);
+                setFloorCode(undefined);
+              }}
               title="Reset all filters"
               className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10"
             >
@@ -165,27 +228,19 @@ export function ViewerFilterPanel({
           onToggle={() => setOpenSections((s) => ({ ...s, class: !s.class }))}
         >
           <div className="space-y-2">
-            {/* Show/Hide all + search */}
+            {/* Show all — clears class inclusion + exclusion (preserves
+                floor + property facets). No "Hide all" in inclusion-model
+                — there's no clean equivalent. */}
             <div className="flex items-center gap-1">
               <button
-                onClick={showAllIfcClasses}
-                disabled={noneHidden}
+                onClick={handleShowAll}
+                disabled={noneFiltered}
                 className={cn(
                   'flex-1 px-2 py-1 rounded text-[10px] font-medium transition-colors',
-                  noneHidden ? 'bg-white/5 text-white/30' : 'bg-white/10 text-white/70 hover:bg-white/15',
+                  noneFiltered ? 'bg-white/5 text-white/30' : 'bg-white/10 text-white/70 hover:bg-white/15',
                 )}
               >
                 <Eye className="h-3 w-3 inline mr-1" />Show all
-              </button>
-              <button
-                onClick={() => hideAllIfcClasses(types.map((t) => t.type))}
-                disabled={allHidden}
-                className={cn(
-                  'flex-1 px-2 py-1 rounded text-[10px] font-medium transition-colors',
-                  allHidden ? 'bg-white/5 text-white/30' : 'bg-white/10 text-white/70 hover:bg-white/15',
-                )}
-              >
-                <EyeOff className="h-3 w-3 inline mr-1" />Hide all
               </button>
             </div>
             {types.length > 6 && (
@@ -205,14 +260,36 @@ export function ViewerFilterPanel({
                 <div className="text-[10px] text-white/30 italic py-2 text-center">No matching classes</div>
               )}
               {filteredTypes.map(({ type, count }) => {
-                const visible = !hiddenIfcClasses.includes(type);
+                const isolated = includedClasses.includes(type);
+                const excluded = excludedClasses.includes(type);
+                const inclusionActive = includedClasses.length > 0;
+                // visible = passes inclusion AND not excluded
+                const visible =
+                  (!inclusionActive || isolated) && !excluded;
                 return (
                   <button
                     key={type}
-                    onClick={() => toggleIfcClass(type)}
+                    onClick={(e: MouseEvent<HTMLButtonElement>) =>
+                      handleIsolate(type, e.metaKey || e.ctrlKey)
+                    }
+                    onContextMenu={(e: MouseEvent<HTMLButtonElement>) => {
+                      e.preventDefault();
+                      handleToggleExcluded(type);
+                    }}
+                    title={
+                      excluded
+                        ? 'Right-click to unhide'
+                        : isolated
+                          ? 'Click to clear · cmd-click toggles · right-click hides'
+                          : 'Click to isolate · cmd-click adds · right-click hides'
+                    }
                     className={cn(
-                      'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
-                      visible ? 'text-white/80 hover:bg-white/10' : 'text-white/35 hover:bg-white/5',
+                      'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors border',
+                      excluded
+                        ? 'border-rose-400/40 bg-rose-500/10 text-rose-200/70 line-through hover:bg-rose-500/15'
+                        : isolated
+                          ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/20'
+                          : 'border-transparent text-white/80 hover:bg-white/10',
                     )}
                   >
                     <span className="flex items-center gap-1.5 min-w-0">
@@ -221,7 +298,18 @@ export function ViewerFilterPanel({
                         : <EyeOff className="h-3 w-3 shrink-0 text-white/30" />}
                       <span className="truncate">{type.replace('Ifc', '')}</span>
                     </span>
-                    <span className={cn('tabular-nums shrink-0', visible ? 'text-white/40' : 'text-white/20')}>
+                    <span
+                      className={cn(
+                        'tabular-nums shrink-0',
+                        excluded
+                          ? 'text-rose-200/50'
+                          : isolated
+                            ? 'text-cyan-200/70'
+                            : visible
+                              ? 'text-white/40'
+                              : 'text-white/20',
+                      )}
+                    >
                       {count.toLocaleString()}
                     </span>
                   </button>
@@ -241,7 +329,7 @@ export function ViewerFilterPanel({
           >
             <div className="space-y-0.5">
               <button
-                onClick={() => setFloorCode(null)}
+                onClick={() => setFloorCode(undefined)}
                 className={cn(
                   'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
                   floorCode === null
@@ -256,7 +344,7 @@ export function ViewerFilterPanel({
                 return (
                   <button
                     key={code}
-                    onClick={() => setFloorCode(active ? null : code)}
+                    onClick={() => setFloorCode(active ? undefined : [code])}
                     className={cn(
                       'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
                       active
@@ -287,7 +375,7 @@ export function ViewerFilterPanel({
           >
             <div className="space-y-0.5">
               <button
-                onClick={() => setFloorCode(null)}
+                onClick={() => setFloorCode(undefined)}
                 className={cn(
                   'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
                   floorCode === null
@@ -302,7 +390,7 @@ export function ViewerFilterPanel({
                 return (
                   <button
                     key={name}
-                    onClick={() => setFloorCode(active ? null : name)}
+                    onClick={() => setFloorCode(active ? undefined : [name])}
                     className={cn(
                       'w-full flex items-center justify-between px-2 py-1 rounded text-[10px] transition-colors',
                       active
