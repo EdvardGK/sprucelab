@@ -452,9 +452,19 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         // 4. Setup Renderer (post-processing for SSAO + edges + clean outlines).
         // Falls back to no-AO mode if URL has ?ao=off (large federated escape hatch).
         world.renderer = new OBCF.PostproductionRenderer(components, container);
-        // Cap pixel ratio: HiDPI/4K displays otherwise render 2-4x the fragments,
-        // tanking framerate on federated loads. 1.5 keeps edges acceptable.
-        world.renderer.three.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        // Pixel ratio: capping at 1.5 was visibly fuzzy on DPR=2 devices
+        // (retina laptops, 4K@200% scaling) — rendered at 56% of native then
+        // upscaled. Cap at 2.0 instead: industry-standard ceiling, sharp on
+        // modern displays without going overboard on DPR=3 phones. Override
+        // via ?dpr=N for diagnostic.
+        const dprQueryParams = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search)
+          : null;
+        const dprOverride = dprQueryParams?.get('dpr');
+        const dprCap = dprOverride !== null && dprOverride !== undefined
+          ? Math.max(0.5, Math.min(3, parseFloat(dprOverride) || 2))
+          : 2;
+        world.renderer.three.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
 
         // 5. Setup Camera
         world.camera = new OBC.OrthoPerspectiveCamera(components);
