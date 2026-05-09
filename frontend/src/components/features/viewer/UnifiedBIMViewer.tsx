@@ -489,6 +489,51 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             custom: true,
           });
 
+          // MSAA on the composer's ping-pong render targets.
+          //
+          // The composer is constructed with default WebGLRenderTargets
+          // that have samples=0 (no multisampling). Three.js EffectComposer
+          // reads `samples` at GL allocation time only, so we have to swap
+          // the existing RTs out for new ones with `samples > 0`. Once
+          // assigned, subsequent setSize() calls preserve the sample count
+          // (Three's WebGLRenderTarget.setSize keeps the existing config).
+          //
+          // 4 samples is the sweet spot on Intel Iris Xe — visually identical
+          // to 8x without the bandwidth tax. Override via ?msaa=N
+          // (0 disables; 1-8 selects sample count). Hardware caps at 16 on
+          // most modern GPUs; we clamp to 8 to stay safe on older devices.
+          const msaaOverride = ppParams?.get('msaa');
+          const samples = msaaOverride !== null && msaaOverride !== undefined
+            ? Math.max(0, Math.min(8, parseInt(msaaOverride, 10) || 0))
+            : 4;
+          if (samples > 0) {
+            const composer = world.renderer.postproduction.composer;
+            const oldRT1 = composer.renderTarget1;
+            const oldRT2 = composer.renderTarget2;
+            const rtParams = {
+              type: oldRT1.texture.type,
+              format: oldRT1.texture.format,
+              colorSpace: oldRT1.texture.colorSpace,
+              samples,
+            };
+            composer.renderTarget1 = new THREE.WebGLRenderTarget(
+              oldRT1.width,
+              oldRT1.height,
+              rtParams,
+            );
+            composer.renderTarget2 = new THREE.WebGLRenderTarget(
+              oldRT2.width,
+              oldRT2.height,
+              rtParams,
+            );
+            postproDisposablesRef.current.push(() => {
+              try { composer.renderTarget1.dispose(); } catch { /* */ }
+              try { composer.renderTarget2.dispose(); } catch { /* */ }
+            });
+            try { oldRT1.dispose(); } catch { /* */ }
+            try { oldRT2.dispose(); } catch { /* */ }
+          }
+
           // FXAA antialiasing pass.
           //
           // ThatOpen's PostproductionRenderer pipes the scene through an
