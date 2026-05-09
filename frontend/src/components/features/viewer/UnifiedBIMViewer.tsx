@@ -24,8 +24,6 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import * as OBC from '@thatopen/components';
 import * as OBCF from '@thatopen/components-front';
 import * as THREE from 'three';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import type { FragmentsGroup, FragmentIdMap } from '@thatopen/fragments';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -507,7 +505,11 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             ? Math.max(0, Math.min(8, parseInt(msaaOverride, 10) || 0))
             : 4;
           if (samples > 0) {
-            const composer = world.renderer.postproduction.composer;
+            const pp = world.renderer.postproduction as unknown as {
+              composer: { renderTarget1: THREE.WebGLRenderTarget; renderTarget2: THREE.WebGLRenderTarget };
+              _renderTarget?: THREE.WebGLRenderTarget;
+            };
+            const composer = pp.composer;
             const oldRT1 = composer.renderTarget1;
             const oldRT2 = composer.renderTarget2;
             const rtParams = {
@@ -526,53 +528,35 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               oldRT2.height,
               rtParams,
             );
+            // Postproduction holds a separate `_renderTarget` reference the
+            // composer was constructed with. It's not referenced at render
+            // time today, but if a future setSize() handler reaches for it
+            // we want it to point at the MSAA RT too.
+            if (pp._renderTarget && pp._renderTarget === oldRT1) {
+              pp._renderTarget = composer.renderTarget1;
+            }
             postproDisposablesRef.current.push(() => {
               try { composer.renderTarget1.dispose(); } catch { /* */ }
               try { composer.renderTarget2.dispose(); } catch { /* */ }
             });
             try { oldRT1.dispose(); } catch { /* */ }
-            try { oldRT2.dispose(); } catch { /* */ }
+            // oldRT2 may equal oldRT1 if composer wasn't fully wired; guard.
+            if (oldRT2 !== oldRT1) {
+              try { oldRT2.dispose(); } catch { /* */ }
+            }
+            // Diagnostic log so we can verify in production what samples
+            // actually landed on the composer chain. Remove after the
+            // 2026-05-09 viewer-quality investigation closes.
+            console.info('[Viewer] postpro MSAA configured', {
+              rt1Samples: composer.renderTarget1.samples,
+              rt2Samples: composer.renderTarget2.samples,
+              passes: world.renderer.postproduction.composer.passes.map((p: { constructor: { name: string }; enabled: boolean }) => ({
+                name: p.constructor.name,
+                enabled: p.enabled,
+              })),
+            });
           }
 
-          // FXAA antialiasing pass.
-          //
-          // ThatOpen's PostproductionRenderer pipes the scene through an
-          // EffectComposer that renders to an offscreen WebGLRenderTarget
-          // without `samples > 0`, so the GL driver's MSAA (which our
-          // WebGLRenderer is constructed with `antialias: true`) is bypassed
-          // entirely. Result: visibly aliased silhouettes — most noticeable
-          // on long horizontals like floor slabs and door frames.
-          //
-          // FXAA is a single fragment-shader pass that detects edge
-          // gradients in the final composite image and blurs them slightly.
-          // ~0.5-1ms on Intel Iris Xe at 1080p; effectively free at 4K
-          // because it's bandwidth-bound, not pixel-bound. Cheaper and
-          // simpler than re-architecting around a multisample render
-          // target. SMAA is the upgrade path if FXAA's mild blur on text
-          // becomes a problem (no canvas text yet, so FXAA wins).
-          //
-          // Disable via ?fxaa=off if it ever causes a visual regression.
-          const fxaaDisabled = ppParams?.get('fxaa') === 'off';
-          if (!fxaaDisabled) {
-            const fxaaPass = new ShaderPass(FXAAShader);
-            const composer = world.renderer.postproduction.composer;
-            composer.addPass(fxaaPass);
-
-            const updateFxaaResolution = () => {
-              const w = container.clientWidth || window.innerWidth;
-              const h = container.clientHeight || window.innerHeight;
-              const pr = world.renderer!.three.getPixelRatio();
-              fxaaPass.material.uniforms['resolution'].value.set(
-                1 / (w * pr),
-                1 / (h * pr),
-              );
-            };
-            updateFxaaResolution();
-            const ro = new ResizeObserver(updateFxaaResolution);
-            ro.observe(container);
-            // Track for disposal in the existing cleanup path.
-            postproDisposablesRef.current.push(() => ro.disconnect());
-          }
         } catch (err) {
           console.warn('[Viewer] Postproduction setup failed, continuing without AO:', err);
         }
