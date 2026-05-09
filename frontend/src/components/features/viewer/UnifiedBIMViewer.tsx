@@ -24,6 +24,8 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import * as OBC from '@thatopen/components';
 import * as OBCF from '@thatopen/components-front';
 import * as THREE from 'three';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import type { FragmentsGroup, FragmentIdMap } from '@thatopen/fragments';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -219,6 +221,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
   const cullerRef = useRef<OBC.MeshCullerRenderer | null>(null);
+  const postproDisposablesRef = useRef<Array<() => void>>([]);
   // Previous applied visibility state, so the effect below can do delta updates
   // instead of rebuilding and re-applying the full scene visibility every toggle.
   const prevTypeVisibilityRef = useRef<Record<string, boolean>>({});
@@ -485,6 +488,46 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             gamma: true,
             custom: true,
           });
+
+          // FXAA antialiasing pass.
+          //
+          // ThatOpen's PostproductionRenderer pipes the scene through an
+          // EffectComposer that renders to an offscreen WebGLRenderTarget
+          // without `samples > 0`, so the GL driver's MSAA (which our
+          // WebGLRenderer is constructed with `antialias: true`) is bypassed
+          // entirely. Result: visibly aliased silhouettes — most noticeable
+          // on long horizontals like floor slabs and door frames.
+          //
+          // FXAA is a single fragment-shader pass that detects edge
+          // gradients in the final composite image and blurs them slightly.
+          // ~0.5-1ms on Intel Iris Xe at 1080p; effectively free at 4K
+          // because it's bandwidth-bound, not pixel-bound. Cheaper and
+          // simpler than re-architecting around a multisample render
+          // target. SMAA is the upgrade path if FXAA's mild blur on text
+          // becomes a problem (no canvas text yet, so FXAA wins).
+          //
+          // Disable via ?fxaa=off if it ever causes a visual regression.
+          const fxaaDisabled = ppParams?.get('fxaa') === 'off';
+          if (!fxaaDisabled) {
+            const fxaaPass = new ShaderPass(FXAAShader);
+            const composer = world.renderer.postproduction.composer;
+            composer.addPass(fxaaPass);
+
+            const updateFxaaResolution = () => {
+              const w = container.clientWidth || window.innerWidth;
+              const h = container.clientHeight || window.innerHeight;
+              const pr = world.renderer!.three.getPixelRatio();
+              fxaaPass.material.uniforms['resolution'].value.set(
+                1 / (w * pr),
+                1 / (h * pr),
+              );
+            };
+            updateFxaaResolution();
+            const ro = new ResizeObserver(updateFxaaResolution);
+            ro.observe(container);
+            // Track for disposal in the existing cleanup path.
+            postproDisposablesRef.current.push(() => ro.disconnect());
+          }
         } catch (err) {
           console.warn('[Viewer] Postproduction setup failed, continuing without AO:', err);
         }
@@ -1176,6 +1219,12 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       cleanupSelection?.();
       cleanupResize?.();
       cleanupTelemetry?.();
+
+      // Run any postproduction disposers (FXAA ResizeObserver, etc.)
+      for (const dispose of postproDisposablesRef.current) {
+        try { dispose(); } catch { /* noop */ }
+      }
+      postproDisposablesRef.current = [];
 
       // Dispose of components properly
       if (componentsRef.current) {
