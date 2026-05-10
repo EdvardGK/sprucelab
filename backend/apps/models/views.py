@@ -1518,7 +1518,7 @@ class ModelViewSet(viewsets.ModelViewSet):
 
         return Response(response_data)
 
-    @action(detail=True, methods=['post'], url_path='fragments-complete')
+    @action(detail=True, methods=['post'], url_path='fragments-complete', permission_classes=[AllowAny])
     def fragments_complete(self, request, pk=None):
         """
         Callback from FastAPI when fragments generation completes.
