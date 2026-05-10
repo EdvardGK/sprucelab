@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3 } from 'lucide-react';
+import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3, Table2 } from 'lucide-react';
 import { useModel } from '@/hooks/use-models';
 import { useModelAnalysis, useRunAnalysis } from '@/hooks/use-model-analysis';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,9 @@ import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
 import { treemapLayout } from '@/lib/treemap';
 import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
+import { DrillTarget } from '@/components/filters/DrillTarget';
+import { useProjectFilter, useProjectFilterActions } from '@/contexts/ProjectFilterProvider';
+import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
 
 // Tab definitions
 const TABS = [
@@ -411,59 +414,80 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [viewerMode, setViewerMode] = useState<'3d' | 'footprint'>('3d');
   const [drillSource, setDrillSource] = useState<DrillSource>(null);
-  const [viewerStoreyFilter, setViewerStoreyFilter] = useState<string | null>(null);
-  const [viewerTypeVisibility, setViewerTypeVisibility] = useState<Record<string, boolean> | undefined>(undefined);
   const hasFile = !!model.file_url;
+
+  // Cross-filter state lives in the shared project-scoped store
+  // (`ProjectFilterProvider`). The embedded `<UnifiedBIMViewer>` is
+  // fed derived `floorCodeFilter`/`typeVisibility` props matching the
+  // FederatedViewer wiring (PR 1.2). Click handlers on charts/tiles
+  // dispatch through `useProjectFilterActions` so the viewer reacts
+  // identically to actions taken anywhere else in the app.
+  const filter = useProjectFilter();
+  const { setFloorCode, setIfcClass } = useProjectFilterActions();
+
+  // The viewer's `floorCodeFilter` is matched against discovered IFC
+  // storey names directly; ModelWorkspace operates on a single model
+  // so canonical-floor aliasing is unnecessary here.
+  const viewerStoreyFilter = filter.floor_code?.[0] ?? null;
+
+  // Derive type-visibility from inclusion + exclusion facets. The
+  // shared store uses raw `Ifc`-prefixed class names (e.g. `IfcWall`).
+  const allIfcClasses = useMemo(
+    () => Object.keys(stats.classCounts).map((c) => 'Ifc' + c),
+    [stats.classCounts],
+  );
+  const viewerTypeVisibility = useMemo(() => {
+    const included = filter.ifc_class;
+    const excluded = filter.excluded_ifc_class;
+    // No filter active → undefined so the viewer shows all.
+    if ((!included || included.length === 0) && (!excluded || excluded.length === 0)) {
+      return undefined;
+    }
+    return deriveTypeVisibility(allIfcClasses, included, excluded);
+  }, [allIfcClasses, filter.ifc_class, filter.excluded_ifc_class]);
 
   const drillConfig = useMemo(() => buildDrillTabs(drillSource, analysis, stats), [drillSource, analysis, stats]);
 
-  // When drill opens, also filter the viewer. When drill closes, reset.
-  const openDrill = (source: DrillSource) => {
-    setDrillSource(source);
-    if (!source) {
-      setViewerStoreyFilter(null);
-      setViewerTypeVisibility(undefined);
-      return;
-    }
-    switch (source.type) {
-      case 'storeys':
-        setViewerStoreyFilter(source.storeyName ?? null);
-        setViewerTypeVisibility(undefined);
-        break;
-      case 'treemap': {
-        // Show only the selected IFC class
-        const vis: Record<string, boolean> = {};
-        for (const cls of Object.keys(stats.classCounts)) {
-          vis['Ifc' + cls] = cls === source.ifcClass;
-        }
-        setViewerTypeVisibility(vis);
-        setViewerStoreyFilter(null);
-        break;
+  // Cross-filter handlers — primary click on charts/tiles. PowerBI
+  // pattern: page reflects the click; modal escape lives behind the
+  // Table2 icon (`onViewData`).
+  const filterByStorey = (storeyName: string | null) => {
+    setFloorCode(storeyName ? [storeyName] : undefined);
+  };
+  const filterByIfcClass = (cls: string) => {
+    // Tile labels arrive without the `Ifc` prefix; the store uses the
+    // prefixed form to match the viewer's `typeVisibility` keys.
+    setIfcClass(['Ifc' + cls]);
+  };
+  const filterByQuality = () => {
+    // "Show only problem types" → include the IFC classes that have
+    // any quality issue. Resolves to `Ifc`-prefixed names already.
+    const problem = new Set<string>();
+    for (const t of analysis.types) {
+      const hasIssue =
+        t.is_proxy ||
+        t.is_external_unset > 0 ||
+        t.loadbearing_unset > 0 ||
+        t.fire_rating_unset > 0;
+      if (hasIssue) {
+        problem.add(t.element_class || t.type_class);
       }
-      case 'quality': {
-        // Show only proxy/problem types by hiding well-behaved ones
-        const vis: Record<string, boolean> = {};
-        for (const t of analysis.types) {
-          const cls = t.element_class || t.type_class;
-          const hasIssue = t.is_proxy || t.is_external_unset > 0 || t.loadbearing_unset > 0 || t.fire_rating_unset > 0;
-          if (hasIssue) vis[cls] = true;
-        }
-        // Only set if we found issues, otherwise show all
-        setViewerTypeVisibility(Object.keys(vis).length > 0 ? vis : undefined);
-        setViewerStoreyFilter(null);
-        break;
-      }
-      default:
-        setViewerStoreyFilter(null);
-        setViewerTypeVisibility(undefined);
-        break;
     }
+    setIfcClass(problem.size > 0 ? Array.from(problem) : undefined);
+  };
+  const filterByGeometry = (representation: string) => {
+    // Include all IFC classes whose primary representation matches.
+    const classes = new Set<string>();
+    for (const t of analysis.types) {
+      if (t.primary_representation === representation && t.instance_count > 0) {
+        classes.add(t.element_class || t.type_class);
+      }
+    }
+    setIfcClass(classes.size > 0 ? Array.from(classes) : undefined);
   };
 
   const closeDrill = () => {
     setDrillSource(null);
-    setViewerStoreyFilter(null);
-    setViewerTypeVisibility(undefined);
   };
 
   // Build class → color map matching treemap ordering (sorted by instance count desc)
@@ -484,26 +508,48 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
           {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
           <div className="col-span-2">
-            <QualityCard analysis={analysis} stats={stats} onExpand={() => setOverlay('quality')} onClick={() => openDrill({ type: 'quality' })} />
+            <QualityCard
+              analysis={analysis}
+              stats={stats}
+              onExpand={() => setOverlay('quality')}
+              onClick={filterByQuality}
+              onViewData={() => setDrillSource({ type: 'quality' })}
+            />
           </div>
-          <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent onClick={() => openDrill({ type: 'types' })} />
-          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} onClick={() => openDrill({ type: 'instances' })} />
-          <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => openDrill({ type: 'storeys' })} />
+          <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent onClick={() => setDrillSource({ type: 'types' })} />
+          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} onClick={() => setDrillSource({ type: 'instances' })} />
+          <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => setDrillSource({ type: 'storeys' })} />
           <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
 
           {/* Row 2: Storeys + Treemap (left) | Viewer (right) */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)]">
             <Card className="overflow-hidden card-accent-forest h-[220px]">
               <CardContent className="p-3 h-full overflow-y-auto">
-                <CardHeader title="Storeys" onExpand={() => setOverlay('storeys')} />
-                <StoreyChart storeys={analysis.storeys} onBarClick={(name) => openDrill({ type: 'storeys', storeyName: name })} />
+                <CardHeader
+                  title="Storeys"
+                  onExpand={() => setOverlay('storeys')}
+                  onViewData={() => setDrillSource({ type: 'storeys' })}
+                />
+                <StoreyChart storeys={analysis.storeys} activeStorey={viewerStoreyFilter} onBarClick={filterByStorey} />
               </CardContent>
             </Card>
             <Card className="overflow-hidden card-accent-forest h-[280px]">
               <CardContent className="p-3 h-full flex flex-col">
-                <CardHeader title="Elements" onExpand={() => setOverlay('elements')} />
+                <CardHeader
+                  title="Elements"
+                  onExpand={() => setOverlay('elements')}
+                  onViewData={() => setDrillSource({ type: 'instances' })}
+                />
                 <div className="flex-1 relative">
-                  <Treemap types={analysis.types} onTileClick={(cls) => openDrill({ type: 'treemap', ifcClass: cls })} />
+                  <Treemap
+                    types={analysis.types}
+                    activeIfcClass={
+                      filter.ifc_class && filter.ifc_class.length === 1
+                        ? filter.ifc_class[0].replace(/^Ifc/, '')
+                        : null
+                    }
+                    onTileClick={filterByIfcClass}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -566,9 +612,27 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <div className="col-span-3">
             <Card className="overflow-hidden card-accent-forest h-full">
               <CardContent className="p-3 flex flex-col h-full">
-                <CardHeader title="Geometry" onExpand={() => setOverlay('geometry')} />
+                <CardHeader
+                  title="Geometry"
+                  onExpand={() => setOverlay('geometry')}
+                  onViewData={() => {
+                    // Pick the first geometry segment as the drill default —
+                    // there is no aggregate "all geometry" drill. Falls back
+                    // to showing nothing if no segments exist.
+                    const reps = new Map<string, number>();
+                    for (const t of analysis.types) {
+                      if (t.primary_representation && t.instance_count > 0) {
+                        reps.set(t.primary_representation, (reps.get(t.primary_representation) ?? 0) + t.instance_count);
+                      }
+                    }
+                    const sorted = [...reps.entries()].sort((a, b) => b[1] - a[1]);
+                    if (sorted.length > 0) {
+                      setDrillSource({ type: 'geometry', representation: sorted[0][0] });
+                    }
+                  }}
+                />
                 <div className="flex-1 flex flex-col justify-center">
-                  <GeometryBar types={analysis.types} onSegmentClick={(rep) => openDrill({ type: 'geometry', representation: rep })} />
+                  <GeometryBar types={analysis.types} onSegmentClick={filterByGeometry} />
                 </div>
               </CardContent>
             </Card>
@@ -710,7 +774,19 @@ function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio, onClic
 
 // ─── Quality Checks Card ────────────────────────────────────────────────────
 
-function QualityCard({ analysis, stats, onExpand, onClick }: { analysis: ModelAnalysis; stats: AnalysisStats; onExpand?: () => void; onClick?: () => void }) {
+function QualityCard({
+  analysis,
+  stats,
+  onExpand,
+  onClick,
+  onViewData,
+}: {
+  analysis: ModelAnalysis;
+  stats: AnalysisStats;
+  onExpand?: () => void;
+  onClick?: () => void;
+  onViewData?: () => void;
+}) {
   const checks = [
     { label: 'Duplicate GUIDs', value: analysis.duplicate_guid_count, ok: analysis.duplicate_guid_count === 0 },
     { label: 'Proxy-typed', value: stats.proxyCount, ok: stats.proxyCount === 0 },
@@ -719,35 +795,55 @@ function QualityCard({ analysis, stats, onExpand, onClick }: { analysis: ModelAn
     { label: 'FireRating unset', value: stats.missingFireRating, ok: stats.missingFireRating === 0 },
   ];
 
+  // Body click cross-filters the page (PowerBI pattern); the Table2
+  // icon in the header is the secondary "view raw issues table" escape.
+  const body = (
+    <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
+      <CardHeader title="Quality" onExpand={onExpand} onViewData={onViewData} />
+      <div className="space-y-[clamp(0.2rem,0.4vw,0.3rem)] flex-1">
+        {checks.map((c) => (
+          <div key={c.label} className="flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)]">
+            <span className="text-text-secondary">{c.label}</span>
+            <span className={`font-semibold tabular-nums px-[clamp(0.3rem,0.6vw,0.5rem)] py-px rounded text-[clamp(0.5rem,0.9vw,0.65rem)] ${
+              c.ok
+                ? 'bg-forest/15 text-forest'
+                : 'bg-red-500/15 text-red-400'
+            }`}>
+              {c.value === 0 ? 'OK' : c.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-auto pt-[clamp(0.3rem,0.5vw,0.4rem)] border-t border-border text-[clamp(0.5rem,0.8vw,0.6rem)] text-text-tertiary">
+        {analysis.ifc_schema} &middot; {analysis.application}
+      </div>
+    </CardContent>
+  );
+
+  if (onClick) {
+    return (
+      <DrillTarget
+        ariaLabel="Filter to types with quality issues"
+        onActivate={onClick}
+        className="h-full"
+      >
+        <Card className="h-full flex flex-col card-accent-lime">
+          {body}
+        </Card>
+      </DrillTarget>
+    );
+  }
+
   return (
-    <Card className={`h-full flex flex-col card-accent-lime ${onClick ? 'cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all' : ''}`} onClick={onClick}>
-      <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
-        <CardHeader title="Quality" onExpand={onExpand} />
-        <div className="space-y-[clamp(0.2rem,0.4vw,0.3rem)] flex-1">
-          {checks.map((c) => (
-            <div key={c.label} className="flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)]">
-              <span className="text-text-secondary">{c.label}</span>
-              <span className={`font-semibold tabular-nums px-[clamp(0.3rem,0.6vw,0.5rem)] py-px rounded text-[clamp(0.5rem,0.9vw,0.65rem)] ${
-                c.ok
-                  ? 'bg-forest/15 text-forest'
-                  : 'bg-red-500/15 text-red-400'
-              }`}>
-                {c.value === 0 ? 'OK' : c.value.toLocaleString()}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-auto pt-[clamp(0.3rem,0.5vw,0.4rem)] border-t border-border text-[clamp(0.5rem,0.8vw,0.6rem)] text-text-tertiary">
-          {analysis.ifc_schema} &middot; {analysis.application}
-        </div>
-      </CardContent>
+    <Card className="h-full flex flex-col card-accent-lime">
+      {body}
     </Card>
   );
 }
 
 // ─── Storey Chart ───────────────────────────────────────────────────────────
 
-function StoreyChart({ storeys, onBarClick }: { storeys: AnalysisStorey[]; onBarClick?: (storeyName: string) => void }) {
+function StoreyChart({ storeys, onBarClick, activeStorey }: { storeys: AnalysisStorey[]; onBarClick?: (storeyName: string | null) => void; activeStorey?: string | null }) {
   if (!storeys.length) return <div className="text-text-tertiary text-xs">No storeys</div>;
 
   const sorted = [...storeys].sort((a, b) => (b.elevation ?? 0) - (a.elevation ?? 0));
@@ -755,26 +851,42 @@ function StoreyChart({ storeys, onBarClick }: { storeys: AnalysisStorey[]; onBar
 
   return (
     <div className="space-y-[clamp(0.1rem,0.3vw,0.2rem)]">
-      {sorted.map((s) => (
-        <div key={s.name}
-             className={`grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)] ${onBarClick ? 'cursor-pointer hover:bg-white/5 rounded transition-colors' : ''}`}
-             style={{ gridTemplateColumns: 'minmax(0, 5rem) auto 1fr auto' }}
-             onClick={onBarClick ? () => onBarClick(s.name) : undefined}>
-          <span className="text-text-secondary truncate" title={s.name}>{s.name}</span>
-          <span className="text-text-tertiary tabular-nums w-[3.5em] text-right">
-            {s.elevation != null ? `${s.elevation.toFixed(1)}m` : '—'}
-          </span>
-          <div className="h-[clamp(0.7rem,1.2vw,1rem)] bg-white/5 rounded overflow-hidden">
-            <div
-              className="h-full rounded bg-gradient-to-r from-navy to-forest transition-all"
-              style={{ width: `${(s.element_count / maxCount) * 100}%` }}
-            />
+      {sorted.map((s) => {
+        const isActive = activeStorey === s.name;
+        const row = (
+          <div className="grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)]"
+               style={{ gridTemplateColumns: 'minmax(0, 5rem) auto 1fr auto' }}>
+            <span className="text-text-secondary truncate" title={s.name}>{s.name}</span>
+            <span className="text-text-tertiary tabular-nums w-[3.5em] text-right">
+              {s.elevation != null ? `${s.elevation.toFixed(1)}m` : '—'}
+            </span>
+            <div className="h-[clamp(0.7rem,1.2vw,1rem)] bg-white/5 rounded overflow-hidden">
+              <div
+                className="h-full rounded bg-gradient-to-r from-navy to-forest transition-all"
+                style={{ width: `${(s.element_count / maxCount) * 100}%` }}
+              />
+            </div>
+            <span className="text-text-primary tabular-nums font-medium w-[3em] text-right">
+              {s.element_count}
+            </span>
           </div>
-          <span className="text-text-primary tabular-nums font-medium w-[3em] text-right">
-            {s.element_count}
-          </span>
-        </div>
-      ))}
+        );
+        if (!onBarClick) {
+          return <div key={s.name}>{row}</div>;
+        }
+        return (
+          <DrillTarget
+            key={s.name}
+            ariaLabel={`Filter by storey ${s.name}`}
+            active={isActive}
+            // Toggle: clicking the active row clears the floor filter.
+            onActivate={() => onBarClick(isActive ? null : s.name)}
+            className="rounded"
+          >
+            {row}
+          </DrillTarget>
+        );
+      })}
     </div>
   );
 }
@@ -789,7 +901,7 @@ const TREEMAP_COLORS = [
 
 // treemapLayout imported from @/lib/treemap
 
-function Treemap({ types, onTileClick }: { types: AnalysisTypeRecord[]; onTileClick?: (ifcClass: string) => void }) {
+function Treemap({ types, onTileClick, activeIfcClass }: { types: AnalysisTypeRecord[]; onTileClick?: (ifcClass: string) => void; activeIfcClass?: string | null }) {
   const items = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const t of types) {
@@ -815,17 +927,39 @@ function Treemap({ types, onTileClick }: { types: AnalysisTypeRecord[]; onTileCl
           const pctW = (r.w / W) * 100, pctH = (r.h / H) * 100;
           const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
           const showLabel = pctW > 8 && pctH > 8;
+          const isActive = activeIfcClass === r.label;
+          // The treemap tiles need inline style for absolute positioning;
+          // DrillTarget doesn't expose `style`, so mirror its
+          // hover-outline / focus / active classes manually here. The
+          // class set matches `DrillTarget`'s output for visual parity.
+          const interactive = !!onTileClick;
+          const className = [
+            'absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px',
+            interactive && 'cursor-pointer transition-all hover:brightness-110 hover:outline hover:outline-1 hover:outline-primary hover:outline-offset-[1px] focus:outline focus:outline-1 focus:outline-primary focus:outline-offset-[1px] focus-visible:ring-2 focus-visible:ring-primary/30',
+            interactive && isActive && 'outline outline-1 outline-primary outline-offset-[1px]',
+          ].filter(Boolean).join(' ');
           return (
             <div
               key={r.label}
-              className={`absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px ${onTileClick ? 'cursor-pointer hover:brightness-110 transition-all' : ''}`}
+              role={interactive ? 'button' : undefined}
+              tabIndex={interactive ? 0 : undefined}
+              aria-pressed={interactive ? isActive : undefined}
+              aria-label={interactive ? `Filter by ${r.label}` : undefined}
+              className={className}
               style={{
                 left: `${pctX}%`, top: `${pctY}%`,
                 width: `${pctW}%`, height: `${pctH}%`,
                 background: color, opacity: 0.85,
               }}
               title={`${r.label}: ${r.value.toLocaleString()}`}
-              onClick={onTileClick ? () => onTileClick(r.label) : undefined}
+              onClick={interactive ? (e) => { e.stopPropagation(); onTileClick!(r.label); } : undefined}
+              onKeyDown={interactive ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTileClick!(r.label);
+                }
+              } : undefined}
             >
               {showLabel && (
                 <>
@@ -862,37 +996,64 @@ function GeometryBar({ types, onSegmentClick }: { types: AnalysisTypeRecord[]; o
   if (!data.length) return <div className="text-text-tertiary text-xs">No geometry data</div>;
 
   const total = data.reduce((s, [, v]) => s + v, 0);
+  const interactive = !!onSegmentClick;
 
   return (
     <div>
-      {/* Stacked bar */}
+      {/* Stacked bar — segments need inline width %; mirror DrillTarget
+          affordances with role/tabIndex/keyboard handlers manually. */}
       <div className="h-[clamp(0.6rem,1vw,0.8rem)] rounded-full overflow-hidden flex">
         {data.map(([label, value], i) => {
           const pct = (value / total) * 100;
           return (
             <div
               key={label}
-              className={`h-full ${onSegmentClick ? 'cursor-pointer hover:brightness-110' : ''} transition-all`}
+              role={interactive ? 'button' : undefined}
+              tabIndex={interactive ? 0 : undefined}
+              aria-label={interactive ? `Filter by ${label}` : undefined}
+              className={`h-full transition-all ${interactive ? 'cursor-pointer hover:brightness-110 focus:outline focus:outline-1 focus:outline-primary focus-visible:ring-2 focus-visible:ring-primary/30' : ''}`}
               style={{ width: `${pct}%`, background: GEOM_COLORS[i % GEOM_COLORS.length] }}
               title={`${label}: ${value.toLocaleString()} (${pct.toFixed(1)}%)`}
-              onClick={onSegmentClick ? () => onSegmentClick(label) : undefined}
+              onClick={interactive ? (e) => { e.stopPropagation(); onSegmentClick!(label); } : undefined}
+              onKeyDown={interactive ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onSegmentClick!(label);
+                }
+              } : undefined}
             />
           );
         })}
       </div>
       {/* Legend */}
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-[clamp(0.3rem,0.5vw,0.4rem)]">
-        {data.map(([label, value], i) => (
-          <div
-            key={label}
-            className={`flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)] ${onSegmentClick ? 'cursor-pointer hover:text-text-primary' : ''}`}
-            onClick={onSegmentClick ? () => onSegmentClick(label) : undefined}
-          >
-            <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: GEOM_COLORS[i % GEOM_COLORS.length] }} />
-            <span className="text-text-secondary">{label}</span>
-            <span className="text-text-primary font-semibold tabular-nums">{value.toLocaleString()}</span>
-          </div>
-        ))}
+        {data.map(([label, value], i) => {
+          const swatch = (
+            <>
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: GEOM_COLORS[i % GEOM_COLORS.length] }} />
+              <span className="text-text-secondary">{label}</span>
+              <span className="text-text-primary font-semibold tabular-nums">{value.toLocaleString()}</span>
+            </>
+          );
+          if (!interactive) {
+            return (
+              <div key={label} className="flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)]">
+                {swatch}
+              </div>
+            );
+          }
+          return (
+            <DrillTarget
+              key={label}
+              ariaLabel={`Filter by ${label}`}
+              onActivate={() => onSegmentClick!(label)}
+              className="flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)] hover:text-text-primary rounded px-1 -mx-1"
+            >
+              {swatch}
+            </DrillTarget>
+          );
+        })}
       </div>
     </div>
   );
@@ -955,22 +1116,44 @@ function ModelInfoCard({ analysis }: { analysis: ModelAnalysis }) {
 
 // ─── Card Header with expand button ─────────────────────────────────────────
 
-function CardHeader({ title, onExpand }: { title: string; onExpand?: () => void }) {
+function CardHeader({
+  title,
+  onExpand,
+  onViewData,
+  viewDataLabel,
+}: {
+  title: string;
+  onExpand?: () => void;
+  onViewData?: () => void;
+  viewDataLabel?: string;
+}) {
   return (
     <div className="flex items-center justify-between mb-[clamp(0.25rem,0.5vw,0.4rem)]">
       <h3 className="text-[clamp(0.65rem,1.1vw,0.8rem)] font-semibold text-text-primary">
         {title}
       </h3>
-      {onExpand && (
-        <button
-          onClick={onExpand}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
-                     bg-forest/15 border border-forest/30 text-lime
-                     hover:bg-forest hover:text-white hover:border-forest transition-all"
-        >
-          <Maximize2 className="h-3 w-3" />
-        </button>
-      )}
+      <div className="flex items-center gap-1">
+        {onViewData && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onViewData(); }}
+            aria-label={viewDataLabel ?? 'View data'}
+            className="p-1 -m-1 text-text-tertiary hover:text-text-primary rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <Table2 className="h-3 w-3" />
+          </button>
+        )}
+        {onExpand && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onExpand(); }}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.65rem] font-medium
+                       bg-forest/15 border border-forest/30 text-lime
+                       hover:bg-forest hover:text-white hover:border-forest transition-all"
+          >
+            <Maximize2 className="h-3 w-3" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
