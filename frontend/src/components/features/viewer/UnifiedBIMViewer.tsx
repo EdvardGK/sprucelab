@@ -334,31 +334,39 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   }, [modelVisibility]);
 
   // Helper function to fit all models to view
-  const fitAllModelsToView = useCallback(() => {
+  const fitAllModelsToView = useCallback(async () => {
     if (!worldRef.current || loadedModelsRef.current.length === 0) return;
 
     // Calculate combined bounding box.
     //
     // v2 FragmentsGroup eagerly loads all geometry to the main thread, so
     // `Box3.setFromObject(group)` works directly. v3 FragmentsModel
-    // streams tiles based on camera proximity — at fit-to-view time the
-    // tiles haven't loaded yet so setFromObject returns an empty box and
-    // the camera never finds the model. Use `v3Model.box` (the
-    // worker-computed model-wide AABB, populated at load time
-    // independent of tile streaming) for v3 entries.
+    // streams tiles from the worker — at fit-to-view time the synchronous
+    // `v3Model.box` getter may still be empty (worker hasn't responded
+    // yet), so for v3 we fall back to `getMergedBox(undefined)` which
+    // awaits the worker. setFromObject doesn't work on v3 either since
+    // the Three.js children are still empty placeholder groups.
     const combinedBbox = new THREE.Box3();
 
-    loadedModelsRef.current.forEach((m) => {
+    for (const m of loadedModelsRef.current) {
       const bbox = new THREE.Box3();
       if (m.formatVersion === 'v3' && m.v3Model) {
-        bbox.copy(m.v3Model.box);
+        const sync = m.v3Model.box;
+        if (!sync.isEmpty()) {
+          bbox.copy(sync);
+        } else {
+          try {
+            const merged = await m.v3Model.getMergedBox([]);
+            bbox.copy(merged);
+          } catch { /* worker may still be initialising */ }
+        }
       } else {
         bbox.setFromObject(m.group);
       }
       if (!bbox.isEmpty()) {
         combinedBbox.union(bbox);
       }
-    });
+    }
 
     if (combinedBbox.isEmpty()) return;
 
@@ -1603,15 +1611,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           fragments.settings.graphicsQuality = 1; // crispest tier
           fragments.settings.autoCoordinate = true;
           v3FragmentsRef.current = fragments;
-          // Drive worker-side culling + LOD off camera 'rest' events. The
-          // controls already debounce these naturally (only fires when
-          // camera stops), so we don't need additional throttling.
+          // Drive worker-side tile streaming + LOD off camera 'update'
+          // events (fire continuously during motion for live streaming) AND
+          // 'rest' events (final settle). Per ThatOpen's tutorial the
+          // primary hook is 'update' — without it tiles never stream and
+          // the canvas stays empty.
           const controls = worldRef.current?.camera?.controls;
           if (controls) {
-            const onRest = () => { fragments.update().catch(() => {}); };
-            controls.addEventListener('rest', onRest);
+            const triggerUpdate = () => { fragments.update().catch(() => {}); };
+            controls.addEventListener('update', triggerUpdate);
+            controls.addEventListener('rest', triggerUpdate);
             postproDisposablesRef.current.push(() => {
-              try { controls.removeEventListener('rest', onRest); } catch { /* */ }
+              try {
+                controls.removeEventListener('update', triggerUpdate);
+                controls.removeEventListener('rest', triggerUpdate);
+              } catch { /* */ }
             });
           }
           // Initial population pass once the camera is positioned.
@@ -1711,6 +1725,13 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           // Provisional onModelLoaded with zero count — re-fired with the
           // real count once category extraction completes above.
           onModelLoaded?.(modelId, 0);
+
+          // Kick the worker to start streaming tiles for this model now
+          // that the camera (or default-positioned camera) has been bound
+          // via useCamera(). Without this, the worker waits for the first
+          // 'update' event from controls, which on initial load never
+          // fires since the camera hasn't moved.
+          v3FragmentsRef.current?.update().catch(() => {});
 
           return loadedModel;
         };
