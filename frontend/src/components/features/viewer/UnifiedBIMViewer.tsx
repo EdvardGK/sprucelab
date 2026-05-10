@@ -231,7 +231,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // Type filtering state - auto-discovered from loaded models.
   // Stores each type's FragmentIdMap directly so the Hider can be driven without
   // converting back through GUID arrays every toggle.
-  const [typeInfo, setTypeInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
+  // TypeInfoEntry can carry either v2 fragment-id maps OR per-v3-model
+  // localId references (or both, for federated viewers mixing formats).
+  // The hider effect (below) applies whichever side is populated.
+  const [typeInfo, setTypeInfo] = useState<Map<string, {
+    map: FragmentIdMap;
+    count: number;
+    v3Refs?: Array<{ modelId: string; localIds: number[] }>;
+  }>>(new Map());
   const [storeyInfo, setStoreyInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
@@ -1520,8 +1527,62 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               .catch(() => { /* property fetch will fail gracefully on click */ });
           }
 
+          // Type extraction (replaces OBC.Classifier.byEntity for v3).
+          // Fire-and-forget: pulls the category list from the worker, then
+          // fans out a getItemsOfCategory call per category to gather
+          // localIds. Merged into the shared typeInfo so the filter panel
+          // sees v3 classes alongside any v2 model's classes.
+          v3Model.getCategories()
+            .then(async (categories) => {
+              const entries = await Promise.all(
+                categories.map(async (cat) => {
+                  const items = await v3Model.getItemsOfCategory(cat);
+                  // Resolve localIds in parallel — getLocalId is async but
+                  // cached after first call; per-item awaits in a loop
+                  // would serialise N worker round-trips.
+                  const ids = await Promise.all(items.map((it) => it.getLocalId()));
+                  const localIds = ids.filter((id): id is number => id !== null);
+                  return { cat, localIds };
+                }),
+              );
+              loadedModel.elementCount = entries.reduce((s, e) => s + e.localIds.length, 0);
+              onModelLoaded?.(modelId, loadedModel.elementCount);
+              setTypeInfo((prev) => {
+                const next = new Map(prev);
+                for (const { cat, localIds } of entries) {
+                  if (localIds.length === 0) continue;
+                  const existing = next.get(cat);
+                  const newRef = { modelId: v3Model.modelId, localIds };
+                  if (existing) {
+                    next.set(cat, {
+                      map: existing.map,
+                      count: existing.count + localIds.length,
+                      v3Refs: [...(existing.v3Refs ?? []), newRef],
+                    });
+                  } else {
+                    next.set(cat, {
+                      map: {} as FragmentIdMap,
+                      count: localIds.length,
+                      v3Refs: [newRef],
+                    });
+                  }
+                }
+                return next;
+              });
+              setTypeVisibility?.((prev) => {
+                const updated = { ...prev };
+                for (const { cat } of entries) {
+                  if (!(cat in updated)) updated[cat] = true;
+                }
+                return updated;
+              });
+            })
+            .catch((err) => console.warn('[Viewer] v3 category extraction failed:', err));
+
           loadedModelsRef.current.push(loadedModel);
           setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
+          // Provisional onModelLoaded with zero count — re-fired with the
+          // real count once category extraction completes above.
           onModelLoaded?.(modelId, 0);
 
           return loadedModel;
@@ -1658,31 +1719,61 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // Single-frame debounce via requestAnimationFrame coalesces rapid Show/Hide-All
   // clicks into one Hider operation.
   useEffect(() => {
-    if (!hiderRef.current || typeInfo.size === 0) return;
+    if (typeInfo.size === 0) return;
     // GUID isolation takes priority — skip type-visibility while active.
     if (isolation && isolation.guids.length > 0) return;
 
     const rafId = requestAnimationFrame(() => {
       const hider = hiderRef.current;
-      if (!hider) return;
 
       const prev = prevTypeVisibilityRef.current;
       const flippedOn: FragmentIdMap[] = [];
       const flippedOff: FragmentIdMap[] = [];
+      // v3 visibility ops, fanned out per-model after the v2 hider call.
+      // Promises are non-blocking — the worker handles them async; we
+      // don't block the rAF callback waiting for resolution.
+      const v3Ops: Array<Promise<void>> = [];
 
       for (const [type, data] of typeInfo) {
         const now = typeVisibility[type] !== false; // default: visible
         const before = type in prev ? prev[type] : now; // first-sync: no change
         if (now === before) continue;
-        (now ? flippedOn : flippedOff).push(data.map);
+        // v2 path — accumulate fragmentIdMaps for batched hider.set call
+        if (data.map && Object.keys(data.map).length > 0) {
+          (now ? flippedOn : flippedOff).push(data.map);
+        }
+        // v3 path — call setVisible per model that contributes to this type
+        if (data.v3Refs?.length) {
+          for (const ref of data.v3Refs) {
+            const lm = loadedModelsRef.current.find(m => m.fragmentModelId === ref.modelId);
+            if (lm?.v3Model) {
+              v3Ops.push(lm.v3Model.setVisible(ref.localIds, now).catch(err => {
+                console.warn('[Viewer] v3 setVisible failed:', err);
+              }));
+            }
+          }
+        }
       }
 
-      try {
-        if (flippedOff.length > 0) hider.set(false, unionFragmentIdMaps(flippedOff));
-        if (flippedOn.length > 0) hider.set(true, unionFragmentIdMaps(flippedOn));
-      } catch (err) {
-        console.error('Type visibility filtering failed:', err);
-        hider.set(true);
+      // v2 batched hider call. Skip if no hider — viewer might be a
+      // pure-v3 mount where the OBC.Hider never got attached.
+      if (hider) {
+        try {
+          if (flippedOff.length > 0) hider.set(false, unionFragmentIdMaps(flippedOff));
+          if (flippedOn.length > 0) hider.set(true, unionFragmentIdMaps(flippedOn));
+        } catch (err) {
+          console.error('Type visibility filtering failed:', err);
+          hider.set(true);
+        }
+      }
+
+      // After all v3 ops dispatch, kick a single fragments.update() to
+      // re-evaluate culling/LOD with the new visibility set. The worker
+      // batches its own redraws, so racing v3Ops here is safe.
+      if (v3Ops.length > 0 && v3FragmentsRef.current) {
+        Promise.allSettled(v3Ops).then(() => {
+          v3FragmentsRef.current?.update().catch(() => {});
+        });
       }
 
       // Capture the applied visibility for next delta computation.
