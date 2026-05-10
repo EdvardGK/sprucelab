@@ -509,19 +509,22 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         // 4. Setup Renderer (post-processing for SSAO + edges + clean outlines).
         // Falls back to no-AO mode if URL has ?ao=off (large federated escape hatch).
         world.renderer = new OBCF.PostproductionRenderer(components, container);
-        // Pixel ratio: capping at 1.5 was visibly fuzzy on DPR=2 devices
-        // (retina laptops, 4K@200% scaling) — rendered at 56% of native then
-        // upscaled. Cap at 2.0 instead: industry-standard ceiling, sharp on
-        // modern displays without going overboard on DPR=3 phones. Override
-        // via ?dpr=N for diagnostic.
+        // Pixel ratio policy:
+        //   - No `?dpr=` override: clamp window.devicePixelRatio to [0.5, 2].
+        //     Sharp on retina (DPR=2), no overdraw on DPR=3 phones.
+        //   - With `?dpr=N`: use N exactly as the render ratio. This lets
+        //     a DPR=1 user opt into supersampling (e.g., `?dpr=2` renders
+        //     at 4× pixel count then downsamples → SSAA — hardware MSAA
+        //     equivalent on geometry edges). Cost is real (4× fragment
+        //     shading on integrated GPUs) but the override is user-driven.
         const dprQueryParams = typeof window !== 'undefined'
           ? new URLSearchParams(window.location.search)
           : null;
         const dprOverride = dprQueryParams?.get('dpr');
-        const dprCap = dprOverride !== null && dprOverride !== undefined
+        const effectiveDPR = dprOverride !== null && dprOverride !== undefined
           ? Math.max(0.5, Math.min(3, parseFloat(dprOverride) || 2))
-          : 2;
-        world.renderer.three.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
+          : Math.min(window.devicePixelRatio, 2);
+        world.renderer.three.setPixelRatio(effectiveDPR);
 
         // 5. Setup Camera
         world.camera = new OBC.OrthoPerspectiveCamera(components);
@@ -1601,18 +1604,20 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const ensureV3 = (): FRAGS.FragmentsModels => {
           if (v3FragmentsRef.current) return v3FragmentsRef.current;
           const fragments = new FRAGS.FragmentsModels(fragmentsWorkerUrl);
-          // graphicsQuality controls LOD aggressiveness. 0 = low (most
-          // tiles drop to coarse LOD; cheapest per-frame), 1 = max (every
-          // tile always full detail; defeats LOD entirely). 0.5 is the
-          // ThatOpen tutorial default and the right balance for federated
-          // BIM scenes — distant geometry simplifies, near geometry stays
-          // sharp. Override per-load via ?gq=N for diagnostics.
+          // graphicsQuality controls LOD aggressiveness. 0 = low quality
+          // (coarse tiles, cheapest), 1 = max quality (full detail
+          // tiles). Default is 1 — values below 1 trigger a known LOD
+          // path in @thatopen/fragments@3.0.11 that can throw
+          // "Cannot read properties of undefined (reading 'lodSize')"
+          // every rAF tick when tiles haven't computed their LOD yet.
+          // Once that's stable upstream, we can safely default to ~0.7.
+          // Until then, opt into LOD via ?gq=N URL flag for testing.
           const gqOverride = typeof window !== 'undefined'
             ? new URLSearchParams(window.location.search).get('gq')
             : null;
           fragments.settings.graphicsQuality = gqOverride !== null
-            ? Math.max(0, Math.min(1, parseFloat(gqOverride) || 0.5))
-            : 0.5;
+            ? Math.max(0, Math.min(1, parseFloat(gqOverride) || 1))
+            : 1;
           fragments.settings.autoCoordinate = true;
           v3FragmentsRef.current = fragments;
           // Drive worker-side tile streaming + LOD off camera 'update'
