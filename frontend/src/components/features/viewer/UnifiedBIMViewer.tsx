@@ -1727,23 +1727,46 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             }
             const modelData = await modelResponse.json();
 
-            // Fast path: prebuilt fragments. The version flag determines
-            // whether we go through OBC.FragmentsManager (v2) or the new
-            // FragmentsModels worker pipeline (v3). `?fragments=...` URL
-            // override wins; otherwise we trust the backend stamp.
-            try {
-              const fragmentsResponse = await authedFetch(`${API_BASE}/models/${modelId}/fragments/`);
-              if (fragmentsResponse.ok) {
-                const fragInfo = await fragmentsResponse.json();
-                const fragments_url = fragInfo.fragments_url as string;
-                const backendVersion = fragInfo.fragments_format_version as 'v2' | 'v3' | undefined;
-                const effectiveVersion = formatOverride ?? backendVersion ?? 'v2';
-                const response = await fetch(fragments_url);
-                const arrayBuffer = await response.arrayBuffer();
+            // Fast path: prebuilt fragments.
+            //
+            // The model's `fragments_format_version` stamp is the routing
+            // hint, but we don't blindly trust it — the FastAPI→Django
+            // callback can fail (e.g., 403 during a misconfigured deploy)
+            // leaving the stamp out-of-sync with the actual binary in
+            // storage. So we sniff the first few bytes too: a v3 buffer
+            // produced by IfcImporter starts with the zlib header
+            // `0x78 0x9c` (compressed); v2 buffers start with the
+            // FragmentsManager FlatBuffer prefix. Sniff wins over stamp.
+            //
+            // Crucially: we DO NOT fall back to in-browser IFC parsing
+            // when a fragments file existed. A fragments file existing is
+            // an explicit user signal — the silent IFC fallback masked
+            // real failures behind misleading "SetWasmPath null" errors
+            // (web-ifc state gets corrupted by a partially-failed
+            // fragments.load before the fallback runs). Surface the real
+            // error instead.
+            const fragmentsResponse = await authedFetch(`${API_BASE}/models/${modelId}/fragments/`);
+            if (fragmentsResponse.ok) {
+              const fragInfo = await fragmentsResponse.json();
+              const fragments_url = fragInfo.fragments_url as string;
+              const backendVersion = fragInfo.fragments_format_version as 'v2' | 'v3' | undefined;
+              const response = await fetch(fragments_url);
+              const arrayBuffer = await response.arrayBuffer();
+              const head = new Uint8Array(arrayBuffer.slice(0, 2));
+              const sniffedV3 = head[0] === 0x78 && head[1] === 0x9c;
+              const effectiveVersion: 'v2' | 'v3' =
+                formatOverride ?? (sniffedV3 ? 'v3' : (backendVersion ?? 'v2'));
+              if (sniffedV3 && backendVersion !== 'v3' && import.meta.env.DEV) {
+                console.warn(
+                  `[Viewer] Model ${modelId} sniffed as v3 but DB stamp is "${backendVersion}". ` +
+                  'Routing by sniff. (Likely a fragments-complete callback failure left the stamp stale.)',
+                );
+              }
+              try {
                 if (effectiveVersion === 'v3') {
                   const v3 = ensureV3();
                   const v3Model = await v3.load(arrayBuffer, {
-                    modelId, // backend UUID — also serves as the worker-side modelId
+                    modelId,
                     camera: worldRef.current!.camera!.three as THREE.PerspectiveCamera | THREE.OrthographicCamera,
                   });
                   return finalizeV3Model(v3Model, modelData, modelId);
@@ -1751,12 +1774,16 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 const buffer = new Uint8Array(arrayBuffer);
                 const group = fragments.load(buffer);
                 return finalizeLoadedGroup(group, modelData, modelId, 'fragments-v2');
-              }
-            } catch (err) {
-              if (import.meta.env.DEV) {
-                console.warn('[Viewer] Fragments fast path failed; falling back to IFC parse:', err);
+              } catch (err) {
+                console.error(`[Viewer] Fragments load failed for ${modelId} (${effectiveVersion}):`, err);
+                throw new Error(
+                  `Fragments load failed for "${modelData.name}": ${err instanceof Error ? err.message : String(err)}`,
+                );
               }
             }
+            // 404 from fragments endpoint = no fragments generated yet.
+            // The IFC fallback path below is only reached for genuinely
+            // un-converted models; web-ifc state stays clean.
 
             // Fallback: parse raw IFC in-browser
             if (!modelData.file_url) {
