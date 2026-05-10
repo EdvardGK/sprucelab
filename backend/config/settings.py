@@ -423,6 +423,19 @@ CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 
 
+# Fragments generation timeout
+# When a Model has been pinned at fragments_status='generating' for longer
+# than this without a callback from the FastAPI ifc-service, a sweep on the
+# next read flips it to 'failed' with a synthesized reason. Defaults to 10
+# minutes — covers conversion of large IFCs (~100 MB) plus upload, but
+# short enough to surface a stuck job before users keep refreshing.
+# See backend/apps/models/views.py::ModelViewSet.fragments.
+from datetime import timedelta as _timedelta
+FRAGMENTS_GENERATION_TIMEOUT = _timedelta(
+    minutes=int(os.getenv('FRAGMENTS_GENERATION_TIMEOUT_MINUTES', '10'))
+)
+
+
 # Webhook subscriptions
 # HMAC-signed POSTs are dispatched from apps.automation.tasks.deliver_webhook_task.
 # Receivers MUST validate X-Webhook-Signature against the stored secret.

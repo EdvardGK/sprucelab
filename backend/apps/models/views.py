@@ -5,10 +5,14 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
 from django.conf import settings
+from django.utils import timezone
+import logging
 import os
 import tempfile
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 from .models import ExtractionRun, Model, SourceFile
 from .serializers import (
@@ -1497,6 +1501,33 @@ class ModelViewSet(viewsets.ModelViewSet):
             - 404 Not Found: No fragments (status=pending or failed)
         """
         model = self.get_object()
+
+        # Sweep-on-read timeout recovery: if a generation has been pinned at
+        # 'generating' longer than FRAGMENTS_GENERATION_TIMEOUT, the FastAPI
+        # subprocess most likely crashed (Railway pod restart, OOM, silent
+        # web-ifc WASM failure, ...) and the callback never fired. Flip to
+        # 'failed' with a synthesized reason so the UI stops spinning and
+        # the user can hit ?force=true to retry. This is the only place the
+        # transition lives — generate_fragments still respects the
+        # 'generating' guard unless force=true is passed.
+        timeout = getattr(
+            settings, 'FRAGMENTS_GENERATION_TIMEOUT', timedelta(minutes=10)
+        )
+        if model.fragments_status == 'generating':
+            elapsed = timezone.now() - model.updated_at
+            if elapsed > timeout:
+                minutes = int(elapsed.total_seconds() // 60)
+                reason = (
+                    f"timed out after {minutes}m without callback "
+                    f"(presumed worker crash)"
+                )
+                model.fragments_status = 'failed'
+                model.fragments_error = reason
+                model.save(update_fields=['fragments_status', 'fragments_error'])
+                logger.warning(
+                    "Fragments generation swept to failed for model %s (%s): %s",
+                    model.id, model.name, reason,
+                )
 
         response_data = {
             'fragments_status': model.fragments_status,
