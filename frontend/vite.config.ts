@@ -8,6 +8,19 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // dxf-viewer does `import opentype from "opentype.js"`; opentype.js'
+      // ESM build (`.mjs`) only has named exports. Force the CJS entry so
+      // Rollup synthesises a default export consistently across Yarn 1 (Vercel)
+      // and Yarn 4 PnP (local). Without this, Vercel's Yarn 1 hoist breaks.
+      'opentype.js': 'opentype.js/dist/opentype.js',
+    },
+  },
+  optimizeDeps: {
+    include: ['dxf-viewer', 'opentype.js'],
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
     },
   },
   server: {
