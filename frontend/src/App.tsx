@@ -18,6 +18,7 @@ const ProjectDashboard = lazy(() => import('./pages/ProjectDashboard'));
 const ProjectModels = lazy(() => import('./pages/ProjectModels'));
 const ProjectMyPage = lazy(() => import('./pages/ProjectMyPage'));
 const ProjectDocuments = lazy(() => import('./pages/ProjectDocuments'));
+const ProjectClaimsPage = lazy(() => import('./pages/ProjectClaimsPage'));
 const ProjectDrawings = lazy(() => import('./pages/ProjectDrawings'));
 const BIMWorkbench = lazy(() => import('./pages/BIMWorkbench'));
 const ModelWorkspace = lazy(() => import('./pages/ModelWorkspace'));
@@ -66,6 +67,7 @@ const router = createBrowserRouter([
       { path: "viewer-groups", element: withSuspense(<ViewerGroups />) },
       { path: "viewer/:groupId", element: withSuspense(<FederatedViewer />) },
       { path: "documents", element: withSuspense(<ProjectDocuments />) },
+      { path: "claims", element: withSuspense(<ProjectClaimsPage />) },
       { path: "drawings", element: withSuspense(<ProjectDrawings />) },
       { path: "types", element: withSuspense(<ProjectTypesPage />) },
       { path: "type-library", element: withSuspense(<ProjectTypeLibrary />) },

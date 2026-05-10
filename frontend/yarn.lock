@@ -1208,6 +1208,129 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@napi-rs/canvas-android-arm64@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-android-arm64@npm:0.1.100"
+  conditions: os=android & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-darwin-arm64@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-darwin-arm64@npm:0.1.100"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-darwin-x64@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-darwin-x64@npm:0.1.100"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-linux-arm-gnueabihf@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-linux-arm-gnueabihf@npm:0.1.100"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-linux-arm64-gnu@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-linux-arm64-gnu@npm:0.1.100"
+  conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-linux-arm64-musl@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-linux-arm64-musl@npm:0.1.100"
+  conditions: os=linux & cpu=arm64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-linux-riscv64-gnu@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-linux-riscv64-gnu@npm:0.1.100"
+  conditions: os=linux & cpu=riscv64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-linux-x64-gnu@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-linux-x64-gnu@npm:0.1.100"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-linux-x64-musl@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-linux-x64-musl@npm:0.1.100"
+  conditions: os=linux & cpu=x64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-win32-arm64-msvc@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-win32-arm64-msvc@npm:0.1.100"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas-win32-x64-msvc@npm:0.1.100":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas-win32-x64-msvc@npm:0.1.100"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas@npm:^0.1.80":
+  version: 0.1.100
+  resolution: "@napi-rs/canvas@npm:0.1.100"
+  dependencies:
+    "@napi-rs/canvas-android-arm64": "npm:0.1.100"
+    "@napi-rs/canvas-darwin-arm64": "npm:0.1.100"
+    "@napi-rs/canvas-darwin-x64": "npm:0.1.100"
+    "@napi-rs/canvas-linux-arm-gnueabihf": "npm:0.1.100"
+    "@napi-rs/canvas-linux-arm64-gnu": "npm:0.1.100"
+    "@napi-rs/canvas-linux-arm64-musl": "npm:0.1.100"
+    "@napi-rs/canvas-linux-riscv64-gnu": "npm:0.1.100"
+    "@napi-rs/canvas-linux-x64-gnu": "npm:0.1.100"
+    "@napi-rs/canvas-linux-x64-musl": "npm:0.1.100"
+    "@napi-rs/canvas-win32-arm64-msvc": "npm:0.1.100"
+    "@napi-rs/canvas-win32-x64-msvc": "npm:0.1.100"
+  dependenciesMeta:
+    "@napi-rs/canvas-android-arm64":
+      optional: true
+    "@napi-rs/canvas-darwin-arm64":
+      optional: true
+    "@napi-rs/canvas-darwin-x64":
+      optional: true
+    "@napi-rs/canvas-linux-arm-gnueabihf":
+      optional: true
+    "@napi-rs/canvas-linux-arm64-gnu":
+      optional: true
+    "@napi-rs/canvas-linux-arm64-musl":
+      optional: true
+    "@napi-rs/canvas-linux-riscv64-gnu":
+      optional: true
+    "@napi-rs/canvas-linux-x64-gnu":
+      optional: true
+    "@napi-rs/canvas-linux-x64-musl":
+      optional: true
+    "@napi-rs/canvas-win32-arm64-msvc":
+      optional: true
+    "@napi-rs/canvas-win32-x64-msvc":
+      optional: true
+    canvas:
+      built: true
+    skia-canvas:
+      built: true
+  checksum: 10c0/d3dfca5620a41c34addd344bd4c448a5334d3f32f2562ec8390507b3897747ed1de9f08fcb9169cff6dd27111afb5b3eaf7e42cc1494c8fa4128e7d4235f6bea
+  languageName: node
+  linkType: hard
+
 "@napi-rs/wasm-runtime@npm:^1.0.3, @napi-rs/wasm-runtime@npm:^1.0.7":
   version: 1.1.0
   resolution: "@napi-rs/wasm-runtime@npm:1.1.0"
@@ -4187,6 +4310,7 @@ __metadata:
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
     cmdk: "npm:^1.1.1"
+    dxf-viewer: "npm:^1.0.47"
     eslint: "npm:^8.55.0"
     eslint-plugin-react-hooks: "npm:^4.6.0"
     eslint-plugin-react-refresh: "npm:^0.4.5"
@@ -4198,6 +4322,7 @@ __metadata:
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     react-i18next: "npm:^16.5.0"
+    react-pdf: "npm:^10.4.1"
     react-plotly.js: "npm:^2.6.0"
     react-router-dom: "npm:^6.20.0"
     tailwind-merge: "npm:^3.3.1"
@@ -5134,6 +5259,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dequal@npm:^2.0.3":
+  version: 2.0.3
+  resolution: "dequal@npm:2.0.3"
+  checksum: 10c0/f98860cdf58b64991ae10205137c0e97d384c3a4edc7f807603887b7c4b850af1224a33d88012009f150861cbee4fa2d322c4cc04b9313bee312e47f6ecaa888
+  languageName: node
+  linkType: hard
+
 "detect-kerning@npm:^2.1.2":
   version: 2.1.2
   resolution: "detect-kerning@npm:2.1.2"
@@ -5255,6 +5387,18 @@ __metadata:
     readable-stream: "npm:^2.0.0"
     stream-shift: "npm:^1.0.0"
   checksum: 10c0/59d1440c1b4e3a4db35ae96933392703ce83518db1828d06b9b6322920d6cbbf0b7159e88be120385fe459e77f1eb0c7622f26e9ec1f47c9ff05c2b35747dbd3
+  languageName: node
+  linkType: hard
+
+"dxf-viewer@npm:^1.0.47":
+  version: 1.0.47
+  resolution: "dxf-viewer@npm:1.0.47"
+  dependencies:
+    earcut: "npm:^3.0.0"
+    loglevel: "npm:^1.9.1"
+    opentype.js: "npm:^1.3.4"
+    three: "npm:^0.161.0"
+  checksum: 10c0/abb5cfe9feca0475cada3a1c8c4713f63fde62ab33399ba0431d68a6a6eb797ee3cf26706a284261d680549fc74007295eeadcaf1c4e8d02593b48c080cccec3
   languageName: node
   linkType: hard
 
@@ -7626,7 +7770,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"loose-envify@npm:^1.1.0, loose-envify@npm:^1.4.0":
+"loglevel@npm:^1.9.1":
+  version: 1.9.2
+  resolution: "loglevel@npm:1.9.2"
+  checksum: 10c0/1e317fa4648fe0b4a4cffef6de037340592cee8547b07d4ce97a487abe9153e704b98451100c799b032c72bb89c9366d71c9fb8192ada8703269263ae77acdc7
+  languageName: node
+  linkType: hard
+
+"loose-envify@npm:^1.0.0, loose-envify@npm:^1.1.0, loose-envify@npm:^1.4.0":
   version: 1.4.0
   resolution: "loose-envify@npm:1.4.0"
   dependencies:
@@ -7685,10 +7836,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"make-cancellable-promise@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "make-cancellable-promise@npm:2.0.0"
+  checksum: 10c0/e9d76281ea0005001c3de95d26ea6cd508f44ffd8fa2e19193b92d1e8bc03cf75f87750baec6de3dd032b12f8b747ba88fef3328309fe005dbbdd56ce70617c6
+  languageName: node
+  linkType: hard
+
 "make-error@npm:^1.1.1":
   version: 1.3.6
   resolution: "make-error@npm:1.3.6"
   checksum: 10c0/171e458d86854c6b3fc46610cfacf0b45149ba043782558c6875d9f42f222124384ad0b468c92e996d815a8a2003817a710c0a160e49c1c394626f76fa45396f
+  languageName: node
+  linkType: hard
+
+"make-event-props@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "make-event-props@npm:2.0.0"
+  checksum: 10c0/8c799634839498064dd73c979842af9d1d5a6156fe447edda6144318c948cfa7edbc434b14cebd5898e148e4d52aa37ffa204a82c1e2ee43e5946442f8b2466d
   languageName: node
   linkType: hard
 
@@ -7765,6 +7930,18 @@ __metadata:
   version: 1.0.1
   resolution: "math-log2@npm:1.0.1"
   checksum: 10c0/6bd247d50f526d4521bceb23c8adff5f93bc60df7e073cf14ea1a45be7e53ff2d24779b3bf22f174831a33ff33a9026022bde314b6fe77ee89cd2444489ae9e3
+  languageName: node
+  linkType: hard
+
+"merge-refs@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "merge-refs@npm:2.0.0"
+  peerDependencies:
+    "@types/react": ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 10c0/3a8c72da328ca68dd8f9e1168687a348baae585d9c1a5ae0f524e067663f00ce3e46465a54616d0cf65f03d55cc9b847b0902f4642c4425d6dc009610ea26ebb
   languageName: node
   linkType: hard
 
@@ -8318,6 +8495,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"opentype.js@npm:^1.3.4":
+  version: 1.3.4
+  resolution: "opentype.js@npm:1.3.4"
+  dependencies:
+    string.prototype.codepointat: "npm:^0.2.1"
+    tiny-inflate: "npm:^1.0.3"
+  bin:
+    ot: bin/ot
+  checksum: 10c0/7de1c175c439a648f32f5113c619cdcd7ae09096cb791b5b1b8b24afdaf76ccdf8938297dab61ded48e032e8ebb54bcf444eedef562498f7e241dbebcf3da2f6
+  languageName: node
+  linkType: hard
+
 "optionator@npm:^0.9.3":
   version: 0.9.4
   resolution: "optionator@npm:0.9.4"
@@ -8549,6 +8738,18 @@ __metadata:
   bin:
     pbf: bin/pbf
   checksum: 10c0/79e5dc59a9391789de84b0a6d713fad0dd1e5ce6eb721536af8c9ec49feae04fdebab9f077b760bba858e615a95ac714a7d248ecb43736e904bb8396885e16d6
+  languageName: node
+  linkType: hard
+
+"pdfjs-dist@npm:5.4.296":
+  version: 5.4.296
+  resolution: "pdfjs-dist@npm:5.4.296"
+  dependencies:
+    "@napi-rs/canvas": "npm:^0.1.80"
+  dependenciesMeta:
+    "@napi-rs/canvas":
+      optional: true
+  checksum: 10c0/a9e438f12771963f7c29934b4d5e58d508fa43954e4e4cbf951b040c6c89891d048e3d9d3799ed9ec6ceade677628a25f88062b300c5425777ce0b522e457532
   languageName: node
   linkType: hard
 
@@ -9017,6 +9218,29 @@ __metadata:
   version: 18.3.1
   resolution: "react-is@npm:18.3.1"
   checksum: 10c0/f2f1e60010c683479e74c63f96b09fb41603527cd131a9959e2aee1e5a8b0caf270b365e5ca77d4a6b18aae659b60a86150bb3979073528877029b35aecd2072
+  languageName: node
+  linkType: hard
+
+"react-pdf@npm:^10.4.1":
+  version: 10.4.1
+  resolution: "react-pdf@npm:10.4.1"
+  dependencies:
+    clsx: "npm:^2.0.0"
+    dequal: "npm:^2.0.3"
+    make-cancellable-promise: "npm:^2.0.0"
+    make-event-props: "npm:^2.0.0"
+    merge-refs: "npm:^2.0.0"
+    pdfjs-dist: "npm:5.4.296"
+    tiny-invariant: "npm:^1.0.0"
+    warning: "npm:^4.0.0"
+  peerDependencies:
+    "@types/react": ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 10c0/958917374d76c9d1bc0b0ece6468582e741c66b60d2b1738e1a15fc183db61be070c2202c25179734be2003785de3e4d6ca3cc9532cc891f89b0043b647cbfa7
   languageName: node
   linkType: hard
 
@@ -9944,6 +10168,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"string.prototype.codepointat@npm:^0.2.1":
+  version: 0.2.1
+  resolution: "string.prototype.codepointat@npm:0.2.1"
+  checksum: 10c0/83c4d2f83b6f3f8f377e0b36628b74a9efcaf5a725e6fb6354f15f30f0399c8f4b08956df883877b2b0f50dd2e644ed7e8b1f6d45bdee2dc5b3f4248796607fa
+  languageName: node
+  linkType: hard
+
 "string_decoder@npm:~0.10.x":
   version: 0.10.31
   resolution: "string_decoder@npm:0.10.31"
@@ -10221,6 +10452,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"three@npm:^0.161.0":
+  version: 0.161.0
+  resolution: "three@npm:0.161.0"
+  checksum: 10c0/0314e0b11c717042cc6cec983d6e2832ed416e4ab996b1340ff25335bbf71c529415856ae2de42952faeae284202368e7f1c6e3fd5a7c73d2b68108e5fb3c057
+  languageName: node
+  linkType: hard
+
 "three@npm:^0.175.0":
   version: 0.175.0
   resolution: "three@npm:0.175.0"
@@ -10264,7 +10502,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tiny-invariant@npm:^1.3.1":
+"tiny-inflate@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "tiny-inflate@npm:1.0.3"
+  checksum: 10c0/fab687537254f6ec44c9a2e880048fe70da3542aba28f73cda3e74c95cabf342a339372f2a6c032e322324f01accc03ca26c04ba2bad9b3eb8cf3ee99bba7f9b
+  languageName: node
+  linkType: hard
+
+"tiny-invariant@npm:^1.0.0, tiny-invariant@npm:^1.3.1":
   version: 1.3.3
   resolution: "tiny-invariant@npm:1.3.3"
   checksum: 10c0/65af4a07324b591a059b35269cd696aba21bef2107f29b9f5894d83cc143159a204b299553435b03874ebb5b94d019afa8b8eff241c8a4cfee95872c2e1c1c4a
@@ -10824,6 +11069,15 @@ __metadata:
     "@mapbox/vector-tile": "npm:^1.3.1"
     pbf: "npm:^3.2.1"
   checksum: 10c0/a568801ae25f0ffe65ef697bf520c996c8a4067f73f355c0d5815238de90322c8ca207c61220206141cfe6f5b525de875b7eb26e22979a1b768b96d03b93dca7
+  languageName: node
+  linkType: hard
+
+"warning@npm:^4.0.0":
+  version: 4.0.3
+  resolution: "warning@npm:4.0.3"
+  dependencies:
+    loose-envify: "npm:^1.0.0"
+  checksum: 10c0/aebab445129f3e104c271f1637fa38e55eb25f968593e3825bd2f7a12bd58dc3738bb70dc8ec85826621d80b4acfed5a29ebc9da17397c6125864d72301b937e
   languageName: node
   linkType: hard
 

@@ -1261,5 +1261,67 @@
     "metricCard": {
       "fractionHelper": "{{count}} av {{total}}"
     }
+  },
+  "drawings": {
+    "pageTitle": "Tegninger",
+    "projectNotFound": "Prosjektet ble ikke funnet",
+    "untitledSheet": "Uten navn",
+    "page": "Side",
+    "registered": "Registrert",
+    "notRegistered": "Ikke registrert",
+    "registerSheet": "Registrer ark",
+    "registerHelp": "Knytt to papirpunkter til rutenett-skjæringspunkter for å utlede modellkoordinater.",
+    "registerSubmit": "Registrer",
+    "openOriginal": "Åpne original",
+    "layersPanelTitle": "Lag",
+    "noLayers": "Tegningen rapporterer ingen lag.",
+    "refPair": "Referanse {{n}}",
+    "paperX": "Papir X (mm)",
+    "paperY": "Papir Y (mm)",
+    "gridU": "Rutenett U-tag",
+    "gridV": "Rutenett V-tag",
+    "gridSourceRun": "Ekstraksjonskjøring for rutenett",
+    "empty": {
+      "title": "Ingen tegninger ennå",
+      "description": "Slipp inn en DXF, DWG, PDF eller SVG for å starte et tegningssett."
+    },
+    "upload": {
+      "dropOrClick": "Dra en tegning hit eller klikk for å velge",
+      "uploading": "Laster opp...",
+      "invalidFileType": "Bare DWG, DXF, PDF og SVG er støttet.",
+      "failed": "Opplasting feilet."
+    },
+    "preview": {
+      "pdfDeferred": "PDF-forhåndsvisning ligger i Dokumenter-biblioteket. Bruk Åpne original for nedlasting.",
+      "dwgDeferred": "DWG-forhåndsvisning er ikke klar ennå (PR 2.4). Bruk Åpne original.",
+      "unsupported": "Dette tegningsformatet har ingen forhåndsvisning i nettleseren ennå.",
+      "loadFailed": "Klarte ikke å laste tegningen."
+    },
+    "registerToast": {
+      "success": "Tegning registrert",
+      "failed": "Registrering feilet"
+    }
+  },
+  "documents": {
+    "pageTitle": "Dokumenter",
+    "projectNotFound": "Prosjektet ble ikke funnet",
+    "openClaimsInbox": "Krav-innboks",
+    "openOriginal": "Åpne original",
+    "pageCount_one": "{{count}} side",
+    "pageCount_other": "{{count}} sider",
+    "lineage": "{{decided}} av {{total}} krav avgjort",
+    "method": {
+      "text_layer": "Tekst",
+      "ocr": "OCR",
+      "structured": "Strukturert"
+    },
+    "preview": {
+      "loadFailed": "Klarte ikke å laste dokumentet.",
+      "empty": "Dette dokumentet har ingen uttrukket tekst ennå."
+    },
+    "empty": {
+      "title": "Ingen dokumenter ennå",
+      "description": "Last opp PDF-er eller Office-filer via fil-innboksen for å fylle dette biblioteket."
+    }
   }
 }

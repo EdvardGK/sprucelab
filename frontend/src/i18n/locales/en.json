@@ -1261,5 +1261,67 @@
     "metricCard": {
       "fractionHelper": "{{count}} of {{total}}"
     }
+  },
+  "drawings": {
+    "pageTitle": "Drawings",
+    "projectNotFound": "Project not found",
+    "untitledSheet": "Untitled sheet",
+    "page": "Page",
+    "registered": "Registered",
+    "notRegistered": "Not registered",
+    "registerSheet": "Register sheet",
+    "registerHelp": "Pin two paper points to grid intersections so model coordinates can be derived.",
+    "registerSubmit": "Register",
+    "openOriginal": "Open original",
+    "layersPanelTitle": "Layers",
+    "noLayers": "No layers reported by this drawing.",
+    "refPair": "Reference {{n}}",
+    "paperX": "Paper X (mm)",
+    "paperY": "Paper Y (mm)",
+    "gridU": "Grid U tag",
+    "gridV": "Grid V tag",
+    "gridSourceRun": "Grid source extraction run",
+    "empty": {
+      "title": "No drawings yet",
+      "description": "Drop a DXF, DWG, PDF or SVG to start a drawing set."
+    },
+    "upload": {
+      "dropOrClick": "Drag a drawing here or click to browse",
+      "uploading": "Uploading...",
+      "invalidFileType": "Only DWG, DXF, PDF and SVG files are accepted.",
+      "failed": "Upload failed."
+    },
+    "preview": {
+      "pdfDeferred": "PDF preview lives in the Documents library. Use Open original to download.",
+      "dwgDeferred": "DWG preview is not available yet (PR 2.4). Use Open original to download.",
+      "unsupported": "This drawing format has no in-browser preview yet.",
+      "loadFailed": "Failed to load drawing."
+    },
+    "registerToast": {
+      "success": "Drawing registered",
+      "failed": "Registration failed"
+    }
+  },
+  "documents": {
+    "pageTitle": "Documents",
+    "projectNotFound": "Project not found",
+    "openClaimsInbox": "Claim Inbox",
+    "openOriginal": "Open original",
+    "pageCount_one": "{{count}} page",
+    "pageCount_other": "{{count}} pages",
+    "lineage": "{{decided}} of {{total}} claims decided",
+    "method": {
+      "text_layer": "Text",
+      "ocr": "OCR",
+      "structured": "Structured"
+    },
+    "preview": {
+      "loadFailed": "Failed to load document.",
+      "empty": "This document has no extracted text yet."
+    },
+    "empty": {
+      "title": "No documents yet",
+      "description": "Upload PDFs or Office files via the universal file inbox to populate this library."
+    }
   }
 }
