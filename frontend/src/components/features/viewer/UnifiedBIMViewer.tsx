@@ -600,17 +600,10 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             if (oldRT2 !== oldRT1) {
               try { oldRT2.dispose(); } catch { /* */ }
             }
-            // Diagnostic log so we can verify in production what samples
-            // actually landed on the composer chain. Remove after the
-            // 2026-05-09 viewer-quality investigation closes.
-            console.info('[Viewer] postpro MSAA configured', {
-              rt1Samples: composer.renderTarget1.samples,
-              rt2Samples: composer.renderTarget2.samples,
-              passes: world.renderer.postproduction.composer.passes.map((p: { constructor: { name: string }; enabled: boolean }) => ({
-                name: p.constructor.name,
-                enabled: p.enabled,
-              })),
-            });
+            // (Diagnostic log removed in cleanup commit. MSAA configuration
+            // is verified working — `canvasSamples: 4` on the bound
+            // framebuffer was confirmed in chrome-devtools. Leaving the
+            // hardware tier as samples=4 default.)
           }
 
         } catch (err) {
@@ -1608,7 +1601,18 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         const ensureV3 = (): FRAGS.FragmentsModels => {
           if (v3FragmentsRef.current) return v3FragmentsRef.current;
           const fragments = new FRAGS.FragmentsModels(fragmentsWorkerUrl);
-          fragments.settings.graphicsQuality = 1; // crispest tier
+          // graphicsQuality controls LOD aggressiveness. 0 = low (most
+          // tiles drop to coarse LOD; cheapest per-frame), 1 = max (every
+          // tile always full detail; defeats LOD entirely). 0.5 is the
+          // ThatOpen tutorial default and the right balance for federated
+          // BIM scenes — distant geometry simplifies, near geometry stays
+          // sharp. Override per-load via ?gq=N for diagnostics.
+          const gqOverride = typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('gq')
+            : null;
+          fragments.settings.graphicsQuality = gqOverride !== null
+            ? Math.max(0, Math.min(1, parseFloat(gqOverride) || 0.5))
+            : 0.5;
           fragments.settings.autoCoordinate = true;
           v3FragmentsRef.current = fragments;
           // Drive worker-side tile streaming + LOD off camera 'update'
