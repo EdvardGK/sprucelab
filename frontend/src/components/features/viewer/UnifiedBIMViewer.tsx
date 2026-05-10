@@ -858,6 +858,117 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           onSelectionChange?.(null);
         });
 
+        // v3 click selection. OBCF.Highlighter's raycast targets
+        // FragmentsGroup-style meshes; v3 model objects are bare
+        // Three.js groups, so the highlighter can't produce a useful
+        // FragmentIdMap for them. We install a parallel pointerdown
+        // listener that raycasts each v3 model via its built-in worker
+        // raycast, picks the closest hit, and routes the selection
+        // through v3-aware handlers.
+        //
+        // The listener fires in the bubble phase AFTER OBCF.Highlighter's
+        // pointerdown — that means OBCF already made its decision based on
+        // its v2-only knowledge. If a v3 hit happens here we explicitly
+        // clear the highlighter's selection (in case OBCF mistakenly
+        // selected a v2 mesh that happened to be on the same ray).
+        const v3HighlightMaterial: FRAGS.MaterialDefinition = {
+          color: new THREE.Color(0x88ccff),
+          opacity: 1,
+          transparent: false,
+          renderedFaces: 0,
+        };
+        const handleV3Click = async (event: PointerEvent) => {
+          if (event.button !== 0) return; // left click only
+          const v3Models = loadedModelsRef.current.filter(m => m.v3Model);
+          if (v3Models.length === 0) return;
+          const canvas = world.renderer?.three.domElement;
+          const camera = world.camera?.three as THREE.PerspectiveCamera | THREE.OrthographicCamera | undefined;
+          if (!canvas || !camera) return;
+          const rect = canvas.getBoundingClientRect();
+          const mouse = new THREE.Vector2(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1,
+          );
+          // Raycast every v3 model in parallel; pick the closest hit.
+          const results = await Promise.all(
+            v3Models.map(async (m) => {
+              try {
+                return await m.v3Model!.raycast({ camera, mouse, dom: canvas });
+              } catch {
+                return null;
+              }
+            }),
+          );
+          let closest: { lm: typeof v3Models[number]; result: NonNullable<typeof results[number]> } | null = null;
+          for (let i = 0; i < results.length; i++) {
+            const r = results[i];
+            if (!r) continue;
+            if (!closest || r.distance < closest.result.distance) {
+              closest = { lm: v3Models[i], result: r };
+            }
+          }
+          if (!closest) return;
+          // Clear the v2 highlighter so OBCF.Outliner doesn't render a
+          // stale v2 outline next to the v3 selection.
+          try { highlighter.clear('selection'); } catch { /* */ }
+          try { outliner.clear('selection'); } catch { /* */ }
+          // Reset prior v3 highlight, then apply blue tint to the new
+          // selection on its model.
+          for (const m of v3Models) {
+            try { await m.v3Model!.resetHighlight(); } catch { /* */ }
+          }
+          try {
+            await closest.lm.v3Model!.highlight([closest.result.localId], v3HighlightMaterial);
+          } catch { /* */ }
+          v3FragmentsRef.current?.update().catch(() => {});
+          // Surface the hit as a selection — fetch attributes via the
+          // worker for a richer property panel render.
+          try {
+            const data = await closest.lm.v3Model!.getItemsData([closest.result.localId], {
+              attributesDefault: true,
+              relationsDefault: { attributes: true, relations: false },
+            });
+            const attrs = data[0] as Record<string, unknown> | undefined;
+            const guid = typeof attrs?.GlobalId === 'object' && attrs?.GlobalId !== null
+              ? String((attrs.GlobalId as { value: unknown }).value)
+              : undefined;
+            const name = typeof attrs?.Name === 'object' && attrs?.Name !== null
+              ? String((attrs.Name as { value: unknown }).value ?? '')
+              : undefined;
+            const ifcType = typeof attrs?._category === 'object' && attrs?._category !== null
+              ? String((attrs._category as { value: unknown }).value ?? '')
+              : undefined;
+            const element: ElementProperties = {
+              expressID: closest.result.localId,
+              type: ifcType ?? 'Unknown',
+              name: name ?? `Element ${closest.result.localId}`,
+              guid,
+              modelId: closest.lm.modelId,
+              modelName: closest.lm.name,
+            };
+            setSelectedElement(element);
+            onSelectionChange?.(element);
+          } catch (err) {
+            console.warn('[Viewer] v3 getItemsData failed:', err);
+            const element: ElementProperties = {
+              expressID: closest.result.localId,
+              type: 'Unknown',
+              name: `Element ${closest.result.localId}`,
+              modelId: closest.lm.modelId,
+              modelName: closest.lm.name,
+            };
+            setSelectedElement(element);
+            onSelectionChange?.(element);
+          }
+        };
+        const v3ClickContainer = world.renderer?.three.domElement;
+        if (v3ClickContainer) {
+          v3ClickContainer.addEventListener('pointerdown', handleV3Click);
+          postproDisposablesRef.current.push(() => {
+            try { v3ClickContainer.removeEventListener('pointerdown', handleV3Click); } catch { /* */ }
+          });
+        }
+
         // Setup click handler with drag detection
         // Only trigger selection on true "clicks" (not drags for camera movement)
         const CLICK_THRESHOLD_PX = 5;     // Max pixels moved to count as click
