@@ -1450,8 +1450,13 @@ class ModelViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # If already generating, return current status
-        if model.fragments_status == 'generating':
+        # If already generating, return current status — unless `force=true`
+        # is set to recover from a stuck job (typically a Railway pod
+        # restart killed the FastAPI subprocess mid-conversion and the
+        # Django callback never fired, leaving status pinned at
+        # 'generating' forever).
+        force = request.query_params.get('force') == 'true' or request.data.get('force') is True
+        if model.fragments_status == 'generating' and not force:
             return Response({
                 'message': 'Fragment generation already in progress',
                 'fragments_status': 'generating',
