@@ -337,14 +337,30 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const fitAllModelsToView = useCallback(() => {
     if (!worldRef.current || loadedModelsRef.current.length === 0) return;
 
-    // Calculate combined bounding box
+    // Calculate combined bounding box.
+    //
+    // v2 FragmentsGroup eagerly loads all geometry to the main thread, so
+    // `Box3.setFromObject(group)` works directly. v3 FragmentsModel
+    // streams tiles based on camera proximity — at fit-to-view time the
+    // tiles haven't loaded yet so setFromObject returns an empty box and
+    // the camera never finds the model. Use `v3Model.box` (the
+    // worker-computed model-wide AABB, populated at load time
+    // independent of tile streaming) for v3 entries.
     const combinedBbox = new THREE.Box3();
 
-    loadedModelsRef.current.forEach(({ group }) => {
+    loadedModelsRef.current.forEach((m) => {
       const bbox = new THREE.Box3();
-      bbox.setFromObject(group);
-      combinedBbox.union(bbox);
+      if (m.formatVersion === 'v3' && m.v3Model) {
+        bbox.copy(m.v3Model.box);
+      } else {
+        bbox.setFromObject(m.group);
+      }
+      if (!bbox.isEmpty()) {
+        combinedBbox.union(bbox);
+      }
     });
+
+    if (combinedBbox.isEmpty()) return;
 
     // Get center and size
     const center = new THREE.Vector3();
