@@ -19,13 +19,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SectionPlane } from '@/hooks/useSectionPlanes';
+import { FilterChips } from '@/components/filters/FilterChips';
+import { useProjectFilter } from '@/contexts/ProjectFilterProvider';
 
 // ── Shared types ──
-
-export interface ActiveFilter {
-  id: string;
-  label: string;
-}
 
 export type ViewerTool = 'select' | 'section' | 'measure';
 export type ViewMode = 'perspective' | 'wireframe' | 'xray';
@@ -234,36 +231,42 @@ function HUDButton({
 
 // ═══ CANVAS STATUS PANEL (floating bottom-right) ═══
 
+interface FloorLabel {
+  code: string;
+  name: string;
+}
+
 interface CanvasStatusPanelProps {
-  filters: ActiveFilter[];
   planes: SectionPlane[];
   activePlaneId: string | null;
   visibleModelCount: number;
   visibleElementCount: number;
   viewMode: string;
-  onRemoveFilter: (id: string) => void;
-  onClearFilters: () => void;
+  floorLabels?: Map<string, FloorLabel>;
   onSelectPlane: (id: string | null) => void;
   onDeletePlane: (id: string) => void;
   className?: string;
 }
 
 export function CanvasStatusPanel({
-  filters,
   planes,
   activePlaneId,
   visibleModelCount,
   visibleElementCount,
   viewMode,
-  onRemoveFilter,
-  onClearFilters,
+  floorLabels,
   onSelectPlane,
   onDeletePlane,
   className,
 }: CanvasStatusPanelProps) {
   const { t } = useTranslation();
+  const filter = useProjectFilter();
 
-  const hasFilters = filters.length > 0;
+  const hasFilters =
+    (filter.ifc_class?.length ?? 0) +
+      (filter.excluded_ifc_class?.length ?? 0) +
+      (filter.floor_code?.length ?? 0) >
+    0;
   const hasPlanes = planes.length > 0;
   return (
     <div className={cn(
@@ -278,28 +281,7 @@ export function CanvasStatusPanel({
       {/* Filters */}
       {hasFilters && (
         <>
-          <div className="flex items-center gap-[3px] flex-wrap px-2 py-[5px]">
-            {filters.map(f => (
-              <span
-                key={f.id}
-                className="flex items-center gap-[3px] px-[7px] py-[2px] rounded-[3px] text-[8.5px] font-semibold bg-[rgba(21,121,84,0.15)] text-[rgba(208,211,77,0.85)] border border-[rgba(21,121,84,0.25)] cursor-pointer hover:bg-[rgba(21,121,84,0.25)] transition-all"
-              >
-                {f.label}
-                <button
-                  onClick={() => onRemoveFilter(f.id)}
-                  className="w-[10px] h-[10px] flex items-center justify-center opacity-50 hover:opacity-100"
-                >
-                  <X className="w-[7px] h-[7px]" />
-                </button>
-              </span>
-            ))}
-            <button
-              onClick={onClearFilters}
-              className="text-[8px] text-white/25 px-1 py-0.5 rounded-[3px] hover:text-white/60 hover:bg-white/[0.06] transition-all cursor-pointer"
-            >
-              {t('viewer.filters.reset')}
-            </button>
-          </div>
+          <FilterChips floorLabels={floorLabels} />
           <div className="h-px bg-white/[0.06]" />
         </>
       )}

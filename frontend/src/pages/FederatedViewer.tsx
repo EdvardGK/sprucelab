@@ -25,7 +25,6 @@ import {
   SectionFloat,
   ViewerHUD,
   CanvasStatusPanel,
-  type ActiveFilter,
   type ViewerTool,
   type ViewMode,
 } from '@/components/features/viewer/CanvasOverlays';
@@ -88,8 +87,7 @@ export default function FederatedViewer() {
   // provider mounted at <ProjectShell />; URL + localStorage sync hooks are
   // mounted there too.
   const filter = useProjectFilter();
-  const { setIfcClass, setExcludedIfcClass, setFloorCode } =
-    useProjectFilterActions();
+  const { setFloorCode } = useProjectFilterActions();
 
   const includedClasses = useMemo(
     () => filter.ifc_class ?? [],
@@ -182,54 +180,18 @@ export default function FederatedViewer() {
     viewerRef.current?.fitToView();
   }, []);
 
-  const handleRemoveFilter = useCallback(
-    (id: string) => {
-      if (id === 'floor') {
-        setFloorCode(undefined);
-        return;
-      }
-      if (id.startsWith('include-')) {
-        const cls = id.slice(8);
-        const next = includedClasses.filter((c) => c !== cls);
-        setIfcClass(next.length === 0 ? undefined : next);
-        return;
-      }
-      if (id.startsWith('exclude-')) {
-        const cls = id.slice(8);
-        const next = excludedClasses.filter((c) => c !== cls);
-        setExcludedIfcClass(next.length === 0 ? undefined : next);
-        return;
-      }
-    },
-    [includedClasses, excludedClasses, setIfcClass, setExcludedIfcClass, setFloorCode],
-  );
-
-  const handleClearFilters = useCallback(() => {
-    setIfcClass(undefined);
-    setExcludedIfcClass(undefined);
-    setFloorCode(undefined);
-  }, [setIfcClass, setExcludedIfcClass, setFloorCode]);
-
   // ── Derived data ──
 
-  // Build filter pills directly from the project filter context. PR 1.3
-  // makes these chips interactive (DrillTarget); for now they remain
-  // display-only with delete affordance via handleRemoveFilter.
-  const computedFilters: ActiveFilter[] = [
-    ...includedClasses.map((cls) => ({
-      id: `include-${cls}`,
-      label: `+${cls.replace('Ifc', '')}`,
-    })),
-    ...excludedClasses.map((cls) => ({
-      id: `exclude-${cls}`,
-      label: `−${cls.replace('Ifc', '')}`,
-    })),
-  ];
-  if (floorCodeFilter) {
-    const canonical = canonicalFloors.find((f) => f.code === floorCodeFilter);
-    const label = canonical ? `${canonical.code} ${canonical.name}` : floorCodeFilter;
-    computedFilters.unshift({ id: 'floor', label });
-  }
+  // Floor labels keyed by code, forwarded to <CanvasStatusPanel> so the
+  // FilterChips component can resolve `L1` → `L1 Level 1` without
+  // duplicating the canonical-floors fetch.
+  const floorLabelsMap = useMemo(() => {
+    const m = new Map<string, { code: string; name: string }>();
+    for (const f of canonicalFloors) {
+      m.set(f.code, { code: f.code, name: f.name });
+    }
+    return m;
+  }, [canonicalFloors]);
 
   // Build model info for platform panel
   const modelLookup = new Map((models || []).map(m => [m.id, m]));
@@ -385,14 +347,12 @@ export default function FederatedViewer() {
 
               {/* Status panel (bottom-right, single frame) */}
               <CanvasStatusPanel
-                filters={computedFilters}
                 planes={sectionPlanes}
                 activePlaneId={activePlaneId}
                 visibleModelCount={visibleModelCount}
                 visibleElementCount={visibleElementCount}
                 viewMode={viewModeLabel}
-                onRemoveFilter={handleRemoveFilter}
-                onClearFilters={handleClearFilters}
+                floorLabels={floorLabelsMap}
                 onSelectPlane={handleSelectPlane}
                 onDeletePlane={handleDeletePlane}
               />

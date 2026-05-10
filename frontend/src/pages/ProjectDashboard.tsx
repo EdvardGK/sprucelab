@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Clock,
   Eye,
+  Table2,
 } from 'lucide-react';
 import { useProject } from '@/hooks/use-projects';
 import { useProjectStatistics } from '@/hooks/use-project-stats';
@@ -19,6 +20,8 @@ import { AppLayout } from '@/components/Layout/AppLayout';
 import { TypeDashboard } from '@/components/features/warehouse/TypeDashboard';
 import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
 import { ProjectFloorsTab } from '@/components/features/projects/ProjectFloorsTab';
+import { DrillTarget } from '@/components/filters/DrillTarget';
+import { useProjectFilterActions } from '@/contexts/ProjectFilterProvider';
 import {
   useDashboardMetrics,
   type ModelHealthMetrics,
@@ -162,7 +165,6 @@ type DrillSource =
   | { type: 'models' }
   | { type: 'types' }
   | { type: 'materials' }
-  | { type: 'discipline'; code: string }
   | null;
 
 function OverviewTab({
@@ -256,34 +258,10 @@ function OverviewTab({
           }] as DrillTab[],
         };
       }
-      case 'discipline': {
-        const disc = drillSource.code;
-        const models = (metrics?.models ?? []).filter(
-          (m) => m.discipline?.toUpperCase() === disc.toUpperCase()
-        );
-        const rows = models.map((m) => ({
-          name: m.name,
-          total_types: m.total_types,
-          mapped: m.mapped,
-          health_score: m.health_score,
-        }));
-        return {
-          title: disc,
-          subtitle: `${rows.length} ${t('nav.models').toLowerCase()}`,
-          tabs: [{
-            id: 'models', label: t('nav.models'), count: rows.length,
-            columns: [
-              { key: 'name', label: t('dashboard.modelName'), sortable: true },
-              { key: 'total_types', label: t('drill.types'), align: 'right' as const, sortable: true },
-              { key: 'mapped', label: t('common.mapped'), align: 'right' as const, sortable: true },
-              { key: 'health_score', label: 'Score', align: 'right' as const, sortable: true },
-            ],
-            data: rows,
-          }] as DrillTab[],
-        };
-      }
     }
   }, [drillSource, metrics, stats, t]);
+
+  const { setDiscipline } = useProjectFilterActions();
 
   const loading = statsLoading || metricsLoading;
 
@@ -329,14 +307,18 @@ function OverviewTab({
 
       {/* Row 2: Discipline Breakdown + NS3451 Coverage + Classification Progress */}
       <div className="grid grid-cols-3 gap-[clamp(0.4rem,0.8vw,0.6rem)]">
-        {/* Discipline Breakdown */}
-        <DashCard title={t('dashboard.disciplines')}>
+        {/* Discipline Breakdown — bar click cross-filters the project; Table2 icon opens raw models drill */}
+        <DashCard
+          title={t('dashboard.disciplines')}
+          onViewData={() => setDrillSource({ type: 'models' })}
+          viewDataLabel={t('drill.viewData', 'View data')}
+        >
           {loading ? (
             <div className="text-xs text-text-secondary">{t('common.loading')}</div>
           ) : metrics?.by_discipline ? (
             <DisciplineBreakdown
               byDiscipline={metrics.by_discipline}
-              onBarClick={(code) => setDrillSource({ type: 'discipline', code })}
+              onBarClick={(code) => setDiscipline([code])}
             />
           ) : (
             <div className="text-xs text-text-tertiary">{t('drill.noData')}</div>
@@ -470,11 +452,33 @@ function KpiCard({
   );
 }
 
-function DashCard({ title, children }: { title: string; children: React.ReactNode }) {
+function DashCard({
+  title,
+  onViewData,
+  viewDataLabel,
+  children,
+}: {
+  title: string;
+  onViewData?: () => void;
+  viewDataLabel?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-border bg-background p-[clamp(0.5rem,1vw,0.75rem)]">
-      <div className="text-[clamp(0.55rem,0.9vw,0.65rem)] font-semibold text-text-secondary uppercase tracking-wider mb-[clamp(0.3rem,0.6vw,0.5rem)]">
-        {title}
+      <div className="flex items-center justify-between mb-[clamp(0.3rem,0.6vw,0.5rem)]">
+        <div className="text-[clamp(0.55rem,0.9vw,0.65rem)] font-semibold text-text-secondary uppercase tracking-wider">
+          {title}
+        </div>
+        {onViewData && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onViewData(); }}
+            aria-label={viewDataLabel ?? 'View data'}
+            className="p-1 -m-1 text-text-tertiary hover:text-text-primary rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <Table2 className="h-3 w-3" />
+          </button>
+        )}
       </div>
       {children}
     </div>
@@ -496,10 +500,11 @@ function DisciplineBreakdown({
         const pct = m.total > 0 ? Math.round((m.mapped / m.total) * 100) : 0;
         const dc = discColor(code);
         return (
-          <div
+          <DrillTarget
             key={code}
-            className="flex items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] cursor-pointer hover:bg-muted/30 rounded px-1 -mx-1 transition-colors"
-            onClick={() => onBarClick(code)}
+            ariaLabel={`Filter by ${code}`}
+            onActivate={() => onBarClick(code)}
+            className="flex items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] hover:bg-muted/30 rounded px-1 -mx-1"
           >
             <span className={`text-[clamp(0.5rem,0.8vw,0.6rem)] font-semibold px-1.5 py-0.5 rounded ${dc.bg} ${dc.text} w-10 text-center flex-shrink-0`}>
               {code}
@@ -513,7 +518,7 @@ function DisciplineBreakdown({
             <span className="text-[clamp(0.5rem,0.8vw,0.6rem)] font-semibold tabular-nums text-text-primary w-16 text-right flex-shrink-0">
               {m.mapped}/{m.total}
             </span>
-          </div>
+          </DrillTarget>
         );
       })}
     </div>
