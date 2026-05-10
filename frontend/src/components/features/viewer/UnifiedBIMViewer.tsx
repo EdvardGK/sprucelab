@@ -23,8 +23,13 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as OBC from '@thatopen/components';
 import * as OBCF from '@thatopen/components-front';
+import * as FRAGS from '@thatopen/fragments';
 import * as THREE from 'three';
 import type { FragmentsGroup, FragmentIdMap } from '@thatopen/fragments';
+// FragmentsModels worker. Vite copies this asset to dist/assets/ with a
+// content hash; `?url` resolves it to a same-origin URL at runtime so
+// `new Worker(url)` succeeds.
+import fragmentsWorkerUrl from '@thatopen/fragments/dist/Worker/worker.mjs?url';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, Box, Layers } from 'lucide-react';
@@ -162,9 +167,21 @@ interface UnifiedBIMViewerProps {
 interface LoadedModel {
   modelId: string;           // Backend model ID
   fragmentModelId: string;   // ThatOpen internal model ID
-  group: FragmentsGroup;     // Three.js group
+  /**
+   * Three.js Object3D added to the scene. For v2 fragments this is the
+   * `FragmentsGroup` returned by `OBC.FragmentsManager.load()`. For v3
+   * fragments this is `FragmentsModel.object` (a Three.js group the
+   * worker drives).
+   */
+  group: THREE.Object3D;
+  /** v2 only — the loaded FragmentsGroup. */
+  fragmentsGroup?: FragmentsGroup;
+  /** v3 only — the FragmentsModel handle for visibility / highlight / raycast. */
+  v3Model?: FRAGS.FragmentsModel;
+  /** Format version of the loaded fragments. */
+  formatVersion: 'v2' | 'v3';
   elementCount: number;
-  loadMethod: 'fragments' | 'ifc';
+  loadMethod: 'fragments-v2' | 'fragments-v3' | 'ifc';
   name: string;
   fileUrl?: string;          // Supabase Storage URL for FastAPI queries
   ifcServiceFileId?: string; // FastAPI file_id for direct IFC queries
@@ -220,6 +237,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const hiderRef = useRef<OBC.Hider | null>(null);
   const cullerRef = useRef<OBC.MeshCullerRenderer | null>(null);
   const postproDisposablesRef = useRef<Array<() => void>>([]);
+  /**
+   * Single shared FragmentsModels instance for v3-format models. Created
+   * lazily on first v3 load; disposed on viewer unmount. The instance
+   * spawns a Web Worker (one per viewer mount) that owns geometry tiles,
+   * culling, LOD, and item data — main thread just consumes the rendered
+   * Three.js Object3D via `model.object`.
+   */
+  const v3FragmentsRef = useRef<FRAGS.FragmentsModels | null>(null);
   // Previous applied visibility state, so the effect below can do delta updates
   // instead of rebuilding and re-applying the full scene visibility every toggle.
   const prevTypeVisibilityRef = useRef<Record<string, boolean>>({});
@@ -1249,11 +1274,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       cleanupResize?.();
       cleanupTelemetry?.();
 
-      // Run any postproduction disposers (FXAA ResizeObserver, etc.)
+      // Run any postproduction disposers (FXAA ResizeObserver, v3 camera-rest
+      // listener, etc.)
       for (const dispose of postproDisposablesRef.current) {
         try { dispose(); } catch { /* noop */ }
       }
       postproDisposablesRef.current = [];
+
+      // Tear down the FragmentsModels worker (v3 path). The worker owns
+      // model tiles, item data, and culling state; disposing it here
+      // releases the worker thread + GPU memory used by v3 models.
+      if (v3FragmentsRef.current) {
+        const v3 = v3FragmentsRef.current;
+        v3FragmentsRef.current = null;
+        v3.dispose().catch(err => console.warn('[Viewer] v3 dispose failed:', err));
+      }
 
       // Dispose of components properly
       if (componentsRef.current) {
@@ -1309,7 +1344,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           group: FragmentsGroup,
           modelData: { name: string; file_url: string },
           modelId: string,
-          loadMethod: 'fragments' | 'ifc',
+          loadMethod: 'fragments-v2' | 'ifc',
         ): LoadedModel => {
           worldRef.current!.scene!.three.add(group);
 
@@ -1336,6 +1371,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             modelId,
             fragmentModelId: group.uuid,
             group,
+            fragmentsGroup: group,
+            formatVersion: 'v2',
             elementCount: totalElements,
             loadMethod,
             name: modelData.name,
@@ -1423,6 +1460,83 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           return loadedModel;
         };
 
+        // v3 fragments loader. Lazy-instantiated on first v3 load.
+        // Worker URL is bundled by Vite via the `?url` import at the
+        // top of this file; production-safe (no unpkg dependency).
+        const ensureV3 = (): FRAGS.FragmentsModels => {
+          if (v3FragmentsRef.current) return v3FragmentsRef.current;
+          const fragments = new FRAGS.FragmentsModels(fragmentsWorkerUrl);
+          fragments.settings.graphicsQuality = 1; // crispest tier
+          fragments.settings.autoCoordinate = true;
+          v3FragmentsRef.current = fragments;
+          // Drive worker-side culling + LOD off camera 'rest' events. The
+          // controls already debounce these naturally (only fires when
+          // camera stops), so we don't need additional throttling.
+          const controls = worldRef.current?.camera?.controls;
+          if (controls) {
+            const onRest = () => { fragments.update().catch(() => {}); };
+            controls.addEventListener('rest', onRest);
+            postproDisposablesRef.current.push(() => {
+              try { controls.removeEventListener('rest', onRest); } catch { /* */ }
+            });
+          }
+          // Initial population pass once the camera is positioned.
+          fragments.update().catch(() => {});
+          return fragments;
+        };
+
+        // Finalizer for v3 models — parallel to finalizeLoadedGroup but
+        // tailored to FragmentsModel's API (no FragmentsGroup, no
+        // OBC.Classifier, no MeshCullerRenderer; the worker handles
+        // culling + LOD itself, and Phase C wires up Hider/Highlighter/
+        // Classifier replacements via FragmentsModel's built-in methods).
+        const finalizeV3Model = (
+          v3Model: FRAGS.FragmentsModel,
+          modelData: { name: string; file_url: string },
+          modelId: string,
+        ): LoadedModel => {
+          worldRef.current!.scene!.three.add(v3Model.object);
+          v3Model.useCamera(worldRef.current!.camera!.three as THREE.PerspectiveCamera | THREE.OrthographicCamera);
+          modelIdMapRef.current.set(v3Model.modelId, modelId);
+
+          const loadedModel: LoadedModel = {
+            modelId,
+            fragmentModelId: v3Model.modelId,
+            group: v3Model.object,
+            v3Model,
+            formatVersion: 'v3',
+            elementCount: 0, // Phase C will populate via getCategories + getItemsOfCategory
+            loadMethod: 'fragments-v3',
+            name: modelData.name,
+            fileUrl: modelData.file_url,
+          };
+
+          // Fire-and-forget FastAPI open so click-to-inspect has a fallback
+          // if the in-browser path doesn't resolve.
+          if (modelData.file_url) {
+            const absoluteUrl = toAbsoluteUrl(modelData.file_url);
+            ifcService.openFromUrl(absoluteUrl)
+              .then(result => { loadedModel.ifcServiceFileId = result.file_id; })
+              .catch(() => { /* property fetch will fail gracefully on click */ });
+          }
+
+          loadedModelsRef.current.push(loadedModel);
+          setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
+          onModelLoaded?.(modelId, 0);
+
+          return loadedModel;
+        };
+
+        // Per-load query-string override for the format flag. `?fragments=v3`
+        // forces every model to attempt the v3 load path (useful for
+        // diagnosing a re-converted model before the version stamp lands);
+        // `?fragments=v2` forces the legacy path even on v3 models.
+        const formatOverride = (() => {
+          const sp = new URLSearchParams(window.location.search);
+          const v = sp.get('fragments');
+          return v === 'v2' || v === 'v3' ? v : null;
+        })();
+
         // Load all models in parallel
         const loadPromises = modelIds.map(async (modelId) => {
           setLoadingProgress(prev => ({ ...prev, [modelId]: true }));
@@ -1441,18 +1555,35 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             }
             const modelData = await modelResponse.json();
 
-            // Fast path: prebuilt fragments
+            // Fast path: prebuilt fragments. The version flag determines
+            // whether we go through OBC.FragmentsManager (v2) or the new
+            // FragmentsModels worker pipeline (v3). `?fragments=...` URL
+            // override wins; otherwise we trust the backend stamp.
             try {
               const fragmentsResponse = await authedFetch(`${API_BASE}/models/${modelId}/fragments/`);
               if (fragmentsResponse.ok) {
-                const { fragments_url } = await fragmentsResponse.json();
+                const fragInfo = await fragmentsResponse.json();
+                const fragments_url = fragInfo.fragments_url as string;
+                const backendVersion = fragInfo.fragments_format_version as 'v2' | 'v3' | undefined;
+                const effectiveVersion = formatOverride ?? backendVersion ?? 'v2';
                 const response = await fetch(fragments_url);
-                const buffer = new Uint8Array(await response.arrayBuffer());
+                const arrayBuffer = await response.arrayBuffer();
+                if (effectiveVersion === 'v3') {
+                  const v3 = ensureV3();
+                  const v3Model = await v3.load(arrayBuffer, {
+                    modelId, // backend UUID — also serves as the worker-side modelId
+                    camera: worldRef.current!.camera!.three as THREE.PerspectiveCamera | THREE.OrthographicCamera,
+                  });
+                  return finalizeV3Model(v3Model, modelData, modelId);
+                }
+                const buffer = new Uint8Array(arrayBuffer);
                 const group = fragments.load(buffer);
-                return finalizeLoadedGroup(group, modelData, modelId, 'fragments');
+                return finalizeLoadedGroup(group, modelData, modelId, 'fragments-v2');
               }
-            } catch {
-              // Fragments not available, fall back to IFC
+            } catch (err) {
+              if (import.meta.env.DEV) {
+                console.warn('[Viewer] Fragments fast path failed; falling back to IFC parse:', err);
+              }
             }
 
             // Fallback: parse raw IFC in-browser
@@ -1836,7 +1967,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             <div className="flex items-center gap-1 mt-2">
               <Layers className="h-3 w-3" />
               <span className="text-xs">
-                {loadedModelsRef.current.every(m => m.loadMethod === 'fragments')
+                {loadedModelsRef.current.every(m => m.loadMethod === 'fragments-v2' || m.loadMethod === 'fragments-v3')
                   ? '⚡ All Fragments'
                   : loadedModelsRef.current.every(m => m.loadMethod === 'ifc')
                   ? '📄 All IFC Parsed'
