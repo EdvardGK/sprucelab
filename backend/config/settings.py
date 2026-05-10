@@ -111,6 +111,7 @@ INSTALLED_APPS = [
     'apps.automation',
     'apps.field',
     'apps.embed',
+    'apps.filters',
 ]
 
 MIDDLEWARE = [

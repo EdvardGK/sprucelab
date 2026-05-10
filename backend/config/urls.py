@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/field/', include('apps.field.urls')),
     path('api/admin/', include('apps.accounts.urls')),
     path('api/embed/', include('apps.embed.urls')),
+    path('api/filters/', include('apps.filters.urls')),
 ]
 
 # Serve media files in development
