@@ -28,7 +28,7 @@ class ModelSerializer(serializers.ModelSerializer):
             'parsing_status', 'geometry_status', 'validation_status',
             # Fragments (ThatOpen optimized binary format)
             'fragments_url', 'fragments_size_mb', 'fragments_generated_at',
-            'fragments_status', 'fragments_error',
+            'fragments_status', 'fragments_error', 'fragments_format_version',
             # Version tracking
             'version_number', 'parent_model', 'is_published',
             'ifc_timestamp', 'version_diff',
@@ -44,7 +44,7 @@ class ModelSerializer(serializers.ModelSerializer):
             'id', 'ifc_schema', 'file_url', 'file_size',
             'status', 'parsing_status', 'geometry_status', 'validation_status',
             'fragments_url', 'fragments_size_mb', 'fragments_generated_at',
-            'fragments_status', 'fragments_error',
+            'fragments_status', 'fragments_error', 'fragments_format_version',
             'is_published', 'ifc_timestamp', 'version_diff',
             'forked_at', 'is_fork', 'fork_count',
             'element_count', 'storey_count', 'system_count',

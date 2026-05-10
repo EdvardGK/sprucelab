@@ -296,6 +296,18 @@ class Model(models.Model):
         null=True,
         help_text="Error message if fragment generation failed"
     )
+    # Format version of the fragments binary. 'v2' was the legacy
+    # OBC.FragmentsManager.export() output; 'v3' is the IfcImporter
+    # output (compatible with the new FragmentsModels worker-based
+    # loader). Existing rows default to 'v2'; new generations stamp 'v3'.
+    # Frontend reads this to pick the load path during the dual-load
+    # rollout (Phase B); after backfill (Phase D) all rows are 'v3'.
+    fragments_format_version = models.CharField(
+        max_length=8,
+        default='v2',
+        choices=[('v2', 'v2'), ('v3', 'v3')],
+        help_text="Binary format version of the fragments file"
+    )
 
     # Legacy status field (deprecated, use stage-specific fields below)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='uploading')

@@ -41,6 +41,7 @@ class FragmentResult(BaseModel):
     fragments_url: Optional[str] = None
     size_mb: Optional[float] = None
     element_count: Optional[int] = None
+    fragments_format_version: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -187,20 +188,26 @@ async def _generate_fragments(model_id: str, ifc_url: str) -> FragmentResult:
 
         print(f"  Uploaded: {fragments_url}")
 
-        # Parse element count from script output (JSON line at end)
+        # Parse converter stdout — JSON result line at end. The v3 converter
+        # (IfcImporter-based) emits `fragments_format_version: 'v3'` and no
+        # longer reports element_count (FragmentsModels enumerates items
+        # via the worker on first load).
         element_count = 0
+        format_version = 'v2'  # legacy default if a stale converter emits no version
         for line in result.stdout.split('\n'):
             if line.startswith('{') and '"success":true' in line:
                 import json
                 data = json.loads(line)
                 element_count = data.get('elementCount', 0)
+                format_version = data.get('fragments_format_version', 'v2')
                 break
 
         return FragmentResult(
             model_id=model_id,
             fragments_url=fragments_url,
             size_mb=round(frag_size_mb, 2),
-            element_count=element_count
+            element_count=element_count,
+            fragments_format_version=format_version,
         )
 
     except Exception as e:

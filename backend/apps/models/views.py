@@ -1496,6 +1496,7 @@ class ModelViewSet(viewsets.ModelViewSet):
         response_data = {
             'fragments_status': model.fragments_status,
             'fragments_url': model.fragments_url,
+            'fragments_format_version': model.fragments_format_version,
             'size_mb': model.fragments_size_mb,
             'generated_at': model.fragments_generated_at,
             'error': model.fragments_error,
@@ -1535,6 +1536,7 @@ class ModelViewSet(viewsets.ModelViewSet):
         fragments_url = request.data.get('fragments_url')
         size_mb = request.data.get('size_mb')
         element_count = request.data.get('element_count')
+        format_version = request.data.get('fragments_format_version', 'v2')
         error = request.data.get('error')
 
         if error:
@@ -1547,13 +1549,14 @@ class ModelViewSet(viewsets.ModelViewSet):
             model.fragments_url = fragments_url
             model.fragments_size_mb = size_mb
             model.fragments_generated_at = timezone.now()
+            model.fragments_format_version = format_version
             model.fragments_error = None
             model.save(update_fields=[
                 'fragments_status', 'fragments_url',
                 'fragments_size_mb', 'fragments_generated_at',
-                'fragments_error'
+                'fragments_format_version', 'fragments_error',
             ])
-            print(f"Fragments ready for {model.name}: {fragments_url}")
+            print(f"Fragments ready for {model.name} ({format_version}): {fragments_url}")
 
         return Response({'status': 'ok'})
 
