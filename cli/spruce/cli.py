@@ -19,6 +19,7 @@ from .models import models_app
 from .types import types_app
 from .verify import verify_app
 from .scripts import scripts_app
+from .webhooks import app as webhooks_app
 
 app = typer.Typer(
     name="spruce",
@@ -31,6 +32,7 @@ app.add_typer(models_app, name="models")
 app.add_typer(types_app, name="types")
 app.add_typer(verify_app, name="verify")
 app.add_typer(scripts_app, name="scripts")
+app.add_typer(webhooks_app, name="webhooks")
 console = Console()
 
 # Config subcommand

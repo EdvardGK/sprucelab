@@ -93,6 +93,10 @@ spruce run <pipeline> --project <id>     # Run for specific project
 spruce run <pipeline> --dry-run          # Preview without executing
 ```
 
+### Webhooks
+
+`spruce webhooks {list,create,disable,delete,deliveries,redeliver,test}` — agent-first surface over `/api/automation/webhook-subscriptions/` and `/api/automation/webhook-deliveries/` (supports `--json`, `--dry-run`, and `--secret-out FILE` for one-shot HMAC secrets).
+
 ## Development
 
 ```bash

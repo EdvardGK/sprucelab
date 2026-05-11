@@ -14,12 +14,20 @@ def runner() -> CliRunner:
 
 
 @pytest.fixture(autouse=True)
+def _wide_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Force a wide terminal so Rich tables don't truncate column values
+    we're asserting on in stdout-substring checks."""
+    monkeypatch.setenv("COLUMNS", "200")
+
+
+@pytest.fixture(autouse=True)
 def _pin_api_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("spruce.config.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.models.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.types.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.verify.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.scripts.get_api_url", lambda: TEST_API_URL)
+    monkeypatch.setattr("spruce.webhooks.get_api_url", lambda: TEST_API_URL)
 
 
 @pytest.fixture
