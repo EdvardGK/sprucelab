@@ -52,7 +52,7 @@ export function TypeBrowserFilterBarV2({
       </div>
 
       <Select
-        value={modelId ?? undefined}
+        value={modelId ?? ''}
         onValueChange={onModelChange}
         disabled={models.length === 0}
       >
