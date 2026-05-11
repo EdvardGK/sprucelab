@@ -1,96 +1,90 @@
 # Current TODO - Sprucelab BIM Platform
 
-**Last Updated**: 2026-04-24
-**Current Phase**: Data-First Sprint + Agent-Ready Platform
-**Status**: B1-B2 complete, views split, script execution API wired, batch API enhanced
+**Last Updated**: 2026-05-10 (post Coordinator Round 2)
+**Current Phase**: Frontend refresh — Phase 1 COMPLETE, Phase 3 next
+**Status**: 194 unit tests green. Trunk-based: all merges direct to `main`.
 
 ---
 
-## Active Sprint: IFC in -> Actionable Insight Out
+## Recently shipped
 
-### B3. Dashboard Enhancement
-- [ ] Update `dashboard_metrics` endpoint with verification_score and verification_issues
-- [ ] Verification Summary widget (pass/warning/fail, top issues)
-- [ ] Action Items widget (types needing attention, sorted by severity, click to navigate)
-- [ ] HealthScoreRing sub-segments (classification 30%, unit 15%, material 25%, verification 30%)
-
-### B4. Version Change Detection
-- [ ] `version_compare.py` service (compare types by signature tuple)
-- [ ] Auto-compare on upload when parent_model exists
-- [ ] Store results in Model.version_diff JSONField
-- [ ] API endpoint: `GET /api/types/types/version-changes/?model={id}`
-- [ ] Frontend badges: NEW (green), REMOVED (red), CHANGED (orange) on type rows
-- [ ] Dashboard card: "+X new, -Y removed, Z changed" with click-to-filter
-
-### B5. Sandwich View
-- [ ] `SandwichDiagram.tsx` - SVG/CSS stacked rectangles
-- [ ] Integrate into TypeDetailPanel Materials tab
-- [ ] Color by material category, total thickness annotation
-
-### Agent-Ready: Event/Webhook System
-- [ ] `WebhookSubscription` model (project, event_type, url, secret, is_active)
-- [ ] `dispatch_event()` utility (POST to subscribers with HMAC)
-- [ ] Wire into: model processing complete, types classified, verification complete
-- [ ] Start with 3 events: `model.processed`, `types.classified`, `verification.complete`
-
-### Agent-Ready: CLI Expansion (spruce types/verify/scripts)
-- [ ] `spruce types list --model X` -- list types with mapping status
-- [ ] `spruce types classify --model X --type Y --ns3451 222 --unit m2`
-- [ ] `spruce types export --model X --format excel|reduzer`
-- [ ] `spruce verify --model X` -- run verification, print results table
-- [ ] `spruce scripts list` / `spruce scripts run --script X --model Y`
-- [ ] All commands support `--json` for agent consumption
+- [x] **Webhook System Phase 1** (2026-04-29, snapshot `b73a1d5`) -- `WebhookSubscription` + `WebhookDelivery` in `apps/automation/`, HMAC-SHA256 dispatcher, Celery `deliver_webhook_task` with exponential backoff + auto-disable, ViewSets at `/api/automation/webhook-{subscriptions,deliveries}/`. Four events wired: `model.processed`, `document.processed`, `claim.extracted`, `verification.complete`.
+- [x] **CLI Expansion -- spruce {types,verify,scripts}** (2026-05-10, commit `991cce9`) -- Typer + Rich + httpx (mirrors `embed.py`). All commands support `--json`. Entry point `cli/spruce/cli.py`. Backend quirks documented: `verify` is POST not GET; `types classify` uses bulk-update with single-element mappings; `types export` streams binary to stdout.
+- [x] **PR 1.5 SavedFiltersDropdown** (2026-05-10, commit `e2f7b0c`) -- `useSavedFilters` hook + Radix dropdown UI mounted in `CanvasOverlays.tsx` chip row. Restore semantics = full replace via `useProjectFilterActions.replace()`. i18n keys `filters.saved.*` (en + nb with proper æøå).
+- [x] **PR 1.4 SavedFilter backend** (2026-05-10, commit `95c4b50`) -- `apps/filters/` with six models, scope-aware ViewSets at `/api/filters/{saved,libraries,pinned,announcements}/`, 18 unit tests. TODO: swap `owner_company` CharField -> FK when Phase 7 org model lands.
+- [x] **PR 1.3b ModelWorkspace cross-filter** (2026-05-10, commit `0cf9e83`) + **Track H DrillTarget `style?:` prop** (2026-05-10, commit `dba3932`) -- treemap + GeometryBar segments now use `<DrillTarget>` instead of hand-rolled `role="button"` blocks.
+- [x] **Phase 2 Drawings + Documents wiring** (2026-05-10, commit `35ed867`) -- real `ProjectDrawings.tsx` + `ProjectDocuments.tsx`, `dxf-viewer` + `react-pdf` deps, ClaimInbox rehoused at `/projects/:id/claims`. Vite opentype.js fix-forward in `ae397a9`.
+- [x] **Phase 1 PR 1.3 DrillTarget + FilterChips demote** (2026-05-10, commit `1f2f3a6`)
+- [x] **ifc-service OOM detection** (2026-05-10, commit `6837c6b`) -- `_classify_subprocess_failure` distinguishes SIGKILL/OOM (`returncode in (-9, 137)`) from generic failures, emits structured logs. Pairs with Django-side sweep-on-read recovery (`04d61dd`).
+- [x] **Django sweep-on-read fragments recovery** (2026-05-10, commit `04d61dd`) -- `fragments_status` flips `'generating'` -> `'failed'` after `FRAGMENTS_GENERATION_TIMEOUT` (10m default).
+- [x] **Vercel pinned to Corepack Yarn 4** (2026-05-10, commit `1219b83`) -- `frontend/vercel.json` `installCommand` runs `corepack enable && corepack prepare yarn@4.12.0 --activate && yarn install --immutable`. Round 1 Vite opentype.js alias stays as defensive fallback.
+- [x] **F-1/F-2/F-3 canonical floors end-to-end** (2026-04-30 -> 2026-05-01) -- `ProjectScope.canonical_floors`, `storey_list` claim + promotion, `check_storey_deviation` engine rule, publish gate, frontend StoreyListClaimPanel + Floors tab + viewer floor-code wiring.
+- [x] **Embed PRs 1-4** (through 2026-05-05) -- plan doc, DashboardFilterProvider, `/api/embed/instances/`, scoped tokens + iframe page. Branch `feat/embed-scoped-tokens-iframe` squash-merged as `fc16b1a`, dead branch already deleted from origin.
 
 ---
 
-## Complete
+## Active backlog
 
-- [x] Types-only extraction (2-second parsing)
-- [x] TypeBank cross-project intelligence
-- [x] TypeMapping workflow + keyboard shortcuts
-- [x] NS3451 cascading selector
-- [x] Excel export/import (backend endpoints + frontend UI)
-- [x] Material layer editor (TypeDefinitionLayer)
-- [x] Type Dashboard (health scores, progress bars)
-- [x] Type Analysis Dashboard (KPIs, quality checks, treemap)
-- [x] TypeInstanceViewer (3D)
-- [x] i18n (EN/NB)
-- [x] Airtable-style grid view
-- [x] ProjectConfig model
-- [x] EPD Architecture Phase 1 (data models)
-- [x] Responsibility Matrix (21 discipline codes)
-- [x] Production deployment (Railway + Vercel)
-- [x] Verification Engine v1 (4 default rules, ProjectConfig custom rules, bulk update)
-- [x] Script Execution API endpoint (POST /api/scripts/{id}/execute/)
-- [x] Batch Classification API (POST /api/types/type-mappings/bulk-update/ with all fields)
-- [x] API Surface Map (docs/knowledge/API_SURFACE.md)
-- [x] Common Patterns in CLAUDE.md
-- [x] entities/views.py split (2855 lines -> 8 modules)
-- [x] Codebase simplification (BEP archived, dead apps removed, -13.8k lines)
-- [x] Dashboard Enhancement (verification bar, action items, weighted health score)
-- [x] Version Change Detection (service, endpoint, hook, TypeScript types)
-- [x] Sandwich View (SandwichDiagram.tsx SVG component with material colors)
+### Phase 3 -- Type page v2 (next anchor PR)
+- [ ] Visual refresh for Type page (`?v=2`), the anchor PR for the next phase of the frontend refresh roadmap
+- [ ] Deserves a dedicated session, NOT a parallel coordinator track
 
----
+### CLI follow-ups
+- [ ] Live API smoke against dev server: `spruce types list --model <id> --json`, `spruce verify --model <id>`, `spruce scripts list`. Only `--help` verified at ship time.
 
-## Phase 2 Backlog
+### Embed surface
+- [ ] PR 5/10 onward (ViewerTile + filter->isolation, TypeBrowser tile cross-filter, robustness pass, ModelQualityIssue, Requirements Fulfillment dashboard, Floors Overview, skiplum-pages integration). Sequence in `docs/plans/2026-05-03-21-15_Forward-Deployed-Embed.md`.
+- [ ] Surface the embed roadmap into `docs/todos/` proper before the next coordinator round picks it up.
 
-- [ ] Rule Configuration GUI (visual rule builder)
+### Filter system follow-ups
+- [ ] Replace `is_staff` fallbacks in `apps/filters/views.py` when Phase 7 org model + company-admin role types land
+- [ ] Swap `owner_company` CharField -> FK to `accounts.Company` (same trigger)
+- [ ] Library + Pin + Announcement UI (PR 1.4 only shipped SavedFilter consumer; the other three model surfaces still have no frontend)
+
+### Phase 2 (Drawings/Documents) follow-ups
+- [ ] PR 2.3 -- permissions gating on Drawing/Document/TitleBlock ViewSets
+- [ ] PR 2.4 -- DWG -> DXF conversion via LibreDWG
+- [ ] DXF viewer primitive toggle + color override (memory: `dxf-viewer-feedback.md`)
+
+### Verification + dashboards
+- [ ] Replace `health_score` with ISO 19650-style requirement fulfillment ("X/Y EIRs fulfilled") per memory `feedback-iso19650-requirement-fulfillment.md`
 - [ ] BCF export from verification failures
-- [ ] Auto-classification suggestions (TypeBank ML)
+- [ ] Rule Configuration GUI (visual rule builder)
+
+### Agent-ready platform
+- [ ] Webhook UI -- backend Phase 1 is live, but there's no frontend to manage subscriptions/deliveries
+- [ ] Dry-run support on remaining mutations (currently only `type-mappings/bulk-update/` + `type-definition-layers/bulk-update/` + claim actions support `?dry_run=true`)
+
+### Infra / DX
+- [ ] Frontend unit-test runner (vitest) -- memory `feedback-frontend-no-unit-tests.md`. Until then, frontend verification = `tsc --noEmit` + `yarn build` + Vercel commit-status.
+- [ ] `UnifiedBIMViewer` chunk size warning -- 4.7 MB raw / 896 KB gzipped. Pre-existing, surfaces on every build.
+
+---
+
+## Parked / deferred
+
+- **Viewer perf + visual rework** -- per memory `feedback-viewer-perf-rabbithole.md`. Diagnose when asked, stop at diagnosis. Multi-stack viewer fixes (properties sidecar, AO, hider perf) wait for Phase 4 or explicit ask.
+- **Sprint 6.3 LLM claim extraction** -- PINNED. Do not start without real inbox-quality data + explicit cost/policy approval. Hooks in place: one-file change to `claim_extractor.py` + per-project flag when ready.
+- **ThatOpen lodSize bug** -- documented elsewhere; not blocking. Park alongside other viewer perf work.
+- **Phase 7 org model + EIR/BEP module + auto-classification (LLM)** -- unblocks the `is_staff` -> role-type swap in `apps/filters/`.
+- **Phase 8 Schedule + Meetings + thumbnails + pluggable classifications**
+
+---
+
+## Phase 2 (legacy) backlog -- still relevant
+
+- [ ] Auto-classification suggestions (TypeBank ML) -- depends on Phase 7
 - [ ] Design scenario comparison (A/B/C LCA)
 - [ ] EPD Architecture Phase 2-4 (ProjectConfig inheritance, EPD browser UI)
 - [ ] MMI extraction
 - [ ] Measurement rules per IFC class
 - [ ] Reduzer product seeding
-- [ ] Test infrastructure bootstrap (pytest + conftest + smoke tests)
-- [ ] Dry-run support for mutations (?dry_run=true)
 
 ---
 
 ## Deprioritized
 
-- BEP System (over-engineered, ProjectConfig sufficient)
+- BEP System (over-engineered, ProjectConfig sufficient -- archived)
 - Full property editing (Excel workflow sufficient)
 - Graph queries (over-engineered for MVP)
 - Clash detection (Solibri's moat)
@@ -98,34 +92,12 @@
 
 ---
 
-## Known Issues
+## Known issues
 
-1. **Production migration needed**: `reused_status` column missing on Railway
-2. **Dashboard health at 0%**: Types pending classification (expected for new projects)
-
----
-
-## Progress Tracking
-
-**Overall MVP Completion**: ~80%
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Type extraction | Done | 2-second parsing works |
-| TypeBank | Done | Cross-project intelligence |
-| Type Dashboard | Done | Health scores, progress bars |
-| Type Library UI | Done | Grid, detail panel, verification badges |
-| Excel Workflow UI | Done | Export/Import/Reduzer in TypeBrowser toolbar |
-| Verification Engine | Done | 4 rules, ProjectConfig custom rules |
-| Script Execution API | Done | POST /api/scripts/{id}/execute/ |
-| Batch Classification | Done | All fields supported |
-| Version Change Detection | Done | Service + endpoint + hook |
-| Dashboard Enhancement | Done | Verification bar + action items |
-| Sandwich View | Done | SVG component with material colors |
-| Event/Webhook System | Pending | Agent-ready platform feature |
-| CLI Expansion | Pending | types/verify/scripts commands |
+1. **`UnifiedBIMViewer` chunk size**: 4.7 MB / 896 KB gzipped. Pre-existing build warning; not blocking.
+2. **Dashboard health at 0%** for new projects: types pending classification (expected).
 
 ---
 
-**Next Action**: Event/Webhook System (agent-ready platform)
-**Then**: CLI Expansion (spruce types/verify/scripts commands)
+**Next Action**: Phase 3 -- Type page v2 visual refresh (dedicated session)
+**Then**: Embed PR 5+ (ViewerTile + filter->isolation) once roadmap is surfaced into `docs/todos/`
