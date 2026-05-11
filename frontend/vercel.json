@@ -1,6 +1,6 @@
 {
   "buildCommand": "yarn build",
-  "installCommand": "yarn install",
+  "installCommand": "corepack enable && corepack prepare yarn@4.12.0 --activate && yarn install --immutable",
   "outputDirectory": "dist",
   "framework": "vite",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
