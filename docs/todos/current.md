@@ -33,8 +33,19 @@
 - [ ] Live API smoke against dev server: `spruce types list --model <id> --json`, `spruce verify --model <id>`, `spruce scripts list`. Only `--help` verified at ship time.
 
 ### Embed surface
-- [ ] PR 5/10 onward (ViewerTile + filter->isolation, TypeBrowser tile cross-filter, robustness pass, ModelQualityIssue, Requirements Fulfillment dashboard, Floors Overview, skiplum-pages integration). Sequence in `docs/plans/2026-05-03-21-15_Forward-Deployed-Embed.md`.
-- [ ] Surface the embed roadmap into `docs/todos/` proper before the next coordinator round picks it up.
+- [x] PR 1: Plan doc + DashboardFilterProvider stub (`fc16b1a`)
+- [x] PR 2: DashboardFilterProvider live -- filter context types, provider, URL serialization (`fc16b1a`)
+- [x] PR 3: `/api/embed/instances/` resolver -- semantic->concrete + truncation logic + `/api/embed/capabilities` (`fc16b1a`)
+- [x] PR 4: Scoped token middleware + iframe page route -- `/embed/:dashboard`, postMessage handshake, origin allowlist (`fc16b1a`)
+- [ ] PR 5: ViewerTile + filter->isolation -- `UnifiedBIMViewer` as filter-context consumer, resolver-driven isolation, highlight/filter toggle. Design in `docs/research/2026-05-10-22-37_Viewer-Highlight-Mode-Spike.md`; scaffold landing in Round 5 Track U; real-model spike (transparency artifacts, perf, multi-model coord) pending omarchy session
+- [ ] PR 6: TypeBrowser tile + cross-filter loop -- full bidirectional filter loop with one chart-shaped tile; end-to-end demo
+- [ ] PR 7: Robustness pass -- items 2-10 from robustness contract not yet covered (memory cap, leak smoke test, telemetry beacon, degraded mode, etc.)
+- [ ] PR 7a: Model-quality dimension -- `quality.*` filter keys, `ModelQualityIssue` store (or `ExtractionRun` extension), resolver scoping, quality tiles; gates dashboard 1
+- [ ] PR 8: Requirements Fulfillment dashboard -- first MVP dashboard (depends on ISO 19650 framework plan)
+- [ ] PR 9: Floors Overview dashboard -- second MVP dashboard
+- [ ] PR 10 (final): skiplum-pages integration -- real embed inside skiplum-pages behind a scoped token; per memory `forward-deployed-embed-mission`
+
+> Roadmap source: [docs/plans/2026-05-03-21-15_Forward-Deployed-Embed.md](../plans/2026-05-03-21-15_Forward-Deployed-Embed.md)
 
 ### Filter system follow-ups
 - [ ] Replace `is_staff` fallbacks in `apps/filters/views.py` when Phase 7 org model + company-admin role types land
