@@ -9,6 +9,7 @@ interface DrillTargetProps {
   className?: string;
   style?: CSSProperties;
   ariaLabel?: string;
+  title?: string;
   disabled?: boolean;
   children: ReactNode;
 }
@@ -20,6 +21,7 @@ export function DrillTarget({
   className,
   style,
   ariaLabel,
+  title,
   disabled = false,
   children,
 }: DrillTargetProps) {
@@ -50,6 +52,7 @@ export function DrillTarget({
       'aria-pressed': active,
       'aria-label': ariaLabel,
       'aria-disabled': disabled || undefined,
+      ...(title !== undefined ? { title } : {}),
       type: isButton ? 'button' : undefined,
       className: cn(
         'transition-all',

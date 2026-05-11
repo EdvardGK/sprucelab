@@ -962,6 +962,7 @@ function Treemap({ types, onTileClick, activeIfcClass }: { types: AnalysisTypeRe
               key={r.label}
               active={isActive}
               ariaLabel={`Filter by ${r.label}`}
+              title={`${r.label}: ${r.value.toLocaleString()}`}
               className={tileClassName}
               style={tileStyle}
               onActivate={() => onTileClick!(r.label)}
@@ -1015,6 +1016,7 @@ function GeometryBar({ types, onSegmentClick }: { types: AnalysisTypeRecord[]; o
             <DrillTarget
               key={label}
               ariaLabel={`Filter by ${label}: ${value.toLocaleString()} (${pct.toFixed(1)}%)`}
+              title={`${label}: ${value.toLocaleString()} (${pct.toFixed(1)}%)`}
               className="h-full"
               style={segStyle}
               onActivate={() => onSegmentClick!(label)}
