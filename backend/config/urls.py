@@ -7,7 +7,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework import routers
 
-from .views import capabilities, current_user, health_check, update_profile
+from .views import (
+    agent_tools_manifest,
+    capabilities,
+    current_user,
+    health_check,
+    llms_txt,
+    update_profile,
+)
 
 # API Router
 router = routers.DefaultRouter()
@@ -17,6 +24,9 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/health/', health_check, name='health-check'),
     path('api/capabilities/', capabilities, name='capabilities'),
+    # Agent site-scan discovery surfaces — both public, both unthrottled.
+    path('.well-known/agent-tools.json', agent_tools_manifest, name='agent-tools-manifest'),
+    path('llms.txt', llms_txt, name='llms-txt'),
     path('api/me/', current_user, name='current-user'),
     path('api/me/profile/', update_profile, name='update-profile'),
     path('api/auth/me/', current_user, name='current-user-legacy'),

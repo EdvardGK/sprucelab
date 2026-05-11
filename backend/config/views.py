@@ -6,6 +6,9 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.db import connection
+from django.http import HttpResponse
+from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
 
 from apps.accounts.models import UserProfile
 
@@ -113,7 +116,175 @@ def capabilities(request):
             'verify': 'spruce verify --model <id> [--dry-run] [--json]',
             'webhooks': 'spruce webhooks {list,create,disable,delete,deliveries,redeliver,test}',
         },
+        # Site-scan discovery surfaces. Agents that crawl us blind can find
+        # these without hitting human docs first.
+        'discovery': {
+            'agent_tools_manifest': '/.well-known/agent-tools.json',
+            'llms_txt': '/llms.txt',
+        },
     })
+
+
+# ---------------------------------------------------------------------------
+# Agent discovery surfaces
+#
+# Two unauthenticated endpoints sized for site-scan: agents that crawl a
+# domain blind should be able to discover Sprucelab without needing a human
+# to point them at the docs URL.
+#
+#   /.well-known/agent-tools.json — JSON manifest (verbs, endpoints, auth)
+#   /llms.txt                     — plain-text LLM-targeted README
+#
+# Both surfaces are public, throttling-exempt, and intentionally additive
+# alongside /api/capabilities/. Treat the keys as a stable contract — drop
+# nothing, only add.
+# ---------------------------------------------------------------------------
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@throttle_classes([])  # Discovery surface — agents may hit this on cold start.
+def agent_tools_manifest(request):
+    """
+    Public agent-tools manifest served from the conventional well-known path.
+
+    Format follows the informal `/.well-known/agent-tools.json` convention used
+    by agentic crawlers: one stable JSON document advertising the API base, the
+    primary discovery endpoints, the CLI install + verbs, and the high-level
+    extraction surface.
+
+    ``api_base`` is computed from the request so reverse-proxied deployments
+    (Railway behind sprucelab.no) report the right absolute URL without config.
+    """
+    api_base = request.build_absolute_uri('/').rstrip('/')
+
+    return Response({
+        'schema_version': '0.1',
+        'name': 'Sprucelab',
+        'tagline': (
+            'Data-first BIM intelligence: every file becomes a queryable '
+            'data stream.'
+        ),
+        'homepage': 'https://sprucelab.no',
+        'endpoints': {
+            'api_base': api_base,
+            'capabilities': '/api/capabilities/',
+            'embed_capabilities': '/api/embed/capabilities/',
+            'health': '/api/health/',
+            'auth': {
+                'scheme': 'Bearer',
+                'header': 'Authorization',
+                'register_endpoint': '/api/automation/agent/register/',
+                'docs': (
+                    "Use 'spruce auth register --token <KEY> --url <URL>' or "
+                    "pass 'Authorization: Bearer <KEY>' on every request."
+                ),
+            },
+        },
+        'cli': {
+            'package_name': 'spruce',
+            'install': 'pip install -e cli/  (from sprucelab repo)',
+            'elevator_pitch': (
+                "Run 'spruce capabilities' for the full command catalog."
+            ),
+        },
+        'verbs': [
+            {
+                'command': 'spruce capabilities',
+                'purpose': 'Discover the full agent surface',
+                'auth': False,
+            },
+            {
+                'command': 'spruce models list --project <UUID>',
+                'purpose': 'List uploaded BIM models',
+                'auth': True,
+            },
+            {
+                'command': 'spruce log list --project <UUID>',
+                'purpose': 'Drill the observation log of extracted facts',
+                'auth': True,
+            },
+            {
+                'command': 'spruce verify --dry-run --model <UUID>',
+                'purpose': 'Preview verification output without persisting',
+                'auth': True,
+            },
+        ],
+        'what_we_extract': [
+            'IFC: types (not entities), spatial hierarchy, classification, materials',
+            'DXF/DWG: layers, text blocks, title-block fields',
+            'PDF (drawing sheets): heuristic title-block, sheet metadata',
+            'PDF/DOCX/XLSX/PPTX: documents, claim candidates from prose',
+        ],
+        'good_use_cases': [
+            'Verify a delivered IFC model against project requirements',
+            'Compare floor/storey data across IFC models',
+            'Cross-classify types (NS3451) reused across projects',
+            'Extract claim candidates from documents and feed them back as ProjectConfig',
+        ],
+        'conventions': {
+            'dry_run': (
+                "All listed mutations support ?dry_run=true; see "
+                "/api/capabilities/ → mutations_supporting_dry_run."
+            ),
+            'errors': (
+                'JSON envelope with detail + structured codes. Duplicate-upload '
+                "responses include 'duplicate: true'."
+            ),
+            'webhooks': (
+                'HMAC-SHA256, X-Webhook-Signature header. See '
+                '/api/capabilities/ → events for the full event taxonomy.'
+            ),
+        },
+    })
+
+
+LLMS_TXT_BODY = """\
+# Sprucelab
+
+> Data-first BIM intelligence: every file becomes a queryable data stream.
+> Agent-first, human-second.
+
+## Discovery
+- [Capabilities (machine-readable)](/api/capabilities/)
+- [Embed capabilities](/api/embed/capabilities/)
+- [Agent tools manifest](/.well-known/agent-tools.json)
+- [Health](/api/health/)
+
+## CLI
+- Install: `pip install -e cli/` (from the sprucelab repo)
+- Catalog: `spruce capabilities`
+- Auth: `spruce auth register --token <KEY> --url <URL>`
+  (or send `Authorization: Bearer <KEY>` directly)
+
+## Common tasks
+- List models: `spruce models list --project <UUID>`
+- Drill the observation log: `spruce log list --project <UUID>`
+- Preview verification: `spruce verify --dry-run --model <UUID>`
+
+## Conventions
+- All mutations support `?dry_run=true` where applicable
+  (see `/api/capabilities/` → `mutations_supporting_dry_run`)
+- Errors are JSON: check `detail` and (for duplicates) the `duplicate: true` flag
+- Webhooks: HMAC-SHA256, header `X-Webhook-Signature`
+- Token registration: `POST /api/automation/agent/register/`
+"""
+
+
+@csrf_exempt
+@require_GET
+def llms_txt(request):
+    """
+    Plain-text LLM-targeted README, served at the root.
+
+    Follows the informal https://llmstxt.org/ convention: a Markdown-flavoured
+    plaintext index of the most useful URLs and CLI verbs, sized for an agent
+    to ingest in one fetch on cold start. Public, no auth, no rate limit.
+
+    Served as ``text/plain; charset=utf-8`` so naive crawlers don't try to
+    HTML-render it.
+    """
+    return HttpResponse(LLMS_TXT_BODY, content_type='text/plain; charset=utf-8')
 
 
 @api_view(['GET'])
