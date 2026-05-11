@@ -313,7 +313,9 @@
     "mapped": "Kartlagt",
     "ignored": "Ignorert",
     "review": "Trenger gjennomgang",
-    "followup": "Oppfølging"
+    "followup": "Oppfølging",
+    "verified": "Verifisert",
+    "flagged": "Flagget"
   },
   "keyboard": {
     "shortcuts": "Tastatursnarveier",
@@ -944,6 +946,7 @@
   },
   "typeLibrary": {
     "title": "Typebibliotek",
+    "tryV2Link": "Prøv ny Typer-side →",
     "types": "typer",
     "instances": "instanser",
     "models": "modeller",
@@ -1477,6 +1480,47 @@
       "description": "Beskrivelse",
       "descriptionPlaceholder": "Valgfri notat for mennesker",
       "isActive": "Aktiv umiddelbart"
+    }
+  },
+  "typesV2": {
+    "title": "Typer",
+    "subtitle": "Utforsk og klassifiser de unike typene i dette prosjektet.",
+    "tryV1Link": "Bytt til klassisk visning",
+    "loading": "Laster typer...",
+    "noModels": "Last opp en modell for å begynne å utforske typer.",
+    "stats": {
+      "totalTypes": "Typer totalt",
+      "ifcClasses": "IFC-klasser",
+      "instances": "Forekomster",
+      "mapped": "Klassifisert"
+    },
+    "filter": {
+      "searchPlaceholder": "Søk i typer...",
+      "modelPlaceholder": "Velg modell",
+      "ifcClassPlaceholder": "IFC-klasse",
+      "ifcClassAll": "Alle IFC-klasser",
+      "totalCount": "{{count}} typer",
+      "showingOf": "{{showing}} av {{total}}"
+    },
+    "viz": {
+      "treemapTitle": "Typefordeling",
+      "treemapSubtitle": "Skalert etter forekomster, farget etter IFC-klasse",
+      "topBarTitle": "Topp {{count}} typer",
+      "topBarSubtitle": "Etter antall forekomster",
+      "empty": "Ingen data å vise"
+    },
+    "table": {
+      "title": "Alle typer",
+      "empty": "Ingen typer matcher gjeldende filtre.",
+      "unnamed": "Navnløs type",
+      "col": {
+        "ifcClass": "IFC-klasse",
+        "typeName": "Typenavn",
+        "instances": "Forekomster",
+        "ns3451": "NS3451",
+        "status": "Status",
+        "coverage": "Dekning"
+      }
     }
   }
 }

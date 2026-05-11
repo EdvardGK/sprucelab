@@ -1,13 +1,17 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { TypeBrowser } from '@/components/features/warehouse/TypeBrowser';
+import { TypeBrowserV2 } from '@/components/features/warehouse-v2/TypeBrowserV2';
 import { useProject } from '@/hooks/use-projects';
 
 export default function ProjectTypesPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const { data: project, isLoading } = useProject(id!);
+
+  const useV2 = searchParams.get('v') === '2';
 
   if (isLoading) {
     return (
@@ -25,6 +29,14 @@ export default function ProjectTypesPage() {
         <div className="flex h-full items-center justify-center">
           <div className="text-destructive">{t('project.notFound')}</div>
         </div>
+      </AppLayout>
+    );
+  }
+
+  if (useV2) {
+    return (
+      <AppLayout>
+        <TypeBrowserV2 projectId={project.id} />
       </AppLayout>
     );
   }

@@ -313,7 +313,9 @@
     "mapped": "Mapped",
     "ignored": "Ignored",
     "review": "Needs Review",
-    "followup": "Follow-up"
+    "followup": "Follow-up",
+    "verified": "Verified",
+    "flagged": "Flagged"
   },
   "keyboard": {
     "shortcuts": "Keyboard shortcuts",
@@ -944,6 +946,7 @@
   },
   "typeLibrary": {
     "title": "Type Library",
+    "tryV2Link": "Try the new Types page →",
     "types": "types",
     "instances": "instances",
     "models": "models",
@@ -1477,6 +1480,47 @@
       "description": "Description",
       "descriptionPlaceholder": "Optional human-readable note",
       "isActive": "Active immediately"
+    }
+  },
+  "typesV2": {
+    "title": "Types",
+    "subtitle": "Browse and classify the unique types in this project.",
+    "tryV1Link": "Switch to classic view",
+    "loading": "Loading types...",
+    "noModels": "Upload a model to start browsing types.",
+    "stats": {
+      "totalTypes": "Total types",
+      "ifcClasses": "IFC classes",
+      "instances": "Instances",
+      "mapped": "Mapped"
+    },
+    "filter": {
+      "searchPlaceholder": "Search types...",
+      "modelPlaceholder": "Select a model",
+      "ifcClassPlaceholder": "IFC class",
+      "ifcClassAll": "All IFC classes",
+      "totalCount": "{{count}} types",
+      "showingOf": "{{showing}} of {{total}}"
+    },
+    "viz": {
+      "treemapTitle": "Type distribution",
+      "treemapSubtitle": "Sized by instance count, colored by IFC class",
+      "topBarTitle": "Top {{count}} types",
+      "topBarSubtitle": "By instance count",
+      "empty": "No data to visualize"
+    },
+    "table": {
+      "title": "All types",
+      "empty": "No types match the current filters.",
+      "unnamed": "Unnamed type",
+      "col": {
+        "ifcClass": "IFC class",
+        "typeName": "Type name",
+        "instances": "Instances",
+        "ns3451": "NS3451",
+        "status": "Status",
+        "coverage": "Coverage"
+      }
     }
   }
 }

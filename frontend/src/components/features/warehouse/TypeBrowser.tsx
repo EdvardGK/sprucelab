@@ -183,6 +183,18 @@ export function TypeBrowser({ projectId, className }: TypeBrowserProps) {
       <div className="flex-none flex items-center gap-3 px-3 py-2 border-b bg-muted/30">
         <h1 className="text-sm font-semibold">{t('typeBrowser.title')}</h1>
 
+        <button
+          type="button"
+          onClick={() => {
+            const params = new URLSearchParams(searchParams);
+            params.set('v', '2');
+            setSearchParams(params, { replace: false });
+          }}
+          className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+        >
+          {t('typeLibrary.tryV2Link')}
+        </button>
+
         {/* Model Selector */}
         <Select
           value={selectedModelId || ''}
