@@ -34,6 +34,8 @@ const ProcessingReports = lazy(() => import('./pages/dev/ProcessingReports'));
 const ProcessingReportDetail = lazy(() => import('./pages/dev/ProcessingReportDetail'));
 const GridDemo = lazy(() => import('./pages/dev/GridDemo'));
 const EmbedDashboard = lazy(() => import('./pages/EmbedDashboard'));
+const WebhookSubscriptions = lazy(() => import('./pages/Settings/WebhookSubscriptions'));
+const WebhookDeliveries = lazy(() => import('./pages/Settings/WebhookDeliveries'));
 
 const guard = (element: ReactNode) => <RequireAuth>{element}</RequireAuth>;
 
@@ -78,6 +80,8 @@ const router = createBrowserRouter([
   },
   { path: "/type-library", element: withSuspense(guard(<TypeLibraryPage />)) },
   { path: "/admin", element: withSuspense(guard(<AdminDashboard />)) },
+  { path: "/settings/webhooks", element: withSuspense(guard(<WebhookSubscriptions />)) },
+  { path: "/settings/webhooks/deliveries", element: withSuspense(guard(<WebhookDeliveries />)) },
   { path: "/dev/processing-reports", element: withSuspense(guard(<ProcessingReports />)) },
   { path: "/dev/processing-reports/:id", element: withSuspense(guard(<ProcessingReportDetail />)) },
   { path: "/dev/grid-demo", element: withSuspense(guard(<GridDemo />)) },

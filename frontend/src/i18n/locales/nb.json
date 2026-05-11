@@ -52,6 +52,7 @@
     "scriptsLibrary": "Skriptbibliotek",
     "quickStats": "Hurtigstatistikk",
     "processingReports": "Prosesseringsrapporter",
+    "webhooks": "Webhooks",
     "workspace": "Arbeidsområde",
     "developer": "Utvikler",
     "modules": "Moduler",
@@ -1336,6 +1337,111 @@
   "embed": {
     "viewerTile": {
       "unavailable": "Visning utilgjengelig"
+    }
+  },
+  "webhooks": {
+    "allProjects": "Alle prosjekter",
+    "subscriptions": {
+      "title": "Webhook-abonnementer",
+      "subtitle": "HMAC-signert hendelseslevering til eksterne systemer.",
+      "create": "Nytt abonnement",
+      "viewDeliveries": "Leveringslogg",
+      "loadFailed": "Klarte ikke å laste abonnementer.",
+      "empty": {
+        "title": "Ingen webhook-abonnementer ennå",
+        "description": "Registrer en mål-URL for å motta HMAC-signerte hendelser når modeller, dokumenter eller verifiseringer endres."
+      }
+    },
+    "deliveries": {
+      "title": "Webhook-leveringer",
+      "subtitle": "Logg per forsøk på tvers av alle abonnementer. Leveringer overlever sletting av abonnementet.",
+      "backToSubscriptions": "Tilbake til abonnementer",
+      "refresh": "Oppdater",
+      "filterSubscription": "Abonnement",
+      "filterStatus": "Status",
+      "allSubscriptions": "Alle abonnementer",
+      "allStatuses": "Alle statuser",
+      "loadFailed": "Klarte ikke å laste leveringer.",
+      "paginationHint": "Viser {{count}} av {{total}}",
+      "empty": {
+        "title": "Ingen leveringer ennå",
+        "description": "Leveringer dukker opp så snart en hendelse matcher et abonnement, eller etter at du har brukt test-handlingen."
+      }
+    },
+    "columns": {
+      "event": "Hendelse",
+      "url": "Mål-URL",
+      "target": "Mål",
+      "project": "Prosjekt",
+      "state": "Tilstand",
+      "failures": "Feil",
+      "lastFired": "Sist sendt",
+      "status": "Status",
+      "httpStatus": "HTTP",
+      "attempts": "Forsøk",
+      "created": "Opprettet",
+      "response": "Svar",
+      "actions": "Handlinger"
+    },
+    "state": {
+      "active": "Aktiv",
+      "disabled": "Deaktivert"
+    },
+    "deliveryStatus": {
+      "pending": "Venter",
+      "delivering": "Leverer",
+      "success": "Vellykket",
+      "failed": "Mislyktes",
+      "retrying": "Prøver igjen"
+    },
+    "actions": {
+      "test": "Send testhendelse",
+      "rotateSecret": "Rotér hemmelighet",
+      "enable": "Aktivér",
+      "disable": "Deaktivér",
+      "delete": "Slett abonnement",
+      "redeliver": "Send på nytt"
+    },
+    "confirm": {
+      "rotate": "Rotere HMAC-hemmeligheten? Den gamle slutter å fungere umiddelbart, og den nye vises kun én gang.",
+      "delete": "Slette abonnementet for {{url}}? Leveringshistorikken beholdes."
+    },
+    "toast": {
+      "enabled": "Abonnement aktivert",
+      "disabled": "Abonnement deaktivert",
+      "updateFailed": "Oppdatering mislyktes",
+      "testQueued": "Testhendelse lagt i kø",
+      "testFailed": "Test mislyktes",
+      "secretRotated": "Hemmelighet rotert",
+      "rotateFailed": "Rotering mislyktes",
+      "deleted": "Abonnement slettet",
+      "deleteFailed": "Sletting mislyktes",
+      "redelivered": "Ny levering lagt i kø",
+      "redeliverFailed": "Ny levering mislyktes"
+    },
+    "secret": {
+      "title": "Lagre denne hemmeligheten nå",
+      "warning": "Dette er eneste gang HMAC-hemmeligheten vises. Lagre den i mottakeren — den kan ikke hentes ut senere.",
+      "copy": "Kopiér",
+      "copied": "Kopiert",
+      "dismiss": "Lukk"
+    },
+    "form": {
+      "createTitle": "Opprett webhook-abonnement",
+      "createDescription": "Abonnér en URL på en plattformhendelse. HMAC-hemmeligheten returneres kun én gang ved opprettelse.",
+      "submit": "Opprett abonnement",
+      "errorRequired": "Hendelsestype og mål-URL er påkrevd."
+    },
+    "fields": {
+      "eventType": "Hendelsestype",
+      "eventTypePlaceholder": "f.eks. model.processed",
+      "targetUrl": "Mål-URL",
+      "project": "Prosjektomfang",
+      "projectAll": "Alle prosjekter (ingen avgrensning)",
+      "projectHelp": "La stå på «Alle prosjekter» for å motta hendelser fra alle prosjekter du har tilgang til.",
+      "description": "Beskrivelse",
+      "descriptionPlaceholder": "Valgfri notat for mennesker",
+      "isActive": "Aktiv umiddelbart"
     }
   }
 }

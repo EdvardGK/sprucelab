@@ -52,6 +52,7 @@
     "scriptsLibrary": "Scripts Library",
     "quickStats": "Quick Stats",
     "processingReports": "Processing Reports",
+    "webhooks": "Webhooks",
     "workspace": "Workspace",
     "developer": "Developer",
     "modules": "Modules",
@@ -1336,6 +1337,111 @@
   "embed": {
     "viewerTile": {
       "unavailable": "Viewer unavailable"
+    }
+  },
+  "webhooks": {
+    "allProjects": "All projects",
+    "subscriptions": {
+      "title": "Webhook subscriptions",
+      "subtitle": "HMAC-signed event delivery to external systems.",
+      "create": "New subscription",
+      "viewDeliveries": "Delivery log",
+      "loadFailed": "Failed to load subscriptions.",
+      "empty": {
+        "title": "No webhook subscriptions yet",
+        "description": "Register a target URL to receive HMAC-signed events when models, documents, or verifications change."
+      }
+    },
+    "deliveries": {
+      "title": "Webhook deliveries",
+      "subtitle": "Per-attempt log across every subscription. Deliveries survive subscription deletion.",
+      "backToSubscriptions": "Back to subscriptions",
+      "refresh": "Refresh",
+      "filterSubscription": "Subscription",
+      "filterStatus": "Status",
+      "allSubscriptions": "All subscriptions",
+      "allStatuses": "All statuses",
+      "loadFailed": "Failed to load deliveries.",
+      "paginationHint": "Showing {{count}} of {{total}}",
+      "empty": {
+        "title": "No deliveries yet",
+        "description": "Deliveries appear once an event matches a subscription, or after using the test action."
+      }
+    },
+    "columns": {
+      "event": "Event",
+      "url": "Target URL",
+      "target": "Target",
+      "project": "Project",
+      "state": "State",
+      "failures": "Failures",
+      "lastFired": "Last fired",
+      "status": "Status",
+      "httpStatus": "HTTP",
+      "attempts": "Attempts",
+      "created": "Created",
+      "response": "Response",
+      "actions": "Actions"
+    },
+    "state": {
+      "active": "Active",
+      "disabled": "Disabled"
+    },
+    "deliveryStatus": {
+      "pending": "Pending",
+      "delivering": "Delivering",
+      "success": "Success",
+      "failed": "Failed",
+      "retrying": "Retrying"
+    },
+    "actions": {
+      "test": "Send test event",
+      "rotateSecret": "Rotate secret",
+      "enable": "Enable",
+      "disable": "Disable",
+      "delete": "Delete subscription",
+      "redeliver": "Redeliver"
+    },
+    "confirm": {
+      "rotate": "Rotate the HMAC secret? The previous secret stops working immediately and the new one is shown only once.",
+      "delete": "Delete the subscription for {{url}}? Delivery history is kept."
+    },
+    "toast": {
+      "enabled": "Subscription enabled",
+      "disabled": "Subscription disabled",
+      "updateFailed": "Update failed",
+      "testQueued": "Test event queued",
+      "testFailed": "Test failed",
+      "secretRotated": "Secret rotated",
+      "rotateFailed": "Rotate failed",
+      "deleted": "Subscription deleted",
+      "deleteFailed": "Delete failed",
+      "redelivered": "Redelivery queued",
+      "redeliverFailed": "Redelivery failed"
+    },
+    "secret": {
+      "title": "Save this secret now",
+      "warning": "This is the only time the HMAC secret is shown. Store it in your receiver — it cannot be retrieved later.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "dismiss": "Dismiss"
+    },
+    "form": {
+      "createTitle": "Create webhook subscription",
+      "createDescription": "Subscribe a URL to a platform event. The HMAC secret is returned exactly once on create.",
+      "submit": "Create subscription",
+      "errorRequired": "Event type and target URL are required."
+    },
+    "fields": {
+      "eventType": "Event type",
+      "eventTypePlaceholder": "e.g. model.processed",
+      "targetUrl": "Target URL",
+      "project": "Project scope",
+      "projectAll": "All projects (no scope)",
+      "projectHelp": "Leave on \"All projects\" to receive events from every project you have access to.",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional human-readable note",
+      "isActive": "Active immediately"
     }
   }
 }
