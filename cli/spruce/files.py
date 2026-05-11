@@ -29,6 +29,7 @@ from rich.table import Table
 
 from .config import get_api_url
 from ._auth import auth_headers as _admin_headers, resolve_token as _admin_token
+from ._errors import print_http_error, print_request_error
 
 
 files_app = typer.Typer(help='Universal file substrate — upload, list, inspect, reprocess SourceFiles.')
@@ -52,41 +53,11 @@ ON_DUPLICATE_CHOICES = ('ask', 'use_existing', 'replace')
 # Shared helpers
 # ---------------------------------------------------------------------------
 
-def _handle_http(err: httpx.HTTPStatusError, *, json_out: bool, hint: Optional[str] = None) -> None:
-    body_text = err.response.text
-    parsed = None
-    try:
-        parsed = err.response.json()
-    except Exception:
-        pass
-    if json_out:
-        payload = {
-            'error': 'http_error',
-            'status': err.response.status_code,
-            'body': parsed if parsed is not None else {'detail': body_text[:500]},
-        }
-        if hint:
-            payload['hint'] = hint
-        sys.stdout.write(json.dumps(payload, indent=2) + '\n')
-    else:
-        console.print(f'[red]HTTP {err.response.status_code}[/red]')
-        console.print(body_text[:500])
-        if hint:
-            console.print(f'  [dim]Try:[/dim] [cyan]{hint}[/cyan]')
-    raise typer.Exit(1)
-
-
-def _handle_request_err(err: httpx.RequestError, *, json_out: bool, hint: Optional[str] = None) -> None:
-    if json_out:
-        payload = {'error': 'request_failed', 'detail': str(err)}
-        if hint:
-            payload['hint'] = hint
-        sys.stdout.write(json.dumps(payload, indent=2) + '\n')
-    else:
-        console.print(f'[red]Request failed:[/red] {err}')
-        if hint:
-            console.print(f'  [dim]Try:[/dim] [cyan]{hint}[/cyan]')
-    raise typer.Exit(1)
+def _handle_http(
+    err: httpx.HTTPStatusError,
+    *, json_out: bool, command_context: str = 'files list',
+) -> None:
+    print_http_error(console, err, json_out=json_out, command_context=command_context)
 
 
 def _short(uuid_str: Optional[str], n: int = 8) -> str:
@@ -152,16 +123,10 @@ def files_list(
         resp = httpx.get(url, headers=_admin_headers(admin_token), params=params, timeout=30)
         resp.raise_for_status()
     except httpx.HTTPStatusError as err:
-        _handle_http(
-            err, json_out=json_out,
-            hint='spruce auth status  # check token; or pass --token <KEY>',
-        )
+        _handle_http(err, json_out=json_out, command_context='files list')
         return
     except httpx.RequestError as err:
-        _handle_request_err(
-            err, json_out=json_out,
-            hint='spruce capabilities --url <URL>  # confirm the API is reachable',
-        )
+        print_request_error(console, err, json_out=json_out, command_context='files list')
         return
 
     body = resp.json()
@@ -232,13 +197,10 @@ def files_show(
         resp = httpx.get(url, headers=_admin_headers(admin_token), timeout=30)
         resp.raise_for_status()
     except httpx.HTTPStatusError as err:
-        _handle_http(
-            err, json_out=json_out,
-            hint=f'spruce files list --json  # find a valid file id',
-        )
+        _handle_http(err, json_out=json_out, command_context='files show')
         return
     except httpx.RequestError as err:
-        _handle_request_err(err, json_out=json_out)
+        print_request_error(console, err, json_out=json_out, command_context='files show')
         return
 
     body = resp.json()
@@ -358,13 +320,10 @@ def files_upload(
             )
         resp.raise_for_status()
     except httpx.HTTPStatusError as err:
-        _handle_http(
-            err, json_out=json_out,
-            hint='spruce auth status  # ensure your token can write to this project',
-        )
+        _handle_http(err, json_out=json_out, command_context='files upload')
         return
     except httpx.RequestError as err:
-        _handle_request_err(err, json_out=json_out)
+        print_request_error(console, err, json_out=json_out, command_context='files upload')
         return
 
     body = resp.json()
@@ -415,13 +374,10 @@ def files_download(
         resp = httpx.get(detail_url, headers=_admin_headers(admin_token), timeout=30)
         resp.raise_for_status()
     except httpx.HTTPStatusError as err:
-        _handle_http(
-            err, json_out=json_out,
-            hint=f'spruce files list --json  # confirm the file id',
-        )
+        _handle_http(err, json_out=json_out, command_context='files download')
         return
     except httpx.RequestError as err:
-        _handle_request_err(err, json_out=json_out)
+        print_request_error(console, err, json_out=json_out, command_context='files download')
         return
 
     body = resp.json()
@@ -468,10 +424,10 @@ def files_download(
                     fh.write(chunk)
                     bytes_written += len(chunk)
     except httpx.HTTPStatusError as err:
-        _handle_http(err, json_out=json_out)
+        _handle_http(err, json_out=json_out, command_context='files download')
         return
     except httpx.RequestError as err:
-        _handle_request_err(err, json_out=json_out)
+        print_request_error(console, err, json_out=json_out, command_context='files download')
         return
 
     result = {
@@ -505,13 +461,10 @@ def files_reprocess(
         resp = httpx.post(url, headers=headers, timeout=60)
         resp.raise_for_status()
     except httpx.HTTPStatusError as err:
-        _handle_http(
-            err, json_out=json_out,
-            hint=f'spruce files show {file_id}  # confirm the file has a file_url',
-        )
+        _handle_http(err, json_out=json_out, command_context='files reprocess')
         return
     except httpx.RequestError as err:
-        _handle_request_err(err, json_out=json_out)
+        print_request_error(console, err, json_out=json_out, command_context='files reprocess')
         return
 
     body = resp.json()
@@ -556,13 +509,10 @@ def files_versions(
         detail_resp = httpx.get(detail_url, headers=headers, timeout=30)
         detail_resp.raise_for_status()
     except httpx.HTTPStatusError as err:
-        _handle_http(
-            err, json_out=json_out,
-            hint=f'spruce files list --json  # confirm the file id',
-        )
+        _handle_http(err, json_out=json_out, command_context='files versions')
         return
     except httpx.RequestError as err:
-        _handle_request_err(err, json_out=json_out)
+        print_request_error(console, err, json_out=json_out, command_context='files versions')
         return
 
     detail = detail_resp.json()
@@ -586,10 +536,10 @@ def files_versions(
         )
         list_resp.raise_for_status()
     except httpx.HTTPStatusError as err:
-        _handle_http(err, json_out=json_out)
+        _handle_http(err, json_out=json_out, command_context='files versions')
         return
     except httpx.RequestError as err:
-        _handle_request_err(err, json_out=json_out)
+        print_request_error(console, err, json_out=json_out, command_context='files versions')
         return
 
     list_body = list_resp.json()

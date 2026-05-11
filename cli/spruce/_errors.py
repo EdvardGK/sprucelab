@@ -37,6 +37,12 @@ _NOUN_FOR_404 = {
     'embed pass revoke': 'embed pass list',
     'embed pass refresh': 'embed pass list',
     'embed': 'embed pass list',
+    'files show': 'files list',
+    'files download': 'files list',
+    'files reprocess': 'files list',
+    'files versions': 'files list',
+    'files upload': 'files list  # confirm the project id',
+    'files': 'files list',
     'log': 'log list',
 }
 

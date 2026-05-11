@@ -217,9 +217,9 @@ def test_files_list_http_error_json(runner, admin_token_env):
     result = runner.invoke(app, ["files", "list", "--json"])
     assert result.exit_code == 1
     parsed = _json.loads(result.stdout)
-    assert parsed["error"] == "http_error"
+    assert parsed["error"] == "HTTP 401"
     assert parsed["status"] == 401
-    assert "hint" in parsed
+    assert "spruce auth register" in parsed["hint"]
 
 
 @respx.mock
@@ -282,9 +282,9 @@ def test_files_show_404(runner, admin_token_env):
     result = runner.invoke(app, ["files", "show", FILE_ID, "--json"])
     assert result.exit_code == 1
     parsed = _json.loads(result.stdout)
-    assert parsed["error"] == "http_error"
+    assert parsed["error"] == "HTTP 404"
     assert parsed["status"] == 404
-    assert "hint" in parsed
+    assert "spruce files list" in parsed["hint"]
 
 
 # ---------------------------------------------------------------------------
@@ -543,6 +543,7 @@ def test_files_reprocess_400_no_file_url(runner, admin_token_env):
     assert result.exit_code == 1
     parsed = _json.loads(result.stdout)
     assert parsed["status"] == 400
+    assert "spruce files reprocess --help" in parsed["hint"]
 
 
 # ---------------------------------------------------------------------------
@@ -647,3 +648,53 @@ def test_files_versions_404_on_detail(runner, admin_token_env):
     assert result.exit_code == 1
     parsed = _json.loads(result.stdout)
     assert parsed["status"] == 404
+    assert "spruce files list" in parsed["hint"]
+
+
+@respx.mock
+def test_files_list_401_hint(runner, admin_token_env):
+    respx.get(f"{TEST_API_URL}/api/files/").mock(
+        return_value=httpx.Response(401, json={"detail": "invalid token"})
+    )
+    result = runner.invoke(app, ["files", "list", "--json"])
+    assert result.exit_code == 1
+    parsed = _json.loads(result.stdout)
+    assert parsed["error"] == "HTTP 401"
+    assert "spruce auth register" in parsed["hint"]
+
+
+@respx.mock
+def test_files_upload_403_hint(runner, admin_token_env, tmp_path):
+    src = tmp_path / "demo.ifc"
+    src.write_bytes(b"X")
+    respx.post(f"{TEST_API_URL}/api/files/").mock(
+        return_value=httpx.Response(403, json={"detail": "forbidden"})
+    )
+    result = runner.invoke(app, [
+        "files", "upload", str(src),
+        "--project", PROJECT_ID,
+        "--json",
+    ])
+    assert result.exit_code == 1
+    parsed = _json.loads(result.stdout)
+    assert parsed["error"] == "HTTP 403"
+    assert parsed["status"] == 403
+    assert "spruce auth register" in parsed["hint"]
+
+
+@respx.mock
+def test_files_download_404_hint(runner, admin_token_env, tmp_path):
+    respx.get(f"{TEST_API_URL}/api/files/{FILE_ID}/").mock(
+        return_value=httpx.Response(404, json={"detail": "Not found."})
+    )
+    out = tmp_path / "out.ifc"
+    result = runner.invoke(app, [
+        "files", "download", FILE_ID,
+        "--out", str(out),
+        "--json",
+    ])
+    assert result.exit_code == 1
+    parsed = _json.loads(result.stdout)
+    assert parsed["error"] == "HTTP 404"
+    assert parsed["status"] == 404
+    assert "spruce files list" in parsed["hint"]
