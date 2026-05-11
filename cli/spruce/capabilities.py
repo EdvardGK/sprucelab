@@ -33,11 +33,10 @@ WORKED_EXAMPLES = [
         ],
     ),
     (
-        "Upload a drawing and watch its extraction",
+        "Discover what's on the platform",
         [
-            "spruce files upload model.pdf --project <PROJECT_UUID>",
-            "# returns: extraction_run_id",
-            "spruce log list --source-file <FILE_UUID> --json",
+            "spruce models list --json",
+            "spruce types list --model <MODEL_UUID> --json",
         ],
     ),
     (
@@ -47,9 +46,11 @@ WORKED_EXAMPLES = [
         ],
     ),
     (
-        "List all observations on a sheet, JSON for piping",
+        "Manage webhook subscriptions",
         [
-            "spruce log list --sheet <SHEET_UUID> --category title_block_field --json",
+            "spruce webhooks list --json",
+            "spruce webhooks create --url https://my-listener.example/hook \\",
+            "  --events model.processed,verification.complete --dry-run",
         ],
     ),
 ]

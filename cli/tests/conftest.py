@@ -39,3 +39,13 @@ def admin_token_env(monkeypatch: pytest.MonkeyPatch) -> str:
 @pytest.fixture(autouse=True)
 def _clear_admin_token(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SPRUCELAB_ADMIN_TOKEN", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _clear_keyring_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Tests must behave identically whether or not the developer running them
+    has a real token in their OS keyring. Pin `spruce.config.get_api_key`
+    to None so the auth resolver's keyring fallback never picks one up.
+    """
+    monkeypatch.setattr("spruce.config.get_api_key", lambda: None)

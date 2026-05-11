@@ -37,10 +37,7 @@ console = Console()
 # Helpers (mirrors embed.py)
 # ---------------------------------------------------------------------------
 
-def _admin_token(override: Optional[str]) -> Optional[str]:
-    if override:
-        return override
-    return os.environ.get('SPRUCELAB_ADMIN_TOKEN') or None
+from ._auth import resolve_token as _admin_token  # noqa: F401
 
 
 def _admin_headers(override: Optional[str], *, accept_json: bool = True) -> dict:

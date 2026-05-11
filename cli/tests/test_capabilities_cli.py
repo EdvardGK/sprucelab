@@ -62,11 +62,12 @@ def test_capabilities_human_mode_shows_pitch():
     assert 'File formats' in result.output
     assert 'ifc' in result.output
     assert 'dry_run=true' in result.output
-    # Worked examples included
+    # Worked examples included (all advertised commands must exist in the CLI)
     assert 'Worked examples' in result.output
     assert 'spruce auth register' in result.output
-    assert 'spruce files upload' in result.output
-    assert 'spruce log list' in result.output
+    assert 'spruce models list' in result.output
+    assert 'spruce verify' in result.output
+    assert 'spruce webhooks' in result.output
 
 
 def test_capabilities_json_mode_is_pure_json():

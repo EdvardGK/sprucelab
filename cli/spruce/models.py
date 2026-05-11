@@ -33,18 +33,7 @@ console = Console()
 # Helpers (mirrors verify.py / types.py)
 # ---------------------------------------------------------------------------
 
-def _admin_token(override: Optional[str]) -> Optional[str]:
-    if override:
-        return override
-    return os.environ.get('SPRUCELAB_ADMIN_TOKEN') or None
-
-
-def _admin_headers(override: Optional[str]) -> dict:
-    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-    token = _admin_token(override)
-    if token:
-        headers['Authorization'] = f'Bearer {token}'
-    return headers
+from ._auth import resolve_token as _admin_token, auth_headers as _admin_headers  # noqa: F401
 
 
 def _handle_http(err: httpx.HTTPStatusError, *, json_out: bool) -> None:
