@@ -21,6 +21,7 @@ from .verify import verify_app
 from .scripts import scripts_app
 from .webhooks import app as webhooks_app
 from .capabilities import app as capabilities_app
+from .log import log_app
 
 app = typer.Typer(
     name="spruce",
@@ -35,6 +36,7 @@ app.add_typer(verify_app, name="verify")
 app.add_typer(scripts_app, name="scripts")
 app.add_typer(webhooks_app, name="webhooks")
 app.add_typer(capabilities_app, name="capabilities")
+app.add_typer(log_app, name="log")
 console = Console()
 
 # Config subcommand
