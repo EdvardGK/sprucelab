@@ -208,3 +208,48 @@ Same Round 3 cadence — kept the wins, didn't experiment:
 - Round 3's worktree-isolation oddity (Track N) — did not recur.
   Round 4 = 4/4 isolated. Watching it across Rounds 5+ but no longer
   flagging as actionable.
+
+## Post-wrap follow-ups (after the Round 4 worklog landed)
+
+Two items came in after the worklog push (`0c519f1`) — both ran
+serially against `main`, not as additional tracks.
+
+### `257e749` — `ifc-service: profile endpoint returns 200+null for "no profile" case`
+
+User reported a recurring `GET .../profile/{guid} 404` in the prod
+console (pasted from the live viewer). Diagnosis: the FastAPI endpoint
+at `backend/ifc-service/api/ifc_operations.py:217` was emitting `404`
+for three semantically distinct states (file not loaded, element GUID
+not found, **element exists but has no `IfcProfileDef`**). The third
+is the common case for non-extruded elements (walls without extrusion
+profiles). Per `feedback-bad-models-are-the-product` + CLAUDE.md
+agent-first design, that's a data property, not an error.
+
+Change: `response_model=Optional[ProfileData]` + `return None` on the
+"no profile" branch. Real errors (file/element not found) still 404.
+Frontend client (`frontend/src/lib/ifc-service-client.ts:262-274`)
+needed no change — `response.json()` on a `200 + null` body already
+yields `null`. Backend pytest unchanged at 284/284. All six
+deploy/check signals green on `257e749`.
+
+### Dashed-line LOD at distance (diagnosed, parked)
+
+User flagged "lines get dashed when seen from afar — looks like shit"
+in the viewer. Diagnosis (no code change): the dashes are fragments
+v3's **LOD line representation**, not an MSAA failure. The relevant
+class in `frontend/node_modules/@thatopen/fragments/dist/index.d.ts:1592-1599`
+is `LodMaterial extends THREE.ShaderMaterial` with `isLineMaterial = true`
+and a `LineMaterialParameters` constructor. Past a distance threshold
+v3 swaps tiles to a fat-line shader; as `lodSize.xy` shrinks toward
+sub-pixel, the screen-space line accumulator stippels.
+
+Same code path as the existing `lodSize` upstream bug (already pinned
+in `next-steps.md` and memory `frontend-fragmentsmodels-v3.md`).
+`gq=1` (current default) only delays the LOD swap — doesn't disable
+line-LOD entirely. Three fix paths considered: recolor `lodColor` to
+scene tone (cheapest), substitute `LodMaterial` per model after load
+(risk: v3 re-assigns on every tile refresh), cap LOD swap (no clean
+knob in the v3 .d.ts surface, would need a fork). User said "skip,
+just make a note" — diagnosis added as a new section in memory
+`frontend-fragmentsmodels-v3.md` co-located with the existing lodSize
+note. Resurface together when the upstream fix lands.
