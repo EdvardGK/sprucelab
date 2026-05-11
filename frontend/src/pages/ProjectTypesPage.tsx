@@ -36,7 +36,9 @@ export default function ProjectTypesPage() {
   if (useV2) {
     return (
       <AppLayout>
-        <TypeBrowserV2 projectId={project.id} />
+        <div className="h-[calc(100vh-4rem)] overflow-hidden">
+          <TypeBrowserV2 projectId={project.id} />
+        </div>
       </AppLayout>
     );
   }

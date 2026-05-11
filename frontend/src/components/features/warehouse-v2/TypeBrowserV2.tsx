@@ -9,6 +9,7 @@ import { TypeBrowserHeaderV2 } from './TypeBrowserHeaderV2';
 import { TypeBrowserFilterBarV2 } from './TypeBrowserFilterBarV2';
 import { TypeTreemap } from './TypeTreemap';
 import { TypeTopBarList } from './TypeTopBarList';
+import { TypeViewerPaneV2 } from './TypeViewerPaneV2';
 import { TypeTableV2 } from './TypeTableV2';
 
 interface TypeBrowserV2Props {
@@ -22,12 +23,18 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const [modelId, setModelId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [ifcClassFilter, setIfcClassFilter] = useState<string>('all');
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!modelId && models.length > 0) {
       setModelId(models[0].id);
     }
   }, [models, modelId]);
+
+  useEffect(() => {
+    // Clear type selection when the user switches models or filters.
+    setSelectedTypeId(null);
+  }, [modelId, ifcClassFilter, searchQuery]);
 
   const { data: types = [], isLoading: typesLoading } = useModelTypes(
     modelId ?? '',
@@ -37,19 +44,17 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const stats = useMemo(() => {
     const ifcClasses = new Set<string>();
     let instances = 0;
-    let mapped = 0;
+    let missingClassification = 0;
     for (const type of types) {
       ifcClasses.add(type.ifc_type);
       instances += type.instance_count;
-      if (type.mapping?.mapping_status === 'mapped') mapped += 1;
+      if (!type.mapping?.ns3451_code) missingClassification += 1;
     }
-    const mappedPercent =
-      types.length === 0 ? 0 : Math.round((mapped / types.length) * 100);
     return {
       totalTypes: types.length,
       ifcClasses: ifcClasses.size,
       instances,
-      mappedPercent,
+      missingClassification,
     };
   }, [types]);
 
@@ -63,10 +68,15 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     return Array.from(set).sort();
   }, [types]);
 
+  const selectedType = useMemo(
+    () => filteredTypes.find((tp) => tp.id === selectedTypeId) ?? null,
+    [filteredTypes, selectedTypeId]
+  );
+
   const isLoading = modelsLoading || (!!modelId && typesLoading);
 
   return (
-    <div className="flex flex-col gap-4 px-6 py-6 max-w-[1600px] mx-auto w-full">
+    <div className="h-full overflow-hidden flex flex-col gap-3 px-6 py-4">
       <TypeBrowserHeaderV2 stats={stats} loading={isLoading} />
 
       <TypeBrowserFilterBarV2
@@ -93,16 +103,22 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <TypeTreemap types={filteredTypes} />
-            </div>
-            <div className="lg:col-span-1">
-              <TypeTopBarList types={filteredTypes} />
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-[clamp(220px,30vh,340px)] flex-shrink-0">
+            <TypeTreemap types={filteredTypes} />
+            <TypeTopBarList types={filteredTypes} />
+            <TypeViewerPaneV2
+              modelId={modelId}
+              selectedType={selectedType}
+              onClearSelection={() => setSelectedTypeId(null)}
+            />
           </div>
 
-          <TypeTableV2 types={filteredTypes} />
+          <TypeTableV2
+            types={filteredTypes}
+            selectedTypeId={selectedTypeId}
+            onSelectType={setSelectedTypeId}
+            className="flex-1 min-h-0"
+          />
         </>
       )}
     </div>
@@ -129,3 +145,4 @@ function filterTypesV2(
     return true;
   });
 }
+

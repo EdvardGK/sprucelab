@@ -1484,15 +1484,15 @@
   },
   "typesV2": {
     "title": "Typer",
-    "subtitle": "Utforsk og klassifiser de unike typene i dette prosjektet.",
+    "subtitle": "Hva som er i modellen, og hva som mangler.",
     "tryV1Link": "Bytt til klassisk visning",
     "loading": "Laster typer...",
     "noModels": "Last opp en modell for å begynne å utforske typer.",
     "stats": {
-      "totalTypes": "Typer totalt",
+      "totalTypes": "typer",
       "ifcClasses": "IFC-klasser",
-      "instances": "Forekomster",
-      "mapped": "Klassifisert"
+      "instances": "forekomster",
+      "missingClassification": "uten klassifisering"
     },
     "filter": {
       "searchPlaceholder": "Søk i typer...",
@@ -1509,6 +1509,11 @@
       "topBarSubtitle": "Etter antall forekomster",
       "empty": "Ingen data å vise"
     },
+    "viewer": {
+      "empty": "3D-visning",
+      "hint": "Velg en type i tabellen for å isolere den i 3D",
+      "clear": "Fjern valg"
+    },
     "table": {
       "title": "Alle typer",
       "empty": "Ingen typer matcher gjeldende filtre.",
@@ -1518,9 +1523,24 @@
         "typeName": "Typenavn",
         "instances": "Forekomster",
         "ns3451": "NS3451",
-        "status": "Status",
-        "coverage": "Dekning"
+        "loadBearing": "BÆR",
+        "isExternal": "YT",
+        "fireRating": "Brann",
+        "acoustic": "Lyd",
+        "thermal": "U-verdi",
+        "mmi": "MMI"
       }
+    },
+    "props": {
+      "loadBearingLong": "Bærende",
+      "isExternalLong": "Ytre (vs. indre)",
+      "fireRatingLong": "Brannmotstand",
+      "acousticLong": "Lydklasse",
+      "thermalLong": "U-verdi (W/m²K)",
+      "mmiLong": "Modelleringsmodenhetsindeks"
+    },
+    "flags": {
+      "missing": "Mangler"
     }
   }
 }

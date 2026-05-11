@@ -1,14 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { Layers, Boxes, Hash } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
-import { DashboardTile } from '@/components/Layout';
+import { cn } from '@/lib/utils';
 
 interface HeaderStats {
   totalTypes: number;
   ifcClasses: number;
   instances: number;
-  mappedPercent: number;
+  missingClassification: number;
 }
 
 interface TypeBrowserHeaderV2Props {
@@ -27,86 +27,63 @@ export function TypeBrowserHeaderV2({ stats, loading }: TypeBrowserHeaderV2Props
   };
 
   return (
-    <header className="flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t('typesV2.title')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('typesV2.subtitle')}
-          </p>
+    <header className="flex items-center justify-between gap-4 flex-wrap flex-shrink-0">
+      <div className="flex items-baseline gap-4 flex-wrap">
+        <h1 className="text-lg font-semibold tracking-tight">{t('typesV2.title')}</h1>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <Metric label={t('typesV2.stats.totalTypes')} value={stats.totalTypes} loading={loading} />
+          <Divider />
+          <Metric label={t('typesV2.stats.ifcClasses')} value={stats.ifcClasses} loading={loading} />
+          <Divider />
+          <Metric label={t('typesV2.stats.instances')} value={stats.instances} loading={loading} />
+          {stats.missingClassification > 0 && (
+            <>
+              <Divider />
+              <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-3 w-3" />
+                <span className="font-medium tabular-nums">{stats.missingClassification.toLocaleString()}</span>
+                <span>{t('typesV2.stats.missingClassification')}</span>
+              </span>
+            </>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={switchToV1}
-          className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
-        >
-          {t('typesV2.tryV1Link')}
-        </button>
       </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatTile
-          id="stat-total-types"
-          icon={<Layers className="h-4 w-4" />}
-          label={t('typesV2.stats.totalTypes')}
-          value={stats.totalTypes}
-          loading={loading}
-        />
-        <StatTile
-          id="stat-ifc-classes"
-          icon={<Boxes className="h-4 w-4" />}
-          label={t('typesV2.stats.ifcClasses')}
-          value={stats.ifcClasses}
-          loading={loading}
-        />
-        <StatTile
-          id="stat-instances"
-          icon={<Hash className="h-4 w-4" />}
-          label={t('typesV2.stats.instances')}
-          value={stats.instances}
-          loading={loading}
-        />
-        <StatTile
-          id="stat-mapped"
-          icon={<Layers className="h-4 w-4" />}
-          label={t('typesV2.stats.mapped')}
-          value={stats.mappedPercent}
-          suffix="%"
-          loading={loading}
-        />
-      </div>
+      <button
+        type="button"
+        onClick={switchToV1}
+        className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+      >
+        {t('typesV2.tryV1Link')}
+      </button>
     </header>
   );
 }
 
-interface StatTileProps {
-  id: string;
-  icon: React.ReactNode;
+function Metric({
+  label,
+  value,
+  loading,
+  className,
+}: {
   label: string;
   value: number;
-  suffix?: string;
   loading?: boolean;
+  className?: string;
+}) {
+  return (
+    <span className={cn('inline-flex items-center gap-1.5', className)}>
+      <span className="font-semibold tabular-nums text-foreground">
+        {loading ? (
+          <span className="inline-block h-3 w-6 bg-muted/50 rounded animate-pulse align-middle" />
+        ) : (
+          value.toLocaleString()
+        )}
+      </span>
+      <span>{label}</span>
+    </span>
+  );
 }
 
-function StatTile({ id, icon, label, value, suffix, loading }: StatTileProps) {
-  return (
-    <DashboardTile id={id} className="p-4">
-      <div className="flex items-center justify-between text-muted-foreground">
-        <span className="text-xs uppercase tracking-wide">{label}</span>
-        {icon}
-      </div>
-      <div className="mt-2 text-2xl font-semibold tabular-nums">
-        {loading ? (
-          <span className="inline-block h-7 w-16 bg-muted/50 rounded animate-pulse" />
-        ) : (
-          <>
-            {value.toLocaleString()}
-            {suffix ?? ''}
-          </>
-        )}
-      </div>
-    </DashboardTile>
-  );
+function Divider() {
+  return <span className="text-muted-foreground/40">·</span>;
 }

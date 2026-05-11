@@ -1484,15 +1484,15 @@
   },
   "typesV2": {
     "title": "Types",
-    "subtitle": "Browse and classify the unique types in this project.",
+    "subtitle": "What's in the model, and what's missing.",
     "tryV1Link": "Switch to classic view",
     "loading": "Loading types...",
     "noModels": "Upload a model to start browsing types.",
     "stats": {
-      "totalTypes": "Total types",
+      "totalTypes": "types",
       "ifcClasses": "IFC classes",
-      "instances": "Instances",
-      "mapped": "Mapped"
+      "instances": "instances",
+      "missingClassification": "missing classification"
     },
     "filter": {
       "searchPlaceholder": "Search types...",
@@ -1509,6 +1509,11 @@
       "topBarSubtitle": "By instance count",
       "empty": "No data to visualize"
     },
+    "viewer": {
+      "empty": "3D viewer",
+      "hint": "Select a type below to isolate it in 3D",
+      "clear": "Clear selection"
+    },
     "table": {
       "title": "All types",
       "empty": "No types match the current filters.",
@@ -1518,9 +1523,24 @@
         "typeName": "Type name",
         "instances": "Instances",
         "ns3451": "NS3451",
-        "status": "Status",
-        "coverage": "Coverage"
+        "loadBearing": "LB",
+        "isExternal": "EXT",
+        "fireRating": "Fire",
+        "acoustic": "Acoustic",
+        "thermal": "U-value",
+        "mmi": "MMI"
       }
+    },
+    "props": {
+      "loadBearingLong": "Load-bearing",
+      "isExternalLong": "External (vs. internal)",
+      "fireRatingLong": "Fire rating",
+      "acousticLong": "Acoustic rating",
+      "thermalLong": "Thermal transmittance (U-value, W/m²K)",
+      "mmiLong": "Modeling Maturity Index"
+    },
+    "flags": {
+      "missing": "Missing"
     }
   }
 }
