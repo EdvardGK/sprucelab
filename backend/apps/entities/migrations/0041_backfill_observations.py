@@ -29,6 +29,7 @@ def backfill(apps, schema_editor):
             sheet,
             extraction_run=sheet.extraction_run,
             Observation=Observation,
+            extract_claims=False,
         )
 
 

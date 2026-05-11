@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import Iterable
 
 
-def emit_for_drawing_sheet(sheet, *, extraction_run, Observation):
+def emit_for_drawing_sheet(sheet, *, extraction_run, Observation, extract_claims=True):
     """
     Build Observation rows for one DrawingSheet.
 
@@ -26,6 +26,12 @@ def emit_for_drawing_sheet(sheet, *, extraction_run, Observation):
     `Observation` is passed in so callers from a migration can use the
     historical model accessor (`apps.get_model(...)`); live callers pass
     the real model.
+
+    `extract_claims` (default True) controls whether the Layer-2 claim
+    extractor runs over the freshly-created text-block observations. The
+    historical-model migration path passes `extract_claims=False` because
+    `apps.get_model(...)` returns historical state without the live FK
+    methods the extractor depends on.
     """
     rows = list(_build_rows_for_sheet(sheet))
     if not rows:
@@ -46,7 +52,26 @@ def emit_for_drawing_sheet(sheet, *, extraction_run, Observation):
         )
         for r in rows
     ]
-    return Observation.objects.bulk_create(objs)
+    created = Observation.objects.bulk_create(objs)
+
+    if extract_claims and created:
+        # Layer-2: walk the freshly-created text_block observations and emit
+        # a Claim for each that matches one of the conservative drawing-
+        # language patterns (elevation, NS3451 code, grid label). Failure
+        # here is logged but never gates the extraction run.
+        try:
+            from .observation_claim_extractor import (
+                extract_claims_for_observations,
+            )
+            extract_claims_for_observations(created)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                'observation_emitter: claim extraction failed for sheet %s',
+                getattr(sheet, 'id', '?'),
+            )
+
+    return created
 
 
 def _build_rows_for_sheet(sheet) -> Iterable[dict]:

@@ -82,6 +82,19 @@ class Claim(models.Model):
         on_delete=models.SET_NULL,
         related_name='claims',
     )
+    origin_observation = models.ForeignKey(
+        'entities.Observation',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='derived_claims',
+        help_text=(
+            'The Layer-1 Observation this claim was derived from, when the '
+            'claim originated from text-block / metadata / annotation matter '
+            'rather than a parsed document body. Null for document-derived '
+            'and IFC-derived claims. SET_NULL on observation deletion so the '
+            'audit trail of an extracted claim survives observation re-emission.'
+        ),
+    )
 
     # Where in the source the claim came from.
     source_location = models.JSONField(
@@ -168,6 +181,12 @@ class Claim(models.Model):
             models.Index(
                 fields=['source_file', 'claim_type', '-extracted_at'],
                 name='claims_sf_type_extracted_idx',
+            ),
+            # Idempotency lookup for the observation→claim extractor: "does
+            # a claim already exist with this origin observation?"
+            models.Index(
+                fields=['origin_observation'],
+                name='claims_origin_obs_idx',
             ),
         ]
 
