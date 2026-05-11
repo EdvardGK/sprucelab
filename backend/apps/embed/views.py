@@ -155,7 +155,18 @@ def embed_capabilities(request):
             'express IDs locally from ThatOpen fragment data using the '
             'returned type_ids.'
         ),
+        # Discovery mirror of the root /api/capabilities/ manifest so embed
+        # callers (which never hit the unauthenticated root) can still learn
+        # which mutations honor ?dry_run=true. Strings are stable IDs —
+        # additive changes only. Keep alphabetized within each app.
         'mutations_supporting_dry_run': [
+            'PATCH /api/projects/scopes/{id}/',
+            'POST /api/automation/webhook-subscriptions/',
+            'POST /api/types/claims/{id}/promote/',
+            'POST /api/types/claims/{id}/reject/',
+            'POST /api/types/claims/{id}/supersede/',
+            'POST /api/types/type-definition-layers/bulk-update/',
+            'POST /api/types/type-mappings/bulk-update/',
             'POST /api/types/types/verify/',
         ],
     })

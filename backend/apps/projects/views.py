@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -7,6 +9,8 @@ from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 import json
 import yaml
+
+from apps.entities.views.claims import _bool_param
 
 from .models import Project, ProjectConfig, ProjectScope
 from .serializers import (
@@ -23,6 +27,9 @@ from .serializers import (
 )
 from .services.bep_defaults import BEPDefaults, get_bep_template
 from .services.scope_assignment import assign_files_to_scope
+
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -653,6 +660,59 @@ class ProjectScopeViewSet(viewsets.ModelViewSet):
         if scope_type:
             qs = qs.filter(scope_type=scope_type)
         return qs.order_by('name')
+
+    def _dry_run_update(self, request, partial: bool):
+        """
+        Shared plan-then-execute path for PUT/PATCH on a ProjectScope.
+
+        Validates the incoming payload through the standard serializer (so
+        invalid input still returns 400 with the usual field-error shape per
+        feedback-bad-models-are-the-product), then either persists or returns
+        a preview with ``dry_run: true`` and the would-be representation.
+
+        Logged to ``apps.projects`` so observability matches the persisted
+        path — agents can grep the same log channel either way.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        dry_run = _bool_param(request.query_params.get('dry_run'))
+        if dry_run:
+            preview = dict(serializer.validated_data)
+            # ValidatedData carries FK instances; surface their ids so the
+            # preview matches the serialized response shape callers see on a
+            # real write.
+            for field_name, value in list(preview.items()):
+                if hasattr(value, 'pk'):
+                    preview[field_name] = str(value.pk)
+            logger.info(
+                'project_scope.partial_update dry_run',
+                extra={'scope_id': str(instance.id), 'fields': sorted(preview.keys())},
+            )
+            return Response({
+                'dry_run': True,
+                'id': str(instance.id),
+                'would_update': preview,
+            })
+        self.perform_update(serializer)
+        logger.info(
+            'project_scope.partial_update persisted',
+            extra={'scope_id': str(instance.id), 'fields': sorted(serializer.validated_data.keys())},
+        )
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """PUT on /api/projects/scopes/{id}/. Supports ?dry_run=true."""
+        return self._dry_run_update(request, partial=False)
+
+    def partial_update(self, request, *args, **kwargs):
+        """PATCH on /api/projects/scopes/{id}/. Supports ?dry_run=true.
+
+        Agents can preview ``storey_merge_tolerance_m`` (and other writable
+        scope fields) before committing. Invalid input returns 400 with the
+        standard field-error shape, matching the rest of the API surface.
+        """
+        return self._dry_run_update(request, partial=True)
 
     @action(detail=True, methods=['post'], url_path='assign-files')
     def assign_files(self, request, pk=None):

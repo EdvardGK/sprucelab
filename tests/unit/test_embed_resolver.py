@@ -218,6 +218,20 @@ def test_capabilities_documents_truncation_and_omitted_express_ids(api_client):
     assert 'instance_express_ids' in body['notes']
 
 
+def test_embed_capabilities_mirrors_dry_run_manifest(api_client):
+    """
+    Embed callers can't hit the unauthenticated root /api/capabilities/, so
+    /api/embed/capabilities/ must mirror the dry-run mutation list. Grows
+    additively — assert membership, not length.
+    """
+    body = api_client.get('/api/embed/capabilities/').json()
+    mutations = body['mutations_supporting_dry_run']
+    assert isinstance(mutations, list)
+    assert len(mutations) >= 3
+    assert any('type-mappings/bulk-update' in m for m in mutations)
+    assert any('claims' in m and 'promote' in m for m in mutations)
+
+
 def test_capabilities_requires_token():
     """Without auth, /capabilities/ now refuses."""
     c = APIClient()

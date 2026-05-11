@@ -50,6 +50,25 @@ def test_capabilities_lists_dry_run_endpoints(client):
     assert any('claims' in m and 'promote' in m for m in mutations)
 
 
+def test_capabilities_dry_run_list_is_non_empty_and_includes_known_entries(client):
+    """
+    Discovery contract: the manifest must list every dry-run-capable mutation
+    so agents can plan-then-execute without scraping docs. The list grows
+    additively (Track S, etc.) — assert a non-empty floor that includes the
+    pre-existing surface, not a hardcoded length.
+    """
+    body = client.get('/api/capabilities/').json()
+    mutations = body['mutations_supporting_dry_run']
+    assert isinstance(mutations, list)
+    assert len(mutations) >= 3
+    assert any('type-mappings/bulk-update' in m for m in mutations)
+    assert any('type-definition-layers/bulk-update' in m for m in mutations)
+    assert any('claims' in m and 'promote' in m for m in mutations)
+    # Newly-added entries from this commit.
+    assert any('projects/scopes/' in m for m in mutations)
+    assert any('webhook-subscriptions/' in m for m in mutations)
+
+
 def test_capabilities_documents_claim_rule_id_prefix(client):
     body = client.get('/api/capabilities/').json()
     prefixes = body['verification']['rule_id_prefixes']

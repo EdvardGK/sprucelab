@@ -36,6 +36,8 @@ def capabilities(request):
             'POST /api/types/claims/{id}/promote/',
             'POST /api/types/claims/{id}/reject/',
             'POST /api/types/claims/{id}/supersede/',
+            'PATCH /api/projects/scopes/{id}/',
+            'POST /api/automation/webhook-subscriptions/',
         ],
         'extraction_pipelines': {
             'ifc': 'fastapi:/api/v1/ifc/extract',

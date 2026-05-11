@@ -1,12 +1,16 @@
 """
 API Views for Automation Pipeline System.
 """
+import logging
+
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.entities.views.claims import _bool_param
 
 from .models import (
     Pipeline,
@@ -19,6 +23,9 @@ from .models import (
     WebhookSubscription,
     WebhookDelivery,
 )
+
+
+logger = logging.getLogger(__name__)
 from .serializers import (
     PipelineSerializer,
     PipelineListSerializer,
@@ -549,6 +556,58 @@ class WebhookSubscriptionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
         serializer.save(created_by=user)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Create a webhook subscription. Supports ``?dry_run=true`` so agents
+        can plan-then-execute subscription registration.
+
+        Dry-run mode validates the payload through the standard serializer
+        (returning 400 with the same field-error shape on bad input) and
+        returns the would-be representation without persisting. No HMAC
+        secret is generated in dry-run — secrets are deliberately
+        one-shot, not previewable.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        dry_run = _bool_param(request.query_params.get('dry_run'))
+        if dry_run:
+            preview = {}
+            for field_name, value in serializer.validated_data.items():
+                preview[field_name] = str(value.pk) if hasattr(value, 'pk') else value
+            logger.info(
+                'webhook_subscription.create dry_run',
+                extra={
+                    'event_type': preview.get('event_type'),
+                    'target_url': preview.get('target_url'),
+                    'project': preview.get('project'),
+                },
+            )
+            return Response(
+                {
+                    'dry_run': True,
+                    'would_create': preview,
+                    'note': (
+                        'HMAC secret is generated only on real create — '
+                        'callers must perform a non-dry-run POST to obtain it.'
+                    ),
+                },
+                status=status.HTTP_200_OK,
+            )
+        self.perform_create(serializer)
+        logger.info(
+            'webhook_subscription.create persisted',
+            extra={
+                'subscription_id': str(serializer.instance.id),
+                'event_type': serializer.instance.event_type,
+            },
+        )
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
     @action(detail=True, methods=['post'], url_path='rotate-secret')
     def rotate_secret(self, request, pk=None):
