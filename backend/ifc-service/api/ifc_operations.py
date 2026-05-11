@@ -214,14 +214,19 @@ async def get_element_geometry(file_id: str, guid: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/{file_id}/profile/{guid}", response_model=ProfileData)
+@router.get("/{file_id}/profile/{guid}", response_model=Optional[ProfileData])
 async def get_element_profile(file_id: str, guid: str):
     """
     Get 2D cross-section profile (IfcProfileDef) for an element.
 
     Extracts parametric profile data and a 2D outline polyline.
     Works for beams, columns, members, and other extruded elements.
-    Returns 404 if no profile is found (e.g., walls without extrusion profiles).
+
+    Status semantics (agent-first contract):
+    - 200 + ProfileData: element has an extractable IfcProfileDef.
+    - 200 + null: element exists but has no profile (e.g., walls without
+      extrusion profiles). This is an expected data state, not an error.
+    - 404: real error — file not loaded or element GUID not found.
     """
     ifc_file = ifc_loader._cache.get(file_id)
     if not ifc_file:
@@ -234,10 +239,7 @@ async def get_element_profile(file_id: str, guid: str):
 
     result = profile_extractor.extract_from_element(ifc_file, guid)
     if not result:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No IfcProfileDef found for {element.is_a()} '{element.Name or guid}'"
-        )
+        return None
 
     return ProfileData(
         guid=element.GlobalId,
