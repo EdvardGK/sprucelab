@@ -22,11 +22,14 @@ export function TypeTopBarList({ types, topN = 20 }: TypeTopBarListProps) {
   const maxCount = rows[0]?.instance_count ?? 0;
 
   return (
-    <DashboardTile id="top-bar-list" className="p-3 flex flex-col">
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
-        <h2 className="text-xs font-medium">
-          {t('typesV2.viz.topBarTitle', { count: topN })}
+    <DashboardTile id="top-bar-list" className="p-4 flex flex-col">
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+        <h2 className="text-sm font-medium">
+          {t('typesV2.viz.topBarTitle', { count: rows.length })}
         </h2>
+        <span className="text-xs text-muted-foreground">
+          {t('typesV2.viz.topBarSubtitle')}
+        </span>
       </div>
 
       {rows.length === 0 ? (
@@ -34,7 +37,7 @@ export function TypeTopBarList({ types, topN = 20 }: TypeTopBarListProps) {
           {t('typesV2.viz.empty')}
         </div>
       ) : (
-        <ul className="flex flex-col gap-1 flex-1 min-h-0 overflow-auto pr-1">
+        <ul className="flex flex-col gap-2">
           {rows.map((row) => {
             const widthPct = maxCount > 0 ? (row.instance_count / maxCount) * 100 : 0;
             return (

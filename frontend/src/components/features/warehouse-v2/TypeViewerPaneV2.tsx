@@ -20,8 +20,8 @@ export function TypeViewerPaneV2({
   const { t } = useTranslation();
 
   return (
-    <DashboardTile id="viewer-pane" className="p-0">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+    <DashboardTile id="viewer-pane" className="p-0 flex flex-col h-full">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/60 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Box className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <h2 className="text-xs font-medium truncate">

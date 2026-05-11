@@ -76,7 +76,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const isLoading = modelsLoading || (!!modelId && typesLoading);
 
   return (
-    <div className="h-full overflow-hidden flex flex-col gap-3 px-6 py-4">
+    <div className="flex flex-col gap-4 px-6 py-6">
       <TypeBrowserHeaderV2 stats={stats} loading={isLoading} />
 
       <TypeBrowserFilterBarV2
@@ -103,21 +103,29 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:h-[clamp(240px,32vh,320px)] flex-shrink-0">
-            <TypeTreemap types={filteredTypes} />
-            <TypeTopBarList types={filteredTypes} />
-            <TypeViewerPaneV2
-              modelId={modelId}
-              selectedType={selectedType}
-              onClearSelection={() => setSelectedTypeId(null)}
-            />
+          {/* Hero row — treemap + viewer get full room to breathe */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[480px]">
+            <div className="md:col-span-2 min-h-0">
+              <TypeTreemap types={filteredTypes} />
+            </div>
+            <div className="md:col-span-1 min-h-0">
+              <TypeViewerPaneV2
+                modelId={modelId}
+                selectedType={selectedType}
+                onClearSelection={() => setSelectedTypeId(null)}
+              />
+            </div>
           </div>
 
+          {/* Top-20 list — natural height, all 20 visible */}
+          <TypeTopBarList types={filteredTypes} />
+
+          {/* Table — contained and scrollable inside the card */}
           <TypeTableV2
             types={filteredTypes}
             selectedTypeId={selectedTypeId}
             onSelectType={setSelectedTypeId}
-            className="flex-1 min-h-0"
+            className="max-h-[640px]"
           />
         </>
       )}
