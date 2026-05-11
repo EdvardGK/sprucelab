@@ -160,8 +160,10 @@ def embed_capabilities(request):
         # which mutations honor ?dry_run=true. Strings are stable IDs —
         # additive changes only. Keep alphabetized within each app.
         'mutations_supporting_dry_run': [
-            'PATCH /api/projects/scopes/{id}/',
             'POST /api/automation/webhook-subscriptions/',
+            'PATCH /api/filters/saved/{id}/',
+            'POST /api/filters/saved/',
+            'PATCH /api/projects/scopes/{id}/',
             'POST /api/types/claims/{id}/promote/',
             'POST /api/types/claims/{id}/reject/',
             'POST /api/types/claims/{id}/supersede/',

@@ -22,11 +22,15 @@ membership filtering.
 """
 from __future__ import annotations
 
+import logging
+
 from django.db import IntegrityError
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
+
+from apps.entities.views.claims import _bool_param
 
 from .models import (
     FilterAnnouncement,
@@ -48,6 +52,9 @@ from .serializers import (
     SavedFilterListSerializer,
     SavedFilterSerializer,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +163,15 @@ class SavedFilterViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return _filter_visible_savedfilters(SavedFilter.objects.all(), self.request.user)
 
-    def perform_create(self, serializer):
+    def _gate_create(self, serializer):
+        """
+        Run scope-based permission gating + normalize validated_data.
+
+        Shared between the persist path (``perform_create``) and the dry-run
+        path so a preview that *would* be rejected at write time also gets
+        rejected before reporting "would_create" — agents shouldn't see a
+        green preview followed by a 403 on the real call.
+        """
         scope = serializer.validated_data.get('scope')
         user = self.request.user
         owner_user = serializer.validated_data.get('owner_user')
@@ -176,10 +191,65 @@ class SavedFilterViewSet(viewsets.ModelViewSet):
         else:
             raise ValidationError({'scope': 'Unknown scope.'})
 
+    def perform_create(self, serializer):
+        self._gate_create(serializer)
         try:
-            serializer.save(created_by=user)
+            serializer.save(created_by=self.request.user)
         except IntegrityError as e:
             raise ValidationError({'detail': str(e)})
+
+    def create(self, request, *args, **kwargs):
+        """
+        Create a SavedFilter. Supports ``?dry_run=true`` so agents can
+        plan-then-execute filter registration.
+
+        Dry-run validates the payload through the standard serializer
+        (returning 400 with the same field-error shape on bad input), runs
+        scope-based permission gating (so a preview that would be rejected
+        at write time is rejected here too), then returns the would-be
+        representation without persisting.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        dry_run = _bool_param(request.query_params.get('dry_run'))
+        if dry_run:
+            # Gate first — agents shouldn't see a green preview followed by
+            # a real 403. _gate_create also normalizes owner_user for
+            # personal scope so the preview matches what would actually
+            # be saved.
+            self._gate_create(serializer)
+            preview = {}
+            for field_name, value in serializer.validated_data.items():
+                preview[field_name] = str(value.pk) if hasattr(value, 'pk') else value
+            logger.info(
+                'saved_filter.create dry_run',
+                extra={
+                    'scope': preview.get('scope'),
+                    'filter_name': preview.get('name'),
+                    'owner_project': preview.get('owner_project'),
+                },
+            )
+            return Response(
+                {
+                    'dry_run': True,
+                    'would_create': preview,
+                },
+                status=status.HTTP_200_OK,
+            )
+        self.perform_create(serializer)
+        logger.info(
+            'saved_filter.create persisted',
+            extra={
+                'saved_filter_id': str(serializer.instance.id),
+                'scope': serializer.instance.scope,
+            },
+        )
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
     def perform_update(self, serializer):
         if not _can_write_saved_filter(self.request.user, serializer.instance):
@@ -188,6 +258,57 @@ class SavedFilterViewSet(viewsets.ModelViewSet):
             serializer.save()
         except IntegrityError as e:
             raise ValidationError({'detail': str(e)})
+
+    def _dry_run_update(self, request, partial: bool):
+        """
+        Shared plan-then-execute path for PUT/PATCH on a SavedFilter.
+
+        Validates the incoming payload through the standard serializer (so
+        invalid input still returns 400 with the usual field-error shape),
+        runs the same scope-based write gate as the persist path, then
+        either persists or returns a preview with ``dry_run: true``.
+        """
+        instance = self.get_object()
+        # Write-gate parity with perform_update — a preview that would be
+        # rejected at write time gets rejected here too.
+        if not _can_write_saved_filter(self.request.user, instance):
+            raise PermissionDenied('You may not modify this filter.')
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        dry_run = _bool_param(request.query_params.get('dry_run'))
+        if dry_run:
+            preview = dict(serializer.validated_data)
+            for field_name, value in list(preview.items()):
+                if hasattr(value, 'pk'):
+                    preview[field_name] = str(value.pk)
+            logger.info(
+                'saved_filter.partial_update dry_run',
+                extra={'saved_filter_id': str(instance.id), 'fields': sorted(preview.keys())},
+            )
+            return Response({
+                'dry_run': True,
+                'id': str(instance.id),
+                'would_update': preview,
+            })
+        self.perform_update(serializer)
+        logger.info(
+            'saved_filter.partial_update persisted',
+            extra={'saved_filter_id': str(instance.id), 'fields': sorted(serializer.validated_data.keys())},
+        )
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """PUT on /api/filters/saved/{id}/. Supports ?dry_run=true."""
+        return self._dry_run_update(request, partial=False)
+
+    def partial_update(self, request, *args, **kwargs):
+        """PATCH on /api/filters/saved/{id}/. Supports ?dry_run=true.
+
+        Agents can preview name / description / payload edits before
+        committing. Invalid input returns 400 with the standard
+        field-error shape.
+        """
+        return self._dry_run_update(request, partial=True)
 
     def perform_destroy(self, instance):
         if not _can_write_saved_filter(self.request.user, instance):

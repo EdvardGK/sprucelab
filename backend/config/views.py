@@ -38,6 +38,8 @@ def capabilities(request):
             'POST /api/types/claims/{id}/supersede/',
             'PATCH /api/projects/scopes/{id}/',
             'POST /api/automation/webhook-subscriptions/',
+            'POST /api/filters/saved/',
+            'PATCH /api/filters/saved/{id}/',
             'POST /api/types/types/verify/',
         ],
         'extraction_pipelines': {

@@ -69,6 +69,17 @@ def test_capabilities_dry_run_list_is_non_empty_and_includes_known_entries(clien
     assert any('webhook-subscriptions/' in m for m in mutations)
 
 
+def test_capabilities_lists_saved_filter_dry_run_endpoints(client):
+    """
+    Round 6 Track CC: SavedFilter create + update gained ?dry_run=true. Pin
+    both entries so the manifest stays in sync with the implementation.
+    """
+    body = client.get('/api/capabilities/').json()
+    mutations = body['mutations_supporting_dry_run']
+    assert 'POST /api/filters/saved/' in mutations
+    assert 'PATCH /api/filters/saved/{id}/' in mutations
+
+
 def test_capabilities_documents_claim_rule_id_prefix(client):
     body = client.get('/api/capabilities/').json()
     prefixes = body['verification']['rule_id_prefixes']

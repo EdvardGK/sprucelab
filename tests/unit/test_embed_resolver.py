@@ -232,6 +232,18 @@ def test_embed_capabilities_mirrors_dry_run_manifest(api_client):
     assert any('claims' in m and 'promote' in m for m in mutations)
 
 
+def test_embed_capabilities_lists_saved_filter_dry_run_endpoints(api_client):
+    """
+    Round 6 Track CC: SavedFilter create + update gained ?dry_run=true. The
+    embed mirror must list both entries so embed-token holders discover the
+    same surface as root-manifest readers.
+    """
+    body = api_client.get('/api/embed/capabilities/').json()
+    mutations = body['mutations_supporting_dry_run']
+    assert 'POST /api/filters/saved/' in mutations
+    assert 'PATCH /api/filters/saved/{id}/' in mutations
+
+
 def test_capabilities_requires_token():
     """Without auth, /capabilities/ now refuses."""
     c = APIClient()
