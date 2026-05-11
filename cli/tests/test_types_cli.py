@@ -263,4 +263,7 @@ def test_types_list_http_error_json_output(runner, admin_token_env):
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
     assert payload["error"] == "HTTP 404"
-    assert payload["detail"] == {"detail": "model not found"}
+    assert payload["body"] == {"detail": "model not found"}
+    # Agent-first PR A.2: 404 should suggest a discovery command verbatim
+    assert payload["hint"] is not None
+    assert "spruce types list" in payload["hint"]

@@ -44,25 +44,13 @@ console = Console()
 # ---------------------------------------------------------------------------
 
 from ._auth import resolve_token as _admin_token, auth_headers as _admin_headers  # noqa: F401
+from ._errors import print_http_error, print_request_error
 
 
-def _handle_http(err: httpx.HTTPStatusError, *, json_out: bool) -> None:
-    body_text = err.response.text
-    parsed = None
-    try:
-        parsed = err.response.json()
-    except Exception:
-        pass
-    if json_out:
-        payload = {
-            'error': f'HTTP {err.response.status_code}',
-            'detail': parsed if parsed is not None else body_text,
-        }
-        sys.stdout.write(json.dumps(payload) + '\n')
-    else:
-        body_pretty = json.dumps(parsed, indent=2) if parsed is not None else body_text
-        console.print(f'[red]HTTP {err.response.status_code}[/red]\n{body_pretty}')
-    raise typer.Exit(1)
+def _handle_http(
+    err: httpx.HTTPStatusError, *, json_out: bool, command_context: str = 'webhooks list',
+) -> None:
+    print_http_error(console, err, json_out=json_out, command_context=command_context)
 
 
 def _shorten(value: Optional[str], n: int = 8) -> str:
@@ -100,7 +88,9 @@ def webhooks_list(
         resp = httpx.get(url, headers=_admin_headers(admin_token), params=params, timeout=30)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='webhooks list')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='webhooks list')
 
     body = resp.json()
     if json_out:
@@ -198,7 +188,9 @@ def webhooks_create(
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as e:
-            _handle_http(e, json_out=json_out)
+            _handle_http(e, json_out=json_out, command_context='webhooks create')
+        except httpx.RequestError as e:
+            print_request_error(console, e, json_out=json_out, command_context='webhooks create')
 
         body = resp.json()
         responses.append(body)
@@ -280,7 +272,9 @@ def webhooks_disable(
         )
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='webhooks disable')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='webhooks disable')
 
     body = resp.json()
     if json_out:
@@ -320,7 +314,9 @@ def webhooks_delete(
         resp = httpx.delete(url, headers=_admin_headers(admin_token), timeout=30)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='webhooks delete')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='webhooks delete')
 
     if json_out:
         sys.stdout.write(json.dumps({'status': 'deleted', 'id': subscription_id}) + '\n')
@@ -357,7 +353,9 @@ def webhooks_deliveries(
         resp = httpx.get(url, headers=_admin_headers(admin_token), params=params, timeout=30)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='webhooks deliveries')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='webhooks deliveries')
 
     body = resp.json()
     if json_out:
@@ -412,17 +410,13 @@ def webhooks_redeliver(
     try:
         resp = httpx.post(url, headers=_admin_headers(admin_token), json={}, timeout=30)
     except httpx.RequestError as e:
-        msg = f'request failed: {e}'
-        if json_out:
-            sys.stdout.write(json.dumps({'error': msg}) + '\n')
-        else:
-            console.print(f'[red]{msg}[/red]')
-        raise typer.Exit(1)
+        print_request_error(console, e, json_out=json_out, command_context='webhooks redeliver')
 
     if resp.status_code == 404:
         # Could be: endpoint not implemented OR delivery_id not found.
         # Both surface the same shape from DRF; treat as exit code 2 with a
         # clear hint to the operator.
+        hint = 'spruce webhooks deliveries  # confirm the delivery ID exists'
         msg = (
             'HTTP 404 — delivery not found or redeliver action not implemented '
             'on this backend.'
@@ -431,24 +425,29 @@ def webhooks_redeliver(
             sys.stdout.write(json.dumps({
                 'error': 'redeliver endpoint missing or delivery not found',
                 'http_status': 404,
+                'hint': hint,
             }) + '\n')
         else:
             console.print(f'[red]{msg}[/red]')
+            console.print(f'[yellow]Try:[/yellow] [cyan]{hint}[/cyan]')
         raise typer.Exit(2)
     if resp.status_code == 405:
+        hint = 'spruce capabilities  # check whether this backend exposes the redeliver action'
         msg = 'HTTP 405 — redeliver endpoint not implemented yet on this backend.'
         if json_out:
             sys.stdout.write(json.dumps({
                 'error': 'redeliver endpoint not implemented',
                 'http_status': 405,
+                'hint': hint,
             }) + '\n')
         else:
             console.print(f'[red]{msg}[/red]')
+            console.print(f'[yellow]Try:[/yellow] [cyan]{hint}[/cyan]')
         raise typer.Exit(2)
     try:
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='webhooks redeliver')
 
     body = resp.json()
     if json_out:
@@ -478,14 +477,10 @@ def webhooks_test(
     try:
         resp = httpx.post(url, headers=_admin_headers(admin_token), json={}, timeout=30)
     except httpx.RequestError as e:
-        msg = f'request failed: {e}'
-        if json_out:
-            sys.stdout.write(json.dumps({'error': msg}) + '\n')
-        else:
-            console.print(f'[red]{msg}[/red]')
-        raise typer.Exit(1)
+        print_request_error(console, e, json_out=json_out, command_context='webhooks test')
 
     if resp.status_code == 404:
+        hint = 'spruce webhooks list  # confirm the subscription ID exists'
         msg = (
             'HTTP 404 — subscription not found or test action not implemented '
             'on this backend.'
@@ -494,24 +489,29 @@ def webhooks_test(
             sys.stdout.write(json.dumps({
                 'error': 'test endpoint missing or subscription not found',
                 'http_status': 404,
+                'hint': hint,
             }) + '\n')
         else:
             console.print(f'[red]{msg}[/red]')
+            console.print(f'[yellow]Try:[/yellow] [cyan]{hint}[/cyan]')
         raise typer.Exit(2)
     if resp.status_code == 405:
+        hint = 'spruce capabilities  # check whether this backend exposes the test action'
         msg = 'HTTP 405 — test endpoint not implemented yet on this backend.'
         if json_out:
             sys.stdout.write(json.dumps({
                 'error': 'test endpoint not implemented',
                 'http_status': 405,
+                'hint': hint,
             }) + '\n')
         else:
             console.print(f'[red]{msg}[/red]')
+            console.print(f'[yellow]Try:[/yellow] [cyan]{hint}[/cyan]')
         raise typer.Exit(2)
     try:
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='webhooks test')
 
     body = resp.json()
     if json_out:

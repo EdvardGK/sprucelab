@@ -40,6 +40,7 @@ console = Console()
 # ---------------------------------------------------------------------------
 
 from ._auth import resolve_token as _admin_token, auth_headers as _admin_headers  # noqa: F401
+from ._errors import print_http_error, print_request_error
 
 
 def _emit(payload: dict, *, json_out: bool, raw_field: Optional[str] = None) -> None:
@@ -55,15 +56,9 @@ def _emit(payload: dict, *, json_out: bool, raw_field: Optional[str] = None) -> 
         console.print(f'[bold yellow]{raw_field} (shown once):[/bold yellow] {payload[raw_field]}')
 
 
-def _handle_http(err: httpx.HTTPStatusError) -> None:
+def _handle_http(err: httpx.HTTPStatusError, *, command_context: str = 'embed pass list') -> None:
     """Pretty-print HTTP failures and exit non-zero."""
-    body = err.response.text
-    try:
-        body = json.dumps(err.response.json(), indent=2)
-    except Exception:
-        pass
-    console.print(f'[red]HTTP {err.response.status_code}[/red]\n{body}')
-    raise typer.Exit(1)
+    print_http_error(console, err, json_out=False, command_context=command_context)
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +97,9 @@ def pass_create(
         resp = httpx.post(url, headers=_admin_headers(admin_token), json=body, timeout=10)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e)
+        _handle_http(e, command_context='embed pass create')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='embed pass create')
     payload = resp.json()
     _emit(payload, json_out=json_out, raw_field='raw_token')
 
@@ -130,7 +127,9 @@ def pass_list(
         resp = httpx.get(url, headers=_admin_headers(admin_token), params=params, timeout=10)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e)
+        _handle_http(e, command_context='embed pass list')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='embed pass list')
 
     body = resp.json()
     if json_out:
@@ -177,7 +176,9 @@ def pass_revoke(
         resp = httpx.delete(url, headers=_admin_headers(admin_token), params=params, timeout=10)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e)
+        _handle_http(e, command_context='embed pass revoke')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='embed pass revoke')
     _emit(resp.json(), json_out=json_out)
 
 
@@ -204,5 +205,7 @@ def pass_refresh(
         resp = httpx.post(url, headers=headers, json={}, timeout=10)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e)
+        _handle_http(e, command_context='embed pass refresh')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='embed pass refresh')
     _emit(resp.json(), json_out=json_out, raw_field='raw_token')

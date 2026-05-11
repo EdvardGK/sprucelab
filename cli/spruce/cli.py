@@ -141,6 +141,7 @@ def auth_status():
             raise typer.Exit(1)
     except httpx.RequestError as e:
         console.print(f"  status:   [red]connection failed: {e}[/red]")
+        console.print("  [yellow]Try:[/yellow] [cyan]spruce config show[/cyan]  # verify api_url; override with `spruce auth register --url <URL>`")
         raise typer.Exit(1)
 
 

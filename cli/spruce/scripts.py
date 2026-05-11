@@ -25,25 +25,11 @@ console = Console()
 
 
 from ._auth import resolve_token as _admin_token, auth_headers as _admin_headers  # noqa: F401
+from ._errors import print_http_error, print_request_error
 
 
-def _handle_http(err: httpx.HTTPStatusError, *, json_out: bool) -> None:
-    body_text = err.response.text
-    parsed = None
-    try:
-        parsed = err.response.json()
-    except Exception:
-        pass
-    if json_out:
-        payload = {
-            'error': f'HTTP {err.response.status_code}',
-            'detail': parsed if parsed is not None else body_text,
-        }
-        sys.stdout.write(json.dumps(payload) + '\n')
-    else:
-        body_pretty = json.dumps(parsed, indent=2) if parsed is not None else body_text
-        console.print(f'[red]HTTP {err.response.status_code}[/red]\n{body_pretty}')
-    raise typer.Exit(1)
+def _handle_http(err: httpx.HTTPStatusError, *, json_out: bool, command_context: str = 'scripts list') -> None:
+    print_http_error(console, err, json_out=json_out, command_context=command_context)
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +53,9 @@ def scripts_list(
         resp = httpx.get(url, headers=_admin_headers(admin_token), params=params, timeout=30)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='scripts list')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='scripts list')
 
     body = resp.json()
     if json_out:
@@ -132,7 +120,9 @@ def scripts_run(
         resp = httpx.post(url, headers=_admin_headers(admin_token), json=body, timeout=600)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='scripts run')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='scripts run')
 
     payload = resp.json()
     if json_out:

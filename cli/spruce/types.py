@@ -38,6 +38,7 @@ console = Console()
 # ---------------------------------------------------------------------------
 
 from ._auth import resolve_token as _admin_token  # noqa: F401
+from ._errors import print_http_error, print_request_error
 
 
 def _admin_headers(override: Optional[str], *, accept_json: bool = True) -> dict:
@@ -51,23 +52,8 @@ def _admin_headers(override: Optional[str], *, accept_json: bool = True) -> dict
     return headers
 
 
-def _handle_http(err: httpx.HTTPStatusError, *, json_out: bool) -> None:
-    body_text = err.response.text
-    parsed = None
-    try:
-        parsed = err.response.json()
-    except Exception:
-        pass
-    if json_out:
-        payload = {
-            'error': f'HTTP {err.response.status_code}',
-            'detail': parsed if parsed is not None else body_text,
-        }
-        sys.stdout.write(json.dumps(payload) + '\n')
-    else:
-        body_pretty = json.dumps(parsed, indent=2) if parsed is not None else body_text
-        console.print(f'[red]HTTP {err.response.status_code}[/red]\n{body_pretty}')
-    raise typer.Exit(1)
+def _handle_http(err: httpx.HTTPStatusError, *, json_out: bool, command_context: str = 'types list') -> None:
+    print_http_error(console, err, json_out=json_out, command_context=command_context)
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +80,9 @@ def types_list(
         resp = httpx.get(url, headers=_admin_headers(admin_token), params=params, timeout=30)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='types list')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='types list')
 
     body = resp.json()
     if json_out:
@@ -184,7 +172,9 @@ def types_classify(
         )
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='types classify')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='types classify')
 
     payload = resp.json()
     if json_out:
@@ -247,7 +237,9 @@ def types_export(
         resp = httpx.get(url, headers=headers, params=params, timeout=120)
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
-        _handle_http(e, json_out=json_out)
+        _handle_http(e, json_out=json_out, command_context='types export')
+    except httpx.RequestError as e:
+        print_request_error(console, e, json_out=json_out, command_context='types export')
 
     content = resp.content
     content_type = resp.headers.get('content-type', 'application/octet-stream')

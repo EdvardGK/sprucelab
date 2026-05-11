@@ -80,10 +80,12 @@ def capabilities(
     except httpx.RequestError as e:
         console.print(f"[red]Connection failed:[/red] {e}")
         console.print(f"  Tried: [dim]{base}/api/capabilities/[/dim]")
-        console.print("  Override with [cyan]--url[/cyan] or [cyan]spruce auth register --url ...[/cyan]")
+        console.print("  [yellow]Try:[/yellow] [cyan]spruce auth register --url <URL>[/cyan]  # or pass --url to this command")
         raise typer.Exit(1)
     except httpx.HTTPStatusError as e:
         console.print(f"[red]HTTP {e.response.status_code}[/red]: {e.response.text[:200]}")
+        if e.response.status_code >= 500:
+            console.print("  [yellow]Try:[/yellow] [cyan]spruce capabilities --url <URL> --json[/cyan]  # inspect raw response")
         raise typer.Exit(1)
 
     data = resp.json()
