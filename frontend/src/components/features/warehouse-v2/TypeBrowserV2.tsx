@@ -7,6 +7,7 @@ import { useModelTypes, type IFCType } from '@/hooks/use-warehouse';
 
 import { TypeBrowserHeaderV2 } from './TypeBrowserHeaderV2';
 import { TypeBrowserFilterBarV2 } from './TypeBrowserFilterBarV2';
+import { TypeKpiGrid } from './TypeKpiGrid';
 import { TypeTreemap } from './TypeTreemap';
 import { TypeTopBarList } from './TypeTopBarList';
 import { TypeViewerPaneV2 } from './TypeViewerPaneV2';
@@ -32,7 +33,6 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   }, [models, modelId]);
 
   useEffect(() => {
-    // Clear type selection when the user switches models or filters.
     setSelectedTypeId(null);
   }, [modelId, ifcClassFilter, searchQuery]);
 
@@ -77,7 +77,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
 
   return (
     <div className="flex flex-col gap-4 px-6 py-6">
-      <TypeBrowserHeaderV2 stats={stats} loading={isLoading} />
+      <TypeBrowserHeaderV2 loading={isLoading} />
 
       <TypeBrowserFilterBarV2
         models={models}
@@ -103,12 +103,22 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         </div>
       ) : (
         <>
-          {/* Hero row — treemap + viewer get full room to breathe */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[480px]">
-            <div className="md:col-span-2 min-h-0">
-              <TypeTreemap types={filteredTypes} />
+          {/* Row 1: KPI cards (75%) + Top 10 types (25%) */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[240px]">
+            <div className="md:col-span-3 min-h-0">
+              <TypeKpiGrid stats={stats} loading={isLoading} />
             </div>
             <div className="md:col-span-1 min-h-0">
+              <TypeTopBarList types={filteredTypes} topN={10} />
+            </div>
+          </div>
+
+          {/* Row 2: Treemap (50%) + Viewer (50%) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[520px]">
+            <div className="min-h-0">
+              <TypeTreemap types={filteredTypes} />
+            </div>
+            <div className="min-h-0">
               <TypeViewerPaneV2
                 modelId={modelId}
                 selectedType={selectedType}
@@ -117,10 +127,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
             </div>
           </div>
 
-          {/* Top-20 list — natural height, all 20 visible */}
-          <TypeTopBarList types={filteredTypes} />
-
-          {/* Table — contained and scrollable inside the card */}
+          {/* Row 3: Table — contained and scrollable inside the card */}
           <TypeTableV2
             types={filteredTypes}
             selectedTypeId={selectedTypeId}
@@ -153,4 +160,3 @@ function filterTypesV2(
     return true;
   });
 }
-
