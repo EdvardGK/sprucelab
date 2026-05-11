@@ -11,6 +11,8 @@ import {
   type EmbedCapabilitiesResponse,
 } from '@/lib/embed/embed-api-client';
 import { usePostMessageBus } from '@/lib/embed/messaging';
+import { DashboardFilterProvider } from '@/lib/embed/DashboardFilterProvider';
+import { useFilterContext } from '@/lib/embed/useFilterContext';
 
 /**
  * EmbedDashboard — the iframe entry point for the forward-deployed embed
@@ -22,9 +24,19 @@ import { usePostMessageBus } from '@/lib/embed/messaging';
  * `set_filter` from the host as a JSON pretty-print so an external
  * developer can verify the bus end-to-end. Real dashboards (Requirements
  * Fulfillment, Floors Overview, Type Browser tile) land in PRs 8–10.
+ *
+ * Round 6 Track BB introduces `DashboardFilterProvider` — filter state
+ * is now held in context instead of local `useState`. The outer
+ * component still owns the lifecycle pieces that must not depend on
+ * filter state (token fetch, capabilities, postMessage bus); the
+ * `DashboardFilterProvider` wraps an inner `EmbedDashboardBody` that
+ * consumes the filter via `useFilterContext()`.
+ *
+ * Public postMessage contract is unchanged: same `ready`, `set_filter`,
+ * `filter_changed`, `error` envelopes — only the in-page storage
+ * mechanism moved.
  */
 export default function EmbedDashboard() {
-  const { dashboard } = useParams<{ dashboard: string }>();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
 
@@ -35,8 +47,6 @@ export default function EmbedDashboard() {
 
   const [capabilities, setCapabilities] = useState<EmbedCapabilitiesResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterContext | null>(null);
-  const [readySent, setReadySent] = useState(false);
 
   // Fetch capabilities to learn project_id + allowed_origins.
   useEffect(() => {
@@ -50,7 +60,6 @@ export default function EmbedDashboard() {
       .then(({ data }) => {
         if (cancelled) return;
         setCapabilities(data);
-        setFilter(createFilterContext({ project_id: data.token.project_id }));
       })
       .catch((err) => {
         if (cancelled) return;
@@ -61,20 +70,67 @@ export default function EmbedDashboard() {
     };
   }, [apiClient]);
 
-  const allowedOrigins = capabilities?.token.allowed_origins ?? [];
+  // Build the initial filter once capabilities arrive. Stable identity so
+  // remounting the provider is a one-shot, not a per-render event.
+  const initialFilter = useMemo<FilterContext | null>(() => {
+    if (!capabilities) return null;
+    return createFilterContext({ project_id: capabilities.token.project_id });
+  }, [capabilities]);
+
+  if (loadError) {
+    return (
+      <div style={containerStyle}>
+        <h1 style={titleStyle}>Embed unavailable</h1>
+        <p style={bodyStyle}>{loadError === 'missing_token' ? 'No token in URL.' : loadError}</p>
+      </div>
+    );
+  }
+
+  if (!capabilities || !initialFilter) {
+    return (
+      <div style={containerStyle}>
+        <p style={bodyStyle}>Loading embed…</p>
+      </div>
+    );
+  }
+
+  return (
+    <DashboardFilterProvider initialFilter={initialFilter}>
+      <EmbedDashboardBody capabilities={capabilities} />
+    </DashboardFilterProvider>
+  );
+}
+
+interface EmbedDashboardBodyProps {
+  capabilities: EmbedCapabilitiesResponse;
+}
+
+/**
+ * Inner body — consumes filter via `useFilterContext()` and owns the
+ * postMessage bus. Split out so we can mount the provider only after
+ * capabilities load (the initial filter requires `project_id`).
+ */
+function EmbedDashboardBody({ capabilities }: EmbedDashboardBodyProps) {
+  const { dashboard } = useParams<{ dashboard: string }>();
+  const { filter, patchFilter } = useFilterContext();
+  const [readySent, setReadySent] = useState(false);
+
+  const allowedOrigins = capabilities.token.allowed_origins ?? [];
 
   const handleHostMessage = useCallback(
-    (msg: { kind: 'set_filter' | 'request_height'; protocol_version: number; payload?: Partial<FilterContext> }) => {
+    (msg: {
+      kind: 'set_filter' | 'request_height';
+      protocol_version: number;
+      payload?: Partial<FilterContext>;
+    }) => {
       if (msg.kind === 'set_filter') {
-        setFilter((prev) => {
-          if (!prev) return prev;
-          const merged: FilterContext = { ...prev, ...(msg.payload ?? {}), protocol_version: CURRENT_PROTOCOL_VERSION };
-          return merged;
-        });
+        // Merge into the provider; protocol_version and project_id are
+        // clamped to the provider's invariants by `patchFilter`.
+        patchFilter(msg.payload ?? {});
       }
       // request_height is acknowledged in the height-emit effect below.
     },
-    [],
+    [patchFilter],
   );
 
   const bus = usePostMessageBus({
@@ -86,61 +142,25 @@ export default function EmbedDashboard() {
         : undefined,
   });
 
-  // Send the initial `ready` once capabilities arrive.
+  // Send the initial `ready` once we mount.
   useEffect(() => {
-    if (!capabilities || readySent) return;
+    if (readySent) return;
     bus.send({
       kind: 'ready',
       protocol_versions: [CURRENT_PROTOCOL_VERSION],
     });
     setReadySent(true);
-  }, [capabilities, readySent, bus]);
+  }, [readySent, bus]);
 
   // Echo filter changes back to the host so the bus is provably round-trip.
   useEffect(() => {
-    if (!filter || !readySent) return;
+    if (!readySent) return;
     bus.send({
       kind: 'filter_changed',
       protocol_version: CURRENT_PROTOCOL_VERSION,
       payload: filter,
     });
   }, [filter, readySent, bus]);
-
-  // Surface fatal load failures to the host as `error` events.
-  useEffect(() => {
-    if (!loadError) return;
-    bus.send({
-      kind: 'error',
-      protocol_version: CURRENT_PROTOCOL_VERSION,
-      payload: {
-        code: loadError,
-        message:
-          loadError === 'missing_token'
-            ? 'Embed iframe loaded without ?token=… in the URL.'
-            : loadError === 'token_rejected'
-              ? 'Embed token rejected by the API. It may be expired or revoked.'
-              : 'Failed to load embed capabilities.',
-        recoverable: loadError !== 'missing_token',
-      },
-    });
-  }, [loadError, bus]);
-
-  if (loadError) {
-    return (
-      <div style={containerStyle}>
-        <h1 style={titleStyle}>Embed unavailable</h1>
-        <p style={bodyStyle}>{loadError === 'missing_token' ? 'No token in URL.' : loadError}</p>
-      </div>
-    );
-  }
-
-  if (!capabilities || !filter) {
-    return (
-      <div style={containerStyle}>
-        <p style={bodyStyle}>Loading embed…</p>
-      </div>
-    );
-  }
 
   return (
     <div style={containerStyle}>

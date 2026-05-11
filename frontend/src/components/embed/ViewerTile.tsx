@@ -50,6 +50,7 @@ import {
 } from '@/components/features/viewer/UnifiedBIMViewer';
 import type { FilterContext } from '@/lib/embed/types';
 import type { EmbedInstancesResponse } from '@/lib/embed/embed-api-client';
+import { useOptionalFilterContext } from '@/lib/embed/useFilterContext';
 
 export interface ViewerTileProps {
   /** Project the embed token is scoped to. Comes from `/embed/capabilities/`. */
@@ -61,11 +62,16 @@ export interface ViewerTileProps {
    */
   modelId: string;
   /**
-   * Current filter context. Today this is passed in by the host
-   * (EmbedDashboard) which owns the state. When `DashboardFilterProvider`
-   * lands in PR 6, ViewerTile will read it via context.
+   * Filter context override. Optional — when rendered inside a
+   * `DashboardFilterProvider` (the normal embed path), the tile prefers
+   * the provider via `useOptionalFilterContext()`. The prop remains for
+   * backward compatibility and standalone harnesses (e.g. legacy tests,
+   * future Storybook). If both are present, the provider wins.
+   *
+   * Exactly one source is required: either render this tile inside a
+   * `DashboardFilterProvider`, or pass `filterContext` as a prop.
    */
-  filterContext: FilterContext;
+  filterContext?: FilterContext;
   /**
    * Embed-scoped axios client (carries the `Embed <token>` header). Owned
    * by the host page (`EmbedDashboard`) so the token lifecycle is
@@ -109,12 +115,24 @@ function buildInstanceQueryParams(filter: FilterContext): Record<string, string>
 export function ViewerTile({
   projectId,
   modelId,
-  filterContext,
+  filterContext: filterContextProp,
   apiClient,
   accentColor,
   className,
 }: ViewerTileProps) {
   const { t } = useTranslation();
+
+  // Provider wins over prop when both are present. This is the normal
+  // embed path (EmbedDashboard mounts `DashboardFilterProvider`); the
+  // prop is the standalone/test fallback.
+  const providerCtx = useOptionalFilterContext();
+  const filterContext = providerCtx?.filter ?? filterContextProp;
+  if (!filterContext) {
+    throw new Error(
+      'ViewerTile requires either a `filterContext` prop or a parent <DashboardFilterProvider>.',
+    );
+  }
+
   // Resolve the filter to a type_ids set via the embed instances endpoint.
   // `keepPreviousData` (default in v5) means rapid filter changes don't
   // flash a loading state on the tile.
