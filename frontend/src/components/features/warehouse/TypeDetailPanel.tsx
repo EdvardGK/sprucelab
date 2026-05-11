@@ -23,6 +23,7 @@ import {
   useVerifyType,
   useFlagType,
   useResetVerification,
+  useTypeBankObservations,
   type GlobalTypeLibraryEntry,
 } from '@/hooks/use-warehouse';
 import { useTypeClaimIssues } from '@/hooks/use-claim-issues';
@@ -349,28 +350,82 @@ function ProductTabContent() {
   );
 }
 
-// Observations tab content (placeholder)
 function ObservationsTabContent({ type }: { type: GlobalTypeLibraryEntry }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { data: observations, isLoading, isError } = useTypeBankObservations(type.id);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-[clamp(0.75rem,1.5vw,1rem)]">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">{t('typeLibrary.observations.title')}</h3>
-        <Badge variant="secondary">{type.source_model_count} {t('typeLibrary.models')}</Badge>
+        <h3 className="text-[clamp(0.75rem,1.4vw,0.875rem)] font-medium">
+          {t('typeLibrary.observations.title')}
+        </h3>
+        <Badge variant="secondary">
+          {type.source_model_count} {t('typeLibrary.models')}
+        </Badge>
       </div>
 
-      <p className="text-sm text-muted-foreground">
+      <p className="text-[clamp(0.625rem,1.2vw,0.75rem)] text-muted-foreground">
         {t('typeLibrary.observations.description', {
           count: type.total_instance_count,
           models: type.source_model_count,
         })}
       </p>
 
-      {/* Placeholder for observations list */}
-      <div className="text-center py-8 text-muted-foreground text-sm">
-        {t('typeLibrary.observations.loadModels')}
-      </div>
+      {isLoading && (
+        <div className="space-y-[clamp(0.25rem,0.8vw,0.5rem)]">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-[clamp(2.5rem,5vw,3rem)] rounded-md bg-muted/40 animate-pulse"
+            />
+          ))}
+        </div>
+      )}
+
+      {isError && (
+        <div className="text-center py-[clamp(1.5rem,4vw,2rem)] text-[clamp(0.625rem,1.2vw,0.75rem)] text-destructive">
+          {t('typeLibrary.observations.error')}
+        </div>
+      )}
+
+      {!isLoading && !isError && observations && observations.length === 0 && (
+        <div className="text-center py-[clamp(1.5rem,4vw,2rem)] text-[clamp(0.625rem,1.2vw,0.75rem)] text-muted-foreground">
+          {t('typeLibrary.observations.empty')}
+        </div>
+      )}
+
+      {!isLoading && !isError && observations && observations.length > 0 && (
+        <ul className="space-y-[clamp(0.25rem,0.8vw,0.5rem)]">
+          {observations.map((obs) => (
+            <li
+              key={obs.id}
+              className="flex items-center justify-between gap-[clamp(0.5rem,1.5vw,1rem)] p-[clamp(0.5rem,1.2vw,0.75rem)] rounded-md border border-border/60 hover:border-border transition-colors"
+            >
+              <div className="min-w-0 flex-1">
+                <Link
+                  to={`/models/${obs.source_model}`}
+                  className="block text-[clamp(0.6875rem,1.3vw,0.8125rem)] font-medium truncate hover:text-primary transition-colors"
+                  title={obs.source_model_name}
+                >
+                  {obs.source_model_name}
+                </Link>
+                <div className="text-[clamp(0.5625rem,1.1vw,0.6875rem)] text-muted-foreground truncate">
+                  {obs.source_model_project}
+                </div>
+              </div>
+              <div className="flex flex-col items-end shrink-0">
+                <span className="text-[clamp(0.6875rem,1.3vw,0.8125rem)] font-mono tabular-nums">
+                  {t('typeLibrary.observations.instances', { count: obs.instance_count })}
+                </span>
+                <span className="text-[clamp(0.5625rem,1.1vw,0.6875rem)] text-muted-foreground">
+                  {new Date(obs.observed_at).toLocaleDateString(i18n.language)}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -535,6 +535,7 @@ export const typeBankKeys = {
   summary: () => [...typeBankKeys.all, 'summary'] as const,
   semanticSummary: () => [...typeBankKeys.all, 'semantic-summary'] as const,
   suggestions: (id: string) => [...typeBankKeys.all, 'suggestions', id] as const,
+  observations: (entryId: string) => [...typeBankKeys.all, 'observations', entryId] as const,
 };
 
 // Global Type Library query keys
@@ -584,6 +585,7 @@ export {
   useSemanticTypesForIfcClass,
   useTypeBankEntries,
   useTypeBankEntry,
+  useTypeBankObservations,
   useTypeBankSummary,
   useSemanticSummary,
   useSemanticTypeSuggestions,

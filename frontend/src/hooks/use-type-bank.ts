@@ -10,6 +10,7 @@ import {
   type SemanticSummary,
   type TypeBankEntry,
   type TypeBankEntryFull,
+  type TypeBankObservation,
   type TypeBankSummary,
 } from './use-warehouse';
 
@@ -140,6 +141,24 @@ export function useSemanticSummary() {
       return response.data;
     },
     staleTime: 30_000,
+  });
+}
+
+/**
+ * Fetch observations for a TypeBank entry (where this canonical type was seen across models).
+ */
+export function useTypeBankObservations(entryId: string, options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
+
+  return useQuery({
+    queryKey: typeBankKeys.observations(entryId),
+    queryFn: async () => {
+      const response = await apiClient.get<PaginatedResponse<TypeBankObservation>>(
+        `/types/type-bank-observations/?type_bank_entry=${entryId}&ordering=-observed_at`
+      );
+      return response.data.results || [];
+    },
+    enabled: enabled && !!entryId,
   });
 }
 
