@@ -1323,5 +1323,14 @@
       "title": "No documents yet",
       "description": "Upload PDFs or Office files via the universal file inbox to populate this library."
     }
+  },
+  "filters": {
+    "saved": {
+      "trigger": "Saved",
+      "empty": "No saved filters",
+      "saveCurrent": "Save current as…",
+      "namePrompt": "Name this filter",
+      "delete": "Delete {{name}}"
+    }
   }
 }

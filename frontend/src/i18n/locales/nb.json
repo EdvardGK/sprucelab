@@ -1323,5 +1323,14 @@
       "title": "Ingen dokumenter ennå",
       "description": "Last opp PDF-er eller Office-filer via fil-innboksen for å fylle dette biblioteket."
     }
+  },
+  "filters": {
+    "saved": {
+      "trigger": "Lagrede",
+      "empty": "Ingen lagrede filtre",
+      "saveCurrent": "Lagre nåværende som…",
+      "namePrompt": "Navngi dette filteret",
+      "delete": "Slett {{name}}"
+    }
   }
 }

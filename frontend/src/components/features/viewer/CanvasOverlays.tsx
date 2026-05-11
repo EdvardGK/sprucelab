@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { SectionPlane } from '@/hooks/useSectionPlanes';
 import { FilterChips } from '@/components/filters/FilterChips';
+import { SavedFiltersDropdown } from '@/components/filters/SavedFiltersDropdown';
 import { useProjectFilter } from '@/contexts/ProjectFilterProvider';
 
 // ── Shared types ──
@@ -279,12 +280,16 @@ export function CanvasStatusPanel({
       className,
     )}>
       {/* Filters */}
-      {hasFilters && (
-        <>
-          <FilterChips floorLabels={floorLabels} />
-          <div className="h-px bg-white/[0.06]" />
-        </>
-      )}
+      <div className="flex items-center gap-[5px] px-2 py-[5px] flex-wrap">
+        {hasFilters && (
+          <FilterChips
+            floorLabels={floorLabels}
+            className="flex items-center gap-[3px] flex-wrap"
+          />
+        )}
+        <SavedFiltersDropdown />
+      </div>
+      <div className="h-px bg-white/[0.06]" />
 
       {/* Section planes */}
       {hasPlanes && (
