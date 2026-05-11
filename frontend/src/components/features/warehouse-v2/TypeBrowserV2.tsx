@@ -103,7 +103,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-[clamp(220px,30vh,340px)] flex-shrink-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:h-[clamp(240px,32vh,320px)] flex-shrink-0">
             <TypeTreemap types={filteredTypes} />
             <TypeTopBarList types={filteredTypes} />
             <TypeViewerPaneV2
