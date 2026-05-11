@@ -99,9 +99,43 @@ spruce run <pipeline> --dry-run          # Preview without executing
 # Install with dev dependencies
 pip install -e ".[dev]"
 
-# Run tests
+# Run tests (mocked, hermetic — what runs in CI)
 pytest
 ```
+
+### Live API smoke
+
+The `tests/integration/` directory holds an opt-in live-API smoke harness that
+hits a real Sprucelab server through the same `Typer` entry points as the
+mocked suite. **These tests are NOT run in CI** — they're skipped by default
+and only execute when `SPRUCE_LIVE_API_URL` is set in the environment.
+
+Required env var:
+
+| Variable | Purpose |
+|---|---|
+| `SPRUCE_LIVE_API_URL` | Base URL of the live Sprucelab Django API (e.g. `http://localhost:8000`). Module is skipped when unset. |
+
+Optional env vars:
+
+| Variable | Purpose |
+|---|---|
+| `SPRUCELAB_ADMIN_TOKEN` | Bearer Supabase staff token. Required unless the backend is running with `DEV_AUTH_BYPASS=1`. |
+| `SPRUCE_LIVE_MODEL_ID` | UUID of an existing model in the target project. Required for the `types list` and `verify` smoke tests, since the CLI does not yet ship a `spruce models list` discovery command. The `scripts list` test runs without it. |
+
+Run the harness:
+
+```bash
+cd cli && \
+  SPRUCE_LIVE_API_URL=https://your-server \
+  SPRUCELAB_ADMIN_TOKEN=... \
+  SPRUCE_LIVE_MODEL_ID=<uuid> \
+  python -m pytest tests/integration -m live -v
+```
+
+These tests deliberately fail loudly: an unexpected status code or response
+shape will surface as a test failure with the raw payload, not a green pass
+with a swallowed warning.
 
 ## Architecture
 
