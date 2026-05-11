@@ -158,6 +158,7 @@ def extract_drawing(file_path: str, fmt: str) -> DrawingExtractionResult:
 def _extract_dxf(file_path: str, result: DrawingExtractionResult, log) -> None:
     """One sheet per DXF/DWG file. Title block is a flat list of all TEXT/MTEXT entities."""
     import ezdxf  # local import: extractor only needed when invoked
+    from ezdxf.tools.text import plain_mtext
 
     doc = ezdxf.readfile(file_path)
     msp = doc.modelspace()
@@ -169,16 +170,22 @@ def _extract_dxf(file_path: str, result: DrawingExtractionResult, log) -> None:
         try:
             etype = entity.dxftype()
             if etype == "TEXT":
+                # TEXT entities use simple codes like %%U (underline), %%C (diameter).
+                # plain_mtext() handles those too — safe to apply.
+                raw = entity.dxf.text or ""
                 text_blocks.append({
-                    "text": entity.dxf.text or "",
+                    "text": plain_mtext(raw, split=False) if raw else "",
                     "layer": entity.dxf.layer,
                     "x": float(entity.dxf.insert.x),
                     "y": float(entity.dxf.insert.y),
                     "height_mm": float(entity.dxf.height),
                 })
             elif etype == "MTEXT":
+                # MTEXT carries embedded format codes — \A1;{\fArial|b0...;text}.
+                # plain_mtext() returns the displayed string with codes stripped.
+                raw = entity.text or ""
                 text_blocks.append({
-                    "text": entity.text or "",
+                    "text": plain_mtext(raw, split=False) if raw else "",
                     "layer": entity.dxf.layer,
                     "x": float(entity.dxf.insert.x),
                     "y": float(entity.dxf.insert.y),
