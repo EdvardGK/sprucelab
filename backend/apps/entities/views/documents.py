@@ -7,12 +7,19 @@ ViewSets for the document layer (Phase 6, Sprint 6.1).
 
 Search lives in `views/search.py` next to this — separate ViewSet because
 search results span both DocumentContent and (later) DrawingSheet/IFCType.
+
+Permissions: ``IsApprovedUser`` is pinned explicitly so the auth gate doesn't
+silently rely on the global DRF default (PR 2.3). Project-membership scoping
+is a no-op today — there's no ProjectMember model yet (see apps.filters.views
+for the same caveat).
 """
 from __future__ import annotations
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
+from apps.accounts.permissions import IsApprovedUser
 
 from ..models import DocumentContent
 from ..serializers import (
@@ -34,6 +41,7 @@ class DocumentContentViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = DocumentContent.objects.all()
     serializer_class = DocumentContentSerializer
+    permission_classes = [IsApprovedUser]
 
     def get_serializer_class(self):
         if self.action == 'list':

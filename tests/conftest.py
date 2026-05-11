@@ -150,7 +150,7 @@ def fastapi_service(django_db_setup, django_db_blocker) -> Iterator[dict]:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
-def _open_permissions(settings):
+def _open_permissions(settings, monkeypatch):
     """
     Tests bypass auth by default — the data-foundation pipeline is what's
     under test, not authn. Real auth gets covered in dedicated tests.
@@ -159,7 +159,15 @@ def _open_permissions(settings):
     which trips inside the e2e suite once enough uploads + polls happen in
     a single run. Throttle correctness is a separate concern; turning it off
     here keeps the data-pipeline tests deterministic.
+
+    ViewSets that pin their own ``permission_classes`` (e.g.
+    DrawingSheetViewSet, DocumentContentViewSet, TitleBlockTemplateViewSet
+    after PR 2.3) bypass DEFAULT_PERMISSION_CLASSES, so we monkey-patch
+    them open here too. Tests that want to exercise the real gate opt out
+    with their own autouse fixture (see test_drawings_documents_permissions).
     """
+    from rest_framework.permissions import AllowAny
+
     settings.REST_FRAMEWORK = {
         **getattr(settings, 'REST_FRAMEWORK', {}),
         'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
@@ -167,6 +175,13 @@ def _open_permissions(settings):
         'DEFAULT_THROTTLE_CLASSES': [],
         'DEFAULT_THROTTLE_RATES': {},
     }
+
+    from apps.entities.views.drawings import (
+        DrawingSheetViewSet, TitleBlockTemplateViewSet,
+    )
+    from apps.entities.views.documents import DocumentContentViewSet
+    for vs in (DrawingSheetViewSet, TitleBlockTemplateViewSet, DocumentContentViewSet):
+        monkeypatch.setattr(vs, 'permission_classes', [AllowAny])
 
 
 @pytest.fixture(autouse=True)

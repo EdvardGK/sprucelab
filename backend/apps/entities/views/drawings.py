@@ -4,6 +4,11 @@ ViewSets for the drawing layer (Phase 5).
 - DrawingSheetViewSet — read + filter; `register` action attaches a
   DrawingRegistration computed from two paper-grid pairs.
 - TitleBlockTemplateViewSet — full CRUD per project.
+
+Permissions: both ViewSets explicitly pin ``IsApprovedUser`` so they don't
+silently rely on the global DRF default. Project-membership scoping is a
+no-op today (the org-model with ProjectMember lands later — see
+apps.filters.views for the same caveat); approval gates the surface for now.
 """
 from __future__ import annotations
 
@@ -11,6 +16,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.accounts.permissions import IsApprovedUser
 from apps.models.models import ExtractionRun
 from ..models import DrawingSheet, TitleBlockTemplate, DrawingRegistration
 from ..serializers import (
@@ -40,6 +46,7 @@ class DrawingSheetViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = DrawingSheet.objects.all()
     serializer_class = DrawingSheetSerializer
+    permission_classes = [IsApprovedUser]
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -159,6 +166,7 @@ class TitleBlockTemplateViewSet(viewsets.ModelViewSet):
     """
     queryset = TitleBlockTemplate.objects.all()
     serializer_class = TitleBlockTemplateSerializer
+    permission_classes = [IsApprovedUser]
 
     def get_queryset(self):
         qs = TitleBlockTemplate.objects.all()
