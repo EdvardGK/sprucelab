@@ -49,13 +49,14 @@ def test_first_upload_creates_201(api_client, project):
     assert SourceFile.objects.filter(project=project).count() == 1
 
 
-def test_duplicate_returns_409_with_existing_payload(api_client, project):
+def test_duplicate_returns_200_with_duplicate_flag(api_client, project):
     _upload(api_client, project, b'\x25PDF-1.4 same', 'sheet.pdf')
     resp = _upload(api_client, project, b'\x25PDF-1.4 same', 'sheet.pdf')
-    assert resp.status_code == 409, resp.content
+    assert resp.status_code == 200, resp.content
     body = resp.json()
-    assert body['error'] == 'duplicate_file'
+    assert body['duplicate'] is True
     assert body['existing_file']['original_filename'] == 'sheet.pdf'
+    assert 'detail' in body
     assert SourceFile.objects.filter(project=project).count() == 1
 
 
@@ -93,7 +94,7 @@ def test_invalid_on_duplicate_returns_400(api_client, project):
     assert resp.status_code == 400, resp.content
     body = resp.json()
     assert body['error'] == 'invalid_on_duplicate'
-    assert 'error_409' in body['allowed']
+    assert 'ask' in body['allowed']
 
 
 def test_different_bytes_same_name_creates_new_version_default(api_client, project):

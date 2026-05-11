@@ -180,12 +180,13 @@ class SourceFileViewSet(viewsets.ModelViewSet):
         Universal upload. Auto-detects format, dispatches the right extractor.
 
         Duplicate handling (?on_duplicate=...):
-          - error_409 (default): if a file with the same checksum already exists
-            in the project, return 409 with the existing file payload. The
-            frontend uses this to surface a "use existing / replace / cancel"
-            dialog.
-          - use_existing: silently return the existing file with 200. Idempotent
-            re-upload path for agents/CLI.
+          - ask (default): if a file with the same checksum already exists in
+            the project, return 200 with ``{"duplicate": true, "existing_file":
+            {...}, "detail": ...}``. The frontend surfaces a "use existing /
+            replace / cancel" dialog. We deliberately use 200 (not 409) so the
+            browser console doesn't redden a normal user-flow outcome.
+          - use_existing: silently return the existing file with 200 (no flag).
+            Idempotent re-upload path for agents/CLI.
           - replace: store as a new version even if checksum matches. Bumps
             version_number on the filename chain.
         """
@@ -195,13 +196,13 @@ class SourceFileViewSet(viewsets.ModelViewSet):
         project_id = upload.validated_data['project_id']
         project = get_object_or_404(Project, pk=project_id)
 
-        on_duplicate = request.query_params.get('on_duplicate', 'error_409')
-        if on_duplicate not in ('error_409', 'use_existing', 'replace'):
+        on_duplicate = request.query_params.get('on_duplicate', 'ask')
+        if on_duplicate not in ('ask', 'use_existing', 'replace'):
             return Response(
                 {
                     'error': 'invalid_on_duplicate',
-                    'detail': 'on_duplicate must be one of: error_409, use_existing, replace',
-                    'allowed': ['error_409', 'use_existing', 'replace'],
+                    'detail': 'on_duplicate must be one of: ask, use_existing, replace',
+                    'allowed': ['ask', 'use_existing', 'replace'],
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -217,14 +218,14 @@ class SourceFileViewSet(viewsets.ModelViewSet):
                 return Response(body, status=status.HTTP_200_OK)
             return Response(
                 {
-                    'error': 'duplicate_file',
+                    'duplicate': True,
                     'detail': (
                         f'A file with identical contents already exists in this project '
                         f'as "{existing.original_filename}".'
                     ),
                     'existing_file': body,
                 },
-                status=status.HTTP_409_CONFLICT,
+                status=status.HTTP_200_OK,
             )
 
         _saved, file_url, _checksum2, file_size = store_uploaded_file(project, uploaded_file)
