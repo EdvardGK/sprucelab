@@ -23,6 +23,7 @@ def _wide_console(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _pin_api_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("spruce.config.get_api_url", lambda: TEST_API_URL)
+    monkeypatch.setattr("spruce.files.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.models.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.types.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.verify.get_api_url", lambda: TEST_API_URL)

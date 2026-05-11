@@ -94,6 +94,25 @@ def capabilities(request):
                 'admin_endpoints_require_staff': True,
             },
         },
+        # CLI verticals — agents that prefer a process-spawn surface over raw
+        # HTTP can pipe `spruce <group> <cmd> --json`. Names are stable; new
+        # groups are additive only. Keep alphabetized.
+        'cli_commands': {
+            'capabilities': 'spruce capabilities [--json]',
+            'files': [
+                'spruce files list [--project] [--format] [--current-only] [--json]',
+                'spruce files show <id> [--json]',
+                'spruce files upload <path> --project <uuid> [--on-duplicate ask|use_existing|replace]',
+                'spruce files download <id> [--out PATH] [--overwrite]',
+                'spruce files reprocess <id> [--json]',
+                'spruce files versions <id> [--json]',
+            ],
+            'log': 'spruce log list [--project] [--source-file] [--category] [--json]',
+            'models': 'spruce models list [--project-id] [--json]',
+            'types': 'spruce types list [--model] [--json]',
+            'verify': 'spruce verify --model <id> [--dry-run] [--json]',
+            'webhooks': 'spruce webhooks {list,create,disable,delete,deliveries,redeliver,test}',
+        },
     })
 
 

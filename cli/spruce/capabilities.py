@@ -40,6 +40,15 @@ WORKED_EXAMPLES = [
         ],
     ),
     (
+        "Walk the universal file substrate",
+        [
+            "spruce files list --project <PROJECT_UUID> --json",
+            "spruce files show <FILE_UUID>",
+            "spruce files upload ./drawings/A101.pdf --project <PROJECT_UUID>",
+            "spruce files reprocess <FILE_UUID>  # re-run extraction on the same blob",
+        ],
+    ),
+    (
         "Run verification (dry-run is safe — no DB writes)",
         [
             "spruce verify --model <MODEL_UUID> --dry-run",
