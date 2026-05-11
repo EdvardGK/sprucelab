@@ -928,50 +928,46 @@ function Treemap({ types, onTileClick, activeIfcClass }: { types: AnalysisTypeRe
           const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
           const showLabel = pctW > 8 && pctH > 8;
           const isActive = activeIfcClass === r.label;
-          // The treemap tiles need inline style for absolute positioning;
-          // DrillTarget doesn't expose `style`, so mirror its
-          // hover-outline / focus / active classes manually here. The
-          // class set matches `DrillTarget`'s output for visual parity.
           const interactive = !!onTileClick;
-          const className = [
-            'absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px',
-            interactive && 'cursor-pointer transition-all hover:brightness-110 hover:outline hover:outline-1 hover:outline-primary hover:outline-offset-[1px] focus:outline focus:outline-1 focus:outline-primary focus:outline-offset-[1px] focus-visible:ring-2 focus-visible:ring-primary/30',
-            interactive && isActive && 'outline outline-1 outline-primary outline-offset-[1px]',
-          ].filter(Boolean).join(' ');
+          const tileStyle = {
+            left: `${pctX}%`, top: `${pctY}%`,
+            width: `${pctW}%`, height: `${pctH}%`,
+            background: color, opacity: 0.85,
+          };
+          const tileClassName = 'absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center p-px';
+          const tileContent = showLabel && (
+            <>
+              <span className="text-[clamp(0.45rem,0.8vw,0.6rem)] font-medium text-white/90 leading-tight truncate max-w-full px-0.5">
+                {r.label}
+              </span>
+              <span className="text-[clamp(0.4rem,0.7vw,0.55rem)] text-white/70 tabular-nums">
+                {r.value.toLocaleString()}
+              </span>
+            </>
+          );
+          if (!interactive) {
+            return (
+              <div
+                key={r.label}
+                className={tileClassName}
+                style={tileStyle}
+                title={`${r.label}: ${r.value.toLocaleString()}`}
+              >
+                {tileContent}
+              </div>
+            );
+          }
           return (
-            <div
+            <DrillTarget
               key={r.label}
-              role={interactive ? 'button' : undefined}
-              tabIndex={interactive ? 0 : undefined}
-              aria-pressed={interactive ? isActive : undefined}
-              aria-label={interactive ? `Filter by ${r.label}` : undefined}
-              className={className}
-              style={{
-                left: `${pctX}%`, top: `${pctY}%`,
-                width: `${pctW}%`, height: `${pctH}%`,
-                background: color, opacity: 0.85,
-              }}
-              title={`${r.label}: ${r.value.toLocaleString()}`}
-              onClick={interactive ? (e) => { e.stopPropagation(); onTileClick!(r.label); } : undefined}
-              onKeyDown={interactive ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onTileClick!(r.label);
-                }
-              } : undefined}
+              active={isActive}
+              ariaLabel={`Filter by ${r.label}`}
+              className={tileClassName}
+              style={tileStyle}
+              onActivate={() => onTileClick!(r.label)}
             >
-              {showLabel && (
-                <>
-                  <span className="text-[clamp(0.45rem,0.8vw,0.6rem)] font-medium text-white/90 leading-tight truncate max-w-full px-0.5">
-                    {r.label}
-                  </span>
-                  <span className="text-[clamp(0.4rem,0.7vw,0.55rem)] text-white/70 tabular-nums">
-                    {r.value.toLocaleString()}
-                  </span>
-                </>
-              )}
-            </div>
+              {tileContent}
+            </DrillTarget>
           );
         })}
       </div>
@@ -1000,29 +996,31 @@ function GeometryBar({ types, onSegmentClick }: { types: AnalysisTypeRecord[]; o
 
   return (
     <div>
-      {/* Stacked bar — segments need inline width %; mirror DrillTarget
-          affordances with role/tabIndex/keyboard handlers manually. */}
+      {/* Stacked bar — segments need inline width %. */}
       <div className="h-[clamp(0.6rem,1vw,0.8rem)] rounded-full overflow-hidden flex">
         {data.map(([label, value], i) => {
           const pct = (value / total) * 100;
+          const segStyle = { width: `${pct}%`, background: GEOM_COLORS[i % GEOM_COLORS.length] };
+          if (!interactive) {
+            return (
+              <div
+                key={label}
+                className="h-full"
+                style={segStyle}
+                title={`${label}: ${value.toLocaleString()} (${pct.toFixed(1)}%)`}
+              />
+            );
+          }
           return (
-            <div
+            <DrillTarget
               key={label}
-              role={interactive ? 'button' : undefined}
-              tabIndex={interactive ? 0 : undefined}
-              aria-label={interactive ? `Filter by ${label}` : undefined}
-              className={`h-full transition-all ${interactive ? 'cursor-pointer hover:brightness-110 focus:outline focus:outline-1 focus:outline-primary focus-visible:ring-2 focus-visible:ring-primary/30' : ''}`}
-              style={{ width: `${pct}%`, background: GEOM_COLORS[i % GEOM_COLORS.length] }}
-              title={`${label}: ${value.toLocaleString()} (${pct.toFixed(1)}%)`}
-              onClick={interactive ? (e) => { e.stopPropagation(); onSegmentClick!(label); } : undefined}
-              onKeyDown={interactive ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onSegmentClick!(label);
-                }
-              } : undefined}
-            />
+              ariaLabel={`Filter by ${label}: ${value.toLocaleString()} (${pct.toFixed(1)}%)`}
+              className="h-full"
+              style={segStyle}
+              onActivate={() => onSegmentClick!(label)}
+            >
+              {null}
+            </DrillTarget>
           );
         })}
       </div>

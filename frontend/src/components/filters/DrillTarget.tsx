@@ -1,4 +1,4 @@
-import { KeyboardEvent, MouseEvent, ReactNode, createElement } from 'react';
+import { CSSProperties, KeyboardEvent, MouseEvent, ReactNode, createElement } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -7,6 +7,7 @@ interface DrillTargetProps {
   active?: boolean;
   as?: 'div' | 'button' | 'span';
   className?: string;
+  style?: CSSProperties;
   ariaLabel?: string;
   disabled?: boolean;
   children: ReactNode;
@@ -17,6 +18,7 @@ export function DrillTarget({
   active = false,
   as = 'div',
   className,
+  style,
   ariaLabel,
   disabled = false,
   children,
@@ -58,6 +60,7 @@ export function DrillTarget({
         'focus:outline focus:outline-1 focus:outline-primary focus:outline-offset-[1px] focus-visible:ring-2 focus-visible:ring-primary/30',
         className,
       ),
+      style,
     },
     children,
   );
