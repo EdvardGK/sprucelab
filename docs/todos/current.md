@@ -8,6 +8,7 @@
 
 ## Recently shipped
 
+- [x] **Phase 3 Type page v2 first cut** (2026-05-11, commit `e41c272`) -- new `/projects/:id/types?v=2` route renders the four-section skiplum-reports layout (header + filter bar + treemap/top-20 row + table) wired to real model data. v1 untouched; round-trip link in both directions. New `frontend/src/components/features/warehouse-v2/` directory (6 files), no new deps, no backend changes. Detail pane + manual classification + cards view + materials port deferred to Phase 3b/3c/3d/3.x.
 - [x] **Webhook System Phase 1** (2026-04-29, snapshot `b73a1d5`) -- `WebhookSubscription` + `WebhookDelivery` in `apps/automation/`, HMAC-SHA256 dispatcher, Celery `deliver_webhook_task` with exponential backoff + auto-disable, ViewSets at `/api/automation/webhook-{subscriptions,deliveries}/`. Four events wired: `model.processed`, `document.processed`, `claim.extracted`, `verification.complete`.
 - [x] **CLI Expansion -- spruce {types,verify,scripts}** (2026-05-10, commit `991cce9`) -- Typer + Rich + httpx (mirrors `embed.py`). All commands support `--json`. Entry point `cli/spruce/cli.py`. Backend quirks documented: `verify` is POST not GET; `types classify` uses bulk-update with single-element mappings; `types export` streams binary to stdout.
 - [x] **PR 1.5 SavedFiltersDropdown** (2026-05-10, commit `e2f7b0c`) -- `useSavedFilters` hook + Radix dropdown UI mounted in `CanvasOverlays.tsx` chip row. Restore semantics = full replace via `useProjectFilterActions.replace()`. i18n keys `filters.saved.*` (en + nb with proper æøå).
@@ -25,9 +26,13 @@
 
 ## Active backlog
 
-### Phase 3 -- Type page v2 (next anchor PR)
-- [ ] Visual refresh for Type page (`?v=2`), the anchor PR for the next phase of the frontend refresh roadmap
-- [ ] Deserves a dedicated session, NOT a parallel coordinator track
+### Phase 3 -- Type page v2 (first cut shipped; follow-ups remain)
+- [x] Phase 3 first cut at `?v=2` (commit `e41c272`)
+- [ ] **Phase 3b**: Detail pane on row click — inline `UnifiedBIMViewer` + `HUDScene`, classification triple, properties grid, layer buildup, MMI/EIR/systems; wires `useProjectFilter` cross-filter
+- [ ] **Phase 3c**: Manual classification UI (ConfirmedClassPill + ClassificationCombobox)
+- [ ] **Phase 3d**: Cards view toggle
+- [ ] **Phase 3.x**: Materials port at `/projects/:id/materials?v=2`
+- [ ] Tune coverage strip metric (`computeCoverage` in `TypeTableV2.tsx`) against real EIRs once Phase 7 lands
 
 ### CLI follow-ups
 - [ ] Live API smoke against dev server: `spruce types list --model <id> --json`, `spruce verify --model <id>`, `spruce scripts list`. Only `--help` verified at ship time.
@@ -110,5 +115,5 @@
 
 ---
 
-**Next Action**: Phase 3 -- Type page v2 visual refresh (dedicated session)
-**Then**: Embed PR 5+ (ViewerTile + filter->isolation) once roadmap is surfaced into `docs/todos/`
+**Next Action**: Phase 3b -- Type detail pane (inline viewer + classification triple + properties grid + cross-filter)
+**Then**: Phase 3c/3d/3.x, then Embed PR 5+
