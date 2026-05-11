@@ -52,6 +52,15 @@ def _fire_event(event_type: str, payload: dict, project_id: str | None) -> None:
         logger.exception('webhook dispatch (%s) failed', event_type)
 
 
+def compute_checksum(uploaded_file) -> str:
+    """SHA-256 of the upload without persisting. Caller must seek(0) afterwards if reusing."""
+    uploaded_file.seek(0)
+    sha = hashlib.sha256()
+    for chunk in uploaded_file.chunks():
+        sha.update(chunk)
+    return sha.hexdigest()
+
+
 def store_uploaded_file(project: Project, uploaded_file) -> tuple[str, str, str, int]:
     """
     Persist an upload to storage and compute its checksum.
@@ -65,11 +74,7 @@ def store_uploaded_file(project: Project, uploaded_file) -> tuple[str, str, str,
     if file_url.startswith('/'):
         file_url = f"{settings.DJANGO_URL}{file_url}"
 
-    uploaded_file.seek(0)
-    sha = hashlib.sha256()
-    for chunk in uploaded_file.chunks():
-        sha.update(chunk)
-    checksum = sha.hexdigest()
+    checksum = compute_checksum(uploaded_file)
 
     return saved_path, file_url, checksum, uploaded_file.size
 
@@ -83,6 +88,7 @@ def get_or_create_source_file(
     checksum: str,
     uploaded_by,
     mime_type: str = "",
+    force_new: bool = False,
 ) -> SourceFile:
     """
     Dedup on (project, checksum). Returns the existing SourceFile if the same
@@ -90,8 +96,12 @@ def get_or_create_source_file(
 
     Versioning: a NEW upload of the same filename with different bytes bumps
     version_number, marks previous versions is_current=False.
+
+    ``force_new=True`` bypasses the checksum-dedup short-circuit so the caller
+    can force a new version row even when the bytes match an existing record
+    (used by the duplicate-upload "replace" UX).
     """
-    if checksum:
+    if checksum and not force_new:
         existing = SourceFile.objects.filter(
             project=project, checksum_sha256=checksum
         ).order_by('-version_number').first()
@@ -166,14 +176,58 @@ class SourceFileViewSet(viewsets.ModelViewSet):
         return SourceFileSerializer
 
     def create(self, request, *args, **kwargs):
-        """Universal upload. Auto-detects format, dispatches the right extractor."""
+        """
+        Universal upload. Auto-detects format, dispatches the right extractor.
+
+        Duplicate handling (?on_duplicate=...):
+          - error_409 (default): if a file with the same checksum already exists
+            in the project, return 409 with the existing file payload. The
+            frontend uses this to surface a "use existing / replace / cancel"
+            dialog.
+          - use_existing: silently return the existing file with 200. Idempotent
+            re-upload path for agents/CLI.
+          - replace: store as a new version even if checksum matches. Bumps
+            version_number on the filename chain.
+        """
         upload = SourceFileUploadSerializer(data=request.data)
         upload.is_valid(raise_exception=True)
         uploaded_file = upload.validated_data['file']
         project_id = upload.validated_data['project_id']
         project = get_object_or_404(Project, pk=project_id)
 
-        _saved, file_url, checksum, file_size = store_uploaded_file(project, uploaded_file)
+        on_duplicate = request.query_params.get('on_duplicate', 'error_409')
+        if on_duplicate not in ('error_409', 'use_existing', 'replace'):
+            return Response(
+                {
+                    'error': 'invalid_on_duplicate',
+                    'detail': 'on_duplicate must be one of: error_409, use_existing, replace',
+                    'allowed': ['error_409', 'use_existing', 'replace'],
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        checksum = compute_checksum(uploaded_file)
+        existing = SourceFile.objects.filter(
+            project=project, checksum_sha256=checksum,
+        ).order_by('-version_number').first() if checksum else None
+
+        if existing and on_duplicate != 'replace':
+            body = SourceFileSerializer(existing, context={'request': request}).data
+            if on_duplicate == 'use_existing':
+                return Response(body, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    'error': 'duplicate_file',
+                    'detail': (
+                        f'A file with identical contents already exists in this project '
+                        f'as "{existing.original_filename}".'
+                    ),
+                    'existing_file': body,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        _saved, file_url, _checksum2, file_size = store_uploaded_file(project, uploaded_file)
 
         sf = get_or_create_source_file(
             project=project,
@@ -183,9 +237,9 @@ class SourceFileViewSet(viewsets.ModelViewSet):
             checksum=checksum,
             uploaded_by=request.user if request.user.is_authenticated else None,
             mime_type=getattr(uploaded_file, 'content_type', '') or '',
+            force_new=(on_duplicate == 'replace'),
         )
 
-        # Dispatch extraction for known formats. Today: IFC only.
         run = self._dispatch_extraction(sf, file_url)
 
         body = SourceFileSerializer(sf, context={'request': request}).data

@@ -2,7 +2,7 @@
 // Mirrors `use-documents.ts` for read hooks, plus mutations for upload/register/delete.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
-import type { PaginatedResponse } from '@/lib/api-types';
+import type { PaginatedResponse, SourceFileListItem } from '@/lib/api-types';
 
 export type DrawingFormat = 'dwg' | 'dxf' | 'pdf' | 'svg';
 
@@ -114,24 +114,59 @@ export interface UploadDrawingArgs {
   projectId: string;
   file: File;
   onProgress?: (percent: number) => void;
+  // 'error_409' (default) returns 409 + existing_file when bytes already exist —
+  // the caller is expected to surface a dialog. 'use_existing' makes the upload
+  // idempotent (returns the existing file with 200). 'replace' bumps version.
+  onDuplicate?: 'error_409' | 'use_existing' | 'replace';
+}
+
+export interface DuplicateFileError extends Error {
+  status: 409;
+  existingFile: SourceFileListItem;
+}
+
+export function isDuplicateFileError(err: unknown): err is DuplicateFileError {
+  return (
+    err instanceof Error &&
+    (err as { status?: number }).status === 409 &&
+    typeof (err as { existingFile?: unknown }).existingFile === 'object'
+  );
 }
 
 export function useUploadDrawing() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ projectId, file, onProgress }: UploadDrawingArgs) => {
+    mutationFn: async ({ projectId, file, onProgress, onDuplicate }: UploadDrawingArgs) => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('project_id', projectId);
-      const response = await apiClient.post('/files/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 300_000,
-        onUploadProgress: (event) => {
-          if (!onProgress || !event.total) return;
-          onProgress(Math.round((event.loaded * 100) / event.total));
-        },
-      });
-      return response.data as { id: string; project: string; format: string };
+      try {
+        const response = await apiClient.post('/files/', formData, {
+          params: onDuplicate ? { on_duplicate: onDuplicate } : undefined,
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 300_000,
+          onUploadProgress: (event) => {
+            if (!onProgress || !event.total) return;
+            onProgress(Math.round((event.loaded * 100) / event.total));
+          },
+        });
+        return response.data as { id: string; project: string; format: string };
+      } catch (err) {
+        const axiosErr = err as {
+          response?: { status?: number; data?: { error?: string; existing_file?: SourceFileListItem } };
+        };
+        if (
+          axiosErr.response?.status === 409 &&
+          axiosErr.response.data?.error === 'duplicate_file' &&
+          axiosErr.response.data.existing_file
+        ) {
+          const duplicate = new Error('duplicate_file') as DuplicateFileError;
+          duplicate.status = 409;
+          duplicate.existingFile = axiosErr.response.data.existing_file;
+          throw duplicate;
+        }
+        throw err;
+      }
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({

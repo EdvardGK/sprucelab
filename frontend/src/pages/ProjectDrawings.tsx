@@ -17,6 +17,7 @@ import { useProject } from '@/hooks/use-projects';
 import {
   useDrawingsList,
   useUploadDrawing,
+  isDuplicateFileError,
   type DrawingSheetListItem,
   type DrawingFormat,
 } from '@/hooks/use-drawings';
@@ -24,6 +25,14 @@ import apiClient from '@/lib/api-client';
 import type { PaginatedResponse, SourceFileListItem } from '@/lib/api-types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +65,10 @@ export default function ProjectDrawings() {
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
+  const [duplicatePrompt, setDuplicatePrompt] = useState<{
+    file: File;
+    existingFilename: string;
+  } | null>(null);
 
   const { data: project, isLoading: projectLoading } = useProject(id!);
   const { data: drawings, isLoading: drawingsLoading } = useDrawingsList(id);
@@ -90,12 +103,31 @@ export default function ProjectDrawings() {
         try {
           await upload.mutateAsync({ projectId: id!, file });
         } catch (err) {
+          if (isDuplicateFileError(err)) {
+            setDuplicatePrompt({ file, existingFilename: err.existingFile.original_filename });
+            continue;
+          }
           const message = err instanceof Error ? err.message : t('drawings.upload.failed');
           setUploadError(message);
         }
       }
     },
     [upload, id, t],
+  );
+
+  const handleDuplicateAction = useCallback(
+    async (action: 'use_existing' | 'replace') => {
+      const pending = duplicatePrompt;
+      setDuplicatePrompt(null);
+      if (!pending) return;
+      try {
+        await upload.mutateAsync({ projectId: id!, file: pending.file, onDuplicate: action });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : t('drawings.upload.failed');
+        setUploadError(message);
+      }
+    },
+    [duplicatePrompt, upload, id, t],
   );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -276,6 +308,35 @@ export default function ProjectDrawings() {
             />
           </Suspense>
         )}
+
+        <Dialog
+          open={duplicatePrompt !== null}
+          onOpenChange={(open) => {
+            if (!open) setDuplicatePrompt(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('drawings.upload.duplicate.title')}</DialogTitle>
+              <DialogDescription>
+                {t('drawings.upload.duplicate.body', {
+                  filename: duplicatePrompt?.existingFilename ?? '',
+                })}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-[clamp(0.5rem,1vw,0.75rem)]">
+              <Button variant="ghost" onClick={() => setDuplicatePrompt(null)}>
+                {t('common.cancel')}
+              </Button>
+              <Button variant="outline" onClick={() => handleDuplicateAction('use_existing')}>
+                {t('drawings.upload.duplicate.useExisting')}
+              </Button>
+              <Button onClick={() => handleDuplicateAction('replace')}>
+                {t('drawings.upload.duplicate.replace')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -1290,7 +1290,13 @@
       "dropOrClick": "Drag a drawing here or click to browse",
       "uploading": "Uploading...",
       "invalidFileType": "Only DWG, DXF, PDF and SVG files are accepted.",
-      "failed": "Upload failed."
+      "failed": "Upload failed.",
+      "duplicate": {
+        "title": "File already exists",
+        "body": "A drawing with identical contents was already uploaded as \"{{filename}}\". What would you like to do?",
+        "useExisting": "Use existing",
+        "replace": "Upload as new version"
+      }
     },
     "preview": {
       "pdfDeferred": "PDF preview lives in the Documents library. Use Open original to download.",

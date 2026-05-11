@@ -1290,7 +1290,13 @@
       "dropOrClick": "Dra en tegning hit eller klikk for å velge",
       "uploading": "Laster opp...",
       "invalidFileType": "Bare DWG, DXF, PDF og SVG er støttet.",
-      "failed": "Opplasting feilet."
+      "failed": "Opplasting feilet.",
+      "duplicate": {
+        "title": "Filen finnes allerede",
+        "body": "En tegning med identisk innhold er allerede lastet opp som «{{filename}}». Hva vil du gjøre?",
+        "useExisting": "Bruk eksisterende",
+        "replace": "Last opp som ny versjon"
+      }
     },
     "preview": {
       "pdfDeferred": "PDF-forhåndsvisning ligger i Dokumenter-biblioteket. Bruk Åpne original for nedlasting.",
