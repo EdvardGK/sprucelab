@@ -101,7 +101,16 @@ export interface IsolationConfig {
   mode: 'single' | 'all';              // 'all' shows the set; 'single' also highlights currentGuid
   currentGuid?: string | null;         // for orange highlight in 'single' mode
   zoomOnChange?: boolean;              // if true, fit camera to isolated set when guids change
+  // PR 5 additions (embed/ViewerTile). Both optional; existing call sites are unchanged.
+  // - 'isolate' (default) = hide non-matching via Hider.set / setVisible (today's behavior).
+  // - 'highlight' = keep everything visible; paint matching with accentColor on v3 models.
+  //   v2 federated models fall back to 'isolate' (logged once) per spike doc § 5a.
+  renderMode?: 'isolate' | 'highlight';
+  accentColor?: string;                // hex string used in 'highlight' mode; defaults to blue-500
 }
+
+// Embed PR 5: default accent for highlight-mode isolation. Tailwind blue-500.
+const HIGHLIGHT_ACCENT_DEFAULT = '#3b82f6';
 
 // Imperative handle interface for parent components
 export interface UnifiedBIMViewerHandle {
@@ -1986,6 +1995,12 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // Tracks whether isolation was active on the previous run, so the restore
   // branch only fires on the null transition (not every typeInfo update).
   const wasIsolatedRef = useRef(false);
+  // Tracks the renderMode applied on the previous active run, so flipping
+  // between 'isolate' and 'highlight' cleans up the prior strategy.
+  const lastRenderModeRef = useRef<'isolate' | 'highlight' | null>(null);
+  // Warn-once when a federated group contains v2 models in highlight mode —
+  // those fall back to filter mode and visually mismatch the v3 path.
+  const v2HighlightWarnedRef = useRef(false);
 
   // Apply floor filter — show only elements on the selected floor.
   // When floorCodeFilter is null/undefined, show all (reset). When the value
@@ -2059,50 +2074,140 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     if (!isActive && !wasActive) return;
 
     const rafId = requestAnimationFrame(() => {
+      // Compute renderMode up here so both active and restore branches use
+      // the same value when cleaning up the prior strategy.
+      const renderMode: 'isolate' | 'highlight' =
+        isolation?.renderMode === 'highlight' ? 'highlight' : 'isolate';
+      const lastMode = lastRenderModeRef.current;
+
+      // If the previous active run was in 'highlight' mode, clean up the v3
+      // highlight overlay before applying the new strategy (or restoring).
+      const clearV3Highlight = async () => {
+        const v3Models = loadedModelsRef.current.filter(m => m.formatVersion === 'v3' && m.v3Model);
+        await Promise.allSettled(v3Models.map(m => m.v3Model!.resetHighlight()));
+        v3FragmentsRef.current?.update().catch(() => {});
+      };
+
       try {
         if (isActive) {
-          const map = fragmentsManager.guidToFragmentIdMap(isolation!.guids);
-          const hasMatches = Object.keys(map).length > 0;
-
-          hider.set(false);
-          if (hasMatches) hider.set(true, map);
-
-          try { highlighter.clear('current'); } catch { /* style not registered yet */ }
-          if (isolation!.mode === 'single' && isolation!.currentGuid) {
-            const cur = fragmentsManager.guidToFragmentIdMap([isolation!.currentGuid]);
-            if (Object.keys(cur).length > 0) {
-              highlighter.highlightByID('current', cur, false, false);
-            }
+          // If we're flipping from 'highlight' → 'isolate', drop the v3 tint
+          // so the upcoming hider.set doesn't leave colored ghosts.
+          if (lastMode === 'highlight' && renderMode === 'isolate') {
+            clearV3Highlight();
           }
 
-          // Optional zoom-to-isolated, useful for prev/next instance navigation.
-          if (isolation!.zoomOnChange && hasMatches && worldRef.current) {
-            const bbox = new THREE.Box3();
-            let hasGeometry = false;
-            for (const fragId of Object.keys(map)) {
-              const fragment = fragmentsManager.list.get(fragId);
-              if (fragment?.mesh) {
-                const meshBbox = new THREE.Box3().setFromObject(fragment.mesh);
-                if (!meshBbox.isEmpty()) { bbox.union(meshBbox); hasGeometry = true; }
+          if (renderMode === 'highlight') {
+            // Embed PR 5 — highlight mode. Keep all elements visible; tint
+            // matching items on v3 models with the accent color. Per the
+            // spike doc § 5a, v2 federated models fall back to filter mode
+            // (they have no per-element highlight surface that doesn't
+            // fight with OBCF.Highlighter's selection cursor).
+            const accentHex = isolation!.accentColor || HIGHLIGHT_ACCENT_DEFAULT;
+            const accentMaterial: FRAGS.MaterialDefinition = {
+              color: new THREE.Color(accentHex),
+              opacity: 1,
+              transparent: false,
+              renderedFaces: 0,
+              customId: 'embed-highlight',
+            };
+
+            // Restore everything to visible (we might be coming off
+            // 'isolate' mode where hider was hiding non-matching).
+            try { hider.set(true); } catch { /* */ }
+
+            // v2 fallback warning (once per viewer mount).
+            const hasV2 = loadedModelsRef.current.some(m => m.formatVersion === 'v2');
+            if (hasV2 && !v2HighlightWarnedRef.current) {
+              console.warn(
+                '[Viewer] isolation.renderMode="highlight" on a federated group with v2 fragments — ' +
+                'v2 models will fall back to filter mode. Re-convert via the backfill command to drop this.',
+              );
+              v2HighlightWarnedRef.current = true;
+            }
+
+            // v2 models in the group fall back to the filter path so they
+            // visually align with the matching set (no tint, but at least
+            // non-matching is hidden).
+            if (hasV2) {
+              const v2Map = fragmentsManager.guidToFragmentIdMap(isolation!.guids);
+              if (Object.keys(v2Map).length > 0) {
+                hider.set(false);
+                hider.set(true, v2Map);
               }
             }
-            const zoomCam = getCamera(worldRef.current as OBC.SimpleWorld<any, any, any> | null);
-            if (hasGeometry && !bbox.isEmpty() && zoomCam?.controls) {
-              const center = new THREE.Vector3(); bbox.getCenter(center);
-              const size = new THREE.Vector3(); bbox.getSize(size);
-              const maxDim = Math.max(size.x, size.y, size.z, 2);
-              const distance = Math.max(maxDim * 2.0, 5);
-              const dir = new THREE.Vector3();
-              zoomCam.three.getWorldDirection(dir);
-              const camPos = center.clone().sub(dir.multiplyScalar(distance));
-              zoomCam.controls.setLookAt(camPos.x, camPos.y, camPos.z, center.x, center.y, center.z, true);
+
+            // v3 tint — resolve GUIDs to localIds per model, then highlight.
+            const v3Models = loadedModelsRef.current.filter(m => m.formatVersion === 'v3' && m.v3Model);
+            if (v3Models.length > 0) {
+              const guids = isolation!.guids;
+              Promise.all(
+                v3Models.map(async (m) => {
+                  try {
+                    const localIds = await m.v3Model!.getLocalIdsByGuids(guids);
+                    const matching = localIds.filter((id): id is number => id !== null);
+                    // Drop prior 'embed-highlight' overlay before applying.
+                    await m.v3Model!.resetHighlight();
+                    if (matching.length > 0) {
+                      await m.v3Model!.highlight(matching, accentMaterial);
+                    }
+                  } catch (err) {
+                    console.warn('[Viewer] v3 highlight failed:', err);
+                  }
+                }),
+              ).then(() => {
+                v3FragmentsRef.current?.update().catch(() => {});
+              });
+            }
+          } else {
+            // 'isolate' mode (default) — unchanged behaviour. Hide all then
+            // show only the matching fragments.
+            const map = fragmentsManager.guidToFragmentIdMap(isolation!.guids);
+            const hasMatches = Object.keys(map).length > 0;
+
+            hider.set(false);
+            if (hasMatches) hider.set(true, map);
+
+            try { highlighter.clear('current'); } catch { /* style not registered yet */ }
+            if (isolation!.mode === 'single' && isolation!.currentGuid) {
+              const cur = fragmentsManager.guidToFragmentIdMap([isolation!.currentGuid]);
+              if (Object.keys(cur).length > 0) {
+                highlighter.highlightByID('current', cur, false, false);
+              }
+            }
+
+            // Optional zoom-to-isolated, useful for prev/next instance navigation.
+            if (isolation!.zoomOnChange && hasMatches && worldRef.current) {
+              const bbox = new THREE.Box3();
+              let hasGeometry = false;
+              for (const fragId of Object.keys(map)) {
+                const fragment = fragmentsManager.list.get(fragId);
+                if (fragment?.mesh) {
+                  const meshBbox = new THREE.Box3().setFromObject(fragment.mesh);
+                  if (!meshBbox.isEmpty()) { bbox.union(meshBbox); hasGeometry = true; }
+                }
+              }
+              const zoomCam = getCamera(worldRef.current as OBC.SimpleWorld<any, any, any> | null);
+              if (hasGeometry && !bbox.isEmpty() && zoomCam?.controls) {
+                const center = new THREE.Vector3(); bbox.getCenter(center);
+                const size = new THREE.Vector3(); bbox.getSize(size);
+                const maxDim = Math.max(size.x, size.y, size.z, 2);
+                const distance = Math.max(maxDim * 2.0, 5);
+                const dir = new THREE.Vector3();
+                zoomCam.three.getWorldDirection(dir);
+                const camPos = center.clone().sub(dir.multiplyScalar(distance));
+                zoomCam.controls.setLookAt(camPos.x, camPos.y, camPos.z, center.x, center.y, center.z, true);
+              }
             }
           }
         } else {
           // Transitioning back from active isolation: show all, clear cursor,
-          // reset delta refs so type/storey re-sync from scratch.
+          // reset delta refs so type/storey re-sync from scratch. If the
+          // prior run was 'highlight', drop the v3 tint too.
           hider.set(true);
           try { highlighter.clear('current'); } catch { /* */ }
+          if (lastMode === 'highlight') {
+            clearV3Highlight();
+          }
           prevTypeVisibilityRef.current = {};
           prevStoreyFilterRef.current = undefined;
         }
@@ -2115,6 +2220,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       }
 
       wasIsolatedRef.current = isActive;
+      lastRenderModeRef.current = isActive ? renderMode : null;
     });
 
     return () => cancelAnimationFrame(rafId);

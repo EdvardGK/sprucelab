@@ -1332,5 +1332,10 @@
       "namePrompt": "Name this filter",
       "delete": "Delete {{name}}"
     }
+  },
+  "embed": {
+    "viewerTile": {
+      "unavailable": "Viewer unavailable"
+    }
   }
 }

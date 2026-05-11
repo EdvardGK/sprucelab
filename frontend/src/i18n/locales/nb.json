@@ -1332,5 +1332,10 @@
       "namePrompt": "Navngi dette filteret",
       "delete": "Slett {{name}}"
     }
+  },
+  "embed": {
+    "viewerTile": {
+      "unavailable": "Visning utilgjengelig"
+    }
   }
 }
