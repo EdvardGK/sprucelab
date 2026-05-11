@@ -26,8 +26,10 @@ interface ClaimInboxProps {
 }
 
 type InboxTab = ClaimStatus | 'all';
+type OriginFilter = 'all' | 'observation' | 'other';
 
 const TAB_ORDER: InboxTab[] = ['unresolved', 'promoted', 'rejected', 'all'];
+const ORIGIN_FILTER_ORDER: OriginFilter[] = ['all', 'observation', 'other'];
 
 function extractApiError(err: unknown, fallback: string): string {
   if (isAxiosError(err)) {
@@ -56,6 +58,7 @@ export function ClaimInbox({ projectId, className }: ClaimInboxProps) {
   const [predicate, setPredicate] = useState('all');
   const [documentId, setDocumentId] = useState('all');
   const [minConfidence, setMinConfidence] = useState(0);
+  const [originFilter, setOriginFilter] = useState<OriginFilter>('all');
   const [selectedClaimId, setSelectedClaimId] = useState<string | null>(initialClaimId);
 
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -75,6 +78,8 @@ export function ClaimInbox({ projectId, className }: ClaimInboxProps) {
   const visibleClaims = useMemo(() => {
     let list = allClaims as ClaimListItem[];
     if (tab !== 'all') list = list.filter((c) => c.status === tab);
+    if (originFilter === 'observation') list = list.filter((c) => c.origin_observation != null);
+    else if (originFilter === 'other') list = list.filter((c) => c.origin_observation == null);
     if (predicate !== 'all') list = list.filter((c) => c.normalized?.predicate === predicate);
     if (documentId !== 'all') list = list.filter((c) => c.document === documentId);
     if (minConfidence > 0) list = list.filter((c) => (c.confidence ?? 0) >= minConfidence);
@@ -83,7 +88,7 @@ export function ClaimInbox({ projectId, className }: ClaimInboxProps) {
       list = list.filter((c) => c.snippet.toLowerCase().includes(q));
     }
     return list;
-  }, [allClaims, tab, predicate, documentId, minConfidence, search]);
+  }, [allClaims, tab, originFilter, predicate, documentId, minConfidence, search]);
 
   // Status counts (ignoring tab filter; respect other filters? -> keep simple, ignore filters too).
   const counts = useMemo(() => {
@@ -240,6 +245,28 @@ export function ClaimInbox({ projectId, className }: ClaimInboxProps) {
             ))}
           </TabsList>
         </Tabs>
+        <div
+          role="group"
+          aria-label={t('claims.filterOrigin.label')}
+          className="inline-flex items-center rounded-md border bg-background p-[clamp(1px,0.2vw,2px)] gap-[clamp(1px,0.2vw,2px)]"
+        >
+          {ORIGIN_FILTER_ORDER.map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setOriginFilter(k)}
+              aria-pressed={originFilter === k}
+              className={cn(
+                'rounded px-[clamp(0.4rem,1vw,0.6rem)] py-[clamp(0.15rem,0.5vw,0.3rem)] text-[clamp(0.625rem,1vw,0.75rem)] font-medium transition-colors',
+                originFilter === k
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted',
+              )}
+            >
+              {t(`claims.filterOrigin.${k}`)}
+            </button>
+          ))}
+        </div>
         <div className="ml-auto text-xs text-muted-foreground">
           <span>
             {t('claims.keyboardLegend')}{' '}

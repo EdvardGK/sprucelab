@@ -41,6 +41,7 @@ export interface ClaimListItem {
   claim_type: ClaimType;
   confidence: number;
   status: ClaimStatus;
+  origin_observation: string | null;
   extracted_at: string;
 }
 
@@ -63,6 +64,7 @@ export interface Claim {
   config_payload: Record<string, unknown>;
   superseded_by: string | null;
   rejected_reason: string;
+  origin_observation: string | null;
   extracted_at: string;
   decided_at: string | null;
   decided_by: string | null;

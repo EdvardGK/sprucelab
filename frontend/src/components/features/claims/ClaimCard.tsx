@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Flame, Wind, Thermometer, Volume2, FileText } from 'lucide-react';
+import { Flame, Wind, Thermometer, Volume2, FileText, FileSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import type { ClaimListItem, ClaimStatus } from '@/lib/claims-types';
@@ -67,6 +67,15 @@ export function ClaimCard({ claim, selected, onSelect, documentName }: ClaimCard
         <span className="text-[10px] text-muted-foreground">
           {confidencePct}% {t('claims.confidence')}
         </span>
+        {claim.origin_observation && (
+          <span
+            className="inline-flex items-center gap-1 rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800 dark:bg-sky-900/40 dark:text-sky-200"
+            title={t('claims.filterOrigin.badge')}
+          >
+            <FileSearch className="h-3 w-3" />
+            {t('claims.filterOrigin.badge')}
+          </span>
+        )}
         {documentName && (
           <span className="text-[10px] text-muted-foreground truncate max-w-[180px]" title={documentName}>
             · {documentName}

@@ -1208,6 +1208,13 @@
       "allDocuments": "All documents",
       "minConfidence": "Min conf."
     },
+    "filterOrigin": {
+      "label": "Origin",
+      "all": "All",
+      "observation": "From observations",
+      "other": "Other",
+      "badge": "From observation"
+    },
     "actions": {
       "promote": "Promote",
       "reject": "Reject",

@@ -860,13 +860,13 @@ class ClaimSerializer(serializers.ModelSerializer):
             'statement', 'normalized', 'source_location',
             'claim_type', 'confidence',
             'status', 'promoted_to_config', 'config_section', 'config_payload',
-            'superseded_by', 'rejected_reason',
+            'superseded_by', 'rejected_reason', 'origin_observation',
             'extracted_at', 'decided_at', 'decided_by',
         ]
         read_only_fields = [
             'source_file', 'document', 'extraction_run',
             'promoted_to_config', 'config_section', 'config_payload',
-            'superseded_by', 'rejected_reason',
+            'superseded_by', 'rejected_reason', 'origin_observation',
             'extracted_at', 'decided_at', 'decided_by',
         ]
 
@@ -883,6 +883,7 @@ class ClaimListSerializer(serializers.ModelSerializer):
             'id', 'project', 'source_file', 'document', 'scope',
             'snippet', 'normalized',
             'claim_type', 'confidence', 'status',
+            'origin_observation',
             'extracted_at',
         ]
 

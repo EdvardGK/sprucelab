@@ -1208,6 +1208,13 @@
       "allDocuments": "Alle dokumenter",
       "minConfidence": "Min. tillit"
     },
+    "filterOrigin": {
+      "label": "Opphav",
+      "all": "Alle",
+      "observation": "Fra observasjoner",
+      "other": "Andre",
+      "badge": "Fra observasjon"
+    },
     "actions": {
       "promote": "Godkjenn",
       "reject": "Avvis",
