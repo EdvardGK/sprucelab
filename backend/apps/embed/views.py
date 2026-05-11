@@ -155,7 +155,9 @@ def embed_capabilities(request):
             'express IDs locally from ThatOpen fragment data using the '
             'returned type_ids.'
         ),
-        'mutations_supporting_dry_run': [],
+        'mutations_supporting_dry_run': [
+            'POST /api/types/types/verify/',
+        ],
     })
 
 

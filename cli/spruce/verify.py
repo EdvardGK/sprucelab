@@ -65,6 +65,10 @@ def verify(
     project_id: Optional[str] = typer.Option(
         None, '--project-id', help='Project UUID (auto-detected from model if omitted)',
     ),
+    dry_run: bool = typer.Option(
+        False, '--dry-run', '-n',
+        help='Preview verification without writing TypeMapping.verification_status rows.',
+    ),
     admin_token: Optional[str] = typer.Option(None, '--admin-token'),
     json_out: bool = typer.Option(False, '--json', help='JSON output'),
 ) -> None:
@@ -72,6 +76,8 @@ def verify(
     params: dict = {'model': model}
     if project_id:
         params['project_id'] = project_id
+    if dry_run:
+        params['dry_run'] = 'true'
 
     url = f'{get_api_url()}/api/types/types/verify/'
     try:
@@ -89,6 +95,9 @@ def verify(
         return
 
     # Human summary — render a header panel of scalar fields + a per-type table
+    if dry_run or payload.get('dry_run') is True:
+        console.print('[yellow](dry run — no changes persisted)[/yellow]')
+
     scalar_keys = [
         'model_id', 'project_id', 'health_score', 'passed', 'warnings',
         'failed', 'skipped', 'rules_applied', 'total_types',

@@ -121,7 +121,12 @@ Optional env vars:
 | Variable | Purpose |
 |---|---|
 | `SPRUCELAB_ADMIN_TOKEN` | Bearer Supabase staff token. Required unless the backend is running with `DEV_AUTH_BYPASS=1`. |
-| `SPRUCE_LIVE_MODEL_ID` | UUID of an existing model in the target project. Required for the `types list` and `verify` smoke tests, since the CLI does not yet ship a `spruce models list` discovery command. The `scripts list` test runs without it. |
+| `SPRUCE_LIVE_MODEL_ID` | UUID of an existing model in the target project. Optional — when unset, the `types list` and `verify` smoke tests fall back to `spruce models list --json` and pick the first model returned. Set it explicitly to pin a specific model. |
+
+The `verify` smoke now runs with `--dry-run` so it never mutates
+`TypeMapping.verification_status` rows on the live model. Backend rolls the
+verification write back inside a savepoint; the engine is idempotent on
+re-run so the rollback is safe.
 
 Run the harness:
 
@@ -129,7 +134,6 @@ Run the harness:
 cd cli && \
   SPRUCE_LIVE_API_URL=https://your-server \
   SPRUCELAB_ADMIN_TOKEN=... \
-  SPRUCE_LIVE_MODEL_ID=<uuid> \
   python -m pytest tests/integration -m live -v
 ```
 

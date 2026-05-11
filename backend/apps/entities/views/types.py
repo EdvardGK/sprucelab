@@ -290,10 +290,17 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
 
         POST /api/types/verify/?model={id}
         Optional query param: project_id (auto-detected from model if not provided)
+        Optional query param: dry_run=true (preview without writing)
 
         Returns verification summary with per-type issues and health score.
-        Updates TypeMapping.verification_status and verification_issues for each type.
+        Updates TypeMapping.verification_status and verification_issues for each type
+        unless ``dry_run=true``, in which case the engine computes the result but
+        rolls back all DB writes. The response shape is identical regardless of
+        mode; ``dry_run: true`` is added to the payload so callers can confirm
+        no persistence happened.
         """
+        from ..views.claims import _bool_param  # local import — same view module tree
+
         model_id = request.query_params.get('model')
         if not model_id:
             return Response(
@@ -302,12 +309,46 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         project_id = request.query_params.get('project_id')
+        dry_run = _bool_param(request.query_params.get('dry_run'))
 
         try:
             from apps.entities.services.verification_engine import VerificationEngine
             engine = VerificationEngine()
+
+            if dry_run:
+                # Run the engine inside an atomic block we always roll back.
+                # The engine itself is idempotent on re-run, so a rollback is
+                # safe: no in-memory state leaks. Webhook dispatches are
+                # transactional through WebhookDelivery rows so they roll back
+                # too — agents get a true preview, not a noisy delivery log.
+                #
+                # ``DryRunCommit`` is caught by the surrounding ``atomic`` and
+                # triggers a rollback while still letting us return the
+                # computed result. Re-raising a sentinel is the
+                # Django-recommended way to force a clean rollback without
+                # bubbling an error to the caller.
+                from django.db import transaction
+
+                class _DryRunCommit(Exception):
+                    pass
+
+                computed = {}
+                try:
+                    with transaction.atomic():
+                        result = engine.verify_model(model_id, project_id=project_id)
+                        computed['payload'] = result.to_dict()
+                        raise _DryRunCommit
+                except _DryRunCommit:
+                    pass
+
+                payload = computed.get('payload', {})
+                payload['dry_run'] = True
+                return Response(payload)
+
             result = engine.verify_model(model_id, project_id=project_id)
-            return Response(result.to_dict())
+            payload = result.to_dict()
+            payload['dry_run'] = False
+            return Response(payload)
         except Exception as e:
             return Response(
                 {'error': f'Verification failed: {str(e)}'},

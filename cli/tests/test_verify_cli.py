@@ -94,3 +94,99 @@ def test_verify_http_error_emits_json_error(runner, admin_token_env):
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
     assert payload["error"] == "HTTP 500"
+
+
+# ---------------------------------------------------------------------------
+# spruce verify --dry-run
+# ---------------------------------------------------------------------------
+
+
+@respx.mock
+def test_verify_dry_run_sets_query_param(runner, admin_token_env):
+    """``--dry-run`` appends ``?dry_run=true`` and surfaces the preview flag."""
+    route = respx.post(f"{TEST_API_URL}/api/types/types/verify/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "model_id": MODEL_ID,
+                "dry_run": True,
+                "checked": 5,
+                "passed": 3,
+                "warnings": 1,
+                "failed": 1,
+                "skipped": 0,
+                "health_score": 60.0,
+                "rules_applied": ["has_ns3451"],
+                "total_types": 5,
+                "type_results": [],
+            },
+        )
+    )
+
+    result = runner.invoke(
+        app,
+        ["verify", "--model", MODEL_ID, "--dry-run", "--json"],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert route.called
+    request = route.calls.last.request
+    assert request.url.params["dry_run"] == "true"
+    assert request.url.params["model"] == MODEL_ID
+    payload = json.loads(result.stdout)
+    assert payload["dry_run"] is True
+    assert payload["health_score"] == 60.0
+
+
+@respx.mock
+def test_verify_dry_run_short_flag(runner, admin_token_env):
+    """``-n`` is the short alias for ``--dry-run``."""
+    route = respx.post(f"{TEST_API_URL}/api/types/types/verify/").mock(
+        return_value=httpx.Response(200, json={"model_id": MODEL_ID, "dry_run": True})
+    )
+
+    result = runner.invoke(app, ["verify", "--model", MODEL_ID, "-n", "--json"])
+
+    assert result.exit_code == 0, result.stdout
+    assert route.calls.last.request.url.params["dry_run"] == "true"
+
+
+@respx.mock
+def test_verify_dry_run_human_output_banner(runner, admin_token_env):
+    """Human-mode output surfaces an explicit '(dry run — no changes persisted)' banner."""
+    respx.post(f"{TEST_API_URL}/api/types/types/verify/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "model_id": MODEL_ID,
+                "dry_run": True,
+                "checked": 1,
+                "passed": 1,
+                "warnings": 0,
+                "failed": 0,
+                "skipped": 0,
+                "health_score": 100.0,
+                "rules_applied": [],
+                "total_types": 1,
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["verify", "--model", MODEL_ID, "--dry-run"])
+
+    assert result.exit_code == 0, result.stdout
+    assert "dry run" in result.stdout.lower()
+    assert "no changes persisted" in result.stdout.lower()
+
+
+@respx.mock
+def test_verify_without_dry_run_omits_query_param(runner, admin_token_env):
+    """Default behavior unchanged — ``dry_run`` not in query when flag absent."""
+    route = respx.post(f"{TEST_API_URL}/api/types/types/verify/").mock(
+        return_value=httpx.Response(200, json={"model_id": MODEL_ID, "dry_run": False})
+    )
+
+    result = runner.invoke(app, ["verify", "--model", MODEL_ID, "--json"])
+
+    assert result.exit_code == 0, result.stdout
+    assert "dry_run" not in route.calls.last.request.url.params

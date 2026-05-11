@@ -1,4 +1,4 @@
-"""Live-API smoke harness for ``spruce {scripts,types,verify}``.
+"""Live-API smoke harness for ``spruce {scripts,models,types,verify}``.
 
 Opt-in: every test is skipped unless ``SPRUCE_LIVE_API_URL`` is set in the
 environment. Never runs in CI by default.
@@ -12,16 +12,19 @@ Optional env vars:
                            endpoint that doesn't have ``DEV_AUTH_BYPASS=1``
                            on the backend.
     SPRUCE_LIVE_MODEL_ID   UUID of an existing model in the target project.
-                           Required for the ``types list`` and ``verify``
-                           tests because the CLI does not (yet) ship a
-                           ``spruce models list`` discovery command.
+                           When unset, ``_require_model_id`` falls back to
+                           ``spruce models list --json`` and uses the first
+                           model returned. Skips only when the live server
+                           reports zero models.
 
 Run:
     cd cli && \\
         SPRUCE_LIVE_API_URL=https://your-server \\
         SPRUCELAB_ADMIN_TOKEN=... \\
-        SPRUCE_LIVE_MODEL_ID=<uuid> \\
         python -m pytest tests/integration -m live -v
+
+The ``verify`` smoke now runs with ``--dry-run`` by default so it never
+mutates ``TypeMapping.verification_status`` rows on a live model.
 
 These tests deliberately do NOT swallow API errors. Per the project's
 "fail loudly" rule, an unexpected status code or shape will surface as a
@@ -48,15 +51,41 @@ pytestmark = [
 ]
 
 
-def _require_model_id() -> str:
-    """Pull the model UUID from env or skip the individual test."""
+def _discover_model_id_via_cli(runner) -> str | None:
+    """Fallback: ask the live API via ``spruce models list --json``.
+
+    Returns the first model's UUID, or ``None`` if discovery fails or the
+    project has zero models. The caller decides whether to skip or fail.
+    """
+    result = runner.invoke(app, ['models', 'list', '--json'])
+    if result.exit_code != 0:
+        return None
+    try:
+        body = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    rows = body.get('results', body) if isinstance(body, dict) else body
+    if not isinstance(rows, list) or not rows:
+        return None
+    first = rows[0]
+    if not isinstance(first, dict):
+        return None
+    model_id = first.get('id')
+    return model_id if isinstance(model_id, str) and model_id else None
+
+
+def _require_model_id(runner) -> str:
+    """Pull the model UUID from env or auto-discover via the CLI."""
     model_id = os.environ.get('SPRUCE_LIVE_MODEL_ID')
-    if not model_id:
-        pytest.skip(
-            'SPRUCE_LIVE_MODEL_ID not set; the CLI has no `spruce models list` '
-            'discovery command yet, so a model UUID must be provided explicitly.'
-        )
-    return model_id
+    if model_id:
+        return model_id
+    discovered = _discover_model_id_via_cli(runner)
+    if discovered:
+        return discovered
+    pytest.skip(
+        'SPRUCE_LIVE_MODEL_ID not set and `spruce models list` returned no '
+        'models on the live server. Upload a model or set the env var.'
+    )
 
 
 def _parse_json_or_fail(stdout: str, *, command: str) -> object:
@@ -108,7 +137,7 @@ def test_live_scripts_list_json(runner):
 
 def test_live_types_list_json(runner):
     """`spruce types list --model <id> --json` returns 0 and a list payload."""
-    model_id = _require_model_id()
+    model_id = _require_model_id(runner)
 
     result = runner.invoke(app, ['types', 'list', '--model', model_id, '--json'])
 
@@ -147,28 +176,59 @@ def test_live_types_list_json(runner):
 
 
 # ---------------------------------------------------------------------------
+# spruce models list
+# ---------------------------------------------------------------------------
+
+
+def test_live_models_list_json(runner):
+    """`spruce models list --json` returns 0 and a list/paginated payload."""
+    result = runner.invoke(app, ['models', 'list', '--json'])
+
+    assert result.exit_code == 0, (
+        f'`spruce models list --json` exited {result.exit_code}.\n'
+        f'stdout:\n{result.stdout}'
+    )
+    payload = _parse_json_or_fail(result.stdout, command='spruce models list --json')
+
+    if isinstance(payload, dict):
+        assert 'results' in payload, (
+            f'expected DRF-paginated payload with "results" key, got keys: '
+            f'{sorted(payload.keys())}'
+        )
+        assert isinstance(payload['results'], list), (
+            f'"results" should be a list, got {type(payload["results"]).__name__}'
+        )
+    else:
+        assert isinstance(payload, list), (
+            f'expected list or paginated dict, got {type(payload).__name__}'
+        )
+
+
+# ---------------------------------------------------------------------------
 # spruce verify --dry-run
 # ---------------------------------------------------------------------------
 
 
 def test_live_verify_dry_run_json(runner):
-    """`spruce verify --model <id> --json` confirms POST + JSON round-trip.
+    """`spruce verify --model <id> --dry-run --json` confirms POST + JSON round-trip.
 
-    Note: the CLI does NOT currently expose ``--dry-run`` on ``verify``
-    (see ``cli/spruce/verify.py``), so this test runs the full verification.
-    The endpoint is idempotent — it recomputes verification status — so this
-    is safe to run against a live model.
+    Uses ``--dry-run`` so it never mutates ``TypeMapping.verification_status``
+    on the live model. Backend rolls back inside a savepoint; the engine
+    itself is idempotent on re-run so a rollback is safe.
     """
-    model_id = _require_model_id()
+    model_id = _require_model_id(runner)
 
-    result = runner.invoke(app, ['verify', '--model', model_id, '--json'])
+    result = runner.invoke(
+        app, ['verify', '--model', model_id, '--dry-run', '--json']
+    )
 
     assert result.exit_code == 0, (
-        f'`spruce verify --model {model_id} --json` exited {result.exit_code}.\n'
-        f'stdout:\n{result.stdout}'
+        f'`spruce verify --model {model_id} --dry-run --json` exited '
+        f'{result.exit_code}.\nstdout:\n{result.stdout}'
     )
     payload = _parse_json_or_fail(
-        result.stdout, command=f'spruce verify --model {model_id} --json'
+        result.stdout,
+        command=f'spruce verify --model {model_id} --dry-run --json',
     )
 
     assert isinstance(payload, dict), (
@@ -184,4 +244,10 @@ def test_live_verify_dry_run_json(runner):
     assert expected_any & set(payload.keys()), (
         f'verify payload had no expected keys. Got keys: {sorted(payload.keys())}\n'
         f'Expected at least one of: {sorted(expected_any)}'
+    )
+    # New: backend must echo ``dry_run: true`` so callers can audit
+    # that no persistence happened.
+    assert payload.get('dry_run') is True, (
+        f'expected dry_run=true in payload, got {payload.get("dry_run")!r}.\n'
+        f'Full keys: {sorted(payload.keys())}'
     )

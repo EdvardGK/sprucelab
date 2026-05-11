@@ -15,6 +15,7 @@ from .config import (
 from .api_client import SprucelabClient
 from .dev import dev_app
 from .embed import embed_app
+from .models import models_app
 from .types import types_app
 from .verify import verify_app
 from .scripts import scripts_app
@@ -26,6 +27,7 @@ app = typer.Typer(
 )
 app.add_typer(dev_app, name="dev")
 app.add_typer(embed_app, name="embed")
+app.add_typer(models_app, name="models")
 app.add_typer(types_app, name="types")
 app.add_typer(verify_app, name="verify")
 app.add_typer(scripts_app, name="scripts")
