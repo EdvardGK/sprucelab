@@ -1298,6 +1298,24 @@
         "replace": "Last opp som ny versjon"
       }
     },
+    "tabs": {
+      "preview": "Forhåndsvisning",
+      "log": "Logg"
+    },
+    "log": {
+      "searchPlaceholder": "Søk i observasjoner …",
+      "empty": "Ingen observasjoner samsvarer med filtrene.",
+      "category": {
+        "text_block": "Tekst",
+        "layer": "Lag",
+        "annotation": "Annotasjoner",
+        "title_block_field": "Tittelfelt",
+        "sheet_metadata": "Arkmetadata",
+        "file_metadata": "Filmetadata",
+        "extraction_event": "Ekstraksjonshendelser",
+        "other": "Annet"
+      }
+    },
     "preview": {
       "pdfDeferred": "PDF-forhåndsvisning ligger i Dokumenter-biblioteket. Bruk Åpne original for nedlasting.",
       "dwgDeferred": "DWG-forhåndsvisning er ikke klar ennå (PR 2.4). Bruk Åpne original.",

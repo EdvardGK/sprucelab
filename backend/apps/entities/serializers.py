@@ -889,3 +889,24 @@ class ClaimListSerializer(serializers.ModelSerializer):
     def get_snippet(self, obj: Claim) -> str:
         text = obj.statement or ''
         return text if len(text) <= 160 else text[:157] + '…'
+
+
+class ObservationSerializer(serializers.ModelSerializer):
+    """Full observation view (one Layer-1 fact from an extraction run)."""
+
+    project = serializers.UUIDField(source='source_file.project_id', read_only=True)
+    original_filename = serializers.CharField(
+        source='source_file.original_filename', read_only=True,
+    )
+
+    class Meta:
+        from .models import Observation as _Observation  # local import to avoid cycle
+        model = _Observation
+        fields = [
+            'id', 'source_file', 'extraction_run', 'sheet', 'scope',
+            'project', 'original_filename',
+            'category', 'key', 'content',
+            'page_index', 'bbox', 'raw_data',
+            'extracted_at',
+        ]
+        read_only_fields = fields

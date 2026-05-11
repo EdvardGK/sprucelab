@@ -1,9 +1,9 @@
 // Detail panel for a DrawingSheet. Renders DXF in-browser via `dxf-viewer`,
 // PDF/DWG fall back to "Open original" download links (DWG conversion is PR 2.4).
 // Exposes a layer-toggle panel and an inline "Register sheet" dialog.
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Download, Layers as LayersIcon, MapPin, Loader2, AlertCircle } from 'lucide-react';
+import { X, Download, Layers as LayersIcon, MapPin, Loader2, AlertCircle, FileText, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,11 +24,15 @@ import {
 import type { SourceFileListItem } from '@/lib/api-types';
 import { cn } from '@/lib/utils';
 
+const DrawingLogPane = lazy(() => import('./DrawingLogPane'));
+
 interface DrawingDetailProps {
   drawingId: string;
   sourceFile: SourceFileListItem | undefined;
   onClose: () => void;
 }
+
+type DrawingTab = 'preview' | 'log';
 
 interface LayerEntry {
   name: string;
@@ -46,6 +50,7 @@ export default function DrawingDetail({ drawingId, sourceFile, onClose }: Drawin
   const { t } = useTranslation();
   const { data: drawing } = useDrawingDetail(drawingId);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [tab, setTab] = useState<DrawingTab>('preview');
   const ext = fileExt(sourceFile?.original_filename);
 
   return (
@@ -63,6 +68,26 @@ export default function DrawingDetail({ drawingId, sourceFile, onClose }: Drawin
             )}
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-md border border-border bg-surface p-0.5">
+              <Button
+                variant={tab === 'preview' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTab('preview')}
+                className="h-7 px-2.5"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                {t('drawings.tabs.preview')}
+              </Button>
+              <Button
+                variant={tab === 'log' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTab('log')}
+                className="h-7 px-2.5"
+              >
+                <List className="h-3.5 w-3.5 mr-1.5" />
+                {t('drawings.tabs.log')}
+              </Button>
+            </div>
             <Button variant="outline" size="sm" onClick={() => setRegisterOpen(true)}>
               <MapPin className="h-4 w-4 mr-1.5" />
               {t('drawings.registerSheet')}
@@ -75,7 +100,18 @@ export default function DrawingDetail({ drawingId, sourceFile, onClose }: Drawin
         </div>
 
         <div className="flex flex-1 min-h-0">
-          {ext === 'dxf' ? (
+          {tab === 'log' ? (
+            <Suspense
+              fallback={
+                <div className="flex flex-1 items-center justify-center text-text-tertiary text-[clamp(0.75rem,1.2vw,0.875rem)]">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {t('common.loading')}
+                </div>
+              }
+            >
+              <DrawingLogPane sheetId={drawingId} />
+            </Suspense>
+          ) : ext === 'dxf' ? (
             <DxfPane sourceFile={sourceFile} />
           ) : (
             <UnsupportedPane ext={ext} sourceFile={sourceFile} />

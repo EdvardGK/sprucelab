@@ -1298,6 +1298,24 @@
         "replace": "Upload as new version"
       }
     },
+    "tabs": {
+      "preview": "Preview",
+      "log": "Log"
+    },
+    "log": {
+      "searchPlaceholder": "Search observations…",
+      "empty": "No observations match the current filters.",
+      "category": {
+        "text_block": "Text",
+        "layer": "Layers",
+        "annotation": "Annotations",
+        "title_block_field": "Title block",
+        "sheet_metadata": "Sheet metadata",
+        "file_metadata": "File metadata",
+        "extraction_event": "Extraction events",
+        "other": "Other"
+      }
+    },
     "preview": {
       "pdfDeferred": "PDF preview lives in the Documents library. Use Open original to download.",
       "dwgDeferred": "DWG preview is not available yet (PR 2.4). Use Open original to download.",

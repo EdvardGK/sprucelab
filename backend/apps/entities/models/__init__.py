@@ -87,6 +87,12 @@ from .claims import (
     CLAIM_STATUS_CHOICES,
 )
 
+# Observation log (Layer 1 substrate — raw extracted facts)
+from .observations import (
+    Observation,
+    OBSERVATION_CATEGORY_CHOICES,
+)
+
 __all__ = [
     # Core
     'IFCEntity',
@@ -143,4 +149,7 @@ __all__ = [
     'Claim',
     'CLAIM_TYPE_CHOICES',
     'CLAIM_STATUS_CHOICES',
+    # Observations
+    'Observation',
+    'OBSERVATION_CATEGORY_CHOICES',
 ]

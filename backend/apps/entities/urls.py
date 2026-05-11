@@ -8,7 +8,7 @@ from .views import (
     MaterialLibraryViewSet, ProductLibraryViewSet, ProductCompositionViewSet,
     GlobalTypeLibraryViewSet, ModelAnalysisViewSet,
     DrawingSheetViewSet, TitleBlockTemplateViewSet,
-    DocumentContentViewSet, ClaimViewSet,
+    DocumentContentViewSet, ClaimViewSet, ObservationViewSet,
 )
 
 router = DefaultRouter()
@@ -48,6 +48,9 @@ router.register(r'documents', DocumentContentViewSet, basename='document')
 
 # Claims (Phase 6, Sprint 6.2)
 router.register(r'claims', ClaimViewSet, basename='claim')
+
+# Observations — Layer 1 substrate (raw extracted facts)
+router.register(r'observations', ObservationViewSet, basename='observation')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -388,9 +388,12 @@ class SourceFileViewSet(viewsets.ModelViewSet):
             run.save(update_fields=['status', 'error_message', 'completed_at'])
             return run
 
+        from apps.entities.models import Observation
+        from apps.entities.services.observation_emitter import emit_for_drawing_sheet
+
         sheets = response.get('sheets') or []
         for sheet_payload in sheets:
-            DrawingSheet.objects.create(
+            sheet = DrawingSheet.objects.create(
                 source_file=source_file,
                 extraction_run=run,
                 scope=source_file.scope,
@@ -406,6 +409,7 @@ class SourceFileViewSet(viewsets.ModelViewSet):
                     'is_drawing': sheet_payload.get('is_drawing', True),
                 },
             )
+            emit_for_drawing_sheet(sheet, extraction_run=run, Observation=Observation)
 
         run.status = 'completed' if response.get('success') else 'failed'
         run.duration_seconds = response.get('duration_seconds')
