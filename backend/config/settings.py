@@ -270,6 +270,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'config.authentication.DevBypassAuthentication',  # No-op unless DEV_AUTH_BYPASS=1 + DEBUG=True
+        'config.authentication.AgentTokenAuthentication',  # Bearer keys minted via AgentRegistration
         'config.authentication.SupabaseAuthentication',
         'rest_framework.authentication.SessionAuthentication',  # Keep for Django admin
     ],

@@ -20,6 +20,7 @@ from .types import types_app
 from .verify import verify_app
 from .scripts import scripts_app
 from .webhooks import app as webhooks_app
+from .capabilities import app as capabilities_app
 
 app = typer.Typer(
     name="spruce",
@@ -33,6 +34,7 @@ app.add_typer(types_app, name="types")
 app.add_typer(verify_app, name="verify")
 app.add_typer(scripts_app, name="scripts")
 app.add_typer(webhooks_app, name="webhooks")
+app.add_typer(capabilities_app, name="capabilities")
 console = Console()
 
 # Config subcommand
@@ -96,28 +98,87 @@ app.add_typer(auth_app, name="auth")
 
 @auth_app.command("status")
 def auth_status():
-    """Check authentication status."""
+    """Show current CLI config + verify the token actually works."""
+    from .config import get_api_url
+    api_url = get_api_url()
     client = SprucelabClient()
 
+    console.print(f"  api_url:  [cyan]{api_url}[/cyan]")
     if not client.api_key:
-        console.print("[red]Not authenticated. Run 'spruce config init' first.[/red]")
+        console.print("  api_key:  [yellow]not configured[/yellow]")
+        console.print()
+        console.print("  Next:  [dim]spruce auth register --token <KEY> --url <URL>[/dim]")
+        console.print("         [dim]Mint a token on the server:  python manage.py create_agent --name my-cli[/dim]")
         raise typer.Exit(1)
 
-    if client.heartbeat():
-        console.print("[green]Authenticated and connected![/green]")
-    else:
-        console.print("[yellow]API key set but heartbeat failed. Check your connection.[/yellow]")
+    masked = client.api_key[:6] + "…" + client.api_key[-4:]
+    console.print(f"  api_key:  [cyan]{masked}[/cyan] (in keyring)")
+
+    # Verify the token by hitting an auth-required endpoint. We pick
+    # /api/types/observations/ since /api/capabilities/ is AllowAny and
+    # would say "OK" even with a bogus token.
+    import httpx
+    try:
+        resp = httpx.get(
+            f"{api_url.rstrip('/')}/api/types/observations/?limit=1",
+            headers={"Authorization": f"Bearer {client.api_key}"},
+            timeout=10.0,
+        )
+        if resp.status_code == 200:
+            console.print("  status:   [green]token works[/green]")
+        elif resp.status_code == 401:
+            console.print("  status:   [red]token rejected (expired or unknown)[/red]")
+            console.print("  Next:     [dim]Re-register with a fresh token from `manage.py create_agent`[/dim]")
+            raise typer.Exit(1)
+        elif resp.status_code == 403:
+            console.print("  status:   [yellow]token works but lacks read scope on this endpoint[/yellow]")
+        else:
+            console.print(f"  status:   [yellow]unexpected {resp.status_code}: {resp.text[:120]}[/yellow]")
+            raise typer.Exit(1)
+    except httpx.RequestError as e:
+        console.print(f"  status:   [red]connection failed: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @auth_app.command("register")
-def auth_register(name: Optional[str] = typer.Option(None, help="Agent name")):
-    """Register this machine as an agent."""
-    client = SprucelabClient()
+def auth_register(
+    name: Optional[str] = typer.Option(None, help="Agent name (used when minting via the server)."),
+    token: Optional[str] = typer.Option(None, "--token", "-t", help="Pre-minted API key to save (skips the mint call)."),
+    url: Optional[str] = typer.Option(None, "--url", "-u", help="API base URL (e.g. https://sprucelab-production.up.railway.app)."),
+):
+    """
+    Configure CLI auth.
 
+    Two paths:
+      --token <KEY>           Save a pre-minted token (from `manage.py create_agent`).
+                              No server call; works offline. This is the default
+                              path while in-app token management isn't built yet.
+
+      (no --token)            POST /api/automation/agent/register/ to mint a new
+                              token. Requires admin-scoped auth on the server side
+                              (existing browser session OR an admin token).
+    """
+    from .config import set_api_url
+
+    if url:
+        set_api_url(url)
+        console.print(f"[green]Saved api_url:[/green] {url}")
+
+    if token:
+        # Manual path — pre-minted token from `manage.py create_agent`.
+        set_api_key(token)
+        console.print("[green]Saved API key to keyring.[/green]")
+        console.print()
+        console.print("Try: [cyan]spruce auth status[/cyan]")
+        console.print("     [cyan]spruce capabilities[/cyan]")
+        return
+
+    # Mint path — call /agent/register/ on the server (requires admin auth).
     if not name:
         import socket
         name = socket.gethostname()
 
+    client = SprucelabClient()
     try:
         result = client.register_agent(name)
         set_agent_id(result["id"])
@@ -132,6 +193,9 @@ def auth_register(name: Optional[str] = typer.Option(None, help="Agent name")):
         ))
     except Exception as e:
         console.print(f"[red]Registration failed: {e}[/red]")
+        console.print()
+        console.print("If you have a pre-minted token, use [cyan]--token[/cyan]:")
+        console.print("  [dim]spruce auth register --token <KEY> --url <URL>[/dim]")
         raise typer.Exit(1)
 
 

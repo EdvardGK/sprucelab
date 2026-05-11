@@ -316,3 +316,86 @@ class DevBypassAuthentication(authentication.BaseAuthentication):
             profile.approved_at = timezone.now()
             profile.save(update_fields=['approval_status', 'approved_at', 'updated_at'])
         return user
+
+
+# ============================================================================
+# Agent token authentication
+# ============================================================================
+
+class AgentTokenAuthentication(authentication.BaseAuthentication):
+    """
+    Bearer-token auth backed by ``apps.automation.AgentRegistration``.
+
+    Reads ``Authorization: Bearer <key>``, hashes, looks up the agent. On
+    success returns ``(synthetic_user, agent)``. ``request.auth`` is the
+    AgentRegistration instance — downstream permissions read ``request.auth.scope``
+    to gate by what the token is allowed to do.
+
+    The synthetic user is a real Django ``User`` row deterministically named
+    ``agent-<uuid>@sprucelab.local`` with an approved ``UserProfile``. This
+    keeps the rest of the framework (filtering, audit fields, admin) working
+    without special-casing agent requests.
+
+    Tokens that look like Supabase JWTs (start with ``eyJ``) are skipped so
+    SupabaseAuthentication still gets a chance.
+    """
+
+    keyword = 'Bearer'
+
+    def authenticate(self, request):
+        auth_header = (request.META.get('HTTP_AUTHORIZATION') or '').strip()
+        if not auth_header.lower().startswith('bearer '):
+            return None
+        token = auth_header.split(' ', 1)[1].strip()
+        if not token or token.startswith('eyJ'):
+            # JWT-shaped — let SupabaseAuthentication handle it.
+            return None
+
+        from apps.automation.models import AgentRegistration  # local import — app cycle
+
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        try:
+            agent = AgentRegistration.objects.get(api_key_hash=token_hash, is_active=True)
+        except AgentRegistration.DoesNotExist:
+            # Not an agent token — silently skip so other authenticators
+            # (Supabase) can still try. Returning None (not raising) is
+            # idiomatic for "this auth scheme doesn't apply."
+            return None
+
+        user = self._get_or_create_agent_user(agent)
+        agent.last_seen_at = timezone.now()
+        agent.save(update_fields=['last_seen_at'])
+        return (user, agent)
+
+    @staticmethod
+    @transaction.atomic
+    def _get_or_create_agent_user(agent):
+        email = f'agent-{agent.id}@sprucelab.local'
+        username = f'agent-{str(agent.id)[:8]}'
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                'username': username,
+                'is_active': True,
+                'is_staff': False,
+                'is_superuser': False,
+            },
+        )
+        if not created and not user.is_active:
+            user.is_active = True
+            user.save(update_fields=['is_active'])
+
+        profile = UserProfile.objects.filter(user=user).first()
+        if profile is None:
+            UserProfile.objects.create(
+                user=user,
+                supabase_id=uuid.uuid4(),  # synthetic — agents don't hit Supabase
+                display_name=f'Agent: {agent.name}',
+                approval_status=UserProfile.APPROVAL_APPROVED,
+                approved_at=timezone.now(),
+            )
+        elif profile.approval_status != UserProfile.APPROVAL_APPROVED:
+            profile.approval_status = UserProfile.APPROVAL_APPROVED
+            profile.approved_at = timezone.now()
+            profile.save(update_fields=['approval_status', 'approved_at', 'updated_at'])
+        return user

@@ -359,6 +359,20 @@ class AgentRegistration(models.Model):
     # API key hash (actual key shown once on creation)
     api_key_hash = models.CharField(max_length=64)
 
+    # Authorization scope for the broader REST surface.
+    # `read_only`: GET-only across the API.
+    # `operator`:  read + write on data resources (files, claims, scopes, …).
+    # `admin`:     everything operator can do, plus user/agent management.
+    SCOPE_CHOICES = [
+        ('read_only', 'Read only (GET only)'),
+        ('operator', 'Operator (read + write data resources)'),
+        ('admin', 'Admin (read + write + manage users/agents)'),
+    ]
+    scope = models.CharField(
+        max_length=16, choices=SCOPE_CHOICES, default='operator',
+        help_text='What this agent token may do across the REST surface.',
+    )
+
     last_seen_at = models.DateTimeField(null=True, blank=True)
 
     # Agent capabilities
