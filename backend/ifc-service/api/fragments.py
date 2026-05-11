@@ -5,6 +5,7 @@ Converts IFC files to ThatOpen Fragments format for 10-100x faster viewer loadin
 """
 
 import asyncio
+import logging
 import os
 import subprocess
 import tempfile
@@ -18,7 +19,59 @@ from pydantic import BaseModel
 from config import settings
 
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/fragments", tags=["fragments"])
+
+
+# Subprocess returncodes that indicate the process was SIGKILL'd.
+# -9 is the canonical POSIX value when `subprocess.run` itself reaps the child.
+# 137 (128 + 9) appears when a shell layer is between us and the killed process
+# (e.g. some container orchestrators surface OOM-kills this way).
+_SIGKILL_RETURNCODES = (-9, 137)
+
+
+def _classify_subprocess_failure(
+    result: subprocess.CompletedProcess,
+    model_id: str,
+    file_size_mb: Optional[float],
+) -> Exception:
+    """Map a non-zero `subprocess.run` result to a structured log + Exception.
+
+    Pulled out as a pure helper so the OOM-vs-generic branching is unit-testable
+    without spinning up the full async pipeline. The caller is responsible for
+    raising the returned Exception.
+    """
+    if result.returncode in _SIGKILL_RETURNCODES:
+        logger.error(
+            "fragments_oom",
+            extra={
+                "event": "fragments_oom",
+                "model_id": model_id,
+                "file_size_mb": file_size_mb,
+                "returncode": result.returncode,
+            },
+        )
+        return Exception(
+            "OOM (SIGKILL during conversion) — file likely too large for "
+            "Railway memory limit"
+        )
+
+    stderr = result.stderr or ""
+    stderr_tail = stderr[-500:] if stderr else ""
+    logger.error(
+        "fragments_failed",
+        extra={
+            "event": "fragments_failed",
+            "model_id": model_id,
+            "returncode": result.returncode,
+            "stderr_tail": stderr_tail,
+        },
+    )
+    return Exception(
+        f"Conversion failed (exit {result.returncode}): "
+        f"{stderr or '<no stderr>'}"
+    )
 
 
 class FragmentRequest(BaseModel):
@@ -171,7 +224,7 @@ async def _generate_fragments(model_id: str, ifc_url: str) -> FragmentResult:
         )
 
         if result.returncode != 0:
-            raise Exception(f"Conversion failed: {result.stderr}")
+            raise _classify_subprocess_failure(result, model_id, file_size_mb)
 
         print(result.stdout)
 
