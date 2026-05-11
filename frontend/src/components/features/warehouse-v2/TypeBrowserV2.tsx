@@ -44,17 +44,32 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const stats = useMemo(() => {
     const ifcClasses = new Set<string>();
     let instances = 0;
+    let untypedInstances = 0;
+    let orphanTypes = 0;
     let missingClassification = 0;
     for (const type of types) {
       ifcClasses.add(type.ifc_type);
       instances += type.instance_count;
+      const isUntyped =
+        type.type_guid === null ||
+        /<untyped>/i.test(type.type_name) ||
+        type.type_name.trim() === '';
+      if (isUntyped) untypedInstances += type.instance_count;
+      if (type.instance_count === 0) orphanTypes += 1;
       if (!type.mapping?.ns3451_code) missingClassification += 1;
     }
+    const totalTypes = types.length;
     return {
-      totalTypes: types.length,
+      totalTypes,
       ifcClasses: ifcClasses.size,
       instances,
+      avgInstancesPerType: totalTypes > 0 ? instances / totalTypes : 0,
+      untypedInstances,
+      untypedPercent: instances > 0 ? (untypedInstances / instances) * 100 : 0,
+      orphanTypes,
+      orphanPercent: totalTypes > 0 ? (orphanTypes / totalTypes) * 100 : 0,
       missingClassification,
+      missingPercent: totalTypes > 0 ? (missingClassification / totalTypes) * 100 : 0,
     };
   }, [types]);
 
@@ -103,22 +118,17 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         </div>
       ) : (
         <>
-          {/* Row 1: KPI cards (75%) + Top 10 types (25%) */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[240px]">
-            <div className="md:col-span-3 min-h-0">
-              <TypeKpiGrid stats={stats} loading={isLoading} />
-            </div>
-            <div className="md:col-span-1 min-h-0">
-              <TypeTopBarList types={filteredTypes} topN={10} />
-            </div>
+          {/* Row 1: KPI cards full width (with callout traffic lights) */}
+          <div className="h-[220px]">
+            <TypeKpiGrid stats={stats} loading={isLoading} />
           </div>
 
-          {/* Row 2: Treemap (50%) + Viewer (50%) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[520px]">
-            <div className="min-h-0">
+          {/* Row 2: Treemap (square) + Viewer (4:3), each at 50% width */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            <div className="aspect-square">
               <TypeTreemap types={filteredTypes} />
             </div>
-            <div className="min-h-0">
+            <div className="aspect-[4/3]">
               <TypeViewerPaneV2
                 modelId={modelId}
                 selectedType={selectedType}
@@ -127,13 +137,20 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
             </div>
           </div>
 
-          {/* Row 3: Table — contained and scrollable inside the card */}
-          <TypeTableV2
-            types={filteredTypes}
-            selectedTypeId={selectedTypeId}
-            onSelectType={setSelectedTypeId}
-            className="max-h-[640px]"
-          />
+          {/* Row 3: Top-10 bar chart (25%) + Table (75%) */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[640px]">
+            <div className="md:col-span-1 min-h-0">
+              <TypeTopBarList types={filteredTypes} topN={10} fillHeight />
+            </div>
+            <div className="md:col-span-3 min-h-0">
+              <TypeTableV2
+                types={filteredTypes}
+                selectedTypeId={selectedTypeId}
+                onSelectType={setSelectedTypeId}
+                className="h-full"
+              />
+            </div>
+          </div>
         </>
       )}
     </div>

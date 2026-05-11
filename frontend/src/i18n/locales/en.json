@@ -1489,10 +1489,15 @@
     "loading": "Loading types...",
     "noModels": "Upload a model to start browsing types.",
     "stats": {
-      "totalTypes": "types",
+      "totalTypes": "Total types",
       "ifcClasses": "IFC classes",
-      "instances": "instances",
-      "missingClassification": "missing classification"
+      "instances": "Instances",
+      "avgPerType": "Avg per type",
+      "untyped": "Untyped instances",
+      "orphan": "Orphan types",
+      "missingClassification": "Missing classification",
+      "percentOfInstances": "{{percent}}% of instances",
+      "percentOfTypes": "{{percent}}% of types"
     },
     "filter": {
       "searchPlaceholder": "Search types...",
@@ -1523,10 +1528,10 @@
         "typeName": "Type name",
         "instances": "Instances",
         "ns3451": "NS3451",
-        "loadBearing": "LB",
-        "isExternal": "EXT",
-        "fireRating": "Fire",
-        "acoustic": "Acoustic",
+        "loadBearing": "Load-bearing",
+        "isExternal": "External",
+        "fireRating": "Fire rating",
+        "acoustic": "Acoustic rating",
         "thermal": "U-value",
         "mmi": "MMI"
       }

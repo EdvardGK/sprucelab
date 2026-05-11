@@ -1489,10 +1489,15 @@
     "loading": "Laster typer...",
     "noModels": "Last opp en modell for å begynne å utforske typer.",
     "stats": {
-      "totalTypes": "typer",
+      "totalTypes": "Typer totalt",
       "ifcClasses": "IFC-klasser",
-      "instances": "forekomster",
-      "missingClassification": "uten klassifisering"
+      "instances": "Forekomster",
+      "avgPerType": "Snitt per type",
+      "untyped": "Utypede forekomster",
+      "orphan": "Foreldreløse typer",
+      "missingClassification": "Uten klassifisering",
+      "percentOfInstances": "{{percent}}% av forekomster",
+      "percentOfTypes": "{{percent}}% av typer"
     },
     "filter": {
       "searchPlaceholder": "Søk i typer...",
