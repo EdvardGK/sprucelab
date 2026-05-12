@@ -52,14 +52,20 @@ export function EirConfigurator({
 }: EirConfiguratorProps) {
   return (
     <div className="flex flex-col gap-[clamp(0.625rem,1vh,1rem)]">
-      {fields.map((field) => (
-        <EirFieldRow
-          key={field.id}
-          field={field}
-          value={values[field.id]}
-          onChange={(v) => onChange(field.id, v)}
-        />
-      ))}
+      {fields.map((field) => {
+        if (field.dependsOn) {
+          const dep = values[field.dependsOn.fieldId];
+          if (dep !== field.dependsOn.equals) return null;
+        }
+        return (
+          <EirFieldRow
+            key={field.id}
+            field={field}
+            value={values[field.id]}
+            onChange={(v) => onChange(field.id, v)}
+          />
+        );
+      })}
     </div>
   );
 }

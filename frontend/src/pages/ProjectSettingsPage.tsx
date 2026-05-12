@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   DndContext,
   PointerSensor,
   KeyboardSensor,
+  useDroppable,
   useSensor,
   useSensors,
   closestCenter,
@@ -22,29 +23,32 @@ import { AppLayout } from '@/components/Layout/AppLayout';
 import { useProject } from '@/hooks/use-projects';
 import {
   EIR_RULES,
+  EIR_RULE_BY_KIND,
   makeActiveRule,
+  ruleMaxInstances,
   type ActiveEirRule,
   type EirRuleKind,
 } from '@/components/features/settings/eirRules';
 import { EirRulePalette } from '@/components/features/settings/EirRulePalette';
 import { EirRuleCard } from '@/components/features/settings/EirRuleCard';
 import type { EirFieldValue } from '@/components/features/settings/EirConfigurator';
+import { cn } from '@/lib/utils';
 
 const DEFAULT_KINDS: EirRuleKind[] = [
   'crs',
-  'basepoint',
+  'placement',
+  'site_plan',
   'canonical_floors',
   'classification',
 ];
+
+const WORKSPACE_DROPPABLE_ID = 'eir-workspace';
 
 export default function ProjectSettingsPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { data: project, isLoading } = useProject(id!);
 
-  // Seed with a sensible starter set per `feedback-modelers-own-data-platform-suggests.md`
-  // — modeler can immediately add/remove from there. State is local-only;
-  // persistence lands with Phase 7 BEP-backend restore.
   const [rules, setRules] = useState<ActiveEirRule[]>(() =>
     DEFAULT_KINDS.map(makeActiveRule)
   );
@@ -54,8 +58,18 @@ export default function ProjectSettingsPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const addRule = (kind: EirRuleKind) => {
+  const kindCounts = useMemo(() => {
+    const m = new Map<EirRuleKind, number>();
+    for (const r of rules) m.set(r.kind, (m.get(r.kind) ?? 0) + 1);
+    return m;
+  }, [rules]);
+
+  const tryAddRule = (kind: EirRuleKind) => {
+    const max = ruleMaxInstances(EIR_RULE_BY_KIND[kind]);
+    const current = kindCounts.get(kind) ?? 0;
+    if (current >= max) return false;
     setRules((prev) => [...prev, makeActiveRule(kind)]);
+    return true;
   };
 
   const removeRule = (ruleId: string) => {
@@ -78,16 +92,30 @@ export default function ProjectSettingsPage() {
 
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setRules((prev) => {
-      const oldIndex = prev.findIndex((r) => r.id === active.id);
-      const newIndex = prev.findIndex((r) => r.id === over.id);
-      if (oldIndex < 0 || newIndex < 0) return prev;
-      return arrayMove(prev, oldIndex, newIndex);
-    });
-  };
+    if (!over) return;
+    const data = active.data.current as
+      | { source?: 'palette'; kind?: EirRuleKind }
+      | undefined;
 
-  const activeKinds = new Set(rules.map((r) => r.kind));
+    // Palette drag → add (only if dropped on the workspace or a rule).
+    if (data?.source === 'palette' && data.kind) {
+      const droppedOnWorkspace =
+        over.id === WORKSPACE_DROPPABLE_ID ||
+        rules.some((r) => r.id === over.id);
+      if (droppedOnWorkspace) tryAddRule(data.kind);
+      return;
+    }
+
+    // Sortable reorder within the workspace.
+    if (active.id !== over.id) {
+      setRules((prev) => {
+        const oldIndex = prev.findIndex((r) => r.id === active.id);
+        const newIndex = prev.findIndex((r) => r.id === over.id);
+        if (oldIndex < 0 || newIndex < 0) return prev;
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -108,8 +136,6 @@ export default function ProjectSettingsPage() {
       </AppLayout>
     );
   }
-
-  const totalKinds = EIR_RULES.length;
 
   return (
     <AppLayout>
@@ -135,56 +161,77 @@ export default function ProjectSettingsPage() {
             {' · '}
             <span className="tabular-nums">
               {t('settings.eir.activeCount', {
-                defaultValue: '{{active}} of {{total}} rules active',
-                active: rules.length,
-                total: totalKinds,
+                defaultValue: '{{active}} of {{total}} rule kinds in use',
+                active: kindCounts.size,
+                total: EIR_RULES.length,
               })}
             </span>
           </span>
         </header>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[clamp(16rem,20vw,22rem)_1fr] gap-[clamp(0.75rem,1.5vw,1.25rem)] overflow-hidden">
-          <aside className="overflow-y-auto pr-[clamp(0.25rem,0.5vw,0.5rem)]">
-            <EirRulePalette activeKinds={activeKinds} onAdd={addRule} />
-          </aside>
-
-          <main className="overflow-y-auto pr-[clamp(0.25rem,0.5vw,0.5rem)]">
-            {rules.length === 0 ? (
-              <EmptyWorkspace />
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={onDragEnd}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={onDragEnd}
+        >
+          <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[clamp(16rem,20vw,22rem)_1fr] gap-[clamp(0.75rem,1.5vw,1.25rem)] overflow-hidden">
+            <aside className="overflow-y-auto pr-[clamp(0.25rem,0.5vw,0.5rem)]">
+              <EirRulePalette kindCounts={kindCounts} onAdd={tryAddRule} />
+            </aside>
+            <WorkspaceDropZone hasRules={rules.length > 0}>
+              <SortableContext
+                items={rules.map((r) => r.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={rules.map((r) => r.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="flex flex-col gap-[clamp(0.75rem,1.2vh,1.25rem)] pb-[clamp(1rem,2vh,2rem)]">
-                    {rules.map((rule) => (
+                <div className="flex flex-col gap-[clamp(0.75rem,1.2vh,1.25rem)] pb-[clamp(1rem,2vh,2rem)]">
+                  {rules.length === 0 ? (
+                    <EmptyWorkspace />
+                  ) : (
+                    rules.map((rule) => (
                       <EirRuleCard
                         key={rule.id}
                         rule={rule}
                         onConfigChange={updateRuleField}
                         onRemove={removeRule}
                       />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            )}
-          </main>
-        </div>
+                    ))
+                  )}
+                </div>
+              </SortableContext>
+            </WorkspaceDropZone>
+          </div>
+        </DndContext>
       </div>
     </AppLayout>
+  );
+}
+
+function WorkspaceDropZone({
+  hasRules,
+  children,
+}: {
+  hasRules: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: WORKSPACE_DROPPABLE_ID });
+  return (
+    <main
+      ref={setNodeRef}
+      className={cn(
+        'overflow-y-auto pr-[clamp(0.25rem,0.5vw,0.5rem)] transition-colors rounded-lg',
+        isOver && 'bg-primary/5 ring-1 ring-primary/30',
+        !hasRules && 'min-h-[60vh]'
+      )}
+    >
+      {children}
+    </main>
   );
 }
 
 function EmptyWorkspace() {
   const { t } = useTranslation();
   return (
-    <div className="h-full flex flex-col items-center justify-center text-center gap-[clamp(0.5rem,1vh,1rem)] px-[clamp(1rem,2vw,2rem)] text-muted-foreground">
+    <div className="h-full flex flex-col items-center justify-center text-center gap-[clamp(0.5rem,1vh,1rem)] px-[clamp(1rem,2vw,2rem)] text-muted-foreground py-[clamp(2rem,6vh,4rem)]">
       <LayoutDashboard className="h-[clamp(2rem,4vw,3.5rem)] w-[clamp(2rem,4vw,3.5rem)] opacity-30" />
       <p className="text-[clamp(0.8rem,1vw,1.05rem)] font-medium text-foreground">
         {t('settings.eir.emptyTitle', { defaultValue: 'No EIR rules yet' })}
@@ -192,7 +239,7 @@ function EmptyWorkspace() {
       <p className="text-[clamp(0.7rem,0.85vw,0.9rem)] max-w-[40ch] leading-[1.5]">
         {t('settings.eir.emptyBody', {
           defaultValue:
-            'Pick rule kinds from the palette on the left. Each rule defines what the project commits to — CRS, basepoint, classification, naming, tagging, and so on.',
+            'Drag a rule from the palette on the left into this area — or double-click a palette row to add it.',
         })}
       </p>
     </div>

@@ -37,6 +37,12 @@ export interface EirField {
   unit?: string;
   /** Default value if the user hasn't edited yet. */
   defaultValue?: string | number | boolean | string[] | AddressValue | null;
+  /**
+   * Render only when another field in the same rule equals a given value.
+   * Used e.g. on the placement rule to show control-point coords only
+   * when "Enable control point" is on.
+   */
+  dependsOn?: { fieldId: string; equals: unknown };
 }
 
 /**

@@ -1594,12 +1594,14 @@
     "subtitleEirBuilder": "Komponer EIR — reglene prosjektet forplikter seg til",
     "eir": {
       "paletteTitle": "Regelpalett",
-      "paletteHint": "Klikk for å legge til. Dra kortene i arbeidsflaten for å sortere.",
-      "activeCount": "{{active}} av {{total}} regler aktive",
+      "paletteHint": "Dobbeltklikk eller dra en rad inn i arbeidsflaten.",
+      "paletteRowTitle": "Dobbeltklikk for å legge til — eller dra inn i arbeidsflaten",
+      "paletteAtCap": "Allerede lagt til (maks {{max}})",
+      "activeCount": "{{active}} av {{total}} regeltyper i bruk",
       "removeRule": "Fjern regel",
       "dragHandle": "Dra for å sortere",
       "emptyTitle": "Ingen EIR-regler ennå",
-      "emptyBody": "Velg regeltyper fra paletten til venstre. Hver regel definerer hva prosjektet forplikter seg til — CRS, basepunkt, klassifikasjon, navngivning, tagging og så videre."
+      "emptyBody": "Dra en regel fra paletten til venstre hit — eller dobbeltklikk en palett-rad for å legge den til."
     },
     "eirConfig": {
       "multiselectNone": "Ingen valgt",

@@ -1594,12 +1594,14 @@
     "subtitleEirBuilder": "Compose the EIR — rules the project commits to",
     "eir": {
       "paletteTitle": "Rule palette",
-      "paletteHint": "Click to add. Drag cards in the workspace to reorder.",
-      "activeCount": "{{active}} of {{total}} rules active",
+      "paletteHint": "Double-click or drag a row into the workspace.",
+      "paletteRowTitle": "Double-click to add — or drag to the workspace",
+      "paletteAtCap": "Already added (max {{max}})",
+      "activeCount": "{{active}} of {{total}} rule kinds in use",
       "removeRule": "Remove rule",
       "dragHandle": "Drag to reorder",
       "emptyTitle": "No EIR rules yet",
-      "emptyBody": "Pick rule kinds from the palette on the left. Each rule defines what the project commits to — CRS, basepoint, classification, naming, tagging, and so on."
+      "emptyBody": "Drag a rule from the palette on the left into this area — or double-click a palette row to add it."
     },
     "eirConfig": {
       "multiselectNone": "None selected",

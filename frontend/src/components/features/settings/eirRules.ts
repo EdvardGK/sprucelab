@@ -4,11 +4,16 @@
  * The Project EIR is a composed set of rules picked from this palette.
  * Each rule kind has its own typed configuration (re-using the `EirField`
  * shape from `eirConfig.ts`). The page renders the palette as a sidebar
- * (click to add) and the active rules as workspace cards.
+ * (drag or double-click to add) and the active rules as workspace cards.
  *
- * State is local-only for now (`useState` in the page). Persistence lands
- * with the Phase 7 BEP-backend restore — the on-the-wire shape is
- * intentionally close to `ProjectEirRule { kind, config, position }`.
+ * Mutual exclusivity is encoded as `maxInstances` (undefined = unlimited).
+ * Most rules are project-singletons; classification / tagging / custom-
+ * properties can repeat because they describe multi-system or multi-Pset
+ * commitments.
+ *
+ * State is local-only for now. Persistence lands with Phase 7 BEP-backend
+ * restore — on-the-wire shape is intentionally close to
+ * `ProjectEirRule { kind, config, position }`.
  */
 import {
   Activity,
@@ -21,7 +26,6 @@ import {
   Layers,
   Map,
   MapPin,
-  Pin,
   Tags,
   Users,
   Wrench,
@@ -31,8 +35,7 @@ import type { EirField } from './eirConfig';
 
 export type EirRuleKind =
   | 'crs'
-  | 'basepoint'
-  | 'control_point'
+  | 'placement'
   | 'site_plan'
   | 'site_grid'
   | 'canonical_floors'
@@ -57,6 +60,11 @@ export interface EirRuleDefinition {
   icon: LucideIcon;
   /** Form fields rendered inside the rule card. */
   fields: EirField[];
+  /**
+   * Max instances allowed in one project. Use `Infinity` for unlimited.
+   * Default (omitted) is 1 — most rules are project-singletons.
+   */
+  maxInstances?: number;
 }
 
 const NORWEGIAN_CRS_OPTIONS = [
@@ -113,24 +121,33 @@ export const EIR_RULES: EirRuleDefinition[] = [
     ],
   },
   {
-    kind: 'basepoint',
-    title: 'Project basepoint',
-    blurb: 'World-coordinate anchor for placement.',
+    kind: 'placement',
+    title: 'Project placement',
+    blurb: 'Basepoint (always) + optional control point.',
     group: 'geometry',
     icon: MapPin,
     fields: [
       {
-        id: 'required',
-        label: 'Required',
-        kind: 'toggle',
-        defaultValue: true,
+        id: 'basepoint_e',
+        label: 'Basepoint E (eastings)',
+        kind: 'number',
+        unit: 'm',
+        step: 0.001,
+        bepRole: 'BEP enters the project basepoint in the chosen CRS.',
       },
       {
-        id: 'address',
-        label: 'Indicative address',
-        kind: 'address',
-        bepRole: 'BEP enters the resolved E/N/H.',
-        hint: 'Adressesøk via Kartverket Geonorge. Lat/lon is informational only; BEP fills exact E/N/H per the chosen CRS.',
+        id: 'basepoint_n',
+        label: 'Basepoint N (northings)',
+        kind: 'number',
+        unit: 'm',
+        step: 0.001,
+      },
+      {
+        id: 'basepoint_h',
+        label: 'Basepoint H (height)',
+        kind: 'number',
+        unit: 'm',
+        step: 0.001,
       },
       {
         id: 'position_tolerance_m',
@@ -140,29 +157,39 @@ export const EIR_RULES: EirRuleDefinition[] = [
         min: 0,
         max: 5,
         step: 0.05,
-        hint: 'Delivered placement must match within this radius.',
+        hint: 'Delivered placement must match the basepoint within this radius.',
         defaultValue: 0.1,
       },
-    ],
-  },
-  {
-    kind: 'control_point',
-    title: 'Project control point',
-    blurb: 'Second reference anchoring rotation.',
-    group: 'geometry',
-    icon: Pin,
-    fields: [
       {
-        id: 'required',
-        label: 'Required',
+        id: 'control_point_enabled',
+        label: 'Enable control point',
         kind: 'toggle',
+        hint: 'A second reference anchors rotation. Without it, true-north is taken from IFC IfcSite.TrueNorth.',
         defaultValue: true,
       },
       {
-        id: 'address',
-        label: 'Indicative address',
-        kind: 'address',
-        bepRole: 'BEP enters the resolved E/N/H.',
+        id: 'control_point_e',
+        label: 'Control point E',
+        kind: 'number',
+        unit: 'm',
+        step: 0.001,
+        dependsOn: { fieldId: 'control_point_enabled', equals: true },
+      },
+      {
+        id: 'control_point_n',
+        label: 'Control point N',
+        kind: 'number',
+        unit: 'm',
+        step: 0.001,
+        dependsOn: { fieldId: 'control_point_enabled', equals: true },
+      },
+      {
+        id: 'control_point_h',
+        label: 'Control point H',
+        kind: 'number',
+        unit: 'm',
+        step: 0.001,
+        dependsOn: { fieldId: 'control_point_enabled', equals: true },
       },
       {
         id: 'rotation_tolerance_deg',
@@ -172,7 +199,6 @@ export const EIR_RULES: EirRuleDefinition[] = [
         min: 0,
         max: 5,
         step: 0.05,
-        hint: 'Delivered true-north must match within this angle.',
         defaultValue: 0.1,
       },
     ],
@@ -185,16 +211,10 @@ export const EIR_RULES: EirRuleDefinition[] = [
     icon: Map,
     fields: [
       {
-        id: 'required',
-        label: 'Required',
-        kind: 'toggle',
-        defaultValue: true,
-      },
-      {
         id: 'address',
         label: 'Site address',
         kind: 'address',
-        hint: 'Adressesøk via Kartverket Geonorge. Anchors the site bounding box.',
+        hint: 'Adressesøk via Kartverket Geonorge. Anchors the site geographically. The basepoint E/N/H derives from this location, in the chosen CRS.',
       },
       {
         id: 'formats',
@@ -213,31 +233,22 @@ export const EIR_RULES: EirRuleDefinition[] = [
   {
     kind: 'site_grid',
     title: 'Project grid',
-    blurb: 'Shared coordination grid axes + spacing.',
+    blurb: 'File-uploaded coordination grid.',
     group: 'geometry',
     icon: Grid3x3,
     fields: [
       {
-        id: 'axis_format',
-        label: 'Axis labels',
-        kind: 'select',
+        id: 'formats',
+        label: 'Accepted formats',
+        kind: 'multiselect',
+        bepRole: 'BEP uploads the grid file in one of these formats; axis labels and spacing are parsed from the file.',
+        hint: 'The grid is parsed from the file — no in-UI editor.',
         options: [
-          { value: 'alpha_num', label: 'Letters × numbers (A1 / B2)' },
-          { value: 'num_num', label: 'Numbers × numbers (1.1 / 1.2)' },
-          { value: 'custom', label: 'Custom' },
+          { value: 'dwg', label: 'DWG (gridlines)' },
+          { value: 'ifc', label: 'IFC (IfcGrid)' },
+          { value: 'csv', label: 'CSV (labels + coords)' },
         ],
-        defaultValue: 'alpha_num',
-      },
-      {
-        id: 'spacing_mode',
-        label: 'Spacing rule',
-        kind: 'select',
-        options: [
-          { value: 'free', label: 'Free (any spacing)' },
-          { value: 'fixed', label: 'Fixed per project' },
-          { value: 'modular', label: 'Modular increments' },
-        ],
-        defaultValue: 'free',
+        defaultValue: ['dwg', 'ifc'],
       },
     ],
   },
@@ -335,44 +346,52 @@ export const EIR_RULES: EirRuleDefinition[] = [
   // ─── Standards & Requirements ──────────────────────────────────
   {
     kind: 'classification',
-    title: 'Classification system(s)',
-    blurb: 'Which standards the project commits to.',
+    title: 'Classification system',
+    blurb: 'A single system + where the code is stored in IFC. Add the rule again per additional system.',
     group: 'standards',
     icon: FileSearch,
+    maxInstances: Infinity,
     fields: [
       {
-        id: 'systems',
-        label: 'Required systems',
-        kind: 'multiselect',
+        id: 'system',
+        label: 'System',
+        kind: 'select',
         options: [
           { value: 'ns3451', label: 'NS 3451 (Norwegian building parts)' },
           { value: 'omniclass', label: 'OmniClass' },
           { value: 'uniclass', label: 'Uniclass 2015' },
-          { value: 'ifc_classification_reference', label: 'IFC Pset_ClassificationReference' },
           { value: 'tfm', label: 'TFM (Tverrfaglig merkesystem)' },
         ],
-        defaultValue: ['ns3451'],
+        defaultValue: 'ns3451',
       },
       {
-        id: 'pset_required',
-        label: 'Carry classification in IFC Pset',
-        kind: 'toggle',
-        hint: 'Require Pset_ClassificationReference on every instance.',
-        defaultValue: true,
+        id: 'ifc_pset',
+        label: 'IFC Pset',
+        kind: 'text',
+        hint: 'Native Pset_ClassificationReference, or a custom Pset like "Skiplum_Klassifikasjon".',
+        defaultValue: 'Pset_ClassificationReference',
+      },
+      {
+        id: 'ifc_property',
+        label: 'IFC property name',
+        kind: 'text',
+        hint: 'Property within the Pset that carries the classification code (e.g., "ItemReference" or "NS3451_Code").',
+        defaultValue: 'ItemReference',
       },
     ],
   },
   {
     kind: 'tagging',
-    title: 'Cross-system tagging',
-    blurb: 'Tag schemas for cross-system identification.',
+    title: 'Tagging namespace',
+    blurb: 'One tag schema + syntax + IFC storage. Add again per additional namespace.',
     group: 'standards',
     icon: Tags,
+    maxInstances: Infinity,
     fields: [
       {
-        id: 'namespaces',
-        label: 'Tag namespaces',
-        kind: 'multiselect',
+        id: 'namespace',
+        label: 'Namespace',
+        kind: 'select',
         options: [
           { value: 'discipline', label: 'Discipline tag' },
           { value: 'stage', label: 'Stage tag (FP / DP / UT)' },
@@ -380,20 +399,35 @@ export const EIR_RULES: EirRuleDefinition[] = [
           { value: 'asset_id', label: 'Asset ID (FDV)' },
           { value: 'lci', label: 'LCI / EPD reference' },
         ],
-        defaultValue: ['discipline', 'asset_id'],
+        defaultValue: 'asset_id',
       },
       {
-        id: 'pset_carry',
-        label: 'Carry tags in IFC Pset',
-        kind: 'toggle',
-        defaultValue: true,
+        id: 'syntax_regex',
+        label: 'Syntax (regex)',
+        kind: 'text',
+        hint: 'Regex the tag value must match. Example: ^[A-Z]{2,4}-\\d{3,5}$ for "ARK-001" / "RIB-12345".',
+        defaultValue: '',
+      },
+      {
+        id: 'ifc_pset',
+        label: 'IFC Pset',
+        kind: 'text',
+        hint: 'Pset that carries the tag — native or custom.',
+        defaultValue: '',
+      },
+      {
+        id: 'ifc_property',
+        label: 'IFC property name',
+        kind: 'text',
+        hint: 'Property within the Pset that holds the tag value.',
+        defaultValue: '',
       },
     ],
   },
   {
     kind: 'mmi_lod',
     title: 'MMI / LOD matrix',
-    blurb: 'Maturity per class per stage.',
+    blurb: 'Maturity per class per stage + where the value lives in IFC.',
     group: 'standards',
     icon: Activity,
     fields: [
@@ -420,6 +454,20 @@ export const EIR_RULES: EirRuleDefinition[] = [
           { value: 'fdv', label: 'FDV' },
         ],
         defaultValue: ['forprosjekt', 'detaljprosjekt', 'utforelse'],
+      },
+      {
+        id: 'ifc_pset',
+        label: 'IFC Pset',
+        kind: 'text',
+        hint: 'Native or custom Pset that carries the MMI/LOD value per instance.',
+        defaultValue: 'Pset_NorwegianMMI',
+      },
+      {
+        id: 'ifc_property',
+        label: 'IFC property name',
+        kind: 'text',
+        hint: 'Property within the Pset.',
+        defaultValue: 'MMI',
       },
     ],
   },
@@ -462,23 +510,26 @@ export const EIR_RULES: EirRuleDefinition[] = [
   },
   {
     kind: 'custom_properties',
-    title: 'Custom properties (Psets)',
-    blurb: 'Project-specific Pset values beyond Pset_*Common.',
+    title: 'Custom Pset',
+    blurb: 'Project- or company-prefixed Psets (non-native IFC).',
     group: 'standards',
     icon: Wrench,
+    maxInstances: Infinity,
     fields: [
       {
-        id: 'psets',
-        label: 'Required Psets',
-        kind: 'multiselect',
-        options: [
-          { value: 'pset_common', label: 'Pset_*Common defaults' },
-          { value: 'acoustic_ns8175', label: 'AcousticClass (NS 8175)' },
-          { value: 'fire_no', label: 'FireRating (Norsk klasse)' },
-          { value: 'epd_lca', label: 'EPD / LCA reference' },
-          { value: 'thermal', label: 'ThermalTransmittance' },
-        ],
-        defaultValue: ['pset_common'],
+        id: 'prefix',
+        label: 'Pset prefix',
+        kind: 'text',
+        hint: 'Custom Psets do not use the native Pset_ prefix; they use a project or company prefix (e.g., "ACME_", "Skiplum_", "PROJ_2026_").',
+        bepRole: 'BEP authors the full property list under this prefix in a dedicated workspace.',
+        defaultValue: '',
+      },
+      {
+        id: 'pset_names',
+        label: 'Pset names',
+        kind: 'text',
+        hint: 'Comma-separated list of Psets under this prefix, e.g., "AcousticClass, FireClassNO, EPD_Ref". The full property builder lives in a dedicated module — see notes.',
+        defaultValue: '',
       },
     ],
   },
@@ -539,6 +590,11 @@ export const EIR_GROUP_LABELS: Record<EirRuleGroup, string> = {
 };
 
 export const EIR_GROUP_ORDER: EirRuleGroup[] = ['geometry', 'scope', 'standards'];
+
+/** Default is 1 (single instance per project). Use `Infinity` for unlimited. */
+export function ruleMaxInstances(def: EirRuleDefinition): number {
+  return def.maxInstances ?? 1;
+}
 
 /** Active rule instance — what the project actually committed to. */
 export interface ActiveEirRule {
