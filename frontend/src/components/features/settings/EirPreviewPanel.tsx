@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import proj4 from 'proj4';
 import { Map as MapIcon, Box, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -110,84 +110,69 @@ function deriveMapState(rules: ActiveEirRule[]): DerivedState {
   return { markers, focus };
 }
 
-type Tab = 'map' | 'ifc';
-
 interface EirPreviewPanelProps {
   rules: ActiveEirRule[];
 }
 
+/**
+ * Right-column preview widgets, dashboard-style. Two stacked cards
+ * (map + IFC) with intrinsic proportions — they do NOT stretch to fill
+ * viewport height. Right column scrolls naturally if cards overflow.
+ */
 export function EirPreviewPanel({ rules }: EirPreviewPanelProps) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<Tab>('map');
   const { markers, focus } = useMemo(() => deriveMapState(rules), [rules]);
 
   return (
-    <aside className="flex flex-col gap-[clamp(0.375rem,0.6vh,0.625rem)] h-full min-h-0">
-      <header className="flex items-center gap-1 px-[clamp(0.25rem,0.4vw,0.5rem)]">
-        <h2 className="text-[clamp(0.6rem,0.72vw,0.78rem)] font-semibold uppercase tracking-wide text-muted-foreground flex-1">
-          {t('settings.eir.previewTitle', { defaultValue: 'Live preview' })}
-        </h2>
-      </header>
+    <div className="flex flex-col gap-[clamp(0.625rem,1vh,1rem)] overflow-y-auto pr-[clamp(0.125rem,0.25vw,0.25rem)] pb-[clamp(1rem,2vh,2rem)]">
+      <PreviewWidget
+        icon={MapIcon}
+        title={t('settings.eir.tabMap', { defaultValue: 'Map' })}
+        count={markers.length}
+        bodyClassName="aspect-square"
+      >
+        <KartverketMap markers={markers} focus={focus} />
+      </PreviewWidget>
 
-      <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-muted/40 self-start">
-        <TabButton
-          active={tab === 'map'}
-          onClick={() => setTab('map')}
-          icon={MapIcon}
-          label={t('settings.eir.tabMap', { defaultValue: 'Map' })}
-          count={markers.length}
-        />
-        <TabButton
-          active={tab === 'ifc'}
-          onClick={() => setTab('ifc')}
-          icon={Box}
-          label={t('settings.eir.tabIfc', { defaultValue: 'IFC' })}
-        />
-      </div>
-
-      <div className="flex-1 min-h-0 rounded-lg border border-border/60 bg-card overflow-hidden">
-        {tab === 'map' ? (
-          <KartverketMap markers={markers} focus={focus} />
-        ) : (
-          <IfcCubePreview rules={rules} />
-        )}
-      </div>
-    </aside>
+      <PreviewWidget
+        icon={Box}
+        title={t('settings.eir.tabIfc', { defaultValue: 'Sample IFC' })}
+        bodyClassName="max-h-[clamp(20rem,40vh,28rem)] overflow-y-auto"
+      >
+        <IfcCubePreview rules={rules} />
+      </PreviewWidget>
+    </div>
   );
 }
 
-function TabButton({
-  active,
-  onClick,
+function PreviewWidget({
   icon: Icon,
-  label,
+  title,
   count,
+  bodyClassName,
+  children,
 }: {
-  active: boolean;
-  onClick: () => void;
   icon: typeof MapIcon;
-  label: string;
+  title: string;
   count?: number;
+  bodyClassName?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1.5 px-[clamp(0.5rem,0.7vw,0.75rem)] py-[clamp(0.2rem,0.3vh,0.35rem)] rounded text-[clamp(0.6rem,0.72vw,0.78rem)] font-medium transition-colors',
-        active
-          ? 'bg-card text-foreground shadow-sm'
-          : 'text-muted-foreground hover:text-foreground'
-      )}
-    >
-      <Icon className="h-[clamp(0.625rem,0.85vw,0.85rem)] w-[clamp(0.625rem,0.85vw,0.85rem)]" />
-      <span>{label}</span>
-      {count !== undefined && count > 0 && (
-        <span className="tabular-nums text-[clamp(0.5rem,0.6vw,0.65rem)] bg-primary/15 text-primary rounded-full px-1.5">
-          {count}
-        </span>
-      )}
-    </button>
+    <section className="flex flex-col rounded-lg border border-border/60 bg-card shadow-sm overflow-hidden">
+      <header className="flex items-center gap-1.5 px-[clamp(0.5rem,0.8vw,0.875rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] border-b border-border/40">
+        <Icon className="h-[clamp(0.75rem,0.95vw,0.95rem)] w-[clamp(0.75rem,0.95vw,0.95rem)] text-muted-foreground shrink-0" />
+        <h3 className="text-[clamp(0.65rem,0.78vw,0.82rem)] font-semibold tracking-tight flex-1 min-w-0">
+          {title}
+        </h3>
+        {count !== undefined && count > 0 && (
+          <span className="tabular-nums text-[clamp(0.5rem,0.65vw,0.7rem)] bg-primary/15 text-primary rounded-full px-1.5 font-semibold">
+            {count}
+          </span>
+        )}
+      </header>
+      <div className={cn('w-full', bodyClassName)}>{children}</div>
+    </section>
   );
 }
 
