@@ -747,6 +747,9 @@
       "layerOccurrences": "Layer occurrences",
       "layersEmpty": "This material has no recorded layer occurrences yet.",
       "usageEmpty": "Not yet referenced by any type.",
+      "preview": "Preview",
+      "showingOneOf": "Showing {{name}} ({{index}} of {{total}})",
+      "noModelUsage": "No model usage yet",
       "tab": {
         "definition": "Definition",
         "layers": "Layers",

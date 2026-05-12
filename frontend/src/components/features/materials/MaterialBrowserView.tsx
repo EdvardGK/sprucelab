@@ -1,17 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  AlertCircle,
-  Layers,
-  Leaf,
-  LayoutGrid,
-  ListTree,
-  Package,
-  Search,
-  ShoppingCart,
-  Sparkles,
-} from 'lucide-react';
+import { AlertCircle, Package, Search, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,20 +15,31 @@ import {
 import type { FamilyKey } from '@/lib/material-families';
 
 import { MaterialsKpiHeader } from './MaterialsKpiHeader';
-import { MaterialsFamilyTree } from './MaterialsFamilyTree';
 import { MaterialsFamilyTreemap } from './MaterialsFamilyTreemap';
-import { MaterialsTable, type LensMode } from './MaterialsTable';
+import { MaterialsTable } from './MaterialsTable';
 import { MaterialSetCard } from './MaterialSetCard';
 import { MaterialDetailTabs } from './MaterialDetailTabs';
 import { MaterialSetDetail } from './MaterialSetDetail';
 
 type TabMode = 'materials' | 'sets';
-type FamilyView = 'tree' | 'treemap';
 
 interface MaterialBrowserViewProps {
   projectId: string;
 }
 
+/**
+ * Materials library page (Session 4 density makeover).
+ *
+ * Page structure top-to-bottom:
+ *   1. KPI header (raw counts, never "X%" framing)
+ *   2. Filter bar — search (dominant, left) + Materials/Sets pills (right)
+ *   3. Family treemap (the only family navigation; the old tree column is gone)
+ *   4. Two-column grid: table (left, breathes) + detail panel (right)
+ *
+ * The LensSwitch (All/LCA/Procurement) was removed — the four detail tabs
+ * already provide the slice it was filtering. The FamilyViewSwitch was also
+ * removed (treemap is the only view). Both lifts cost more than they delivered.
+ */
 export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -46,9 +47,7 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
 
   const [selectedFamily, setSelectedFamily] = useState<FamilyKey | null>(null);
   const [selectedSubtype, setSelectedSubtype] = useState<string | null>(null);
-  const [familyView, setFamilyView] = useState<FamilyView>('tree');
   const [tab, setTab] = useState<TabMode>('materials');
-  const [lens, setLens] = useState<LensMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMaterialKey, setSelectedMaterialKey] = useState<string | null>(null);
   const [selectedSetSignature, setSelectedSetSignature] = useState<string | null>(null);
@@ -158,9 +157,9 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
         dataUpdatedAt={dataUpdatedAt}
       />
 
-      {/* Filter / lens / tab bar */}
+      {/* Filter bar — search dominates, Materials/Sets pills sit on the right */}
       <div className="flex flex-wrap items-center gap-[clamp(0.375rem,0.8vw,0.75rem)] rounded-md border bg-muted/10 px-[clamp(0.625rem,1.2vw,1rem)] py-[clamp(0.375rem,0.7vh,0.625rem)]">
-        <div className="relative min-w-[clamp(11rem,18vw,16rem)] flex-1 max-w-[clamp(14rem,22vw,20rem)]">
+        <div className="relative flex-1 min-w-[clamp(11rem,18vw,16rem)]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('materialBrowser.search')}
@@ -169,32 +168,6 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
             className="h-[clamp(1.75rem,2.5vh,2.25rem)] pl-9 text-[clamp(0.65rem,0.9vw,0.8rem)]"
           />
         </div>
-        <div className="flex items-center gap-1 rounded-md border bg-background p-0.5">
-          <button
-            onClick={() => setTab('materials')}
-            className={cn(
-              'rounded px-[clamp(0.625rem,1.2vw,1rem)] py-1 text-[clamp(0.6rem,0.9vw,0.75rem)] font-medium transition-colors',
-              tab === 'materials'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-text-secondary hover:text-text-primary',
-            )}
-          >
-            {t('materialBrowser.tab.materials', { count: filteredMaterials.length })}
-          </button>
-          <button
-            onClick={() => setTab('sets')}
-            className={cn(
-              'rounded px-[clamp(0.625rem,1.2vw,1rem)] py-1 text-[clamp(0.6rem,0.9vw,0.75rem)] font-medium transition-colors',
-              tab === 'sets'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-text-secondary hover:text-text-primary',
-            )}
-          >
-            {t('materialBrowser.tab.sets', { count: filteredSets.length })}
-          </button>
-        </div>
-        <LensSwitch value={lens} onChange={setLens} />
-        <FamilyViewSwitch value={familyView} onChange={setFamilyView} />
         {hasActiveFilter && (
           <Button
             size="sm"
@@ -205,6 +178,30 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
             {t('materialBrowser.clearFilter')}
           </Button>
         )}
+        <div className="ml-auto flex items-center gap-0.5 rounded-md border bg-background p-0.5">
+          <button
+            onClick={() => setTab('materials')}
+            className={cn(
+              'rounded px-[clamp(0.5rem,1vw,0.75rem)] py-1 text-[clamp(0.55rem,0.8vw,0.7rem)] font-medium transition-colors',
+              tab === 'materials'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-text-secondary hover:text-text-primary',
+            )}
+          >
+            {t('materialBrowser.tab.materials', { count: filteredMaterials.length })}
+          </button>
+          <button
+            onClick={() => setTab('sets')}
+            className={cn(
+              'rounded px-[clamp(0.5rem,1vw,0.75rem)] py-1 text-[clamp(0.55rem,0.8vw,0.7rem)] font-medium transition-colors',
+              tab === 'sets'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-text-secondary hover:text-text-primary',
+            )}
+          >
+            {t('materialBrowser.tab.sets', { count: filteredSets.length })}
+          </button>
+        </div>
       </div>
 
       {data.summary.loading && (
@@ -216,46 +213,22 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
         </div>
       )}
 
-      {/* Family visualization — tree OR treemap */}
-      {familyView === 'treemap' && (
-        <div className="h-[clamp(220px,28vh,360px)]">
-          <MaterialsFamilyTreemap
-            materials={data.materials}
-            activeFamily={selectedFamily}
-            onFamilyClick={(family) => {
-              setSelectedFamily(family === selectedFamily ? null : family);
-              setSelectedSubtype(null);
-            }}
-            className="h-full"
-          />
-        </div>
-      )}
+      {/* Family treemap — the only family navigation now */}
+      <div className="h-[clamp(220px,28vh,360px)]">
+        <MaterialsFamilyTreemap
+          materials={data.materials}
+          activeFamily={selectedFamily}
+          onFamilyClick={(family) => {
+            setSelectedFamily(family === selectedFamily ? null : family);
+            setSelectedSubtype(null);
+          }}
+          className="h-full"
+        />
+      </div>
 
-      {/* Main 3-column layout: tree (or empty) + table + detail */}
-      <div
-        className={cn(
-          'grid flex-1 min-h-[clamp(360px,55vh,640px)] gap-[clamp(0.5rem,1vw,0.875rem)]',
-          familyView === 'tree'
-            ? 'grid-cols-[clamp(220px,18vw,300px)_1fr_clamp(280px,24vw,380px)]'
-            : 'grid-cols-[1fr_clamp(300px,26vw,420px)]',
-        )}
-      >
-        {familyView === 'tree' && (
-          <div className="flex flex-col min-h-0 rounded-md border bg-background overflow-hidden">
-            <div className="px-[clamp(0.5rem,1vw,0.75rem)] py-[clamp(0.375rem,0.6vh,0.5rem)] border-b text-[clamp(0.55rem,0.8vw,0.7rem)] uppercase tracking-wide text-text-tertiary">
-              {t('materialBrowser.viz.familiesHeading')}
-            </div>
-            <MaterialsFamilyTree
-              families={data.families}
-              selectedFamily={selectedFamily}
-              selectedSubtype={selectedSubtype}
-              onSelectFamily={setSelectedFamily}
-              onSelectSubtype={setSelectedSubtype}
-            />
-          </div>
-        )}
-
-        {/* Center: table or set cards */}
+      {/* Two-column layout: table (left, breathes) + detail (right) */}
+      <div className="grid flex-1 min-h-[clamp(360px,55vh,640px)] gap-[clamp(0.5rem,1vw,0.875rem)] grid-cols-[1fr_clamp(300px,26vw,420px)]">
+        {/* Left: table or set cards */}
         <div className="flex flex-col min-h-0 rounded-md border bg-background overflow-hidden">
           {tab === 'materials' ? (
             filteredMaterials.length === 0 ? (
@@ -263,7 +236,6 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
             ) : (
               <MaterialsTable
                 materials={filteredMaterials}
-                lens={lens}
                 selectedKey={selectedMaterialKey}
                 onSelect={setSelectedMaterialKey}
               />
@@ -333,95 +305,6 @@ function EmptyResults({ onClearFilters }: { onClearFilters: () => void }) {
       >
         {t('materialBrowser.clearFilter')}
       </Button>
-    </div>
-  );
-}
-
-function LensSwitch({
-  value,
-  onChange,
-}: {
-  value: LensMode;
-  onChange: (v: LensMode) => void;
-}) {
-  const { t } = useTranslation();
-  const options: { key: LensMode; labelKey: string; icon: typeof Leaf }[] = [
-    { key: 'all', labelKey: 'materialBrowser.lens.all', icon: Layers },
-    { key: 'lca', labelKey: 'materialBrowser.lens.lca', icon: Leaf },
-    {
-      key: 'procurement',
-      labelKey: 'materialBrowser.lens.procurement',
-      icon: ShoppingCart,
-    },
-  ];
-
-  return (
-    <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5">
-      {options.map((o) => {
-        const Icon = o.icon;
-        return (
-          <button
-            key={o.key}
-            onClick={() => onChange(o.key)}
-            className={cn(
-              'flex items-center gap-1 rounded px-[clamp(0.5rem,1vw,0.75rem)] py-1 text-[clamp(0.6rem,0.9vw,0.75rem)] font-medium transition-colors',
-              value === o.key
-                ? 'bg-primary text-primary-foreground'
-                : 'text-text-secondary hover:text-text-primary',
-            )}
-          >
-            <Icon className="h-3 w-3" />
-            {t(o.labelKey)}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function FamilyViewSwitch({
-  value,
-  onChange,
-}: {
-  value: FamilyView;
-  onChange: (v: FamilyView) => void;
-}) {
-  const { t } = useTranslation();
-  const options: { key: FamilyView; labelKey: string; icon: typeof Leaf }[] = [
-    {
-      key: 'tree',
-      labelKey: 'materialBrowser.viz.familyView.tree',
-      icon: ListTree,
-    },
-    {
-      key: 'treemap',
-      labelKey: 'materialBrowser.viz.familyView.treemap',
-      icon: LayoutGrid,
-    },
-  ];
-
-  return (
-    <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5">
-      {options.map((o) => {
-        const Icon = o.icon;
-        return (
-          <button
-            key={o.key}
-            onClick={() => onChange(o.key)}
-            className={cn(
-              'flex items-center gap-1 rounded px-[clamp(0.5rem,1vw,0.75rem)] py-1 text-[clamp(0.6rem,0.9vw,0.75rem)] font-medium transition-colors',
-              value === o.key
-                ? 'bg-primary text-primary-foreground'
-                : 'text-text-secondary hover:text-text-primary',
-            )}
-            title={t(o.labelKey)}
-            aria-label={t(o.labelKey)}
-          >
-            <Icon className="h-3 w-3" />
-            <span className="hidden md:inline">{t(o.labelKey)}</span>
-          </button>
-        );
-      })}
     </div>
   );
 }

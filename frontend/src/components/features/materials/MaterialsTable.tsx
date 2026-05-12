@@ -8,18 +8,20 @@ import type {
   MaterialUnit,
 } from '@/hooks/use-project-materials';
 
+/**
+ * Retained for backwards compatibility with any external consumers — the
+ * Materials page itself no longer toggles columns by lens.
+ */
 export type LensMode = 'all' | 'lca' | 'procurement';
 
 interface MaterialsTableProps {
   materials: AggregatedMaterial[];
-  lens: LensMode;
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
 }
 
 export function MaterialsTable({
   materials,
-  lens,
   selectedKey,
   onSelect,
 }: MaterialsTableProps) {
@@ -50,16 +52,12 @@ export function MaterialsTable({
             <th className="px-3 py-2 text-right font-medium text-text-secondary">
               {t('materialBrowser.column.usedIn')}
             </th>
-            {(lens === 'all' || lens === 'lca') && (
-              <th className="px-3 py-2 text-center font-medium text-text-secondary">
-                {t('materialBrowser.column.lca')}
-              </th>
-            )}
-            {(lens === 'all' || lens === 'procurement') && (
-              <th className="px-3 py-2 text-center font-medium text-text-secondary">
-                {t('materialBrowser.column.procurement')}
-              </th>
-            )}
+            <th className="px-3 py-2 text-center font-medium text-text-secondary">
+              {t('materialBrowser.column.lca')}
+            </th>
+            <th className="px-3 py-2 text-center font-medium text-text-secondary">
+              {t('materialBrowser.column.procurement')}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -67,7 +65,6 @@ export function MaterialsTable({
             <MaterialRow
               key={m.key}
               material={m}
-              lens={lens}
               selected={m.key === selectedKey}
               onClick={() => onSelect(m.key === selectedKey ? null : m.key)}
             />
@@ -80,12 +77,10 @@ export function MaterialsTable({
 
 function MaterialRow({
   material,
-  lens,
   selected,
   onClick,
 }: {
   material: AggregatedMaterial;
-  lens: LensMode;
   selected: boolean;
   onClick: () => void;
 }) {
@@ -159,16 +154,12 @@ function MaterialRow({
           ({totalInstances})
         </span>
       </td>
-      {(lens === 'all' || lens === 'lca') && (
-        <td className="px-3 py-2 text-center">
-          <ReadinessLight ready={material.has_epd} />
-        </td>
-      )}
-      {(lens === 'all' || lens === 'procurement') && (
-        <td className="px-3 py-2 text-center">
-          <ReadinessLight ready={material.has_product} />
-        </td>
-      )}
+      <td className="px-3 py-2 text-center">
+        <ReadinessLight ready={material.has_epd} />
+      </td>
+      <td className="px-3 py-2 text-center">
+        <ReadinessLight ready={material.has_product} />
+      </td>
     </tr>
   );
 }
