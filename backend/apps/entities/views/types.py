@@ -451,9 +451,25 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         from django.conf import settings
 
         ifc_type = self.get_object()
-
-        # Get the model's IFC file URL
         model = ifc_type.model
+
+        # Untyped rows (no IfcTypeObject upstream — common for IfcOpeningElement
+        # and other void-style entities) cannot be isolated per-type. Return a
+        # structured 200 instead of letting the FastAPI call hit /types/None/
+        # and 404 — the frontend renders an explanatory state from the error code.
+        if not ifc_type.type_guid:
+            return Response({
+                'type_id': str(ifc_type.id),
+                'type_name': ifc_type.type_name,
+                'type_guid': None,
+                'ifc_type': ifc_type.ifc_type,
+                'model_id': str(model.id),
+                'total_count': ifc_type.instance_count or 0,
+                'instances': [],
+                'error': 'no_type_guid',
+                'error_message': 'Type has no IfcTypeObject (untyped). Per-instance isolation is unavailable.'
+            })
+
         if not model.file_url:
             return Response({
                 'type_id': str(ifc_type.id),
@@ -463,7 +479,8 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'model_id': str(model.id),
                 'total_count': 0,
                 'instances': [],
-                'error': 'No IFC file available for this model'
+                'error': 'no_file_url',
+                'error_message': 'No IFC file available for this model'
             })
 
         # Get FastAPI base URL from settings (matches IFCServiceClient)
@@ -505,7 +522,8 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'model_id': str(model.id),
                 'total_count': 0,
                 'instances': [],
-                'error': f'FastAPI error: {e.response.status_code} - {e.response.text}'
+                'error': 'fastapi_error',
+                'error_message': f'FastAPI {e.response.status_code}: {e.response.text}'
             }, status=e.response.status_code)
         except Exception as e:
             return Response({
@@ -516,7 +534,8 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'model_id': str(model.id),
                 'total_count': 0,
                 'instances': [],
-                'error': f'Failed to query IFC file: {str(e)}'
+                'error': 'query_failed',
+                'error_message': f'Failed to query IFC file: {str(e)}'
             }, status=500)
 
     @action(detail=False, methods=['get'], url_path='export-excel')
