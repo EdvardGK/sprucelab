@@ -67,16 +67,39 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     let untypedInstances = 0;
     let orphanTypes = 0;
     let missingClassification = 0;
+
+    // Per-IFC-class distributions for sparklines.
+    const typesByClass: Record<string, number> = {};
+    const instancesByClass: Record<string, number> = {};
+    const untypedByClass: Record<string, number> = {};
+    const orphanByClass: Record<string, number> = {};
+    const missingByClass: Record<string, number> = {};
+
     for (const type of types) {
       ifcClasses.add(type.ifc_type);
       instances += type.instance_count;
+      typesByClass[type.ifc_type] = (typesByClass[type.ifc_type] || 0) + 1;
+      instancesByClass[type.ifc_type] =
+        (instancesByClass[type.ifc_type] || 0) + type.instance_count;
+
       const isUntyped =
         type.type_guid === null ||
         /<untyped>/i.test(type.type_name) ||
         type.type_name.trim() === '';
-      if (isUntyped) untypedInstances += type.instance_count;
-      if (type.instance_count === 0) orphanTypes += 1;
-      if (!type.mapping?.ns3451_code) missingClassification += 1;
+      if (isUntyped) {
+        untypedInstances += type.instance_count;
+        untypedByClass[type.ifc_type] =
+          (untypedByClass[type.ifc_type] || 0) + type.instance_count;
+      }
+      if (type.instance_count === 0) {
+        orphanTypes += 1;
+        orphanByClass[type.ifc_type] = (orphanByClass[type.ifc_type] || 0) + 1;
+      }
+      if (!type.mapping?.ns3451_code) {
+        missingClassification += 1;
+        missingByClass[type.ifc_type] =
+          (missingByClass[type.ifc_type] || 0) + 1;
+      }
     }
     const totalTypes = types.length;
     return {
@@ -90,6 +113,12 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
       orphanPercent: totalTypes > 0 ? (orphanTypes / totalTypes) * 100 : 0,
       missingClassification,
       missingPercent: totalTypes > 0 ? (missingClassification / totalTypes) * 100 : 0,
+      // Distributions
+      typesByClass,
+      instancesByClass,
+      untypedByClass,
+      orphanByClass,
+      missingByClass,
     };
   }, [types]);
 
