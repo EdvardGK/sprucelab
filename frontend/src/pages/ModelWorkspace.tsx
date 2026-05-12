@@ -76,8 +76,9 @@ export default function ModelWorkspace() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col h-full overflow-hidden">
-        {/* Header */}
+      <div className="flex flex-col">
+        {/* Header — Quick Stats row removed; AnalysisKpiCluster owns
+            those numbers inside OverviewTab. */}
         <header className="border-gradient-header bg-background-elevated px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -98,28 +99,6 @@ export default function ModelWorkspace() {
                 <ModelStatusBadge status={model.status} />
               </div>
             </div>
-
-            {/* Quick Stats */}
-            {isReady && (
-              <div className="flex items-center gap-6 text-sm">
-                <div>
-                  <span className="text-text-secondary">Elements:</span>{' '}
-                  <span className="text-text-primary font-medium">
-                    {model.element_count.toLocaleString()}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-text-secondary">Storeys:</span>{' '}
-                  <span className="text-text-primary font-medium">{model.storey_count}</span>
-                </div>
-                {model.system_count > 0 && (
-                  <div>
-                    <span className="text-text-secondary">Systems:</span>{' '}
-                    <span className="text-text-primary font-medium">{model.system_count}</span>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </header>
 
@@ -145,8 +124,8 @@ export default function ModelWorkspace() {
           </nav>
         </div>
 
-        {/* Tab Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* Tab Content — page scrolls naturally; no inner overflow shell. */}
+        <div>
           {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
           {activeTab === 'qto' && (isReady ? <QTODashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
           {activeTab === 'statistics' && (isReady ? <StatisticsTab modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
@@ -544,7 +523,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
           {/* Row 1: Storeys + Treemap (left) | Viewer + Details Rail (right) */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)]">
-            <Card className="overflow-hidden card-accent-forest h-[220px]">
+            <Card className="overflow-hidden card-accent-forest min-h-[clamp(180px,22vh,260px)] flex-1">
               <CardContent className="p-3 h-full overflow-y-auto">
                 <CardHeader
                   title="Storeys"
@@ -554,7 +533,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <StoreyChart storeys={analysis.storeys} activeStorey={viewerStoreyFilter} onBarClick={filterByStorey} />
               </CardContent>
             </Card>
-            <Card className="overflow-hidden card-accent-forest h-[280px]">
+            <Card className="overflow-hidden card-accent-forest min-h-[clamp(280px,32vh,420px)] flex-1">
               <CardContent className="p-3 h-full flex flex-col">
                 <CardHeader
                   title="Elements"
@@ -575,7 +554,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               </CardContent>
             </Card>
           </div>
-          <div className="col-span-3 flex gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
+          <div className="col-span-3 flex gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-[clamp(360px,44vh,560px)]">
             {hasFile ? (
               <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-w-0">
                 <CardContent className="p-0 flex flex-col flex-1 min-h-0">
@@ -646,11 +625,13 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             )}
           </div>
 
-          {/* Row 2: Model info + Quality (left) | Geometry bar (right) */}
-          <div className="col-span-2">
+          {/* Row 2: Model info + Quality (left) | Geometry bar (right).
+              Row min-height grows on 27" so the bottom doesn't shrink to
+              card-content-only. */}
+          <div className="col-span-2 min-h-[clamp(220px,28vh,360px)]">
             <ModelInfoCard analysis={analysis} />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-2 min-h-[clamp(220px,28vh,360px)]">
             <QualityCard
               analysis={analysis}
               stats={stats}
@@ -659,7 +640,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               onViewData={() => setDrillSource({ type: 'quality' })}
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-2 min-h-[clamp(220px,28vh,360px)]">
             <Card className="overflow-hidden card-accent-forest h-full">
               <CardContent className="p-3 flex flex-col h-full">
                 <CardHeader

@@ -296,7 +296,9 @@ function KpiCard({
     <DashboardTile
       id={id}
       className={cn(
-        'p-[clamp(0.5rem,1vw,1rem)] flex flex-col justify-between h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+        // Tile padding tightened ~25% (Session 1 hero trim) so the KPI row
+        // takes less vertical and the Top-10 + table sit above the fold.
+        'p-[clamp(0.375rem,0.75vw,0.75rem)] flex flex-col justify-between h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
         toneStyles.card
       )}
     >

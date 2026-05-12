@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PageShell } from '@/components/Layout';
 import { cn } from '@/lib/utils';
 import {
   useProjectMaterials,
@@ -148,13 +149,7 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
   const hasActiveFilter = !!selectedFamily || !!selectedSubtype || !!searchQuery;
 
   return (
-    <div className="flex flex-col gap-[clamp(0.5rem,1vh,1rem)] px-[clamp(1rem,2vw,1.5rem)] py-[clamp(0.75rem,1.5vh,1.25rem)] min-h-0">
-      {/* Signature gradient accent — matches Type page */}
-      <div
-        className="h-[3px] w-full rounded-full bg-gradient-to-r from-[#D0D34D] via-[#157954] to-[#21263A]"
-        aria-hidden="true"
-      />
-
+    <PageShell title={t('materials.title')} subtitle={t('materials.description')}>
       {/* KPI grid + freshness */}
       <MaterialsKpiHeader
         summary={data.summary}
@@ -318,7 +313,7 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
           </ScrollArea>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

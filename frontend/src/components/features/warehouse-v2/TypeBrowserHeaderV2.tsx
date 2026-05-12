@@ -8,6 +8,12 @@ interface TypeBrowserHeaderV2Props {
   dataUpdatedAt?: number;
 }
 
+/**
+ * Right-side header content for the Types page — freshness badge + a
+ * "Switch to classic" escape link. Page chrome (title/gradient/padding)
+ * lives in `<PageShell>` now; this component is consumed via PageShell's
+ * `headerRight` slot.
+ */
 export function TypeBrowserHeaderV2({ dataUpdatedAt }: TypeBrowserHeaderV2Props) {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,13 +25,8 @@ export function TypeBrowserHeaderV2({ dataUpdatedAt }: TypeBrowserHeaderV2Props)
   };
 
   return (
-    <header className="flex items-center justify-between gap-[clamp(0.5rem,1vw,1rem)] flex-shrink-0">
-      <div className="flex items-baseline gap-[clamp(0.5rem,1vw,1rem)] flex-wrap">
-        <h1 className="text-[clamp(1rem,1.6vw,1.5rem)] font-semibold tracking-tight">
-          {t('typesV2.title')}
-        </h1>
-        <LiveFreshness dataUpdatedAt={dataUpdatedAt} />
-      </div>
+    <>
+      <LiveFreshness dataUpdatedAt={dataUpdatedAt} />
       <button
         type="button"
         onClick={switchToV1}
@@ -33,6 +34,6 @@ export function TypeBrowserHeaderV2({ dataUpdatedAt }: TypeBrowserHeaderV2Props)
       >
         {t('typesV2.tryV1Link')}
       </button>
-    </header>
+    </>
   );
 }

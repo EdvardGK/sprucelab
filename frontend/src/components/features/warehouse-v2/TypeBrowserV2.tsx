@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 
-import { DashboardGrid, type DashboardLayoutDefinition } from '@/components/Layout';
+import { DashboardGrid, PageShell, type DashboardLayoutDefinition } from '@/components/Layout';
 import { useModels } from '@/hooks/use-models';
 import { useModelTypes, type IFCType } from '@/hooks/use-warehouse';
 
@@ -158,14 +158,11 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const isLoading = modelsLoading || (!!modelId && typesLoading);
 
   return (
-    <div className="flex flex-col gap-[clamp(0.5rem,1vh,1rem)] px-[clamp(1rem,2vw,1.5rem)] py-[clamp(0.75rem,1.5vh,1.25rem)]">
-      {/* Signature gradient accent — skiplum-reports pattern */}
-      <div
-        className="h-[3px] w-full rounded-full bg-gradient-to-r from-[#D0D34D] via-[#157954] to-[#21263A]"
-        aria-hidden="true"
-      />
-      <TypeBrowserHeaderV2 loading={isLoading} dataUpdatedAt={dataUpdatedAt} />
-
+    <PageShell
+      title={t('typesV2.title')}
+      subtitle={t('typesV2.subtitle')}
+      headerRight={<TypeBrowserHeaderV2 loading={isLoading} dataUpdatedAt={dataUpdatedAt} />}
+    >
       <TypeBrowserFilterBarV2
         models={models}
         modelId={modelId}
@@ -193,8 +190,10 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
           {/* Hero — KPI row + viz row.
               Viz row: Treemap + Viewer (50/50). The data rail lives
               INSIDE the viewer card as a sidebar/HUD — see
-              TypeViewerPaneV2 internals. */}
-          <div className="flex flex-col gap-[clamp(0.5rem,1vw,1rem)] h-[clamp(560px,calc(100vh-14rem),1100px)]">
+              TypeViewerPaneV2 internals.
+              Hero ceiling tightened (1100px → 720px) so Top-10 + table
+              sit above the fold on 1440×900 per the 40-30-20-10 rule. */}
+          <div className="flex flex-col gap-[clamp(0.5rem,1vw,1rem)] h-[clamp(420px,calc(100vh-22rem),720px)]">
             <div className="flex-[1_1_28%] min-h-0">
               <TypeKpiGrid
                 stats={stats}
@@ -268,7 +267,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
           </div>
         </>
       )}
-    </div>
+    </PageShell>
   );
 }
 
