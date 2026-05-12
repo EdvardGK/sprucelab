@@ -1741,5 +1741,64 @@
     "workspace": {
       "emptyView": "This project has no EIR rules yet. Switch to Edit to compose the contract."
     }
+  },
+  "modelDash": {
+    "tabs": {
+      "overview": "Overview",
+      "qto": "QTO",
+      "statistics": "Statistics",
+      "validation": "Validation",
+      "metadata": "Metadata",
+      "scripts": "Scripts",
+      "history": "History"
+    },
+    "kpis": {
+      "elements": "Elements",
+      "storeys": "Storeys",
+      "systems": "Systems",
+      "types": "Types",
+      "untyped": "Untyped",
+      "orphan": "Orphan",
+      "percentOfInstancesShort": "{{n}} instances",
+      "percentOfTypesShort": "{{n}} types"
+    },
+    "rail": {
+      "emptyHint": "Pick a type from the treemap to see its details here.",
+      "close": "Close details",
+      "instances": "Instances",
+      "classification": "Classification",
+      "ns3451": "NS-3451",
+      "flags": "Flags",
+      "empty": "Empty",
+      "proxy": "Proxy",
+      "untyped": "Untyped",
+      "representation": "Representation",
+      "qualityCounters": "Quality gaps",
+      "loadbearingUnset": "LoadBearing unset",
+      "isExternalUnset": "IsExternal unset",
+      "fireRatingUnset": "FireRating unset",
+      "materials": "Materials",
+      "storeyDistribution": "Storeys",
+      "missing": "Not provided in the model"
+    },
+    "stats": {
+      "typesByClass": "Types & instances by IFC class",
+      "repDistribution": "Geometry representations",
+      "topTypes": "Top types by instance count",
+      "topN": "Top {{n}}",
+      "totalsLine": "{{types}} types · {{instances}} instances",
+      "noClasses": "No IFC classes in this model.",
+      "noRepData": "No geometry representation data.",
+      "noTypes": "No types found.",
+      "noAnalysis": "No analysis available yet — run analysis on the Overview tab."
+    },
+    "comingSoon": {
+      "nextRound": "Coming next round"
+    },
+    "roadmap": {
+      "validation": "Per-rule pass/fail against the project's EIR — green/yellow/red and a click-through to the offending types.",
+      "scripts": "Run saved Python/JS scripts against this model and pipe the output back into the dashboard.",
+      "history": "Per-upload diff: what types were added, removed, or changed between this version and the previous one."
+    }
   }
 }

@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3, Table2 } from 'lucide-react';
 import { useModel } from '@/hooks/use-models';
 import { useModelAnalysis, useRunAnalysis } from '@/hooks/use-model-analysis';
@@ -18,24 +19,35 @@ import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModa
 import { DrillTarget } from '@/components/filters/DrillTarget';
 import { useProjectFilter, useProjectFilterActions } from '@/contexts/ProjectFilterProvider';
 import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
+import { AnalysisDetailsRail } from '@/components/features/model-workspace/AnalysisDetailsRail';
+import { AnalysisKpiCluster } from '@/components/features/model-workspace/AnalysisKpiCluster';
+import { ComingSoonTile } from '@/components/features/model-workspace/ComingSoonTile';
+import { StatisticsTab } from '@/components/features/model-workspace/StatisticsTab';
 
-// Tab definitions
-const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'validation', label: 'Validation' },
-  { id: 'metadata', label: 'Metadata' },
-  { id: 'scripts', label: 'Scripts' },
-  { id: 'history', label: 'History' },
-] as const;
-
-type TabId = typeof TABS[number]['id'];
+// Tab definitions — see CLAUDE.md "modelers own data" + Track C lift brief.
+// Flattened: AnalysisDashboard is now the default Overview content (no
+// inner sub-bar). QTO and Statistics are peers at the top level. MMI /
+// Properties have been removed — they were never built.
+const TAB_IDS = ['overview', 'qto', 'statistics', 'validation', 'metadata', 'scripts', 'history'] as const;
+type TabId = (typeof TAB_IDS)[number];
 
 export default function ModelWorkspace() {
+  const { t } = useTranslation();
   const { modelId } = useParams<{ id: string; modelId: string }>();
   const navigate = useNavigate();
   // const location = useLocation();
   const { data: model, isLoading } = useModel(modelId!);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: 'overview', label: t('modelDash.tabs.overview') },
+    { id: 'qto', label: t('modelDash.tabs.qto') },
+    { id: 'statistics', label: t('modelDash.tabs.statistics') },
+    { id: 'validation', label: t('modelDash.tabs.validation') },
+    { id: 'metadata', label: t('modelDash.tabs.metadata') },
+    { id: 'scripts', label: t('modelDash.tabs.scripts') },
+    { id: 'history', label: t('modelDash.tabs.history') },
+  ];
 
   // Get preparsed scene from navigation state (if uploaded)
   // const preparsedScene = (location.state as any)?.preparsedScene as THREE.Group | undefined;
@@ -114,7 +126,7 @@ export default function ModelWorkspace() {
         {/* Tabs Navigation */}
         <div className="border-b border-border bg-background-elevated flex-shrink-0">
           <nav className="flex px-6 space-x-1 overflow-x-auto">
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -136,10 +148,27 @@ export default function ModelWorkspace() {
         {/* Tab Content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           {activeTab === 'overview' && (isReady ? <OverviewTab model={model} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-          {activeTab === 'validation' && (isReady ? <PlaceholderTab title="Validation" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+          {activeTab === 'qto' && (isReady ? <QTODashboard modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+          {activeTab === 'statistics' && (isReady ? <StatisticsTab modelId={model.id} /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+          {activeTab === 'validation' && (isReady ? (
+            <ComingSoonTile
+              title={t('modelDash.tabs.validation')}
+              roadmap={t('modelDash.roadmap.validation')}
+            />
+          ) : <ProcessingMessage status={model.status} error={model.processing_error} />)}
           {activeTab === 'metadata' && <MetadataTab model={model} />}
-          {activeTab === 'scripts' && (isReady ? <PlaceholderTab title="Scripts" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
-          {activeTab === 'history' && (isReady ? <PlaceholderTab title="History" /> : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+          {activeTab === 'scripts' && (isReady ? (
+            <ComingSoonTile
+              title={t('modelDash.tabs.scripts')}
+              roadmap={t('modelDash.roadmap.scripts')}
+            />
+          ) : <ProcessingMessage status={model.status} error={model.processing_error} />)}
+          {activeTab === 'history' && (isReady ? (
+            <ComingSoonTile
+              title={t('modelDash.tabs.history')}
+              roadmap={t('modelDash.roadmap.history')}
+            />
+          ) : <ProcessingMessage status={model.status} error={model.processing_error} />)}
         </div>
       </div>
     </AppLayout>
@@ -147,21 +176,15 @@ export default function ModelWorkspace() {
 }
 
 // ─── Overview Tab ─── Analysis dashboard ───────────────────────────────────
-
-const OVERVIEW_SUBTABS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'qto', label: 'QTO' },
-  { id: 'mmi', label: 'MMI' },
-  { id: 'statistics', label: 'Statistics' },
-  { id: 'properties', label: 'Properties' },
-] as const;
-
-type OverviewSubTab = typeof OVERVIEW_SUBTABS[number]['id'];
+//
+// Flattened (Track C lift). AnalysisDashboard is now the default content
+// of Overview — no inner sub-tab navigation. QTO + Statistics moved up to
+// be peer top-level tabs. MMI / Properties were never built and have
+// been removed.
 
 function OverviewTab({ model }: { model: Model }) {
   const { data: analysis, isLoading } = useModelAnalysis(model.id);
   const runAnalysis = useRunAnalysis();
-  const [subTab, setSubTab] = useState<OverviewSubTab>('dashboard');
 
   if (isLoading) {
     return (
@@ -203,38 +226,7 @@ function OverviewTab({ model }: { model: Model }) {
     );
   }
 
-  return (
-    <div>
-      {/* Sub-tab navigation */}
-      <div className="border-b border-border/50 bg-background px-[clamp(1rem,2vw,1.5rem)]">
-        <nav className="flex space-x-1">
-          {OVERVIEW_SUBTABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setSubTab(tab.id)}
-              className={`
-                px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap
-                border-b-2 -mb-px
-                ${subTab === tab.id
-                  ? 'text-text-primary border-lime'
-                  : 'text-text-tertiary border-transparent hover:text-text-secondary'
-                }
-              `}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Sub-tab content */}
-      {subTab === 'dashboard' && <AnalysisDashboard analysis={analysis} model={model} />}
-      {subTab === 'qto' && <QTODashboard modelId={model.id} />}
-      {subTab === 'mmi' && <PlaceholderTab title="MMI" />}
-      {subTab === 'statistics' && <PlaceholderTab title="Statistics" />}
-      {subTab === 'properties' && <PlaceholderTab title="Properties" />}
-    </div>
-  );
+  return <AnalysisDashboard analysis={analysis} model={model} />;
 }
 
 // ─── Analysis Dashboard Layout ──────────────────────────────────────────────
@@ -414,6 +406,13 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [viewerMode, setViewerMode] = useState<'3d' | 'footprint'>('3d');
   const [drillSource, setDrillSource] = useState<DrillSource>(null);
+  // Track C lift: locally-scoped "details rail" target. When set, the
+  // right-hand rail next to the viewer shows the type's metadata. This
+  // is intentionally separate from the shared ProjectFilter store —
+  // hovering/picking a type to inspect should NOT mutate the page-level
+  // class filter on its own (the user can still click a treemap tile to
+  // both filter AND inspect, but the rail can also be cleared independently).
+  const [selectedTypeIfcClass, setSelectedTypeIfcClass] = useState<string | null>(null);
   const hasFile = !!model.file_url;
 
   // Cross-filter state lives in the shared project-scoped store
@@ -458,6 +457,10 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
     // Tile labels arrive without the `Ifc` prefix; the store uses the
     // prefixed form to match the viewer's `typeVisibility` keys.
     setIfcClass(['Ifc' + cls]);
+    // Track C lift: clicking a treemap tile also targets the details
+    // rail at the most-frequent type in that class. Stored without the
+    // `Ifc` prefix to match the treemap's label key.
+    setSelectedTypeIfcClass(cls);
   };
   const filterByQuality = () => {
     // "Show only problem types" → include the IFC classes that have
@@ -502,26 +505,44 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
     return map;
   }, [stats.classCounts]);
 
+  // Track C lift: pick the most-instance-heavy type in the active class
+  // as the details-rail target. Falls back to the first matching record.
+  const selectedTypeRecord = useMemo<AnalysisTypeRecord | null>(() => {
+    if (!selectedTypeIfcClass) return null;
+    const matching = analysis.types.filter((tp) => {
+      const cls = (tp.element_class || tp.type_class.replace(/Type$/, '')).replace(
+        /^Ifc/,
+        ''
+      );
+      return cls === selectedTypeIfcClass;
+    });
+    if (matching.length === 0) return null;
+    return matching.reduce((best, cur) =>
+      cur.instance_count > best.instance_count ? cur : best
+    );
+  }, [selectedTypeIfcClass, analysis.types]);
+
   return (
     <>
-      <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full">
-        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
-          {/* Row 1: Quality (2 cols) + KPIs (1 col each) */}
-          <div className="col-span-2">
-            <QualityCard
-              analysis={analysis}
-              stats={stats}
-              onExpand={() => setOverlay('quality')}
-              onClick={filterByQuality}
-              onViewData={() => setDrillSource({ type: 'quality' })}
-            />
-          </div>
-          <KpiCard value={analysis.total_types} label="Types" subValue={stats.emptyTypes} subLabel="empty" warn={stats.emptyTypes > 0} accent onClick={() => setDrillSource({ type: 'types' })} />
-          <KpiCard value={stats.totalInstances} label="Instances" subValue={stats.untypedCount} subLabel="untyped" warn={stats.untypedCount > 0} ratio={`${stats.typeRatio}:1`} onClick={() => setDrillSource({ type: 'instances' })} />
-          <KpiCard value={analysis.total_storeys} label="Storeys" subValue="—" subLabel="BEP compliance" onClick={() => setDrillSource({ type: 'storeys' })} />
-          <KpiCard value={analysis.total_spaces} label="Spaces" subValue="—" subLabel="m²" />
+      <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full flex flex-col gap-[clamp(0.4rem,0.8vw,0.75rem)]">
+        {/* Row 0 — KPI cluster (Track C lift). 6 tiles: Elements, Storeys,
+            Systems, Types, Untyped %, Orphan %. Replaces the previous
+            QualityCard + 4 KpiCards strip — Quality moves down beside the
+            geometry bar. */}
+        <AnalysisKpiCluster
+          analysis={analysis}
+          elementCountFallback={model.element_count}
+          storeyCountFallback={model.storey_count}
+          systemCountFallback={
+            // Treat 0 as "not surfaced" since the analysis run doesn't
+            // currently break out systems. Show em-dash instead of zero.
+            model.system_count > 0 ? model.system_count : null
+          }
+          classColorMap={classColorMap}
+        />
 
-          {/* Row 2: Storeys + Treemap (left) | Viewer (right) */}
+        <div className="grid grid-cols-6 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
+          {/* Row 1: Storeys + Treemap (left) | Viewer + Details Rail (right) */}
           <div className="col-span-3 flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)]">
             <Card className="overflow-hidden card-accent-forest h-[220px]">
               <CardContent className="p-3 h-full overflow-y-auto">
@@ -554,9 +575,9 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               </CardContent>
             </Card>
           </div>
-          <div className="col-span-3">
+          <div className="col-span-3 flex gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-0">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
+              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-w-0">
                 <CardContent className="p-0 flex flex-col flex-1 min-h-0">
                   <div className="flex-1 min-h-0 relative overflow-hidden bg-black/20 rounded-lg">
                     {viewerMode === '3d' ? (
@@ -597,19 +618,48 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 </CardContent>
               </Card>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
+              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-w-0">
                 <CardContent className="p-3 flex-1 flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
             )}
+            {/* Details rail — mounts whenever a type is picked from the
+                treemap. Hidden when nothing is selected so the viewer
+                gets full width. */}
+            {selectedTypeRecord && (
+              <div className="w-[clamp(200px,14vw,300px)] flex-shrink-0">
+                <Card className="overflow-hidden card-accent-lavender h-full">
+                  <CardContent className="p-0 h-full">
+                    <AnalysisDetailsRail
+                      selectedType={selectedTypeRecord}
+                      classColor={
+                        selectedTypeIfcClass
+                          ? classColorMap[selectedTypeIfcClass]
+                          : undefined
+                      }
+                      onClose={() => setSelectedTypeIfcClass(null)}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
 
-          {/* Row 3: Model info (under charts) + Geometry bar (under viewer) */}
-          <div className="col-span-3">
+          {/* Row 2: Model info + Quality (left) | Geometry bar (right) */}
+          <div className="col-span-2">
             <ModelInfoCard analysis={analysis} />
           </div>
-          <div className="col-span-3">
+          <div className="col-span-2">
+            <QualityCard
+              analysis={analysis}
+              stats={stats}
+              onExpand={() => setOverlay('quality')}
+              onClick={filterByQuality}
+              onViewData={() => setDrillSource({ type: 'quality' })}
+            />
+          </div>
+          <div className="col-span-2">
             <Card className="overflow-hidden card-accent-forest h-full">
               <CardContent className="p-3 flex flex-col h-full">
                 <CardHeader
@@ -735,42 +785,9 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
   return { totalInstances, typeRatio, emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts };
 }
 
-// ─── KPI Card ───────────────────────────────────────────────────────────────
-
-function KpiCard({ value, label, subValue, subLabel, accent, warn, ratio, onClick }: {
-  value: number | string; label: string; subValue?: number | string; subLabel?: string; accent?: boolean; warn?: boolean;
-  ratio?: string; onClick?: () => void;
-}) {
-  const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
-  const displaySubValue = typeof subValue === 'number' ? subValue.toLocaleString() : (subValue ?? '');
-  return (
-    <Card className={`h-full ${accent ? 'bg-forest text-white' : ''} ${onClick ? 'cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all' : ''}`} onClick={onClick}>
-      <CardContent className="p-3 flex flex-col justify-between h-full">
-        <div className={`text-[clamp(0.55rem,0.9vw,0.7rem)] font-semibold uppercase tracking-wide ${accent ? 'text-white/70' : 'text-text-tertiary'}`}>
-          {label}
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className={`text-[clamp(1.5rem,4vw,2.25rem)] font-bold tabular-nums leading-none ${accent ? 'text-white' : 'text-text-primary'}`}>
-            {displayValue}
-          </div>
-          {ratio && (
-            <div className={`text-[clamp(0.5rem,0.8vw,0.6rem)] tabular-nums mt-1 ${accent ? 'text-white/50' : 'text-text-tertiary'}`}>
-              {ratio} per type
-            </div>
-          )}
-        </div>
-        {subLabel != null && (
-          <div className={`pt-2 border-t flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)] ${accent ? 'border-white/20' : 'border-border'}`}>
-            <span className={accent ? 'text-white/70' : 'text-text-secondary'}>{subLabel}</span>
-            <span className={`font-semibold tabular-nums ${warn ? (accent ? 'text-yellow-300' : 'text-warning') : (accent ? 'text-white' : 'text-forest')}`}>
-              {displaySubValue}
-            </span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+// ─── KPI Card — removed Track C lift ─────────────────────────────────────
+// The old local `<KpiCard>` was replaced by `<AnalysisKpiCluster>` which
+// uses DashboardTile + useCountUp + Sparkline per the v2 visual bar.
 
 // ─── Quality Checks Card ────────────────────────────────────────────────────
 
@@ -1519,20 +1536,6 @@ function MetadataTab({ model }: { model: Model }) {
   );
 }
 
-// Placeholder Tab Component
-function PlaceholderTab({ title }: { title: string }) {
-  return (
-    <div className="flex min-h-[300px] items-center justify-center">
-      <Card className="max-w-md">
-        <CardContent className="pt-6 text-center">
-          <h3 className="text-lg font-semibold text-text-primary mb-2">
-            {title} - Coming Soon
-          </h3>
-          <p className="text-text-secondary">
-            This feature is under development and will be available in a future update.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+// Stubbed-tab empty states moved to ComingSoonTile.tsx in
+// components/features/model-workspace/. Validation / Scripts / History
+// now use the same DashboardTile wrapper for visual consistency.
