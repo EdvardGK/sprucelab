@@ -1,0 +1,431 @@
+import { lazy, Suspense, useMemo, memo } from 'react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import {
+  AlertCircle,
+  Box as BoxIcon,
+  Layers3,
+  Loader2,
+  MoreVertical,
+  RefreshCw,
+  Trash2,
+  Type as TypeIcon,
+} from 'lucide-react';
+
+import { ModelStatusBadge } from '@/components/ModelStatusBadge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
+import { useLazyViewerMount } from '@/hooks/useLazyViewerMount';
+import { useModelTypes } from '@/hooks/use-warehouse';
+import { cn } from '@/lib/utils';
+import type { Model } from '@/lib/api-types';
+
+// Lazy-load the heavy UnifiedBIMViewer once per card that actually scrolls
+// into view + claims a concurrency slot. Reusing the page-level bundle is
+// fine — React/Vite dedupe the import.
+const UnifiedBIMViewer = lazy(() =>
+  import('@/components/features/viewer/UnifiedBIMViewer').then((m) => ({
+    default: m.UnifiedBIMViewer,
+  }))
+);
+
+interface ModelCardProps {
+  projectId: string;
+  model: Model;
+  onDelete: (id: string, name: string) => void;
+  onReprocess: (id: string) => void;
+  reprocessing: boolean;
+}
+
+/**
+ * Tactical model card — 220-260px tall, two-column grid:
+ *   - left: 180x180 mini 3D viewer (lazy-mounted, concurrency-capped)
+ *   - right: name + version + status + tiny KPI strip + top-3 IFC classes
+ *
+ * Replaces the previous bloated `h-44` card. Click anywhere on the card
+ * navigates to the model workspace; the kebab menu and any internal links
+ * stop propagation so they don't trigger that navigation.
+ *
+ * Modelers-own-data rule: gaps render as amber em-dash, never "Mapped %".
+ */
+function ModelCardImpl({
+  projectId,
+  model,
+  onDelete,
+  onReprocess,
+  reprocessing,
+}: ModelCardProps) {
+  const { t } = useTranslation();
+  const { ref, shouldMount } = useLazyViewerMount({ rootMargin: '200px' });
+
+  const isReady = model.status === 'ready';
+  const isError = model.status === 'error';
+
+  const relUpdated = useRelativeTime(model.updated_at || model.created_at);
+
+  return (
+    <Link
+      to={`/projects/${projectId}/models/${model.id}`}
+      className="block group focus:outline-none"
+    >
+      <div
+        ref={ref}
+        className={cn(
+          'relative bg-card border border-border rounded-md overflow-hidden',
+          'h-[clamp(220px,28vh,260px)]',
+          'grid grid-cols-[180px_1fr]',
+          'transition-all duration-200',
+          'hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md',
+          'focus-within:ring-2 focus-within:ring-primary/40'
+        )}
+      >
+        {/* Left — mini viewer */}
+        <div className="relative bg-zinc-950 overflow-hidden">
+          {isReady && shouldMount ? (
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-4 w-4 text-white/40 animate-spin" />
+                </div>
+              }
+            >
+              <UnifiedBIMViewer
+                modelId={model.id}
+                showPropertiesPanel={false}
+                showModelInfo={false}
+                showControls={false}
+                showFilterHUD={false}
+                autoFitToView
+              />
+            </Suspense>
+          ) : (
+            <ViewerPlaceholder status={model.status} />
+          )}
+        </div>
+
+        {/* Right — info */}
+        <div className="flex flex-col p-[clamp(0.5rem,1vw,0.875rem)] gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
+          {/* Header — name + version + status + updated */}
+          <div className="flex items-start justify-between gap-[clamp(0.375rem,0.6vw,0.625rem)] min-w-0">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-[clamp(0.25rem,0.5vw,0.5rem)] min-w-0">
+                <span className="font-medium text-[clamp(0.75rem,1vw,0.9rem)] text-text-primary truncate">
+                  {model.name}
+                </span>
+                <span className="text-[clamp(0.55rem,0.7vw,0.7rem)] text-muted-foreground tabular-nums shrink-0">
+                  v{model.version_number}
+                </span>
+              </div>
+              <span className="text-[clamp(0.55rem,0.7vw,0.7rem)] text-muted-foreground">
+                {t('projectModels.card.updatedRelative', { relative: relUpdated })}
+              </span>
+            </div>
+            <div className="flex items-center gap-[clamp(0.125rem,0.25vw,0.25rem)] shrink-0">
+              <ModelStatusBadge status={model.status} />
+              <CardMenu
+                onReprocess={() => onReprocess(model.id)}
+                onDelete={() => onDelete(model.id, model.name)}
+                reprocessing={reprocessing}
+                status={model.status}
+              />
+            </div>
+          </div>
+
+          {/* Mini KPI strip */}
+          <CardKpiStrip
+            elements={isReady ? model.element_count : null}
+            storeys={isReady ? model.storey_count : null}
+            types={isReady ? model.type_count : null}
+          />
+
+          {/* Top-3 IFC classes (or error message) */}
+          <div className="flex-1 min-h-0 mt-[clamp(0.125rem,0.3vh,0.25rem)]">
+            {isError ? (
+              <ErrorMessage error={model.processing_error} />
+            ) : isReady ? (
+              <TopClassesMiniList modelId={model.id} />
+            ) : (
+              <ProcessingHint status={model.status} />
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export const ModelCard = memo(ModelCardImpl);
+
+// --- subcomponents ---
+
+function ViewerPlaceholder({ status }: { status: Model['status'] }) {
+  const { t } = useTranslation();
+  if (status === 'error') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-white/40 gap-1.5 px-2 text-center">
+        <AlertCircle className="h-5 w-5 text-red-400/70" />
+        <span className="text-[0.65rem]">{t('projectModels.card.viewerError')}</span>
+      </div>
+    );
+  }
+  if (status !== 'ready') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-white/40 gap-1.5 px-2 text-center">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span className="text-[0.65rem]">{t('projectModels.card.viewerProcessing')}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-white/30 gap-1.5 px-2 text-center">
+      <BoxIcon className="h-5 w-5" />
+      <span className="text-[0.65rem]">{t('projectModels.card.viewerQueued')}</span>
+    </div>
+  );
+}
+
+function CardKpiStrip({
+  elements,
+  storeys,
+  types,
+}: {
+  elements: number | null;
+  storeys: number | null;
+  types: number | null;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="grid grid-cols-3 gap-[clamp(0.25rem,0.5vw,0.5rem)]">
+      <CardKpi
+        label={t('projectModels.card.kpi.elements')}
+        value={elements}
+        icon={<BoxIcon className="h-3 w-3" />}
+      />
+      <CardKpi
+        label={t('projectModels.card.kpi.storeys')}
+        value={storeys}
+        icon={<Layers3 className="h-3 w-3" />}
+      />
+      <CardKpi
+        label={t('projectModels.card.kpi.types')}
+        value={types}
+        icon={<TypeIcon className="h-3 w-3" />}
+      />
+    </div>
+  );
+}
+
+function CardKpi({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number | null;
+  icon: React.ReactNode;
+}) {
+  const animated = useCountUp(value ?? 0);
+  const isMissing = value === null || value === 0;
+  return (
+    <div className="flex flex-col min-w-0">
+      <div className="flex items-center gap-1 text-muted-foreground">
+        <span className="shrink-0">{icon}</span>
+        <span className="text-[clamp(0.5rem,0.65vw,0.65rem)] uppercase tracking-wide truncate">
+          {label}
+        </span>
+      </div>
+      <span
+        className={cn(
+          'text-[clamp(0.75rem,1.2vw,1rem)] font-semibold tabular-nums leading-tight',
+          isMissing ? 'text-amber-500/80' : 'text-text-primary'
+        )}
+      >
+        {value === null ? '—' : value === 0 ? '—' : animated.toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
+function TopClassesMiniList({ modelId }: { modelId: string }) {
+  const { t } = useTranslation();
+  const { data: types, isLoading } = useModelTypes(modelId);
+
+  // Aggregate instances per ifc_type (top 3). Skips zero-count types.
+  const top = useMemo(() => {
+    if (!types || types.length === 0) return [];
+    const byClass = new Map<string, number>();
+    for (const tp of types) {
+      const cls = tp.ifc_type || 'Unknown';
+      byClass.set(cls, (byClass.get(cls) ?? 0) + (tp.instance_count || 0));
+    }
+    const entries = [...byClass.entries()]
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+    const max = entries[0]?.[1] ?? 0;
+    return entries.map(([cls, value]) => ({ cls, value, max }));
+  }, [types]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-1">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-[14px] rounded-sm bg-gradient-to-r from-muted/30 via-muted/50 to-muted/30 bg-[length:200%_100%] animate-[shimmer_1.5s_ease-in-out_infinite]"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (top.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-[clamp(0.55rem,0.7vw,0.7rem)] text-muted-foreground/70">
+        {t('projectModels.card.noClasses')}
+      </div>
+    );
+  }
+
+  return (
+    <ul className="flex flex-col gap-[clamp(0.125rem,0.3vh,0.25rem)]">
+      {top.map(({ cls, value, max }) => {
+        const widthPct = max > 0 ? (value / max) * 100 : 0;
+        const label = cls.replace(/^Ifc/, '');
+        return (
+          <li key={cls} className="flex flex-col">
+            <div className="flex items-baseline justify-between gap-1 text-[clamp(0.55rem,0.7vw,0.7rem)]">
+              <span className="truncate font-medium" title={cls}>
+                {label}
+              </span>
+              <span className="tabular-nums text-muted-foreground shrink-0">
+                {value.toLocaleString()}
+              </span>
+            </div>
+            <div className="h-[6px] w-full rounded-full bg-muted/60 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[hsl(158_70%_28%)] transition-[width] duration-700 ease-out"
+                style={{ width: `${widthPct}%` }}
+              />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function ErrorMessage({ error }: { error: string | null }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-md bg-error/10 border border-error/20 p-[clamp(0.375rem,0.7vw,0.625rem)]">
+      <div className="flex items-start gap-1.5">
+        <AlertCircle className="h-3.5 w-3.5 text-error mt-0.5 shrink-0" />
+        <p className="text-[clamp(0.55rem,0.7vw,0.7rem)] text-error line-clamp-2">
+          {error || t('modelStatus.processingFailed')}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ProcessingHint({ status }: { status: Model['status'] }) {
+  const { t } = useTranslation();
+  const key =
+    status === 'uploading'
+      ? 'projectModels.card.processingUploading'
+      : status === 'processing'
+      ? 'projectModels.card.processingProcessing'
+      : 'projectModels.card.processingPending';
+  return (
+    <div className="flex items-center gap-1.5 text-[clamp(0.55rem,0.7vw,0.7rem)] text-muted-foreground">
+      <Loader2 className="h-3 w-3 animate-spin" />
+      <span>{t(key)}</span>
+    </div>
+  );
+}
+
+function CardMenu({
+  onReprocess,
+  onDelete,
+  reprocessing,
+  status,
+}: {
+  onReprocess: () => void;
+  onDelete: () => void;
+  reprocessing: boolean;
+  status: Model['status'];
+}) {
+  const { t } = useTranslation();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onReprocess();
+          }}
+          disabled={reprocessing || status === 'processing'}
+        >
+          <RefreshCw
+            className={cn('h-4 w-4 mr-2', reprocessing && 'animate-spin')}
+          />
+          {t('projectModels.card.menu.reprocess')}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="text-error focus:text-error focus:bg-error/10"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          {t('projectModels.card.menu.delete')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// --- helpers ---
+
+function useRelativeTime(iso: string | null | undefined): string {
+  const { t } = useTranslation();
+  if (!iso) return '—';
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '—';
+  const diffSec = Math.max(0, Math.round((now - then) / 1000));
+  if (diffSec < 60) return t('projectModels.relative.justNow');
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return t('projectModels.relative.minutesAgo', { count: diffMin });
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return t('projectModels.relative.hoursAgo', { count: diffHr });
+  const diffDay = Math.round(diffHr / 24);
+  if (diffDay < 30) return t('projectModels.relative.daysAgo', { count: diffDay });
+  const diffMo = Math.round(diffDay / 30);
+  return t('projectModels.relative.monthsAgo', { count: diffMo });
+}

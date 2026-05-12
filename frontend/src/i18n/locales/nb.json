@@ -1800,5 +1800,57 @@
       "scripts": "Kjør lagrede Python-/JS-skript mot denne modellen og send resultatet tilbake til dashbordet.",
       "history": "Diff per opplasting: hvilke typer er lagt til, fjernet eller endret mellom denne versjonen og forrige."
     }
+  },
+  "projectModels": {
+    "title": "IFC-modeller",
+    "loading": "Laster modeller…",
+    "upload": "Last opp modell",
+    "notFound": {
+      "title": "Prosjekt ikke funnet",
+      "body": "Prosjektet du leter etter finnes ikke eller er slettet."
+    },
+    "empty": {
+      "title": "Ingen modeller lastet opp ennå",
+      "body": "Last opp din første IFC-modell for å begynne å analysere og visualisere BIM-dataene.",
+      "cta": "Last opp IFC-modell"
+    },
+    "kpi": {
+      "totalModels": "Modeller",
+      "totalElements": "Elementer",
+      "totalStoreys": "Etasjer",
+      "totalSize": "Total størrelse",
+      "avgProcessing": "Snitt prosessering",
+      "latestUpload": "Siste opplasting"
+    },
+    "card": {
+      "updatedRelative": "Oppdatert {{relative}}",
+      "viewerError": "Viewer utilgjengelig",
+      "viewerProcessing": "Venter på ekstrahering",
+      "viewerQueued": "Lastes når synlig",
+      "noClasses": "Ingen klassedata ennå",
+      "processingUploading": "Laster opp…",
+      "processingProcessing": "Ekstraherer…",
+      "processingPending": "I kø for ekstrahering",
+      "kpi": {
+        "elements": "Elementer",
+        "storeys": "Etasjer",
+        "types": "Typer"
+      },
+      "menu": {
+        "reprocess": "Reprosessér",
+        "delete": "Slett"
+      }
+    },
+    "relative": {
+      "justNow": "akkurat nå",
+      "minutesAgo_one": "{{count}} min siden",
+      "minutesAgo_other": "{{count}} min siden",
+      "hoursAgo_one": "{{count}} time siden",
+      "hoursAgo_other": "{{count}} timer siden",
+      "daysAgo_one": "{{count}} dag siden",
+      "daysAgo_other": "{{count}} dager siden",
+      "monthsAgo_one": "{{count}} md siden",
+      "monthsAgo_other": "{{count}} md siden"
+    }
   }
 }

@@ -1800,5 +1800,57 @@
       "scripts": "Run saved Python/JS scripts against this model and pipe the output back into the dashboard.",
       "history": "Per-upload diff: what types were added, removed, or changed between this version and the previous one."
     }
+  },
+  "projectModels": {
+    "title": "IFC Models",
+    "loading": "Loading models…",
+    "upload": "Upload model",
+    "notFound": {
+      "title": "Project not found",
+      "body": "The project you're looking for doesn't exist or has been deleted."
+    },
+    "empty": {
+      "title": "No models uploaded yet",
+      "body": "Upload your first IFC model to start analyzing and visualizing your BIM data.",
+      "cta": "Upload IFC model"
+    },
+    "kpi": {
+      "totalModels": "Models",
+      "totalElements": "Elements",
+      "totalStoreys": "Storeys",
+      "totalSize": "Total size",
+      "avgProcessing": "Avg processing",
+      "latestUpload": "Latest upload"
+    },
+    "card": {
+      "updatedRelative": "Updated {{relative}}",
+      "viewerError": "Viewer unavailable",
+      "viewerProcessing": "Awaiting extraction",
+      "viewerQueued": "Loads when in view",
+      "noClasses": "No class data yet",
+      "processingUploading": "Uploading…",
+      "processingProcessing": "Extracting…",
+      "processingPending": "Queued for extraction",
+      "kpi": {
+        "elements": "Elements",
+        "storeys": "Storeys",
+        "types": "Types"
+      },
+      "menu": {
+        "reprocess": "Re-process",
+        "delete": "Delete"
+      }
+    },
+    "relative": {
+      "justNow": "just now",
+      "minutesAgo_one": "{{count}} min ago",
+      "minutesAgo_other": "{{count}} min ago",
+      "hoursAgo_one": "{{count}} hr ago",
+      "hoursAgo_other": "{{count}} hrs ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "monthsAgo_one": "{{count}} mo ago",
+      "monthsAgo_other": "{{count}} mo ago"
+    }
   }
 }
