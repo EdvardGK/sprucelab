@@ -235,15 +235,16 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
             </DashboardGrid>
           </div>
 
-          {/* Optional detail panel — only when a type is selected */}
+          {/* Optional detail panel — only when a type is selected.
+              Sizes to content with a max-h escape valve so a sparse
+              detail panel doesn't push the lists below the fold
+              further down than necessary. */}
           {selectedType && (
-            <div className="min-h-[clamp(320px,40vh,540px)]">
-              <TypeDetailPanelV2
-                type={selectedType}
-                onClose={() => setSelectedTypeId(null)}
-                className="h-full"
-              />
-            </div>
+            <TypeDetailPanelV2
+              type={selectedType}
+              onClose={() => setSelectedTypeId(null)}
+              className="max-h-[clamp(360px,70vh,720px)]"
+            />
           )}
 
           {/* Below the fold — Top-10 + Table. Scroll for it. */}

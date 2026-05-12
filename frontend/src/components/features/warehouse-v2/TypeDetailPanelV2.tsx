@@ -25,7 +25,7 @@ export function TypeDetailPanelV2({ type, onClose, className }: TypeDetailPanelV
   return (
     <DashboardTile
       id="type-detail-panel"
-      className={cn('p-0 flex flex-col h-full', className)}
+      className={cn('p-0 flex flex-col overflow-hidden', className)}
     >
       <header className="flex items-start justify-between gap-[clamp(0.5rem,1vw,1rem)] px-[clamp(0.625rem,1.2vw,1.25rem)] py-[clamp(0.5rem,0.8vh,0.75rem)] border-b border-border/60 flex-shrink-0">
         <div className="min-w-0">
@@ -52,7 +52,7 @@ export function TypeDetailPanelV2({ type, onClose, className }: TypeDetailPanelV
         </Button>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-auto p-[clamp(0.625rem,1.2vw,1.25rem)] flex flex-col gap-[clamp(0.75rem,1.2vh,1.25rem)]">
+      <div className="min-h-0 overflow-auto p-[clamp(0.625rem,1.2vw,1.25rem)] flex flex-col gap-[clamp(0.75rem,1.2vh,1.25rem)]">
         <Section title={t('typesV2.detail.classification')}>
           <ClassificationTriple type={type} />
         </Section>
