@@ -1656,5 +1656,56 @@
       "addressNoMatch": "No matches.",
       "addressClear": "Clear"
     }
+  },
+  "projectDash": {
+    "kpi": {
+      "models": "Models",
+      "elements": "Elements",
+      "types": "Types mapped",
+      "materials": "Materials mapped",
+      "percentMapped": "{{percent}}% mapped",
+      "modelsEmpty": "No models uploaded yet"
+    },
+    "health": {
+      "title": "Project health",
+      "classification": "Classification",
+      "units": "Units",
+      "materials": "Materials",
+      "verification": "Verification"
+    },
+    "disciplines": {
+      "title": "Disciplines",
+      "viewData": "View data",
+      "empty": "No discipline data",
+      "filterAria": "Filter by {{code}}"
+    },
+    "attention": {
+      "title": "Attention",
+      "openCount": "{{count}} open",
+      "moreCount": "+{{count}} more",
+      "emptyTitle": "Nothing needs attention",
+      "emptyHint": "Open claims will appear here.",
+      "errorTitle": "Couldn't load claims",
+      "errorHint": "Retry from the claim inbox.",
+      "typeRule": "Rule",
+      "typeSpec": "Spec",
+      "typeRequirement": "Req",
+      "typeConstraint": "Constraint",
+      "typeFact": "Fact",
+      "typeStoreyList": "Floors"
+    },
+    "recent": {
+      "title": "Recent activity",
+      "empty": "No model uploads yet",
+      "statusReady": "Ready",
+      "statusProcessing": "Processing",
+      "statusUploading": "Uploading",
+      "statusError": "Error",
+      "justNow": "just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo": "{{count}} hr ago",
+      "daysAgo": "{{count}} d ago",
+      "monthsAgo": "{{count}} mo ago"
+    }
   }
 }
