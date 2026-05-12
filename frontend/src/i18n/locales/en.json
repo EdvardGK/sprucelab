@@ -1565,6 +1565,7 @@
       "filteredHint": "{{types}} types · {{instances}} instances",
       "instances": "instances",
       "acrossTypes": "across {{count}} types",
+      "isolatingClass": "Isolating class…",
       "filteredEmptyHint": "Filtered to {{ifcClass}}. Select a single type to isolate in the 3D viewer.",
       "untypedTitle": "Untyped {{ifcClass}}",
       "untypedExplain": "These instances have no canonical type definition (no IfcTypeObject). Common for IfcOpeningElement and other void-style entities. Per-type 3D isolation is unavailable until a Type is attached upstream.",

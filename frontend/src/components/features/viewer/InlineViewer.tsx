@@ -29,6 +29,15 @@ interface InlineViewerProps {
   ifcType?: string | null;
   definitionLayers?: TypeDefinitionLayer[];
   className?: string;
+  /**
+   * When provided as a non-empty array, mount UnifiedBIMViewer directly and
+   * isolate to these GUIDs (bypasses the typeId/instances branch). Used by
+   * the Types page to support class-level filter isolation when no single
+   * type is selected.
+   */
+  guidsOverride?: string[];
+  /** Show a spinner while parent is collecting GUIDs for `guidsOverride`. */
+  guidsOverrideLoading?: boolean;
 }
 
 function InlineViewerImpl({
@@ -38,6 +47,8 @@ function InlineViewerImpl({
   ifcType,
   definitionLayers,
   className,
+  guidsOverride,
+  guidsOverrideLoading,
 }: InlineViewerProps) {
   const { t } = useTranslation();
   const [viewDimension, setViewDimension] = useState<ViewDimension>('3d');
@@ -140,6 +151,36 @@ function InlineViewerImpl({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goToPrev, goToNext, handleResetCamera, showModel]);
+
+  // GUID override (e.g. Types page class filter): mount UnifiedBIMViewer
+  // directly with the union of GUIDs. Bypasses the typeId/instances path.
+  const hasGuidsOverride = !!guidsOverride && guidsOverride.length > 0;
+  if (hasGuidsOverride) {
+    return (
+      <div className={`relative h-full bg-zinc-950 overflow-hidden ${className || ''}`}>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-6 w-6 text-white/40 animate-spin" />
+            </div>
+          }
+        >
+          <GuidOverrideViewer modelId={modelId} guids={guidsOverride!} />
+        </Suspense>
+      </div>
+    );
+  }
+
+  // Loading state for the GUID override path: parent is still collecting
+  // instance GUIDs for the active class filter.
+  if (guidsOverrideLoading) {
+    return (
+      <div className={`flex flex-col items-center justify-center h-full bg-zinc-950 ${className || ''}`}>
+        <Loader2 className="h-6 w-6 text-white/40 animate-spin mb-3" />
+        <p className="text-sm text-white/40">{t('typesV2.viewer.isolatingClass')}</p>
+      </div>
+    );
+  }
 
   // Empty state: no type selected
   if (!typeId) {
@@ -290,6 +331,39 @@ function DimensionToggle({
         3D
       </button>
     </div>
+  );
+}
+
+// --- GUID-override wrapper ---
+// Mounts UnifiedBIMViewer with a flat `isolation.guids` set. Used by the
+// Types page when an IFC class filter is active but no single type is
+// selected — we union every instance GUID across the matching types
+// and feed it here so the viewer isolates the whole class.
+function GuidOverrideViewer({
+  modelId,
+  guids,
+}: {
+  modelId: string;
+  guids: string[];
+}) {
+  const isolation = useMemo(
+    () => ({
+      guids,
+      mode: 'all' as const,
+      zoomOnChange: true,
+    }),
+    [guids],
+  );
+
+  return (
+    <UnifiedBIMViewer
+      modelId={modelId}
+      isolation={isolation}
+      showPropertiesPanel={false}
+      showModelInfo={false}
+      showControls={false}
+      showFilterHUD={false}
+    />
   );
 }
 

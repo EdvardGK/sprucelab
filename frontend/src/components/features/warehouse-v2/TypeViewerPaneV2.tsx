@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Box, X, Filter, Layers, HelpCircle } from 'lucide-react';
+import { Box, X, Filter, HelpCircle } from 'lucide-react';
 
 import { DashboardTile } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { InlineViewer } from '@/components/features/viewer/InlineViewer';
-import type { IFCType } from '@/hooks/use-warehouse';
+import { useTypesInstancesByClass, type IFCType } from '@/hooks/use-warehouse';
 
 import { TypeDataRail } from './TypeDataRail';
 
@@ -25,14 +25,12 @@ interface TypeViewerPaneV2Props {
  * (fixed width) as a flex sibling. The rail is always visible and acts
  * as a supporting panel for the viewer.
  *
- * Real class-filtered 3D isolation (when no type is selected but a class
- * filter is active) is parked until the backend exposes instance GUIDs
- * on IFCType records. Today the data-extraction layer surfaces TYPE
- * classes (IfcWallType) while the fragments runtime exposes ENTITY
- * classes (IfcWall); without an explicit entity_ifc_type field or an
- * instance_guids array on IFCType the mapping is heuristic-only and
- * UnifiedBIMViewer filtering can't be made reliable. See worklog for
- * the full architectural note.
+ * Class-filtered isolation (no single type selected, class filter active)
+ * uses `useTypesInstancesByClass` to union instance GUIDs across every
+ * matching type, then passes them to InlineViewer via the
+ * `guidsOverride` prop. This is the frontend-only Bug 1 workaround
+ * pending a backend `entity_ifc_type` field on IFCType. See audit §4
+ * and `data-extraction-vs-fragments-runtime-mismatch.md`.
  */
 export function TypeViewerPaneV2({
   modelId,
@@ -45,6 +43,15 @@ export function TypeViewerPaneV2({
 }: TypeViewerPaneV2Props) {
   const { t } = useTranslation();
   const isClassFiltered = activeIfcClass !== 'all' && !selectedType;
+
+  // Class-level isolation: when a class filter is active and no single
+  // type is selected, collect the instance GUIDs for every type in that
+  // class and pass them to InlineViewer as guidsOverride. Bug 1 fix.
+  const { guids: classGuids, isLoading: classGuidsLoading } =
+    useTypesInstancesByClass(
+      isClassFiltered ? modelId : null,
+      isClassFiltered ? activeIfcClass : null,
+    );
   const titleText = selectedType
     ? selectedType.type_name || t('typesV2.table.unnamed')
     : isClassFiltered
@@ -109,11 +116,13 @@ export function TypeViewerPaneV2({
               />
             )
           ) : isClassFiltered ? (
-            <ClassFilteredState
-              ifcClass={activeIfcClass}
-              classColor={classColor}
-              instanceCount={filteredInstanceCount}
-              typeCount={filteredTypeCount}
+            <InlineViewer
+              key={`class:${activeIfcClass}`}
+              modelId={modelId}
+              typeId={null}
+              guidsOverride={classGuids}
+              guidsOverrideLoading={classGuidsLoading}
+              className="h-full w-full"
             />
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-[clamp(0.375rem,0.6vh,0.75rem)] px-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
@@ -176,42 +185,3 @@ function UntypedState({
   );
 }
 
-function ClassFilteredState({
-  ifcClass,
-  classColor,
-  instanceCount,
-  typeCount,
-}: {
-  ifcClass: string;
-  classColor?: string;
-  instanceCount: number;
-  typeCount: number;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="h-full flex flex-col items-center justify-center text-center px-[clamp(0.75rem,1.5vw,1.5rem)] gap-[clamp(0.5rem,1vh,1rem)]">
-      <div
-        className="h-[clamp(2rem,4vw,3.5rem)] w-[clamp(2rem,4vw,3.5rem)] rounded-md flex items-center justify-center"
-        style={{ background: classColor ?? 'hsl(var(--muted))' }}
-      >
-        <Layers className="h-[clamp(1rem,2vw,1.75rem)] w-[clamp(1rem,2vw,1.75rem)] text-white" />
-      </div>
-      <div>
-        <p className="text-[clamp(0.85rem,1.1vw,1.125rem)] font-semibold tabular-nums">
-          {instanceCount.toLocaleString()}{' '}
-          <span className="font-normal text-muted-foreground">
-            {t('typesV2.viewer.instances')}
-          </span>
-        </p>
-        <p className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground mt-0.5 tabular-nums">
-          {t('typesV2.viewer.acrossTypes', { count: typeCount })}
-        </p>
-      </div>
-      <p className="text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground/80 max-w-[28ch] leading-[1.45]">
-        {t('typesV2.viewer.filteredEmptyHint', {
-          ifcClass: ifcClass.replace(/^Ifc/, ''),
-        })}
-      </p>
-    </div>
-  );
-}

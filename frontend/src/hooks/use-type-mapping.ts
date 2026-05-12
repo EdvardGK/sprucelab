@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 import type { PaginatedResponse } from '@/lib/api-types';
 import {
@@ -138,6 +139,92 @@ export function useTypeInstances(typeId: string | null, options: UseTypeInstance
     },
     enabled: !!typeId && enabled,
   });
+}
+
+// =============================================================================
+// TYPE INSTANCES BY IFC CLASS (Class-filter -> viewer isolation)
+// =============================================================================
+
+/**
+ * Collect every instance GUID for the types in `modelId` whose IFC class
+ * matches `ifcClass`. Used by the Types page so that applying a class
+ * filter actually isolates the corresponding instances in the embedded
+ * 3D viewer.
+ *
+ * The data-extraction layer surfaces TYPE classes (e.g. `IfcWallType`)
+ * while the fragments runtime exposes ENTITY classes (e.g. `IfcWall`).
+ * We match exact first, then fall back to stripping a trailing `Type`
+ * suffix so a viewer-level `IfcWall` filter still finds `IfcWallType`
+ * rows. See `data-extraction-vs-fragments-runtime-mismatch.md`.
+ *
+ * Types with `type_guid === null` (untyped) return a structured 200
+ * with empty `instances` from the backend; we silently skip those.
+ */
+export function useTypesInstancesByClass(
+  modelId: string | null,
+  ifcClass: string | null,
+): { guids: string[]; isLoading: boolean; error: Error | null } {
+  const noop = !modelId || !ifcClass || ifcClass === 'all';
+
+  // Reuse the existing model types query (cached) so we don't refetch.
+  const { data: types = [], isLoading: typesLoading } = useModelTypes(
+    modelId ?? '',
+    { enabled: !noop },
+  );
+
+  const matchingTypes = useMemo(() => {
+    if (noop) return [];
+    const stripped = ifcClass!.replace(/Type$/, '');
+    return types.filter(
+      (t) => t.ifc_type === ifcClass || t.ifc_type === stripped,
+    );
+  }, [types, ifcClass, noop]);
+
+  const instanceQueries = useQueries({
+    queries: matchingTypes.map((type) => ({
+      queryKey: warehouseKeys.typeInstances(type.id, { limit: 100, offset: 0 }),
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        params.append('limit', '100');
+        params.append('offset', '0');
+        const response = await apiClient.get<TypeInstancesResponse>(
+          `/types/types/${type.id}/instances/?${params}`,
+        );
+        return response.data;
+      },
+      enabled: !noop,
+      staleTime: 30 * 1000,
+    })),
+  });
+
+  const guids = useMemo(() => {
+    if (noop) return [];
+    const out: string[] = [];
+    for (const q of instanceQueries) {
+      if (!q.data) continue;
+      const instances = q.data.instances ?? [];
+      for (const inst of instances) {
+        if (inst.ifc_guid) out.push(inst.ifc_guid);
+      }
+    }
+    return out;
+    // Depend on settled count + a stable identity for query results.
+  }, [
+    noop,
+    instanceQueries.length,
+    instanceQueries.map((q) => (q.data ? q.data.instances?.length ?? 0 : -1)).join(','),
+  ]);
+
+  const isLoading =
+    !noop &&
+    (typesLoading || instanceQueries.some((q) => q.isLoading));
+  const firstError = instanceQueries.find((q) => q.error)?.error as Error | undefined;
+
+  // Memoize the returned object so consumers don't see a fresh ref every render.
+  return useMemo(
+    () => ({ guids, isLoading, error: firstError ?? null }),
+    [guids, isLoading, firstError],
+  );
 }
 
 // =============================================================================
