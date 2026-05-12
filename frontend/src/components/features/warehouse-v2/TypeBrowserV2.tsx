@@ -64,21 +64,24 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     dataUpdatedAt,
   } = useModelTypes(modelId ?? '', { enabled: !!modelId });
 
-  const stats = useMemo(() => {
+  // Compute the stats over an arbitrary slice of types so we can show
+  // filtered numbers in the foreground and the unfiltered total in
+  // parens behind them. Sparkline distributions always use the
+  // unfiltered set so the macro vocabulary stays cohesive.
+  const computeStats = (slice: IFCType[]) => {
     const ifcClasses = new Set<string>();
     let instances = 0;
     let untypedInstances = 0;
     let orphanTypes = 0;
     let missingClassification = 0;
 
-    // Per-IFC-class distributions for sparklines.
     const typesByClass: Record<string, number> = {};
     const instancesByClass: Record<string, number> = {};
     const untypedByClass: Record<string, number> = {};
     const orphanByClass: Record<string, number> = {};
     const missingByClass: Record<string, number> = {};
 
-    for (const type of types) {
+    for (const type of slice) {
       ifcClasses.add(type.ifc_type);
       instances += type.instance_count;
       typesByClass[type.ifc_type] = (typesByClass[type.ifc_type] || 0) + 1;
@@ -104,7 +107,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
           (missingByClass[type.ifc_type] || 0) + 1;
       }
     }
-    const totalTypes = types.length;
+    const totalTypes = slice.length;
     return {
       totalTypes,
       ifcClasses: ifcClasses.size,
@@ -116,18 +119,38 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
       orphanPercent: totalTypes > 0 ? (orphanTypes / totalTypes) * 100 : 0,
       missingClassification,
       missingPercent: totalTypes > 0 ? (missingClassification / totalTypes) * 100 : 0,
-      // Distributions
       typesByClass,
       instancesByClass,
       untypedByClass,
       orphanByClass,
       missingByClass,
     };
-  }, [types]);
+  };
 
   const filteredTypes = useMemo(() => {
     return filterTypesV2(types, { searchQuery, ifcClassFilter });
   }, [types, searchQuery, ifcClassFilter]);
+
+  const totalStats = useMemo(() => computeStats(types), [types]);
+  // The filtered subset drives the foreground numbers; sparkline
+  // distributions stay project-scoped (from totalStats) so the macro
+  // vocabulary is consistent.
+  const filteredStats = useMemo(() => computeStats(filteredTypes), [filteredTypes]);
+
+  const isFiltered = ifcClassFilter !== 'all' || searchQuery.trim() !== '';
+
+  // Stats actually rendered: filtered scalars + total distributions.
+  const stats = useMemo(
+    () => ({
+      ...filteredStats,
+      typesByClass: totalStats.typesByClass,
+      instancesByClass: totalStats.instancesByClass,
+      untypedByClass: totalStats.untypedByClass,
+      orphanByClass: totalStats.orphanByClass,
+      missingByClass: totalStats.missingByClass,
+    }),
+    [filteredStats, totalStats]
+  );
 
   const uniqueIfcClasses = useMemo(() => {
     const set = new Set<string>();
@@ -185,7 +208,12 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
           <div className="h-[clamp(560px,calc(100vh-14rem),1100px)]">
             <DashboardGrid layout={HERO_LAYOUT}>
               <div id="kpis">
-                <TypeKpiGrid stats={stats} loading={isLoading} classColors={classColors} />
+                <TypeKpiGrid
+                  stats={stats}
+                  totalStats={isFiltered ? totalStats : undefined}
+                  loading={isLoading}
+                  classColors={classColors}
+                />
               </div>
               <div id="treemap">
                 <TypeTreemap

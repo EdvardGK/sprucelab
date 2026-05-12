@@ -53,6 +53,8 @@ export interface TypeKpiStats {
 
 interface TypeKpiGridProps {
   stats: TypeKpiStats;
+  /** Unfiltered totals shown faded beside each filtered value when set. */
+  totalStats?: TypeKpiStats;
   loading?: boolean;
   classColors?: Map<string, string>;
 }
@@ -66,7 +68,7 @@ function trafficLight(percent: number, thresholds: { warn: number; danger: numbe
   return 'warning';
 }
 
-export function TypeKpiGrid({ stats, loading, classColors }: TypeKpiGridProps) {
+export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpiGridProps) {
   const { t } = useTranslation();
 
   // Memoize sparkline data so the count-up animation doesn't re-key on render.
@@ -94,6 +96,7 @@ export function TypeKpiGrid({ stats, loading, classColors }: TypeKpiGridProps) {
         icon={<Layers className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.totalTypes')}
         value={stats.totalTypes}
+        totalValue={totalStats?.totalTypes}
         loading={loading}
         spark={<Sparkline segments={typesSegments} variant="stacked" />}
       />
@@ -102,6 +105,7 @@ export function TypeKpiGrid({ stats, loading, classColors }: TypeKpiGridProps) {
         icon={<Hash className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.instances')}
         value={stats.instances}
+        totalValue={totalStats?.instances}
         loading={loading}
         spark={<Sparkline segments={instancesSegments} variant="stacked" />}
       />
@@ -110,6 +114,7 @@ export function TypeKpiGrid({ stats, loading, classColors }: TypeKpiGridProps) {
         icon={<BarChart3 className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.avgPerType')}
         value={stats.avgInstancesPerType}
+        totalValue={totalStats?.avgInstancesPerType}
         loading={loading}
         fraction
         spark={<Sparkline segments={instancesSegments} variant="stacked" />}
@@ -119,6 +124,7 @@ export function TypeKpiGrid({ stats, loading, classColors }: TypeKpiGridProps) {
         icon={<HelpCircle className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.untyped')}
         value={stats.untypedInstances}
+        totalValue={totalStats?.untypedInstances}
         subValue={
           stats.instances > 0
             ? t('typesV2.stats.percentOfInstances', { percent: stats.untypedPercent.toFixed(1) })
@@ -137,6 +143,7 @@ export function TypeKpiGrid({ stats, loading, classColors }: TypeKpiGridProps) {
         icon={<Unlink className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.orphan')}
         value={stats.orphanTypes}
+        totalValue={totalStats?.orphanTypes}
         subValue={
           stats.totalTypes > 0
             ? t('typesV2.stats.percentOfTypes', { percent: stats.orphanPercent.toFixed(1) })
@@ -158,6 +165,7 @@ export function TypeKpiGrid({ stats, loading, classColors }: TypeKpiGridProps) {
         icon={<AlertTriangle className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.missingClassification')}
         value={stats.missingClassification}
+        totalValue={totalStats?.missingClassification}
         subValue={
           stats.totalTypes > 0
             ? t('typesV2.stats.percentOfTypes', { percent: stats.missingPercent.toFixed(1) })
@@ -176,6 +184,8 @@ interface KpiCardProps {
   icon: React.ReactNode;
   label: string;
   value: number;
+  /** Unfiltered total shown in parens beside `value` when different. */
+  totalValue?: number;
   subValue?: string;
   loading?: boolean;
   tone?: Tone;
@@ -211,6 +221,7 @@ function KpiCard({
   icon,
   label,
   value,
+  totalValue,
   subValue,
   loading,
   tone = 'neutral',
@@ -219,6 +230,16 @@ function KpiCard({
 }: KpiCardProps) {
   const toneStyles = TONE_STYLES[tone];
   const animated = useCountUp(value, { fraction });
+  // Snap the total — no animation, just a faded reference. Show it only
+  // when it actually differs from the filtered value (eps tolerance for
+  // the avg-per-type case).
+  const showTotal =
+    totalValue !== undefined &&
+    Math.abs(totalValue - value) > (fraction ? 0.05 : 0);
+  const totalDisplay = totalValue !== undefined
+    ? (fraction ? totalValue.toFixed(1) : totalValue.toLocaleString())
+    : null;
+
   return (
     <DashboardTile
       id={id}
@@ -234,18 +255,25 @@ function KpiCard({
         <span className={cn(toneStyles.icon, 'shrink-0')}>{icon}</span>
       </div>
       <div>
-        <div
-          className={cn(
-            'text-[clamp(1.25rem,2.4vw,2.25rem)] font-semibold tabular-nums tracking-tight leading-none',
-            toneStyles.value
-          )}
-        >
-          {loading ? (
-            <ShimmerBlock className="h-[clamp(1.5rem,3vw,2.5rem)] w-[clamp(2.5rem,5vw,4rem)]" />
-          ) : fraction ? (
-            animated.toFixed(1)
-          ) : (
-            animated.toLocaleString()
+        <div className="flex items-baseline gap-[clamp(0.25rem,0.5vw,0.5rem)] flex-wrap">
+          <span
+            className={cn(
+              'text-[clamp(1.25rem,2.4vw,2.25rem)] font-semibold tabular-nums tracking-tight leading-none',
+              toneStyles.value
+            )}
+          >
+            {loading ? (
+              <ShimmerBlock className="h-[clamp(1.5rem,3vw,2.5rem)] w-[clamp(2.5rem,5vw,4rem)]" />
+            ) : fraction ? (
+              animated.toFixed(1)
+            ) : (
+              animated.toLocaleString()
+            )}
+          </span>
+          {showTotal && !loading && (
+            <span className="text-[clamp(0.65rem,0.9vw,0.95rem)] text-muted-foreground/70 tabular-nums leading-none">
+              / {totalDisplay}
+            </span>
           )}
         </div>
         {subValue && !loading && (
