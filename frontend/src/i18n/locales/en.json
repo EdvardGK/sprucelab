@@ -1603,7 +1603,12 @@
       "status": "Status"
     },
     "eir": {
-      "placeholder": "Placeholder — no EIR document loaded yet"
+      "placeholder": "Placeholder — no EIR document loaded yet",
+      "configurator": "Configurator — local edits, persistence in Phase 7"
+    },
+    "eirConfig": {
+      "multiselectNone": "None selected",
+      "multiselectCount": "{{count}} selected"
     },
     "bep": {
       "configure": "Configure",

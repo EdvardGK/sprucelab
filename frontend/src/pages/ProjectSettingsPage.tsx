@@ -19,6 +19,8 @@ import {
   GROUP_ORDER,
   type SettingsSection,
 } from '@/components/features/settings/sections';
+import { getEirFields } from '@/components/features/settings/eirConfig';
+import { EirConfigurator } from '@/components/features/settings/EirConfigurator';
 import { cn } from '@/lib/utils';
 
 export default function ProjectSettingsPage() {
@@ -238,24 +240,35 @@ function ColumnShell({
 function EirColumn({ section }: { section: SettingsSection }) {
   const { t } = useTranslation();
   const eir = section.eirRequirement;
+  const fields = getEirFields(section.id);
   return (
     <ColumnShell
       icon={
         <FileText className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)]" />
       }
       label={t('settings.column.eir')}
-      hint={eir.imported ? eir.sourceRef : t('settings.eir.placeholder')}
+      hint={
+        fields
+          ? eir.sourceRef ?? t('settings.eir.configurator')
+          : eir.imported
+            ? eir.sourceRef
+            : t('settings.eir.placeholder')
+      }
     >
-      <blockquote className="relative pl-[clamp(0.5rem,0.9vw,0.875rem)] border-l-2 border-border/50">
-        <p className="text-[clamp(0.7rem,0.85vw,0.95rem)] text-foreground/85 italic leading-[1.55] whitespace-pre-line">
-          {eir.text}
-        </p>
-        {eir.sourceRef && (
-          <footer className="mt-[clamp(0.375rem,0.6vh,0.625rem)] text-[clamp(0.55rem,0.7vw,0.75rem)] text-muted-foreground not-italic">
-            {eir.sourceRef}
-          </footer>
-        )}
-      </blockquote>
+      {fields ? (
+        <EirConfigurator fields={fields} />
+      ) : (
+        <blockquote className="relative pl-[clamp(0.5rem,0.9vw,0.875rem)] border-l-2 border-border/50">
+          <p className="text-[clamp(0.7rem,0.85vw,0.95rem)] text-foreground/85 italic leading-[1.55] whitespace-pre-line">
+            {eir.text}
+          </p>
+          {eir.sourceRef && (
+            <footer className="mt-[clamp(0.375rem,0.6vh,0.625rem)] text-[clamp(0.55rem,0.7vw,0.75rem)] text-muted-foreground not-italic">
+              {eir.sourceRef}
+            </footer>
+          )}
+        </blockquote>
+      )}
     </ColumnShell>
   );
 }

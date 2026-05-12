@@ -1603,7 +1603,12 @@
       "status": "Status"
     },
     "eir": {
-      "placeholder": "Plassholder — ingen EIR lastet inn ennå"
+      "placeholder": "Plassholder — ingen EIR lastet inn ennå",
+      "configurator": "Konfigurator — lokale endringer, lagring i fase 7"
+    },
+    "eirConfig": {
+      "multiselectNone": "Ingen valgt",
+      "multiselectCount": "{{count}} valgt"
     },
     "bep": {
       "configure": "Konfigurer",
