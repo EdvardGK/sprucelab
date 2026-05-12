@@ -24,6 +24,7 @@ import {
   Globe,
   PanelLeftClose,
   PanelLeft,
+  Layers3,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -131,6 +132,7 @@ export function Sidebar() {
       matchPrefixes: [`/projects/${projectId}/viewer`],
     },
     { to: `/projects/${projectId}/models`, icon: Layers, label: t('nav.models') },
+    { to: `/projects/${projectId}/floors`, icon: Layers3, label: t('nav.floors') },
     { to: `/projects/${projectId}/types`, icon: FileText, label: t('nav.types'), matchPrefixes: [`/projects/${projectId}/type-library`] },
     { to: `/projects/${projectId}/material-library`, icon: Box, label: t('nav.materialLibrary') },
     { to: `/projects/${projectId}/drawings`, icon: Image, label: t('nav.drawings') },

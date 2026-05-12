@@ -1,130 +1,235 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Plus, AlertCircle } from 'lucide-react';
+
 import { useProjects } from '@/hooks/use-projects';
+import { useModels } from '@/hooks/use-models';
+import { useProjectsKpis, modelsForProject } from '@/hooks/useProjectsKpis';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
-import { LoadingCard } from '@/components/LoadingCard';
 import { AppLayout } from '@/components/Layout/AppLayout';
+import { PageShell } from '@/components/Layout';
+import {
+  ProjectsGalleryKpis,
+  ProjectGalleryCard,
+} from '@/components/features/projects-gallery';
+import { cn } from '@/lib/utils';
 
+type SortKey = 'lastActivity' | 'name' | 'mostModels' | 'mostTypes';
+type FilterKey = 'active' | 'all' | 'archived';
+
+const SORT_KEYS: SortKey[] = ['lastActivity', 'name', 'mostModels', 'mostTypes'];
+const FILTER_KEYS: FilterKey[] = ['active', 'all', 'archived'];
+
+/**
+ * Projects Gallery — top-level surface for picking a project to open.
+ *
+ * Layout: `<PageShell>` chrome (no `container mx-auto`, no max-width
+ * cap), project-level KPI row across the top, sort/filter chips, and a
+ * fixed-height card grid below. Cards use a discipline sparkbar instead
+ * of 3D thumbnails (WebGL context limit) and hover via border tint only.
+ */
 export default function ProjectsGallery() {
+  const { t } = useTranslation();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const { data: projects, isLoading, error } = useProjects();
-  const navigate = useNavigate();
+  const [sortKey, setSortKey] = useState<SortKey>('lastActivity');
+  const [filterKey, setFilterKey] = useState<FilterKey>('active');
 
-  if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="container mx-auto p-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <LoadingCard />
-            <LoadingCard />
-            <LoadingCard />
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
+  const { data: projects, isLoading, error } = useProjects();
+  const { data: models } = useModels();
+  const kpis = useProjectsKpis();
+
+  // Sort + filter on the client. The backend doesn't expose an
+  // `archived` flag on Project yet, so the chip is wired but acts as a
+  // pass-through for "all" until `is_archived` lands. Default = active.
+  const visibleProjects = useMemo(() => {
+    if (!projects) return [];
+    // No archive field on Project today; treat `all`/`active` as identical
+    // until the backend exposes it. `archived` returns the empty list.
+    const filtered =
+      filterKey === 'archived' ? [] : projects;
+
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'mostModels':
+          return (b.model_count || 0) - (a.model_count || 0);
+        case 'mostTypes':
+          // Per-project type count not on payload; fall back to most models.
+          return (b.model_count || 0) - (a.model_count || 0);
+        case 'lastActivity':
+        default: {
+          const at = new Date(a.updated_at).getTime();
+          const bt = new Date(b.updated_at).getTime();
+          return (Number.isNaN(bt) ? 0 : bt) - (Number.isNaN(at) ? 0 : at);
+        }
+      }
+    });
+    return sorted;
+  }, [projects, sortKey, filterKey]);
 
   if (error) {
     return (
       <AppLayout>
-        <div className="container mx-auto p-6">
+        <PageShell title={t('projectsGallery.title')} subtitle={t('projectsGallery.subtitle')}>
           <div className="rounded-lg border border-error bg-error/10 p-4 text-error">
-            <h3 className="font-semibold mb-2">Error loading projects</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-5 w-5" />
+              <h3 className="font-semibold">{t('projectsGallery.errorTitle')}</h3>
+            </div>
             <p className="text-sm">{error.message}</p>
-            <p className="text-sm mt-2 text-text-tertiary">
-              Make sure the Django backend is running at http://127.0.0.1:8000/
-            </p>
           </div>
-        </div>
+        </PageShell>
       </AppLayout>
     );
   }
 
+  const newProjectButton = (
+    <Button onClick={() => setCreateDialogOpen(true)} size="sm">
+      <Plus className="mr-1.5 h-4 w-4" />
+      {t('projectsGallery.newProject')}
+    </Button>
+  );
+
   return (
     <AppLayout>
-      <div className="container mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-text-primary">Projects</h1>
-            <p className="text-sm text-text-secondary mt-1">
-              Manage your BIM projects and models
-            </p>
+      <PageShell
+        title={t('projectsGallery.title')}
+        subtitle={t('projectsGallery.subtitle')}
+        headerRight={newProjectButton}
+      >
+        {/* KPI row */}
+        <ProjectsGalleryKpis kpis={kpis} />
+
+        {/* Sort + filter chips */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[clamp(0.55rem,0.7vw,0.7rem)] uppercase tracking-wide font-medium text-muted-foreground mr-1">
+              {t('projectsGallery.sort.label')}
+            </span>
+            {SORT_KEYS.map((k) => (
+              <Chip
+                key={k}
+                active={sortKey === k}
+                onClick={() => setSortKey(k)}
+                label={t(`projectsGallery.sort.${k}`)}
+              />
+            ))}
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            New Project
-          </Button>
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[clamp(0.55rem,0.7vw,0.7rem)] uppercase tracking-wide font-medium text-muted-foreground mr-1">
+              {t('projectsGallery.filter.label')}
+            </span>
+            {FILTER_KEYS.map((k) => (
+              <Chip
+                key={k}
+                active={filterKey === k}
+                onClick={() => setFilterKey(k)}
+                label={t(`projectsGallery.filter.${k}`)}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Empty state */}
-        {projects && projects.length === 0 && (
-          <div className="rounded-lg border border-border bg-card p-12 text-center">
-            <h3 className="text-xl font-semibold text-text-primary mb-2">No projects yet</h3>
-            <p className="text-text-secondary mb-6">
-              Create your first project to start managing BIM models
-            </p>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Project
-            </Button>
+        {/* Card grid */}
+        {isLoading ? (
+          <div
+            className="grid gap-[clamp(0.5rem,1vw,1rem)]"
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+          >
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-[180px] rounded-lg border border-border bg-card animate-pulse"
+              />
+            ))}
           </div>
-        )}
-
-        {/* Project grid */}
-        {projects && projects.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Card
+        ) : visibleProjects.length === 0 ? (
+          <EmptyState
+            archived={filterKey === 'archived'}
+            onCreate={() => setCreateDialogOpen(true)}
+          />
+        ) : (
+          <div
+            className="grid gap-[clamp(0.5rem,1vw,1rem)]"
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+          >
+            {visibleProjects.map((project) => (
+              <ProjectGalleryCard
                 key={project.id}
-                className="cursor-pointer transition-all hover:shadow-glow hover:border-primary/50"
-                onClick={() => navigate(`/projects/${project.id}`)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-xl">{project.name}</CardTitle>
-                    <Badge variant="outline" className="ml-2">
-                      {project.model_count || 0} models
-                    </Badge>
-                  </div>
-                  {project.description && (
-                    <CardDescription className="mt-2">
-                      {project.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-
-                <CardContent>
-                  <dl className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <dt className="text-text-secondary">Created</dt>
-                      <dd className="text-text-tertiary">
-                        {new Date(project.created_at).toLocaleDateString()}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-text-secondary">Last updated</dt>
-                      <dd className="text-text-tertiary">
-                        {new Date(project.updated_at).toLocaleDateString()}
-                      </dd>
-                    </div>
-                  </dl>
-                </CardContent>
-              </Card>
+                project={project}
+                models={modelsForProject(models, project.id)}
+              />
             ))}
           </div>
         )}
 
-        {/* Create project dialog */}
         <CreateProjectDialog
           open={createDialogOpen}
           onOpenChange={setCreateDialogOpen}
         />
-      </div>
+      </PageShell>
     </AppLayout>
+  );
+}
+
+interface ChipProps {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}
+
+function Chip({ active, onClick, label }: ChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'px-2.5 py-1 rounded-full text-[clamp(0.6rem,0.8vw,0.75rem)] font-medium transition-colors',
+        'border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
+        active
+          ? 'border-primary/60 bg-primary/10 text-primary'
+          : 'border-border text-text-secondary hover:border-primary/30 hover:text-text-primary'
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
+function EmptyState({
+  archived,
+  onCreate,
+}: {
+  archived: boolean;
+  onCreate: () => void;
+}) {
+  const { t } = useTranslation();
+  if (archived) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-12 text-center">
+        <h3 className="text-[clamp(0.85rem,1.1vw,1rem)] font-semibold text-text-primary mb-2">
+          {t('projectsGallery.empty.archivedTitle')}
+        </h3>
+        <p className="text-[clamp(0.7rem,0.9vw,0.85rem)] text-text-secondary">
+          {t('projectsGallery.empty.archivedSubtitle')}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-border bg-card p-12 text-center">
+      <h3 className="text-[clamp(0.85rem,1.1vw,1rem)] font-semibold text-text-primary mb-2">
+        {t('projectsGallery.empty.title')}
+      </h3>
+      <p className="text-[clamp(0.7rem,0.9vw,0.85rem)] text-text-secondary mb-6">
+        {t('projectsGallery.empty.subtitle')}
+      </p>
+      <Button onClick={onCreate}>
+        <Plus className="mr-2 h-4 w-4" />
+        {t('projectsGallery.newProject')}
+      </Button>
+    </div>
   );
 }
