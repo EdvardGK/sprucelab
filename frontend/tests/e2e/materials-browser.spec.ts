@@ -58,15 +58,16 @@ test.describe('Materials Browser', () => {
     await expect(page.getByText('Glass', { exact: true })).toBeVisible();
   });
 
-  test('header coverage stats show non-zero materials', async ({ page }) => {
+  test('KPI header surfaces non-zero materials count', async ({ page }) => {
     await page.goto(MATERIALS_URL);
     await expect(page.locator('table thead')).toBeVisible({ timeout: 30_000 });
 
-    // Header shows N materials · M sets. Expect materials > 0.
-    const headerText = await page.locator('body').innerText();
-    const materialsMatch = headerText.match(/(\d+)\s+materialer/);
-    expect(materialsMatch, 'Header should show a material count').not.toBeNull();
-    expect(Number(materialsMatch![1])).toBeGreaterThan(0);
+    // Post-refresh: the KPI grid renders a "Materialer" tile with a
+    // tabular value. The tab button label also reflects the count —
+    // matches "Materialer (N)".
+    const tabMatch = (await page.locator('body').innerText()).match(/Materialer\s*\((\d+)\)/);
+    expect(tabMatch, 'Materials tab should show a count').not.toBeNull();
+    expect(Number(tabMatch![1])).toBeGreaterThan(0);
   });
 
   test('tab toggle switches between Materials and Sets', async ({ page }) => {
@@ -152,13 +153,17 @@ test.describe('Materials Browser', () => {
     await expect(page.getByText(/Brukt i|Used in/i)).toBeVisible();
   });
 
-  test('coverage lights are all red (no EPD / procurement data in seeded state)', async ({ page }) => {
+  test('KPI grid surfaces EPD + procurement gaps with raw counts', async ({ page }) => {
     await page.goto(MATERIALS_URL);
     await expect(page.locator('table thead')).toBeVisible({ timeout: 30_000 });
 
-    // The header shows EPD % and procurement %. Both should be 0% for seeded data.
+    // Post-refresh: modelers-own-data framing — no "% classified" copy.
+    // Raw counts (with "/ total") plus an amber em-dash for true gaps.
+    // Seeded data has no EPD or procurement links — both KPI cards
+    // surface as "0 / N" or an em-dash, never "0%".
     const headerText = await page.locator('body').innerText();
-    expect(headerText).toContain('0%');
-    expect(headerText).toMatch(/med EPD|EPD linked/);
+    expect(headerText).toMatch(/Med EPD|EPD-linked/);
+    expect(headerText).toMatch(/Med produkt|Procurement-linked/);
+    expect(headerText).not.toMatch(/\d+%\s+klassifisert/);
   });
 });

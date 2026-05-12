@@ -669,6 +669,38 @@
     "aliases": "alias",
     "suggested": "Foreslått",
     "unclassified": "Uklassifisert",
+    "missingValue": "Ikke satt",
+    "kpi": {
+      "title": "Oversikt over materialbibliotek",
+      "totalMaterials": "Materialer",
+      "totalSets": "Sett",
+      "classified": "Klassifisert",
+      "epdLinked": "Med EPD",
+      "procurementLinked": "Med produkt",
+      "modelsLoaded": "Modeller lastet"
+    },
+    "viz": {
+      "treemapTitle": "Familier etter mengde",
+      "treemapSubtitle": "Størrelse fra antall forekomster, farge etter familie",
+      "empty": "Ingen familier ennå",
+      "familiesHeading": "Familier",
+      "familyView": {
+        "tree": "Tre",
+        "treemap": "Kart"
+      }
+    },
+    "live": {
+      "updatedAgo": "Oppdatert {{ago}}",
+      "justNow": "nå",
+      "seconds_one": "for {{count}}s siden",
+      "seconds_other": "for {{count}}s siden",
+      "minutes_one": "for {{count}} min siden",
+      "minutes_other": "for {{count}} min siden",
+      "hours_one": "for {{count}}t siden",
+      "hours_other": "for {{count}}t siden",
+      "days_one": "for {{count}}d siden",
+      "days_other": "for {{count}}d siden"
+    },
     "header": {
       "materials": "materialer",
       "sets": "sett",
@@ -699,6 +731,7 @@
       "set": "Materialsett",
       "aliases": "Alias (IFC-navn)",
       "quantities": "Mengder",
+      "classification": "Klassifisering",
       "usedIn": "Brukt i",
       "types": "typer",
       "instances": "forekomster",
@@ -710,7 +743,16 @@
       "procurementReady": "Produkt og leverandør tilknyttet",
       "procurementMissing": "Ingen produkt eller leverandør. Spesifikasjon er generisk.",
       "selectPrompt": "Velg et material eller sett for å se detaljer",
-      "composition": "Sammensetning"
+      "composition": "Sammensetning",
+      "layerOccurrences": "Lag-forekomster",
+      "layersEmpty": "Dette materialet har ingen registrerte lag-forekomster ennå.",
+      "usageEmpty": "Ikke referert av noen type ennå.",
+      "tab": {
+        "definition": "Definisjon",
+        "layers": "Lag",
+        "usage": "Brukt i",
+        "readiness": "Status"
+      }
     },
     "set": {
       "layers": "lag",

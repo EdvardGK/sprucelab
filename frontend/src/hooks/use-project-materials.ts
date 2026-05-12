@@ -334,6 +334,8 @@ export function useProjectMaterials(projectId: string | undefined): {
   data: ProjectMaterialsData | null;
   isLoading: boolean;
   error: Error | null;
+  /** Latest moment any underlying type query last refreshed. 0 if none yet. */
+  dataUpdatedAt: number;
 } {
   const { data: models, isLoading: modelsLoading } = useModels(projectId);
 
@@ -382,6 +384,12 @@ export function useProjectMaterials(projectId: string | undefined): {
 
   const isLoading = modelsLoading || (readyModels.length > 0 && loadedQueries.length === 0);
 
+  // Freshness — most-recent `dataUpdatedAt` across all underlying type queries.
+  const dataUpdatedAt = typeQueries.reduce(
+    (latest, q) => (q.dataUpdatedAt > latest ? q.dataUpdatedAt : latest),
+    0,
+  );
+
   return {
     data: {
       summary,
@@ -389,5 +397,6 @@ export function useProjectMaterials(projectId: string | undefined): {
     },
     isLoading,
     error: errored?.error instanceof Error ? errored.error : null,
+    dataUpdatedAt,
   };
 }
