@@ -8,6 +8,7 @@
 
 ## Recently shipped
 
+- [x] **Phase 3 Type page v2 — full dashboard polish** (2026-05-11, commits `e41c272` → `4cfb5d3`, 24 commits total) -- Last twelve added in an autonomous overnight round: DashboardGrid 4-col primitive adoption; clamp() everywhere; sparklines under every KPI with per-IFC-class distribution; status-dot column on table rows (traffic light); live "Updated Xs ago" pulse in header; Phase 3b detail panel (classification + key properties + layer buildup + Pset explorer); v3 fragments viewer null-camera fix; treemap cross-filter; Top-10 + table IFC-class cross-filter with clear-filter pill; shared ifcClass→color map binding treemap + sparklines + table row stripes; empty-state clear-filters CTA. Three input surfaces converge on one ifcClassFilter (Linear/PowerBI pattern).
 - [x] **Phase 3 Type page v2 — final shape** (2026-05-11, commits `e41c272` → `fba012d`) -- new `/projects/:id/types?v=2` shipped + iterated through 7 commits to final 3-row layout: row 1 = 6-KPI traffic-light grid (Total · Instances · Avg/type / Untyped · Orphan · Missing classification, with amber/red rings + value coloring on threshold), row 2 = treemap (aspect-square) + 3D viewer (aspect-[4/3]) at 50/50 width with click-row-to-isolate, row 3 = Top-10 bar chart (25%) + types table (75%) at h-[640px] with sticky thead and internal scroll. Property columns full-worded (Load-bearing · External · Fire rating · Acoustic rating · U-value · MMI) extracted via tolerant Pset_*Common probe at `warehouse-v2/typeProperties.ts`. Reframe: "modelers own the data, platform suggests + surfaces gaps" — no "Mapped %" framing, missing values render as amber em-dash. v1 untouched.
 - [x] **Webhook System Phase 1** (2026-04-29, snapshot `b73a1d5`) -- `WebhookSubscription` + `WebhookDelivery` in `apps/automation/`, HMAC-SHA256 dispatcher, Celery `deliver_webhook_task` with exponential backoff + auto-disable, ViewSets at `/api/automation/webhook-{subscriptions,deliveries}/`. Four events wired: `model.processed`, `document.processed`, `claim.extracted`, `verification.complete`.
 - [x] **CLI Expansion -- spruce {types,verify,scripts}** (2026-05-10, commit `991cce9`) -- Typer + Rich + httpx (mirrors `embed.py`). All commands support `--json`. Entry point `cli/spruce/cli.py`. Backend quirks documented: `verify` is POST not GET; `types classify` uses bulk-update with single-element mappings; `types export` streams binary to stdout.
@@ -26,15 +27,19 @@
 
 ## Active backlog
 
-### Phase 3 -- Type page v2 (final shape shipped; follow-ups remain)
-- [x] Phase 3 first cut + 6 iteration commits (final commit `fba012d`)
-- [ ] **Phase 3b**: Detail pane on row click — currently only viewer isolation works. Add classification triple + properties grid + layer buildup + MMI/EIR/systems beside or below the viewer. Wire `useProjectFilter` cross-filter (PowerBI-style)
-- [ ] **Phase 3b.1**: Notes + "Flag this type" → creates `Claim` with the selected type as origin (backend `Claim` model already exists, used by ClaimInbox)
+### Phase 3 -- Type page v2 (dashboard polish shipped; follow-ups remain)
+- [x] Phase 3 first cut + 19 iteration commits (last commit `4cfb5d3`)
+- [x] **Phase 3b — detail panel** shipped 2026-05-11 (`c0b704d`)
+- [ ] **Phase 3b.1**: Polish bottom-row KPI sparklines (Untyped/Orphan/Missing) — render but visually subtle. ~10 lines: `mt-auto` or inline subValue
+- [ ] **Phase 3b.2**: URL persistence of `ifcClassFilter` + `selectedTypeId` via `useSearchParams` (~30 lines, matches `?v=2` pattern)
+- [ ] **Phase 3b.3**: Flag this type → create `Claim`. Backend `POST /api/types/claims/` + frontend `useCreateClaim` mutation + UI action in detail panel. Multi-stack
 - [ ] **Phase 3c**: Dedicated type-workspace route at `/projects/:id/types/workspace?type=:id` — modeler-style manual classification UI lives there (currently still in v1 `TypeBrowser` 3-column form). Per `feedback-modelers-own-data-platform-suggests.md`
 - [ ] **Phase 3d**: Cards view toggle
 - [ ] **Phase 3.x**: Materials port at `/projects/:id/materials?v=2`
 - [ ] MMI distribution per type — needs per-instance aggregation (new `useTypeMmiDistribution(typeId)` hook + likely a new backend endpoint)
 - [ ] Confirm "Orphan" semantic with user: currently = types with `instance_count === 0`; might mean orphan entities (no spatial hierarchy) instead
+- [ ] Notes per type — simple textarea in detail panel (independent of Claim system)
+- [ ] Plausible analytics events for v2 (filter set, type selected, detail opened) — ~10 lines
 
 ### CLI follow-ups
 - [ ] Live API smoke against dev server: `spruce types list --model <id> --json`, `spruce verify --model <id>`, `spruce scripts list`. Only `--help` verified at ship time.
