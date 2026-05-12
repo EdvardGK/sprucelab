@@ -1576,6 +1576,13 @@
       "ns3451Name": "NS3451 name",
       "discipline": "Discipline",
       "unit": "Representative unit"
+    },
+    "rail": {
+      "emptyHint": "Select a type or filter by class to see details here.",
+      "ifcClass": "IFC class",
+      "types": "Types",
+      "instances": "Instances",
+      "classHint": "Pick a single type in the table to drill in."
     }
   },
   "settings": {

@@ -1576,6 +1576,13 @@
       "ns3451Name": "NS3451-navn",
       "discipline": "Fag",
       "unit": "Representativ enhet"
+    },
+    "rail": {
+      "emptyHint": "Velg en type eller filtrer på klasse for å se detaljer her.",
+      "ifcClass": "IFC-klasse",
+      "types": "Typer",
+      "instances": "Forekomster",
+      "classHint": "Velg en enkelt type i tabellen for å drille inn."
     }
   },
   "settings": {

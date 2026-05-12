@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { InlineViewer } from '@/components/features/viewer/InlineViewer';
 import type { IFCType } from '@/hooks/use-warehouse';
 
+import { TypeDataRail } from './TypeDataRail';
+
 interface TypeViewerPaneV2Props {
   modelId: string;
   selectedType: IFCType | null;
@@ -30,14 +32,14 @@ export function TypeViewerPaneV2({
 }: TypeViewerPaneV2Props) {
   const { t } = useTranslation();
   const isClassFiltered = activeIfcClass !== 'all' && !selectedType;
-  const titleClassName = selectedType
+  const titleText = selectedType
     ? selectedType.type_name || t('typesV2.table.unnamed')
     : isClassFiltered
       ? activeIfcClass.replace(/^Ifc/, '')
       : t('typesV2.viewer.empty');
 
   return (
-    <DashboardTile id="viewer-pane" className="p-0 flex flex-col h-full">
+    <DashboardTile id="viewer-pane" className="p-0 flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between px-[clamp(0.5rem,1vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] border-b border-border/60 flex-shrink-0">
         <div className="flex items-center gap-[clamp(0.375rem,0.5vw,0.625rem)] min-w-0">
           {isClassFiltered ? (
@@ -49,7 +51,7 @@ export function TypeViewerPaneV2({
             <Box className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)] text-muted-foreground shrink-0" />
           )}
           <h2 className="text-[clamp(0.7rem,0.9vw,0.95rem)] font-medium truncate">
-            {titleClassName}
+            {titleText}
           </h2>
           {isClassFiltered && (
             <span className="text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground tabular-nums">
@@ -72,30 +74,44 @@ export function TypeViewerPaneV2({
           </Button>
         )}
       </div>
-      <div className="flex-1 min-h-0">
-        {selectedType ? (
-          <InlineViewer
-            key={selectedType.id}
-            modelId={modelId}
-            typeId={selectedType.id}
-            typeName={selectedType.type_name}
-            ifcType={selectedType.ifc_type}
-            definitionLayers={selectedType.mapping?.definition_layers}
-            className="h-full w-full"
-          />
-        ) : isClassFiltered ? (
-          <ClassFilteredState
-            ifcClass={activeIfcClass}
+
+      {/* Body: viewer canvas (flex-1) + internal data rail (fixed width). */}
+      <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-w-0">
+          {selectedType ? (
+            <InlineViewer
+              key={selectedType.id}
+              modelId={modelId}
+              typeId={selectedType.id}
+              typeName={selectedType.type_name}
+              ifcType={selectedType.ifc_type}
+              definitionLayers={selectedType.mapping?.definition_layers}
+              className="h-full w-full"
+            />
+          ) : isClassFiltered ? (
+            <ClassFilteredState
+              ifcClass={activeIfcClass}
+              classColor={classColor}
+              instanceCount={filteredInstanceCount}
+              typeCount={filteredTypeCount}
+            />
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-[clamp(0.375rem,0.6vh,0.75rem)] px-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
+              <Box className="h-[clamp(1.5rem,3vw,3rem)] w-[clamp(1.5rem,3vw,3rem)] opacity-30" />
+              <p className="text-[clamp(0.65rem,0.85vw,0.9rem)]">{t('typesV2.viewer.hint')}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="w-[clamp(200px,14vw,300px)] shrink-0 border-l border-border/60 overflow-y-auto bg-muted/10">
+          <TypeDataRail
+            selectedType={selectedType}
+            activeIfcClass={activeIfcClass}
+            filteredTypeCount={filteredTypeCount}
+            filteredInstanceCount={filteredInstanceCount}
             classColor={classColor}
-            instanceCount={filteredInstanceCount}
-            typeCount={filteredTypeCount}
           />
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-[clamp(0.375rem,0.6vh,0.75rem)] px-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
-            <Box className="h-[clamp(1.5rem,3vw,3rem)] w-[clamp(1.5rem,3vw,3rem)] opacity-30" />
-            <p className="text-[clamp(0.65rem,0.85vw,0.9rem)]">{t('typesV2.viewer.hint')}</p>
-          </div>
-        )}
+        </div>
       </div>
     </DashboardTile>
   );

@@ -13,7 +13,6 @@ import { TypeTreemap } from './TypeTreemap';
 import { TypeTopBarList } from './TypeTopBarList';
 import { buildClassColorMap } from './classColors';
 import { TypeViewerPaneV2 } from './TypeViewerPaneV2';
-import { TypeDetailPanelV2 } from './TypeDetailPanelV2';
 import { TypeTableV2 } from './TypeTableV2';
 
 interface TypeBrowserV2Props {
@@ -192,10 +191,9 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
       ) : (
         <>
           {/* Hero — KPI row + viz row.
-              Viz row: 2 cols (treemap + viewer) by default, 3 cols
-              (treemap + viewer + detail) when a single type is
-              selected. Treemap and viewer shrink equally to make room
-              for detail. */}
+              Viz row: Treemap + Viewer (50/50). The data rail lives
+              INSIDE the viewer card as a sidebar/HUD — see
+              TypeViewerPaneV2 internals. */}
           <div className="flex flex-col gap-[clamp(0.5rem,1vw,1rem)] h-[clamp(560px,calc(100vh-14rem),1100px)]">
             <div className="flex-[1_1_28%] min-h-0">
               <TypeKpiGrid
@@ -206,13 +204,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                 activeIfcClass={ifcClassFilter}
               />
             </div>
-            <div
-              className={
-                selectedType
-                  ? 'flex-[2_1_72%] min-h-0 grid grid-cols-1 md:grid-cols-3 gap-[clamp(0.5rem,1vw,1rem)]'
-                  : 'flex-[2_1_72%] min-h-0 grid grid-cols-1 md:grid-cols-2 gap-[clamp(0.5rem,1vw,1rem)]'
-              }
-            >
+            <div className="flex-[2_1_72%] min-h-0 grid grid-cols-1 md:grid-cols-2 gap-[clamp(0.5rem,1vw,1rem)]">
               <div className="min-h-0">
                 <TypeTreemap
                   types={filteredTypes}
@@ -238,15 +230,6 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                   onClearSelection={() => setSelectedTypeId(null)}
                 />
               </div>
-              {selectedType && (
-                <div className="min-h-0">
-                  <TypeDetailPanelV2
-                    type={selectedType}
-                    onClose={() => setSelectedTypeId(null)}
-                    className="h-full"
-                  />
-                </div>
-              )}
             </div>
           </div>
 
