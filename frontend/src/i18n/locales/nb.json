@@ -1265,9 +1265,15 @@
   },
   "claims": {
     "title": "Kravinnboks",
-    "pageHeading": "Dokumenter og krav",
-    "pageSubheading": "Gjennomgå ekstraherte normative utsagn fra prosjektdokumenter",
+    "pageHeading": "Krav",
+    "pageSubheading": "Saker som trenger din oppmerksomhet",
     "confidence": "tillit",
+    "kpi": {
+      "open": "Åpne krav",
+      "assignedToMe": "Tildelt meg",
+      "resolvedThisWeek": "Løst denne uken",
+      "avgTimeToResolve": "Snitt løsetid"
+    },
     "keyboardLegend": "Hurtigtaster:",
     "tabs": {
       "unresolved": "Innboks",
@@ -1371,8 +1377,27 @@
   },
   "drawings": {
     "pageTitle": "Tegninger",
+    "subtitle": "Tegningsark registrert i dette prosjektet",
     "projectNotFound": "Prosjektet ble ikke funnet",
     "untitledSheet": "Uten navn",
+    "kpi": {
+      "total": "Totalt antall tegninger",
+      "registered": "Registrert",
+      "unregistered": "Ikke registrert"
+    },
+    "filter": {
+      "disciplineLabel": "Fag",
+      "disciplineAll": "Alle",
+      "disciplineArchitecture": "Arkitektur",
+      "disciplineStructural": "Konstruksjon",
+      "disciplineMep": "VVS og elektro",
+      "disciplineCivil": "Anlegg",
+      "disciplineOther": "Annet",
+      "statusLabel": "Status",
+      "statusAll": "Alle",
+      "statusRegistered": "Registrert",
+      "statusUnregistered": "Ikke registrert"
+    },
     "page": "Side",
     "registered": "Registrert",
     "notRegistered": "Ikke registrert",
@@ -1435,9 +1460,29 @@
   },
   "documents": {
     "pageTitle": "Dokumenter",
+    "subtitle": "Filer og artefakter lastet opp til dette prosjektet",
     "projectNotFound": "Prosjektet ble ikke funnet",
     "openClaimsInbox": "Krav-innboks",
     "openOriginal": "Åpne original",
+    "kpi": {
+      "total": "Totalt antall dokumenter",
+      "withClaims": "Med krav",
+      "pendingReview": "Til gjennomgang",
+      "classified": "Klassifisert"
+    },
+    "filter": {
+      "formatLabel": "Format",
+      "formatAll": "Alle",
+      "formatPdf": "PDF",
+      "formatDocx": "DOCX",
+      "formatXlsx": "XLSX",
+      "formatPptx": "PPTX",
+      "statusLabel": "Status",
+      "statusAll": "Alle",
+      "statusPending": "Ventende",
+      "statusClassified": "Klassifisert",
+      "statusWithClaims": "Har krav"
+    },
     "pageCount_one": "{{count}} side",
     "pageCount_other": "{{count}} sider",
     "lineage": "{{decided}} av {{total}} krav avgjort",

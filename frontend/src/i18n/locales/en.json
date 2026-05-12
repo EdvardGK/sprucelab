@@ -1265,9 +1265,15 @@
   },
   "claims": {
     "title": "Claim Inbox",
-    "pageHeading": "Documents & Claims",
-    "pageSubheading": "Review extracted normative statements from project documents",
+    "pageHeading": "Claims",
+    "pageSubheading": "Items needing your attention",
     "confidence": "conf.",
+    "kpi": {
+      "open": "Open claims",
+      "assignedToMe": "Assigned to me",
+      "resolvedThisWeek": "Resolved this week",
+      "avgTimeToResolve": "Avg time to resolve"
+    },
     "keyboardLegend": "Shortcuts:",
     "tabs": {
       "unresolved": "Inbox",
@@ -1371,8 +1377,27 @@
   },
   "drawings": {
     "pageTitle": "Drawings",
+    "subtitle": "Drawing sheets registered to this project",
     "projectNotFound": "Project not found",
     "untitledSheet": "Untitled sheet",
+    "kpi": {
+      "total": "Total drawings",
+      "registered": "Registered",
+      "unregistered": "Unregistered"
+    },
+    "filter": {
+      "disciplineLabel": "Discipline",
+      "disciplineAll": "All",
+      "disciplineArchitecture": "Architecture",
+      "disciplineStructural": "Structural",
+      "disciplineMep": "MEP",
+      "disciplineCivil": "Civil",
+      "disciplineOther": "Other",
+      "statusLabel": "Status",
+      "statusAll": "All",
+      "statusRegistered": "Registered",
+      "statusUnregistered": "Unregistered"
+    },
     "page": "Page",
     "registered": "Registered",
     "notRegistered": "Not registered",
@@ -1435,9 +1460,29 @@
   },
   "documents": {
     "pageTitle": "Documents",
+    "subtitle": "Files and artifacts uploaded to this project",
     "projectNotFound": "Project not found",
     "openClaimsInbox": "Claim Inbox",
     "openOriginal": "Open original",
+    "kpi": {
+      "total": "Total documents",
+      "withClaims": "With claims",
+      "pendingReview": "Pending review",
+      "classified": "Classified"
+    },
+    "filter": {
+      "formatLabel": "Format",
+      "formatAll": "All",
+      "formatPdf": "PDF",
+      "formatDocx": "DOCX",
+      "formatXlsx": "XLSX",
+      "formatPptx": "PPTX",
+      "statusLabel": "Status",
+      "statusAll": "All",
+      "statusPending": "Pending",
+      "statusClassified": "Classified",
+      "statusWithClaims": "Has claims"
+    },
     "pageCount_one": "{{count}} page",
     "pageCount_other": "{{count}} pages",
     "lineage": "{{decided}} of {{total}} claims decided",

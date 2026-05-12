@@ -1,9 +1,8 @@
 import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   Upload,
   FileImage,
   FileText,
@@ -21,6 +20,7 @@ import {
   type DrawingSheetListItem,
   type DrawingFormat,
 } from '@/hooks/use-drawings';
+import { useProjectDrawingsKpis } from '@/hooks/useDrawingsKpis';
 import apiClient from '@/lib/api-client';
 import type { PaginatedResponse, SourceFileListItem } from '@/lib/api-types';
 import { Button } from '@/components/ui/button';
@@ -34,11 +34,31 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { AppLayout } from '@/components/Layout/AppLayout';
+import { PageShell } from '@/components/Layout';
+import { DrawingsKpiRow } from '@/components/features/drawings/DrawingsKpiRow';
 import { cn } from '@/lib/utils';
 
 const DrawingDetail = lazy(
   () => import('@/components/features/drawings/DrawingDetail'),
 );
+
+type DisciplineFilter = 'all' | 'architecture' | 'structural' | 'mep' | 'civil' | 'other';
+type RegistrationFilter = 'all' | 'registered' | 'unregistered';
+
+const DISCIPLINE_OPTIONS: Array<{ key: DisciplineFilter; labelKey: string }> = [
+  { key: 'all', labelKey: 'drawings.filter.disciplineAll' },
+  { key: 'architecture', labelKey: 'drawings.filter.disciplineArchitecture' },
+  { key: 'structural', labelKey: 'drawings.filter.disciplineStructural' },
+  { key: 'mep', labelKey: 'drawings.filter.disciplineMep' },
+  { key: 'civil', labelKey: 'drawings.filter.disciplineCivil' },
+  { key: 'other', labelKey: 'drawings.filter.disciplineOther' },
+];
+
+const STATUS_OPTIONS: Array<{ key: RegistrationFilter; labelKey: string }> = [
+  { key: 'all', labelKey: 'drawings.filter.statusAll' },
+  { key: 'registered', labelKey: 'drawings.filter.statusRegistered' },
+  { key: 'unregistered', labelKey: 'drawings.filter.statusUnregistered' },
+];
 
 function inferFormat(filename: string | undefined, fallback?: string): DrawingFormat | string {
   if (!filename) return fallback ?? '';
@@ -58,9 +78,25 @@ function FormatIcon({ format }: { format: string }) {
   return <FileImage className={cn(iconClass, 'text-text-tertiary')} />;
 }
 
+/**
+ * Best-effort discipline classification from a sheet number prefix.
+ * Sheet-number prefixes encode discipline in many drawing standards
+ * (e.g. ARK-100 = architecture, RIB-100 = structural). The list payload
+ * has no first-class discipline field; this is a heuristic. Unknown
+ * prefixes fall through to 'other' rather than failing.
+ */
+function inferDiscipline(sheetNumber: string | undefined | null): DisciplineFilter {
+  if (!sheetNumber) return 'other';
+  const upper = sheetNumber.toUpperCase();
+  if (/^(A|ARK|ARC)/.test(upper)) return 'architecture';
+  if (/^(S|R?IB|STR|STRUCT)/.test(upper)) return 'structural';
+  if (/^(M|R?IV|R?IE|MEP|ELE|VVS|HVAC)/.test(upper)) return 'mep';
+  if (/^(C|CIV|R?IL|LAN)/.test(upper)) return 'civil';
+  return 'other';
+}
+
 export default function ProjectDrawings() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -69,13 +105,16 @@ export default function ProjectDrawings() {
     file: File;
     existingFilename: string;
   } | null>(null);
+  const [disciplineFilter, setDisciplineFilter] = useState<DisciplineFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<RegistrationFilter>('all');
 
   const { data: project, isLoading: projectLoading } = useProject(id!);
   const { data: drawings, isLoading: drawingsLoading } = useDrawingsList(id);
+  const kpis = useProjectDrawingsKpis(id);
   const upload = useUploadDrawing();
 
   // Pull all source files for this project so we can show original filenames
-  // and infer formats on the cards. The list is small (one file per drawing).
+  // and infer formats on the cards.
   const { data: sourceFileIndex } = useQuery({
     queryKey: ['source-files', 'index', id],
     queryFn: async () => {
@@ -168,12 +207,24 @@ export default function ProjectDrawings() {
     });
   }, [drawings]);
 
+  const visibleDrawings = useMemo(() => {
+    return sortedDrawings.filter((d) => {
+      if (disciplineFilter !== 'all' && inferDiscipline(d.sheet_number) !== disciplineFilter) {
+        return false;
+      }
+      const registered = !!d.sheet_number && d.sheet_number.trim().length > 0;
+      if (statusFilter === 'registered' && !registered) return false;
+      if (statusFilter === 'unregistered' && registered) return false;
+      return true;
+    });
+  }, [sortedDrawings, disciplineFilter, statusFilter]);
+
   if (projectLoading) {
     return (
       <AppLayout>
-        <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="text-text-secondary">{t('common.loading')}</div>
-        </div>
+        <PageShell title={t('drawings.pageTitle')}>
+          <div className="text-text-secondary text-sm">{t('common.loading')}</div>
+        </PageShell>
       </AppLayout>
     );
   }
@@ -181,38 +232,36 @@ export default function ProjectDrawings() {
   if (!project) {
     return (
       <AppLayout>
-        <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="text-error">{t('drawings.projectNotFound')}</div>
-        </div>
+        <PageShell title={t('drawings.pageTitle')}>
+          <div className="text-error text-sm">{t('drawings.projectNotFound')}</div>
+        </PageShell>
       </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <div className="flex flex-col w-full flex-grow py-[clamp(1rem,2vw,1.5rem)] px-[clamp(1rem,3vw,3rem)]">
-        {/* Header */}
-        <div className="mb-[clamp(1rem,2vw,2rem)] w-full">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/projects/${id}`)}
-            className="mb-[clamp(0.5rem,1vw,1rem)] -ml-2"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t('common.back')}
-          </Button>
+      <PageShell
+        title={t('drawings.pageTitle')}
+        subtitle={project.name}
+      >
+        <DrawingsKpiRow kpis={kpis} />
 
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-[clamp(1.5rem,3vw,2.25rem)] font-bold text-text-primary">
-                {t('drawings.pageTitle')}
-              </h1>
-              <p className="text-text-secondary mt-2 text-[clamp(0.75rem,1.2vw,0.875rem)]">
-                {project.name}
-              </p>
-            </div>
-          </div>
+        {/* Filter chips */}
+        <div className="flex flex-wrap items-center gap-[clamp(0.25rem,0.5vw,0.5rem)] mt-[clamp(0.25rem,0.5vh,0.5rem)]">
+          <ChipGroup
+            label={t('drawings.filter.disciplineLabel')}
+            options={DISCIPLINE_OPTIONS}
+            value={disciplineFilter}
+            onChange={(v) => setDisciplineFilter(v as DisciplineFilter)}
+          />
+          <span className="text-text-tertiary" aria-hidden="true">·</span>
+          <ChipGroup
+            label={t('drawings.filter.statusLabel')}
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as RegistrationFilter)}
+          />
         </div>
 
         {/* Drag-drop upload area */}
@@ -222,7 +271,7 @@ export default function ProjectDrawings() {
           onDragOver={handleDrag}
           onDrop={handleDrop}
           className={cn(
-            'border-2 border-dashed rounded-md transition-colors mb-[clamp(1rem,2vw,1.5rem)]',
+            'border-2 border-dashed rounded-md transition-colors',
             dragActive
               ? 'border-primary bg-primary/5'
               : 'border-border bg-surface/30',
@@ -230,7 +279,7 @@ export default function ProjectDrawings() {
         >
           <label
             htmlFor="drawing-upload-input"
-            className="flex items-center justify-center gap-3 cursor-pointer p-[clamp(1rem,2vw,2rem)] text-text-secondary hover:text-text-primary"
+            className="flex items-center justify-center gap-3 cursor-pointer p-[clamp(0.75rem,1.5vw,1.25rem)] text-text-secondary hover:text-text-primary"
           >
             <Upload className="h-[clamp(1rem,2vw,1.25rem)] w-[clamp(1rem,2vw,1.25rem)]" />
             <span className="text-[clamp(0.75rem,1.2vw,0.875rem)]">
@@ -254,7 +303,7 @@ export default function ProjectDrawings() {
         </div>
 
         {uploadError && (
-          <div className="mb-[clamp(0.5rem,1vw,1rem)] flex items-start gap-2 rounded-md border border-error/30 bg-error/10 p-3 text-error">
+          <div className="flex items-start gap-2 rounded-md border border-error/30 bg-error/10 p-3 text-error">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <p className="text-[clamp(0.75rem,1.2vw,0.875rem)]">{uploadError}</p>
           </div>
@@ -262,12 +311,12 @@ export default function ProjectDrawings() {
 
         {/* Drawings grid */}
         {drawingsLoading ? (
-          <div className="text-text-secondary">{t('common.loading')}</div>
-        ) : sortedDrawings.length === 0 ? (
+          <div className="text-text-secondary text-sm">{t('common.loading')}</div>
+        ) : visibleDrawings.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent className="pt-6">
               <ImageIcon className="h-[clamp(2rem,4vw,3rem)] w-[clamp(2rem,4vw,3rem)] text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-[clamp(1rem,2vw,1.125rem)] font-semibold text-text-primary mb-2">
+              <h3 className="text-[clamp(1rem,1.4vw,1.125rem)] font-semibold text-text-primary mb-2">
                 {t('drawings.empty.title')}
               </h3>
               <p className="text-text-secondary text-[clamp(0.75rem,1.2vw,0.875rem)]">
@@ -280,7 +329,7 @@ export default function ProjectDrawings() {
             className="grid gap-[clamp(0.75rem,1.5vw,1rem)] list-none p-0"
             style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
           >
-            {sortedDrawings.map((drawing) => (
+            {visibleDrawings.map((drawing) => (
               <DrawingCard
                 key={drawing.id}
                 drawing={drawing}
@@ -337,8 +386,48 @@ export default function ProjectDrawings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </PageShell>
     </AppLayout>
+  );
+}
+
+interface ChipGroupProps {
+  label: string;
+  options: Array<{ key: string; labelKey: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function ChipGroup({ label, options, value, onChange }: ChipGroupProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="inline-flex items-center gap-[clamp(0.25rem,0.5vw,0.5rem)]">
+      <span className="text-[clamp(0.55rem,0.8vw,0.7rem)] uppercase tracking-wide text-muted-foreground font-medium">
+        {label}
+      </span>
+      <div
+        role="group"
+        aria-label={label}
+        className="inline-flex items-center rounded-md border bg-background p-[clamp(1px,0.2vw,2px)] gap-[clamp(1px,0.2vw,2px)]"
+      >
+        {options.map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onChange(opt.key)}
+            aria-pressed={value === opt.key}
+            className={cn(
+              'rounded px-[clamp(0.4rem,1vw,0.6rem)] py-[clamp(0.15rem,0.5vw,0.3rem)] text-[clamp(0.625rem,1vw,0.75rem)] font-medium transition-colors',
+              value === opt.key
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted',
+            )}
+          >
+            {t(opt.labelKey)}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
