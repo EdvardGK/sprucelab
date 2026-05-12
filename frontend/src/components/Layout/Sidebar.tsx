@@ -99,7 +99,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav className="flex-1 overflow-y-auto p-2 pb-4">
         {/* Main navigation - only when NOT in project */}
         {!projectId && (
           <div className="mb-4 space-y-0.5">
