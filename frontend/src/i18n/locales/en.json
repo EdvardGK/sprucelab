@@ -1549,6 +1549,14 @@
       "missing": "Missing",
       "completeTooltip": "All key fields present",
       "missingTooltip": "Missing: {{fields}}"
+    },
+    "live": {
+      "updatedAgo": "Updated {{ago}}",
+      "justNow": "just now",
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
     }
   }
 }

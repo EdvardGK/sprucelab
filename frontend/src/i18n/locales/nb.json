@@ -1549,6 +1549,14 @@
       "missing": "Mangler",
       "completeTooltip": "Alle nøkkelfelt er fylt ut",
       "missingTooltip": "Mangler: {{fields}}"
+    },
+    "live": {
+      "updatedAgo": "Oppdatert {{ago}}",
+      "justNow": "nå",
+      "seconds": "for {{count}}s siden",
+      "minutes": "for {{count}}m siden",
+      "hours": "for {{count}}t siden",
+      "days": "for {{count}}d siden"
     }
   }
 }

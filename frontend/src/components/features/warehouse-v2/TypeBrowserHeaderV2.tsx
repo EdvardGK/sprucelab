@@ -1,11 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
+import { LiveFreshness } from './LiveFreshness';
+
 interface TypeBrowserHeaderV2Props {
   loading?: boolean;
+  dataUpdatedAt?: number;
 }
 
-export function TypeBrowserHeaderV2(_props: TypeBrowserHeaderV2Props) {
+export function TypeBrowserHeaderV2({ dataUpdatedAt }: TypeBrowserHeaderV2Props) {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -17,9 +20,12 @@ export function TypeBrowserHeaderV2(_props: TypeBrowserHeaderV2Props) {
 
   return (
     <header className="flex items-center justify-between gap-[clamp(0.5rem,1vw,1rem)] flex-shrink-0">
-      <h1 className="text-[clamp(1rem,1.6vw,1.5rem)] font-semibold tracking-tight">
-        {t('typesV2.title')}
-      </h1>
+      <div className="flex items-baseline gap-[clamp(0.5rem,1vw,1rem)] flex-wrap">
+        <h1 className="text-[clamp(1rem,1.6vw,1.5rem)] font-semibold tracking-tight">
+          {t('typesV2.title')}
+        </h1>
+        <LiveFreshness dataUpdatedAt={dataUpdatedAt} />
+      </div>
       <button
         type="button"
         onClick={switchToV1}

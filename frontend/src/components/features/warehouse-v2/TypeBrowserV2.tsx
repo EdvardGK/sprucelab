@@ -56,10 +56,11 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     setSelectedTypeId(null);
   }, [modelId, ifcClassFilter, searchQuery]);
 
-  const { data: types = [], isLoading: typesLoading } = useModelTypes(
-    modelId ?? '',
-    { enabled: !!modelId }
-  );
+  const {
+    data: types = [],
+    isLoading: typesLoading,
+    dataUpdatedAt,
+  } = useModelTypes(modelId ?? '', { enabled: !!modelId });
 
   const stats = useMemo(() => {
     const ifcClasses = new Set<string>();
@@ -146,7 +147,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         className="h-[3px] w-full rounded-full bg-gradient-to-r from-[#D0D34D] via-[#157954] to-[#21263A]"
         aria-hidden="true"
       />
-      <TypeBrowserHeaderV2 loading={isLoading} />
+      <TypeBrowserHeaderV2 loading={isLoading} dataUpdatedAt={dataUpdatedAt} />
 
       <TypeBrowserFilterBarV2
         models={models}
