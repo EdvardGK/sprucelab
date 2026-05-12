@@ -1,13 +1,14 @@
 # Current TODO - Sprucelab BIM Platform
 
-**Last Updated**: 2026-05-10 (post Coordinator Round 2)
-**Current Phase**: Frontend refresh — Phase 1 COMPLETE, Phase 3 next
-**Status**: 194 unit tests green. Trunk-based: all merges direct to `main`.
+**Last Updated**: 2026-05-12 (post Coordinator Round 3)
+**Current Phase**: 8-session UX redesign shipped → backend "lights-up" tracks landing
+**Status**: 393 backend unit tests + 142 CLI tests green. Trunk-based: all merges direct to `main`.
 
 ---
 
 ## Recently shipped
 
+- [x] **Coordinator Round 3 — entity_ifc_type + Claim assignee/bulk + spruce claims CLI** (2026-05-12, commits `4215e1d` → `c97ec26`) — Track A: `IFCType.entity_ifc_type` field (Bug 1 fix from `data-extraction-vs-fragments-runtime-mismatch.md`) + Claim `assignee` FK + three bulk endpoints (`bulk-assign`, `bulk-resolve`, `bulk-dismiss`) all supporting `?dry_run=true`; ClaimViewSet locked down (create/PUT/destroy return 405). Migration `0043_entity_ifc_type_claim_assignee.py`. FastAPI extractor + asyncpg INSERT updated per `fastapi-raw-sql-vs-django-defaults.md`. Track B: `spruce claims` CLI with list/show/promote/reject + live API smoke against dev server. Track C: no-op — webhook UI was already shipped in `09803a7`.
 - [x] **Phase 3 Type page v2 — full dashboard polish** (2026-05-11, commits `e41c272` → `4cfb5d3`, 24 commits total) -- Last twelve added in an autonomous overnight round: DashboardGrid 4-col primitive adoption; clamp() everywhere; sparklines under every KPI with per-IFC-class distribution; status-dot column on table rows (traffic light); live "Updated Xs ago" pulse in header; Phase 3b detail panel (classification + key properties + layer buildup + Pset explorer); v3 fragments viewer null-camera fix; treemap cross-filter; Top-10 + table IFC-class cross-filter with clear-filter pill; shared ifcClass→color map binding treemap + sparklines + table row stripes; empty-state clear-filters CTA. Three input surfaces converge on one ifcClassFilter (Linear/PowerBI pattern).
 - [x] **Phase 3 Type page v2 — final shape** (2026-05-11, commits `e41c272` → `fba012d`) -- new `/projects/:id/types?v=2` shipped + iterated through 7 commits to final 3-row layout: row 1 = 6-KPI traffic-light grid (Total · Instances · Avg/type / Untyped · Orphan · Missing classification, with amber/red rings + value coloring on threshold), row 2 = treemap (aspect-square) + 3D viewer (aspect-[4/3]) at 50/50 width with click-row-to-isolate, row 3 = Top-10 bar chart (25%) + types table (75%) at h-[640px] with sticky thead and internal scroll. Property columns full-worded (Load-bearing · External · Fire rating · Acoustic rating · U-value · MMI) extracted via tolerant Pset_*Common probe at `warehouse-v2/typeProperties.ts`. Reframe: "modelers own the data, platform suggests + surfaces gaps" — no "Mapped %" framing, missing values render as amber em-dash. v1 untouched.
 - [x] **Webhook System Phase 1** (2026-04-29, snapshot `b73a1d5`) -- `WebhookSubscription` + `WebhookDelivery` in `apps/automation/`, HMAC-SHA256 dispatcher, Celery `deliver_webhook_task` with exponential backoff + auto-disable, ViewSets at `/api/automation/webhook-{subscriptions,deliveries}/`. Four events wired: `model.processed`, `document.processed`, `claim.extracted`, `verification.complete`.
