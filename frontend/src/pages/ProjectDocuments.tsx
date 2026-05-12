@@ -1,11 +1,11 @@
 // Real Documents library — list of extracted DocumentContent rows with
-// preview + lineage to claims. Supersedes the old ClaimInbox host (now at
-// /projects/:id/claims).
+// preview + lineage to claims. Session 8 added PageShell chrome + a
+// project-level KPI row + format/status filter chips above the
+// format-aware card grid (cards themselves unchanged).
 import { useMemo, useState, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  ArrowLeft,
   FileText,
   Loader2,
   Files,
@@ -16,15 +16,35 @@ import {
 import { useProject } from '@/hooks/use-projects';
 import { useDocumentsList } from '@/hooks/use-documents';
 import { useClaimsList } from '@/hooks/use-claims';
+import { useProjectDocumentsKpis } from '@/hooks/useDocumentsKpis';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AppLayout } from '@/components/Layout/AppLayout';
-import type { ClaimListItem, DocumentListItem } from '@/lib/claims-types';
+import { PageShell } from '@/components/Layout';
+import { DocumentsKpiRow } from '@/components/features/documents/DocumentsKpiRow';
+import type { ClaimListItem, DocumentListItem, DocumentFormat } from '@/lib/claims-types';
 import { cn } from '@/lib/utils';
 
 const DocumentDetail = lazy(
   () => import('@/components/features/documents/DocumentDetail'),
 );
+
+const FORMAT_OPTIONS: Array<{ key: 'all' | DocumentFormat; labelKey: string }> = [
+  { key: 'all', labelKey: 'documents.filter.formatAll' },
+  { key: 'pdf', labelKey: 'documents.filter.formatPdf' },
+  { key: 'docx', labelKey: 'documents.filter.formatDocx' },
+  { key: 'xlsx', labelKey: 'documents.filter.formatXlsx' },
+  { key: 'pptx', labelKey: 'documents.filter.formatPptx' },
+];
+
+type StatusFilter = 'all' | 'pending' | 'classified' | 'with_claims';
+
+const STATUS_OPTIONS: Array<{ key: StatusFilter; labelKey: string }> = [
+  { key: 'all', labelKey: 'documents.filter.statusAll' },
+  { key: 'pending', labelKey: 'documents.filter.statusPending' },
+  { key: 'classified', labelKey: 'documents.filter.statusClassified' },
+  { key: 'with_claims', labelKey: 'documents.filter.statusWithClaims' },
+];
 
 function FormatIcon({ format }: { format: string }) {
   const iconClass = 'h-[clamp(1.25rem,2vw,1.5rem)] w-[clamp(1.25rem,2vw,1.5rem)]';
@@ -38,6 +58,7 @@ function FormatIcon({ format }: { format: string }) {
 interface ClaimLineage {
   total: number;
   decided: number;
+  unresolved: number;
 }
 
 function buildClaimLineage(claims: ClaimListItem[] | undefined): Map<string, ClaimLineage> {
@@ -45,9 +66,10 @@ function buildClaimLineage(claims: ClaimListItem[] | undefined): Map<string, Cla
   if (!claims) return map;
   for (const claim of claims) {
     const sf = claim.source_file;
-    const entry = map.get(sf) ?? { total: 0, decided: 0 };
+    const entry = map.get(sf) ?? { total: 0, decided: 0, unresolved: 0 };
     entry.total += 1;
     if (claim.status !== 'unresolved') entry.decided += 1;
+    else entry.unresolved += 1;
     map.set(sf, entry);
   }
   return map;
@@ -60,16 +82,34 @@ export default function ProjectDocuments() {
   const { data: project, isLoading: projectLoading } = useProject(id!);
   const { data: documents, isLoading: documentsLoading } = useDocumentsList({ project: id });
   const { data: claims } = useClaimsList({ project: id });
+  const kpis = useProjectDocumentsKpis(id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [formatFilter, setFormatFilter] = useState<'all' | DocumentFormat>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const claimLineage = useMemo(() => buildClaimLineage(claims), [claims]);
+
+  const visibleDocuments = useMemo(() => {
+    if (!documents) return [];
+    return documents.filter((d) => {
+      if (formatFilter !== 'all' && d.format !== formatFilter) return false;
+      const lineage = claimLineage.get(d.source_file);
+      if (statusFilter === 'with_claims') return (lineage?.total ?? 0) > 0;
+      if (statusFilter === 'pending') return (lineage?.unresolved ?? 0) > 0;
+      // "classified" — backend has no per-document classification status;
+      // surface as a no-op filter that shows everything, matching the
+      // amber em-dash on the KPI tile.
+      if (statusFilter === 'classified') return false;
+      return true;
+    });
+  }, [documents, formatFilter, statusFilter, claimLineage]);
 
   if (projectLoading) {
     return (
       <AppLayout>
-        <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="text-text-secondary">{t('common.loading')}</div>
-        </div>
+        <PageShell title={t('documents.pageTitle')}>
+          <div className="text-text-secondary text-sm">{t('common.loading')}</div>
+        </PageShell>
       </AppLayout>
     );
   }
@@ -77,48 +117,52 @@ export default function ProjectDocuments() {
   if (!project) {
     return (
       <AppLayout>
-        <div className="flex flex-col w-full flex-grow py-6 px-6 md:px-8 lg:px-12">
-          <div className="text-error">{t('documents.projectNotFound')}</div>
-        </div>
+        <PageShell title={t('documents.pageTitle')}>
+          <div className="text-error text-sm">{t('documents.projectNotFound')}</div>
+        </PageShell>
       </AppLayout>
     );
   }
 
+  const claimsButton = (
+    <Button variant="outline" size="sm" onClick={() => navigate(`/projects/${id}/claims`)}>
+      {t('documents.openClaimsInbox')}
+    </Button>
+  );
+
   return (
     <AppLayout>
-      <div className="flex flex-col w-full flex-grow py-[clamp(1rem,2vw,1.5rem)] px-[clamp(1rem,3vw,3rem)]">
-        <div className="mb-[clamp(1rem,2vw,2rem)]">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/projects/${id}`)}
-            className="mb-[clamp(0.5rem,1vw,1rem)] -ml-2"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t('common.back')}
-          </Button>
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-[clamp(1.5rem,3vw,2.25rem)] font-bold text-text-primary">
-                {t('documents.pageTitle')}
-              </h1>
-              <p className="text-text-secondary mt-2 text-[clamp(0.75rem,1.2vw,0.875rem)]">
-                {project.name}
-              </p>
-            </div>
-            <Button variant="outline" onClick={() => navigate(`/projects/${id}/claims`)}>
-              {t('documents.openClaimsInbox')}
-            </Button>
-          </div>
+      <PageShell
+        title={t('documents.pageTitle')}
+        subtitle={project.name}
+        headerRight={claimsButton}
+      >
+        <DocumentsKpiRow kpis={kpis} />
+
+        {/* Filter chips */}
+        <div className="flex flex-wrap items-center gap-[clamp(0.25rem,0.5vw,0.5rem)] mt-[clamp(0.25rem,0.5vh,0.5rem)]">
+          <ChipGroup
+            label={t('documents.filter.formatLabel')}
+            options={FORMAT_OPTIONS}
+            value={formatFilter}
+            onChange={(v) => setFormatFilter(v as 'all' | DocumentFormat)}
+          />
+          <span className="text-text-tertiary" aria-hidden="true">·</span>
+          <ChipGroup
+            label={t('documents.filter.statusLabel')}
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as StatusFilter)}
+          />
         </div>
 
         {documentsLoading ? (
-          <div className="text-text-secondary">{t('common.loading')}</div>
-        ) : !documents || documents.length === 0 ? (
+          <div className="text-text-secondary text-sm">{t('common.loading')}</div>
+        ) : !visibleDocuments || visibleDocuments.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent className="pt-6">
               <Files className="h-[clamp(2rem,4vw,3rem)] w-[clamp(2rem,4vw,3rem)] text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-[clamp(1rem,2vw,1.125rem)] font-semibold text-text-primary mb-2">
+              <h3 className="text-[clamp(1rem,1.4vw,1.125rem)] font-semibold text-text-primary mb-2">
                 {t('documents.empty.title')}
               </h3>
               <p className="text-text-secondary text-[clamp(0.75rem,1.2vw,0.875rem)]">
@@ -131,7 +175,7 @@ export default function ProjectDocuments() {
             className="grid gap-[clamp(0.75rem,1.5vw,1rem)] list-none p-0"
             style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
           >
-            {documents.map((doc) => (
+            {visibleDocuments.map((doc) => (
               <DocumentCard
                 key={doc.id}
                 doc={doc}
@@ -156,8 +200,48 @@ export default function ProjectDocuments() {
             />
           </Suspense>
         )}
-      </div>
+      </PageShell>
     </AppLayout>
+  );
+}
+
+interface ChipGroupProps {
+  label: string;
+  options: Array<{ key: string; labelKey: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function ChipGroup({ label, options, value, onChange }: ChipGroupProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="inline-flex items-center gap-[clamp(0.25rem,0.5vw,0.5rem)]">
+      <span className="text-[clamp(0.55rem,0.8vw,0.7rem)] uppercase tracking-wide text-muted-foreground font-medium">
+        {label}
+      </span>
+      <div
+        role="group"
+        aria-label={label}
+        className="inline-flex items-center rounded-md border bg-background p-[clamp(1px,0.2vw,2px)] gap-[clamp(1px,0.2vw,2px)]"
+      >
+        {options.map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onChange(opt.key)}
+            aria-pressed={value === opt.key}
+            className={cn(
+              'rounded px-[clamp(0.4rem,1vw,0.6rem)] py-[clamp(0.15rem,0.5vw,0.3rem)] text-[clamp(0.625rem,1vw,0.75rem)] font-medium transition-colors',
+              value === opt.key
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted',
+            )}
+          >
+            {t(opt.labelKey)}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
