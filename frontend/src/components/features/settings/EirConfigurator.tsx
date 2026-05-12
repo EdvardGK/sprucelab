@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/popover';
 import type { EirField, AddressValue } from './eirConfig';
 import { useKartverketAddressSearch } from './use-kartverket-address-search';
-import { KartverketMap } from './KartverketMap';
 
 export type EirFieldValue =
   | string
@@ -52,7 +51,7 @@ export function EirConfigurator({
   onChange,
 }: EirConfiguratorProps) {
   return (
-    <div className="flex flex-col gap-[clamp(0.625rem,1vh,1rem)]">
+    <div className="flex flex-col gap-[clamp(0.5rem,0.8vh,0.875rem)]">
       {fields.map((field) => {
         if (field.dependsOn) {
           const dep = values[field.dependsOn.fieldId];
@@ -80,30 +79,40 @@ function EirFieldRow({
   value: EirFieldValue;
   onChange: (v: EirFieldValue) => void;
 }) {
-  const showMap = field.kind === 'address' && isAddressValue(value);
+  // Toggles + numbers sit nicely on the same row as the label (compact);
+  // selects, multiselects, addresses, and text inputs stack vertically
+  // so they get full card-width breathing room.
+  const inlineLabel = field.kind === 'toggle' || field.kind === 'number';
+
   return (
-    <div className="flex flex-col gap-[clamp(0.25rem,0.4vh,0.5rem)]">
-      <div className="flex items-center justify-between gap-3 min-h-[clamp(1.5rem,1.8vw,1.875rem)]">
-        <label
-          htmlFor={`eir-${field.id}`}
-          className="text-[clamp(0.7rem,0.85vw,0.9rem)] font-medium text-foreground"
-        >
-          {field.label}
-        </label>
-        <EirControl field={field} value={value} onChange={onChange} />
-      </div>
+    <div className="flex flex-col gap-[clamp(0.125rem,0.25vh,0.375rem)]">
+      {inlineLabel ? (
+        <div className="flex items-center justify-between gap-2">
+          <label
+            htmlFor={`eir-${field.id}`}
+            className="text-[clamp(0.65rem,0.78vw,0.82rem)] font-medium text-foreground"
+          >
+            {field.label}
+          </label>
+          <EirControl field={field} value={value} onChange={onChange} />
+        </div>
+      ) : (
+        <>
+          <label
+            htmlFor={`eir-${field.id}`}
+            className="text-[clamp(0.6rem,0.72vw,0.78rem)] font-medium uppercase tracking-wide text-muted-foreground"
+          >
+            {field.label}
+          </label>
+          <EirControl field={field} value={value} onChange={onChange} />
+        </>
+      )}
       {(field.hint || field.bepRole) && (
-        <div className="text-[clamp(0.55rem,0.7vw,0.75rem)] text-muted-foreground/80 leading-[1.45]">
+        <div className="text-[clamp(0.5rem,0.65vw,0.7rem)] text-muted-foreground/70 leading-[1.4]">
           {field.hint && <span>{field.hint}</span>}
           {field.hint && field.bepRole && <span> · </span>}
           {field.bepRole && <span className="italic">{field.bepRole}</span>}
         </div>
-      )}
-      {showMap && (
-        <KartverketMap
-          address={value as AddressValue}
-          className="w-full h-[clamp(12rem,28vh,18rem)] rounded-md overflow-hidden border border-border/60 bg-muted mt-[clamp(0.25rem,0.5vh,0.5rem)]"
-        />
       )}
     </div>
   );
@@ -144,7 +153,7 @@ function EirControl({
       );
     case 'number':
       return (
-        <div className="flex items-baseline gap-1.5">
+        <div className="flex items-baseline gap-1">
           <Input
             id={`eir-${field.id}`}
             type="number"
@@ -157,10 +166,10 @@ function EirControl({
               const n = e.target.value === '' ? NaN : Number(e.target.value);
               onChange(Number.isFinite(n) ? n : 0);
             }}
-            className="h-[clamp(1.5rem,1.8vw,1.875rem)] w-[clamp(4rem,6vw,5rem)] tabular-nums text-right text-[clamp(0.7rem,0.85vw,0.9rem)]"
+            className="h-[clamp(1.5rem,1.7vw,1.75rem)] w-[clamp(3.5rem,5vw,4.5rem)] tabular-nums text-right text-[clamp(0.65rem,0.78vw,0.82rem)] px-1.5"
           />
           {field.unit && (
-            <span className="text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground tabular-nums">
+            <span className="text-[clamp(0.55rem,0.7vw,0.75rem)] text-muted-foreground tabular-nums">
               {field.unit}
             </span>
           )}
@@ -174,7 +183,7 @@ function EirControl({
         >
           <SelectTrigger
             id={`eir-${field.id}`}
-            className="h-[clamp(1.5rem,1.8vw,1.875rem)] w-[clamp(10rem,14vw,14rem)] text-[clamp(0.7rem,0.85vw,0.9rem)]"
+            className="h-[clamp(1.5rem,1.7vw,1.75rem)] w-full text-[clamp(0.65rem,0.78vw,0.82rem)]"
           >
             <SelectValue />
           </SelectTrigger>
@@ -210,7 +219,7 @@ function EirControl({
           type="text"
           value={typeof value === 'string' ? value : ''}
           onChange={(e) => onChange(e.target.value)}
-          className="h-[clamp(1.5rem,1.8vw,1.875rem)] w-[clamp(8rem,12vw,14rem)] text-[clamp(0.7rem,0.85vw,0.9rem)]"
+          className="h-[clamp(1.5rem,1.7vw,1.75rem)] w-full text-[clamp(0.65rem,0.78vw,0.82rem)]"
         />
       );
   }
@@ -220,9 +229,10 @@ function isAddressValue(v: unknown): v is AddressValue {
   return (
     v !== null &&
     typeof v === 'object' &&
-    'adressetekst' in v &&
-    'lat' in v &&
-    'lon' in v
+    v !== undefined &&
+    'adressetekst' in (v as object) &&
+    'lat' in (v as object) &&
+    'lon' in (v as object)
   );
 }
 
@@ -265,16 +275,16 @@ function MultiselectCombobox({
         <button
           id={`eir-${field.id}`}
           type="button"
-          className="flex items-center gap-2 h-[clamp(1.5rem,1.8vw,1.875rem)] min-w-[clamp(10rem,14vw,14rem)] max-w-[clamp(12rem,20vw,22rem)] px-2 rounded-md border border-input bg-background text-[clamp(0.7rem,0.85vw,0.9rem)] hover:bg-muted/50 transition-colors text-left"
+          className="flex items-center gap-2 h-[clamp(1.5rem,1.7vw,1.75rem)] w-full px-2 rounded-md border border-input bg-background text-[clamp(0.65rem,0.78vw,0.82rem)] hover:bg-muted/50 transition-colors text-left"
         >
           <span className="flex-1 truncate text-foreground/90">{summary}</span>
-          <span className="text-[clamp(0.55rem,0.7vw,0.75rem)] tabular-nums text-muted-foreground">
+          <span className="text-[clamp(0.5rem,0.65vw,0.7rem)] tabular-nums text-muted-foreground shrink-0">
             {value.length}/{options.length}
           </span>
         </button>
       </PopoverTrigger>
       <PopoverContent
-        align="end"
+        align="start"
         className="w-[clamp(16rem,22vw,24rem)] p-0"
       >
         <Command shouldFilter>
@@ -341,25 +351,25 @@ function AddressCombobox({
     : t('settings.eirConfig.addressEmpty', { defaultValue: 'Search address…' });
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 w-full">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             id={`eir-${fieldId}`}
             type="button"
-            className="flex items-center gap-2 h-[clamp(1.5rem,1.8vw,1.875rem)] min-w-[clamp(10rem,16vw,16rem)] max-w-[clamp(12rem,22vw,24rem)] px-2 rounded-md border border-input bg-background text-[clamp(0.7rem,0.85vw,0.9rem)] hover:bg-muted/50 transition-colors text-left"
+            className="flex items-center gap-1.5 h-[clamp(1.5rem,1.7vw,1.75rem)] flex-1 min-w-0 px-2 rounded-md border border-input bg-background text-[clamp(0.65rem,0.78vw,0.82rem)] hover:bg-muted/50 transition-colors text-left"
           >
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
             <span className="flex-1 truncate text-foreground/90">{summary}</span>
             {value && (
-              <span className="text-[clamp(0.55rem,0.7vw,0.75rem)] tabular-nums text-muted-foreground shrink-0">
-                {value.lat.toFixed(4)}, {value.lon.toFixed(4)}
+              <span className="text-[clamp(0.5rem,0.65vw,0.7rem)] tabular-nums text-muted-foreground shrink-0">
+                {value.lat.toFixed(3)}, {value.lon.toFixed(3)}
               </span>
             )}
           </button>
         </PopoverTrigger>
         <PopoverContent
-          align="end"
+          align="start"
           className="w-[clamp(18rem,26vw,28rem)] p-0"
         >
           <Command shouldFilter={false}>
@@ -431,10 +441,10 @@ function AddressCombobox({
         <button
           type="button"
           onClick={() => onChange(null)}
-          className="h-[clamp(1.5rem,1.8vw,1.875rem)] w-[clamp(1.5rem,1.8vw,1.875rem)] inline-flex items-center justify-center rounded-md hover:bg-muted/50 text-muted-foreground"
+          className="h-[clamp(1.5rem,1.7vw,1.75rem)] w-[clamp(1.5rem,1.7vw,1.75rem)] inline-flex items-center justify-center rounded-md hover:bg-muted/50 text-muted-foreground shrink-0"
           title={t('settings.eirConfig.addressClear', { defaultValue: 'Clear' })}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-3 w-3" />
         </button>
       )}
     </div>

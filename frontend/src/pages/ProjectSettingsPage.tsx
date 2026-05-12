@@ -14,8 +14,8 @@ import {
 import {
   SortableContext,
   arrayMove,
+  rectSortingStrategy,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { LayoutDashboard } from 'lucide-react';
 
@@ -31,6 +31,7 @@ import {
 } from '@/components/features/settings/eirRules';
 import { EirRulePalette } from '@/components/features/settings/EirRulePalette';
 import { EirRuleCard } from '@/components/features/settings/EirRuleCard';
+import { EirPreviewPanel } from '@/components/features/settings/EirPreviewPanel';
 import type { EirFieldValue } from '@/components/features/settings/EirConfigurator';
 import { cn } from '@/lib/utils';
 
@@ -174,31 +175,40 @@ export default function ProjectSettingsPage() {
           collisionDetection={closestCenter}
           onDragEnd={onDragEnd}
         >
-          <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[clamp(16rem,20vw,22rem)_1fr] gap-[clamp(0.75rem,1.5vw,1.25rem)] overflow-hidden">
+          <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[clamp(14rem,16vw,18rem)_1fr] xl:grid-cols-[clamp(14rem,16vw,18rem)_1fr_clamp(20rem,24vw,28rem)] gap-[clamp(0.75rem,1.25vw,1.25rem)] overflow-hidden">
             <aside className="overflow-y-auto pr-[clamp(0.25rem,0.5vw,0.5rem)]">
               <EirRulePalette kindCounts={kindCounts} onAdd={tryAddRule} />
             </aside>
             <WorkspaceDropZone hasRules={rules.length > 0}>
               <SortableContext
                 items={rules.map((r) => r.id)}
-                strategy={verticalListSortingStrategy}
+                strategy={rectSortingStrategy}
               >
-                <div className="flex flex-col gap-[clamp(0.75rem,1.2vh,1.25rem)] pb-[clamp(1rem,2vh,2rem)]">
-                  {rules.length === 0 ? (
-                    <EmptyWorkspace />
-                  ) : (
-                    rules.map((rule) => (
+                {rules.length === 0 ? (
+                  <EmptyWorkspace />
+                ) : (
+                  <div
+                    className="grid gap-[clamp(0.625rem,1vw,1rem)] pb-[clamp(1rem,2vh,2rem)] items-start"
+                    style={{
+                      gridTemplateColumns:
+                        'repeat(auto-fill, minmax(clamp(18rem, 22vw, 22rem), 1fr))',
+                    }}
+                  >
+                    {rules.map((rule) => (
                       <EirRuleCard
                         key={rule.id}
                         rule={rule}
                         onConfigChange={updateRuleField}
                         onRemove={removeRule}
                       />
-                    ))
-                  )}
-                </div>
+                    ))}
+                  </div>
+                )}
               </SortableContext>
             </WorkspaceDropZone>
+            <div className="hidden xl:flex flex-col min-h-0 overflow-hidden">
+              <EirPreviewPanel rules={rules} />
+            </div>
           </div>
         </DndContext>
       </div>

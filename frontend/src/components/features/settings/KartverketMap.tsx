@@ -2,11 +2,10 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'proj4leaflet';
-import type { AddressValue } from './eirConfig';
 
 /**
  * Kartverket WMTS basemap rendered natively in the project CRS — not
- * Web Mercator. Implements path 3 from the user's preferred-order list
+ * Web Mercator. Path 3 from the user's preferred-order list
  * (Kartverket → vector OSM → reprojected raster OSM).
  *
  * Why native CRS: BIM project coordinates are in the project's chosen
@@ -20,18 +19,16 @@ import type { AddressValue } from './eirConfig';
  * BEP CRS picker lands, this will switch per project: UTM32N for
  * sør-Norge, UTM35N for Finnmark, NTM zones for detail work.
  *
- * Markers accept WGS84 lat/lon (what Geonorge returns); proj4leaflet
- * projects them to UTM33N for display automatically.
+ * Markers accept WGS84 lat/lon; proj4leaflet projects them to the
+ * configured CRS for display automatically.
  *
  * Caching architecture (per user 2026-05-12): the basemap is NOT live.
- * The project basepoint is set once during EIR/BEP authoring, then the
- * map area gets cached. Subsequent page loads serve from cache; lazy
- * refreshes can run overnight via cron. Today this component still
- * hits Kartverket directly — the cache layer is a follow-up.
+ * Project basepoint is set once during EIR/BEP authoring, then the map
+ * area gets cached. Subsequent loads serve from cache; lazy refreshes
+ * via cron overnight. Today this component still hits Kartverket
+ * directly — the cache layer is a follow-up.
  */
 
-// Kartverket UTM33N tile matrix set. Resolutions per matrix level are
-// publicly documented in Kartverket's WMTS GetCapabilities response.
 const UTM33N_RESOLUTIONS = [
   21664, 10832, 5416, 2708, 1354, 677, 338.5, 169.25, 84.625, 42.3125,
   21.15625, 10.578125, 5.2890625, 2.64453125, 1.322265625, 0.6611328125,
@@ -41,8 +38,6 @@ const UTM33N_ORIGIN: [number, number] = [-2500000, 9045984];
 const UTM33N_PROJ_DEF =
   '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs';
 
-// proj4leaflet attaches its API to `L.Proj` at import time. The bundled
-// types don't declare it (just augments L), so we narrow here.
 type ProjLeaflet = typeof L & {
   Proj: {
     CRS: new (
@@ -56,44 +51,72 @@ type ProjLeaflet = typeof L & {
 const utm33nCrs = new (L as ProjLeaflet).Proj.CRS(
   'EPSG:25833',
   UTM33N_PROJ_DEF,
-  {
-    resolutions: UTM33N_RESOLUTIONS,
-    origin: UTM33N_ORIGIN,
-  }
+  { resolutions: UTM33N_RESOLUTIONS, origin: UTM33N_ORIGIN }
 );
 
-// Marker icons need explicit URLs since bundlers don't copy leaflet's
-// asset references through. Pull from the leaflet CDN.
-const markerIcon = L.icon({
-  iconUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  iconRetinaUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+export interface MapMarker {
+  id: string;
+  /** WGS84 lat/lon. Caller converts from project CRS via proj4 if needed. */
+  lat: number;
+  lon: number;
+  label: string;
+  /** Drives the marker color. */
+  kind: 'site' | 'basepoint' | 'control';
+}
+
+const MARKER_COLORS: Record<MapMarker['kind'], string> = {
+  site: '#157954', // sprucelab green
+  basepoint: '#D0D34D', // sprucelab yellow-green
+  control: '#21263A', // sprucelab dark
+};
+
+function makeIcon(kind: MapMarker['kind'], label: string): L.DivIcon {
+  return L.divIcon({
+    className: 'kartverket-marker',
+    html: `
+      <div style="position: relative; transform: translate(-50%, -100%);">
+        <div style="
+          width: 14px; height: 14px; border-radius: 50%;
+          background: ${MARKER_COLORS[kind]};
+          border: 2px solid white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          margin-bottom: 2px;
+        "></div>
+        <div style="
+          position: absolute; top: -6px; left: 18px;
+          background: white; color: #21263A;
+          padding: 1px 5px; border-radius: 3px;
+          font-size: 10px; font-weight: 600;
+          white-space: nowrap;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        ">${label}</div>
+      </div>
+    `,
+    iconSize: [14, 14],
+  });
+}
 
 interface KartverketMapProps {
-  address: AddressValue | null;
+  markers: MapMarker[];
+  /** When set, fit-to-this-bounds on update. */
+  focus?: MapMarker | null;
   className?: string;
 }
 
-export function KartverketMap({ address, className }: KartverketMapProps) {
+export function KartverketMap({
+  markers,
+  focus,
+  className,
+}: KartverketMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  const markerLayerRef = useRef<L.LayerGroup | null>(null);
 
-  // Initialize once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
       crs: utm33nCrs,
-      // Norway-ish centroid until an address pins it
       center: [65.0, 13.0],
       zoom: 4,
       attributionControl: true,
@@ -109,38 +132,35 @@ export function KartverketMap({ address, className }: KartverketMapProps) {
       }
     ).addTo(map);
 
+    const layer = L.layerGroup().addTo(map);
+    markerLayerRef.current = layer;
     mapRef.current = map;
 
     return () => {
       map.remove();
       mapRef.current = null;
-      markerRef.current = null;
+      markerLayerRef.current = null;
     };
   }, []);
 
-  // Marker follows address
+  // Re-render markers when the input array changes
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (!address) {
-      if (markerRef.current) {
-        markerRef.current.remove();
-        markerRef.current = null;
-      }
-      return;
+    const layer = markerLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    for (const m of markers) {
+      L.marker([m.lat, m.lon], { icon: makeIcon(m.kind, m.label) }).addTo(
+        layer
+      );
     }
-    const latLng = L.latLng(address.lat, address.lon);
-    if (markerRef.current) {
-      markerRef.current.setLatLng(latLng);
-    } else {
-      markerRef.current = L.marker(latLng, { icon: markerIcon }).addTo(map);
-    }
-    map.flyTo(latLng, 14, { duration: 0.6 });
-  }, [address]);
+  }, [markers]);
 
-  // Leaflet measures the container at init. If we mount inside a
-  // collapsible/popover/flex parent it may be 0×0 initially; call
-  // invalidateSize once a frame later.
+  // Optionally fly to a focus marker
+  useEffect(() => {
+    if (!mapRef.current || !focus) return;
+    mapRef.current.flyTo([focus.lat, focus.lon], 15, { duration: 0.5 });
+  }, [focus]);
+
   useEffect(() => {
     const id = window.setTimeout(() => {
       mapRef.current?.invalidateSize();
@@ -153,7 +173,7 @@ export function KartverketMap({ address, className }: KartverketMapProps) {
       ref={containerRef}
       className={
         className ??
-        'w-full h-[clamp(12rem,28vh,18rem)] rounded-md overflow-hidden border border-border/60 bg-muted'
+        'w-full h-full rounded-md overflow-hidden border border-border/60 bg-muted'
       }
     />
   );
