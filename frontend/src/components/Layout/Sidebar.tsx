@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   PenLine,
   ClipboardList,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -303,6 +304,29 @@ export function Sidebar() {
               >
                 <ClipboardList className="h-4 w-4" />
                 <span>{t('nav.fieldChecklists')}</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Project Config section */}
+        {projectId && currentProject && (
+          <div className="mb-4">
+            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+              {t('nav.projectConfig')}
+            </div>
+            <div className="mt-1 space-y-0.5">
+              <Link
+                to={`/projects/${projectId}/settings`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  isActive(`/projects/${projectId}/settings`)
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span>{t('nav.settings')}</span>
               </Link>
             </div>
           </div>

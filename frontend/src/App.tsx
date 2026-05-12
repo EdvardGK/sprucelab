@@ -27,6 +27,7 @@ const ViewerGroups = lazy(() => import('./pages/ViewerGroups'));
 const TypeLibraryPage = lazy(() => import('./pages/TypeLibraryPage'));
 const ProjectTypeLibrary = lazy(() => import('./pages/ProjectTypeLibrary'));
 const ProjectTypesPage = lazy(() => import('./pages/ProjectTypesPage'));
+const ProjectSettingsPage = lazy(() => import('./pages/ProjectSettingsPage'));
 const ProjectMaterialLibrary = lazy(() => import('./pages/ProjectMaterialLibrary'));
 const ProjectField = lazy(() => import('./pages/ProjectField'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -75,6 +76,7 @@ const router = createBrowserRouter([
       { path: "type-library", element: withSuspense(<ProjectTypeLibrary />) },
       { path: "material-library", element: withSuspense(<ProjectMaterialLibrary />) },
       { path: "field", element: withSuspense(<ProjectField />) },
+      { path: "settings", element: withSuspense(<ProjectSettingsPage />) },
       { path: "workbench", element: withSuspense(<BIMWorkbench />) },
     ],
   },

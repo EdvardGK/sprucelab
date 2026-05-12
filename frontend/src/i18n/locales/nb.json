@@ -54,6 +54,8 @@
     "processingReports": "Prosesseringsrapporter",
     "webhooks": "Webhooks",
     "workspace": "Arbeidsområde",
+    "projectConfig": "Prosjektoppsett",
+    "settings": "Innstillinger",
     "developer": "Utvikler",
     "modules": "Moduler",
     "files": "Filer",
@@ -1570,6 +1572,21 @@
       "ns3451Name": "NS3451-navn",
       "discipline": "Fag",
       "unit": "Representativ enhet"
+    }
+  },
+  "settings": {
+    "title": "Prosjektoppsett",
+    "state": {
+      "live": "Aktiv",
+      "partial": "Delvis",
+      "planned": "Planlagt"
+    },
+    "placeholder": {
+      "title": "Hva denne seksjonen vil styre",
+      "note": "Venter på backend-kobling. Struktur + omfang er bestemt; skjemaarbeid står i kø."
+    },
+    "classification": {
+      "openTypesV2": "Åpne Typer v2 →"
     }
   }
 }

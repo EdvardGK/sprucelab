@@ -54,6 +54,8 @@
     "processingReports": "Processing Reports",
     "webhooks": "Webhooks",
     "workspace": "Workspace",
+    "projectConfig": "Project Config",
+    "settings": "Settings",
     "developer": "Developer",
     "modules": "Modules",
     "files": "Files",
@@ -1570,6 +1572,21 @@
       "ns3451Name": "NS3451 name",
       "discipline": "Discipline",
       "unit": "Representative unit"
+    }
+  },
+  "settings": {
+    "title": "Project Config",
+    "state": {
+      "live": "Live",
+      "partial": "Partial",
+      "planned": "Planned"
+    },
+    "placeholder": {
+      "title": "What this section will configure",
+      "note": "Awaiting backend wiring. Section structure + scope locked; form work is queued."
+    },
+    "classification": {
+      "openTypesV2": "Open Types v2 →"
     }
   }
 }
