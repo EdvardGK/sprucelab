@@ -1565,6 +1565,7 @@
       "filteredHint": "{{types}} typer · {{instances}} forekomster",
       "instances": "forekomster",
       "acrossTypes": "fordelt på {{count}} typer",
+      "isolatingClass": "Isolerer klasse…",
       "filteredEmptyHint": "Filtrert til {{ifcClass}}. Velg en enkelt type for å isolere i 3D-visningen.",
       "untypedTitle": "Utypet {{ifcClass}}",
       "untypedExplain": "Disse forekomstene har ingen kanonisk typedefinisjon (ingen IfcTypeObject). Vanlig for IfcOpeningElement og andre void-pregede entiteter. 3D-isolering per type er ikke mulig før en Type er koblet på i modellen.",

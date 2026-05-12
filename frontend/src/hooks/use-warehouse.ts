@@ -491,6 +491,8 @@ export const warehouseKeys = {
   typesSummary: (modelId: string) => [...warehouseKeys.types(), 'summary', modelId] as const,
   typeInstances: (typeId: string, options?: { limit?: number; offset?: number }) =>
     [...warehouseKeys.types(), 'instances', typeId, options] as const,
+  typesInstancesByClass: (modelId: string, ifcClass: string) =>
+    [...warehouseKeys.types(), 'instances-by-class', modelId, ifcClass] as const,
 
   // Type Mappings
   typeMappings: () => [...warehouseKeys.all, 'type-mappings'] as const,
@@ -561,6 +563,7 @@ export {
   useModelTypes,
   useTypeMappingSummary,
   useTypeInstances,
+  useTypesInstancesByClass,
   useUpdateTypeMapping,
   useCreateTypeMapping,
   useBulkUpdateTypeMappings,
