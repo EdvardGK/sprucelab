@@ -294,6 +294,7 @@ class IFCParserService:
                     # IFC2X3 uses 'ObjectTypeOf', IFC4 uses 'Types' as the inverse attribute name
                     instance_count = 0
                     representative_element = None
+                    entity_ifc_type = ''
                     type_rels = None
                     if hasattr(type_element, 'Types') and type_element.Types:
                         type_rels = type_element.Types
@@ -305,6 +306,11 @@ class IFCParserService:
                                 instance_count += len(rel.RelatedObjects)
                                 if representative_element is None:
                                     representative_element = rel.RelatedObjects[0]
+                                    # Derive the entity IFC class from the first related instance
+                                    try:
+                                        entity_ifc_type = representative_element.is_a()
+                                    except Exception:
+                                        entity_ifc_type = ''
 
                     # Extract predefined_type if available
                     predefined_type = None
@@ -344,6 +350,7 @@ class IFCParserService:
                         properties=type_properties or None,
                         representative_unit=representative_unit,
                         definition_layers=definition_layers,
+                        entity_ifc_type=entity_ifc_type,
                     ))
 
                 except Exception as e:
@@ -413,6 +420,7 @@ class IFCParserService:
                     has_ifc_type_object=False,
                     representative_unit=representative_unit,
                     definition_layers=definition_layers,
+                    entity_ifc_type=ifc_class,  # For synthetic types, ifc_class IS the instance class
                 ))
 
             if untyped_total > 0:
