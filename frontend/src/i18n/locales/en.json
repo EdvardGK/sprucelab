@@ -669,6 +669,38 @@
     "aliases": "aliases",
     "suggested": "Suggested",
     "unclassified": "Unclassified",
+    "missingValue": "Not set",
+    "kpi": {
+      "title": "Material library overview",
+      "totalMaterials": "Materials",
+      "totalSets": "Sets",
+      "classified": "Classified",
+      "epdLinked": "EPD-linked",
+      "procurementLinked": "Procurement-linked",
+      "modelsLoaded": "Models loaded"
+    },
+    "viz": {
+      "treemapTitle": "Families by quantity",
+      "treemapSubtitle": "Sized by aggregated instances, colored by family",
+      "empty": "No families yet",
+      "familiesHeading": "Families",
+      "familyView": {
+        "tree": "Tree",
+        "treemap": "Treemap"
+      }
+    },
+    "live": {
+      "updatedAgo": "Updated {{ago}}",
+      "justNow": "just now",
+      "seconds_one": "{{count}}s ago",
+      "seconds_other": "{{count}}s ago",
+      "minutes_one": "{{count}} min ago",
+      "minutes_other": "{{count}} min ago",
+      "hours_one": "{{count}}h ago",
+      "hours_other": "{{count}}h ago",
+      "days_one": "{{count}}d ago",
+      "days_other": "{{count}}d ago"
+    },
     "header": {
       "materials": "materials",
       "sets": "sets",
@@ -699,6 +731,7 @@
       "set": "Material set",
       "aliases": "Aliases (IFC names)",
       "quantities": "Quantities",
+      "classification": "Classification",
       "usedIn": "Used in",
       "types": "types",
       "instances": "instances",
@@ -710,7 +743,16 @@
       "procurementReady": "Product and supplier linked",
       "procurementMissing": "No product or supplier. Specification is generic.",
       "selectPrompt": "Select a material or set to see details",
-      "composition": "Composition"
+      "composition": "Composition",
+      "layerOccurrences": "Layer occurrences",
+      "layersEmpty": "This material has no recorded layer occurrences yet.",
+      "usageEmpty": "Not yet referenced by any type.",
+      "tab": {
+        "definition": "Definition",
+        "layers": "Layers",
+        "usage": "Where used",
+        "readiness": "Readiness"
+      }
     },
     "set": {
       "layers": "layers",
