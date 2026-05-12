@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import {
@@ -90,6 +90,17 @@ export function TypeBrowserFilterBarV2({
             })
           : t('typesV2.filter.totalCount', { count: totalCount })}
       </span>
+
+      {ifcClassFilter !== 'all' && (
+        <button
+          type="button"
+          onClick={() => onIfcClassChange('all')}
+          className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[clamp(0.6rem,0.75vw,0.8rem)] font-medium hover:bg-primary/20 transition-colors ml-auto"
+        >
+          <span className="font-mono">{ifcClassFilter.replace(/^Ifc/, '')}</span>
+          <X className="h-[clamp(0.7rem,0.9vw,0.95rem)] w-[clamp(0.7rem,0.9vw,0.95rem)]" />
+        </button>
+      )}
     </div>
   );
 }

@@ -213,13 +213,25 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
           <div className="h-[clamp(420px,55vh,720px)]">
             <DashboardGrid layout={BELOW_LAYOUT}>
               <div id="top10">
-                <TypeTopBarList types={filteredTypes} topN={10} fillHeight />
+                <TypeTopBarList
+                  types={filteredTypes}
+                  topN={10}
+                  fillHeight
+                  selectedTypeId={selectedTypeId}
+                  onTypeClick={(id) =>
+                    setSelectedTypeId((curr) => (curr === id ? null : id))
+                  }
+                />
               </div>
               <div id="table">
                 <TypeTableV2
                   types={filteredTypes}
                   selectedTypeId={selectedTypeId}
                   onSelectType={setSelectedTypeId}
+                  onIfcClassClick={(cls) =>
+                    setIfcClassFilter((curr) => (curr === cls ? 'all' : cls))
+                  }
+                  activeIfcClass={ifcClassFilter}
                   className="h-full"
                 />
               </div>

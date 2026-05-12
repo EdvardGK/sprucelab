@@ -12,6 +12,8 @@ interface TypeTableV2Props {
   types: IFCType[];
   selectedTypeId: string | null;
   onSelectType: (id: string) => void;
+  onIfcClassClick?: (ifcClass: string) => void;
+  activeIfcClass?: string;
   className?: string;
 }
 
@@ -19,6 +21,8 @@ export function TypeTableV2({
   types,
   selectedTypeId,
   onSelectType,
+  onIfcClassClick,
+  activeIfcClass = 'all',
   className,
 }: TypeTableV2Props) {
   const { t } = useTranslation();
@@ -73,6 +77,8 @@ export function TypeTableV2({
                   type={type}
                   selected={type.id === selectedTypeId}
                   onSelect={() => onSelectType(type.id)}
+                  onIfcClassClick={onIfcClassClick}
+                  activeIfcClass={activeIfcClass}
                 />
               ))}
             </tbody>
@@ -110,15 +116,20 @@ function TypeRow({
   type,
   selected,
   onSelect,
+  onIfcClassClick,
+  activeIfcClass,
 }: {
   type: IFCType;
   selected: boolean;
   onSelect: () => void;
+  onIfcClassClick?: (ifcClass: string) => void;
+  activeIfcClass?: string;
 }) {
   const { t } = useTranslation();
   const ns3451Code = type.mapping?.ns3451_code;
   const props = extractTypeProperties(type.properties);
   const completeness = computeCompletenessTone(type, props);
+  const isClassActive = activeIfcClass !== 'all' && activeIfcClass === type.ifc_type;
 
   return (
     <tr
@@ -159,8 +170,27 @@ function TypeRow({
           }
         />
       </td>
-      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-mono text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground whitespace-nowrap">
-        {type.ifc_type.replace(/^Ifc/, '')}
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-mono text-[clamp(0.6rem,0.75vw,0.8rem)] whitespace-nowrap">
+        {onIfcClassClick ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIfcClassClick(type.ifc_type);
+            }}
+            className={cn(
+              'rounded-sm px-1 -mx-1 transition-colors',
+              isClassActive
+                ? 'bg-primary/15 text-primary font-semibold'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+            )}
+            title={t('typesV2.table.filterByClass', { class: type.ifc_type.replace(/^Ifc/, '') })}
+          >
+            {type.ifc_type.replace(/^Ifc/, '')}
+          </button>
+        ) : (
+          <span className="text-muted-foreground">{type.ifc_type.replace(/^Ifc/, '')}</span>
+        )}
       </td>
       <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium">
         {type.type_name || (

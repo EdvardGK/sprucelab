@@ -1523,6 +1523,7 @@
       "title": "All types",
       "empty": "No types match the current filters.",
       "unnamed": "Unnamed type",
+      "filterByClass": "Filter to {{class}}",
       "col": {
         "status": "Status",
         "ifcClass": "IFC class",

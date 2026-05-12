@@ -8,9 +8,17 @@ interface TypeTopBarListProps {
   types: IFCType[];
   topN?: number;
   fillHeight?: boolean;
+  selectedTypeId?: string | null;
+  onTypeClick?: (id: string) => void;
 }
 
-export function TypeTopBarList({ types, topN = 10, fillHeight = false }: TypeTopBarListProps) {
+export function TypeTopBarList({
+  types,
+  topN = 10,
+  fillHeight = false,
+  selectedTypeId = null,
+  onTypeClick,
+}: TypeTopBarListProps) {
   const { t } = useTranslation();
 
   const rows = useMemo(() => {
@@ -44,18 +52,21 @@ export function TypeTopBarList({ types, topN = 10, fillHeight = false }: TypeTop
         >
           {rows.map((row) => {
             const widthPct = maxCount > 0 ? (row.instance_count / maxCount) * 100 : 0;
-            return (
-              <li
-                key={row.id}
-                className={
-                  fillHeight
-                    ? 'text-[clamp(0.65rem,0.8vw,0.85rem)] flex flex-col justify-center'
-                    : 'text-[clamp(0.6rem,0.75vw,0.8rem)]'
-                }
-              >
+            const isSelected = selectedTypeId === row.id;
+            const interactive = !!onTypeClick;
+            const labelText = row.type_name || t('typesV2.table.unnamed');
+            const content = (
+              <>
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate font-medium" title={row.type_name}>
-                    {row.type_name || t('typesV2.table.unnamed')}
+                  <span
+                    className={
+                      isSelected
+                        ? 'truncate font-semibold text-[hsl(158_70%_28%)]'
+                        : 'truncate font-medium'
+                    }
+                    title={labelText}
+                  >
+                    {labelText}
                   </span>
                   <span className="tabular-nums text-muted-foreground shrink-0">
                     {row.instance_count.toLocaleString()}
@@ -73,6 +84,30 @@ export function TypeTopBarList({ types, topN = 10, fillHeight = false }: TypeTop
                     style={{ width: `${widthPct}%` }}
                   />
                 </div>
+              </>
+            );
+            const liClass =
+              fillHeight
+                ? 'text-[clamp(0.65rem,0.8vw,0.85rem)] flex flex-col justify-center'
+                : 'text-[clamp(0.6rem,0.75vw,0.8rem)]';
+            if (!interactive) {
+              return (
+                <li key={row.id} className={liClass}>
+                  {content}
+                </li>
+              );
+            }
+            return (
+              <li key={row.id} className="list-none">
+                <button
+                  type="button"
+                  onClick={() => onTypeClick(row.id)}
+                  className={`${liClass} w-full text-left rounded-md transition-colors px-1 -mx-1 py-0.5 ${
+                    isSelected ? 'bg-primary/10' : 'hover:bg-muted/40'
+                  }`}
+                >
+                  {content}
+                </button>
               </li>
             );
           })}

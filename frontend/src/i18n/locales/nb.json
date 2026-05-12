@@ -1523,6 +1523,7 @@
       "title": "Alle typer",
       "empty": "Ingen typer matcher gjeldende filtre.",
       "unnamed": "Navnløs type",
+      "filterByClass": "Filtrer på {{class}}",
       "col": {
         "status": "Status",
         "ifcClass": "IFC-klasse",
