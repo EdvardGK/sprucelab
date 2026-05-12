@@ -1614,5 +1614,39 @@
       "addressNoMatch": "Ingen treff.",
       "addressClear": "Tøm"
     }
+  },
+  "eirBuilder": {
+    "mode": {
+      "label": "Byggemodus",
+      "view": "Vis",
+      "edit": "Rediger",
+      "editLocked": "Du har ikke redigeringstilgang til dette prosjektet."
+    },
+    "palette": {
+      "title": "Regelpalett",
+      "hint": "Dobbeltklikk eller dra en rad inn i arbeidsflaten.",
+      "tierLabel": "ISO 19650-nivå",
+      "tier_oir_long": "Organisasjonens informasjonskrav (OIR)",
+      "tier_air_long": "Asset Information Requirements (AIR)",
+      "tier_pir_long": "Prosjektets informasjonskrav (PIR)",
+      "tier_eir_long": "Utvekslingsinformasjonskrav (EIR)",
+      "tierEmpty": "Ingen krav i denne kategorien ennå",
+      "responsibleRoleLabel": "Ansvarlig"
+    },
+    "card": {
+      "tierBadge": "ISO 19650-nivå"
+    },
+    "cube": {
+      "canvasAria": "IFC-bygnings-prøvekube",
+      "labelSchema": "IFC-skjema",
+      "labelMvdNone": "Ingen MVD",
+      "labelCrs": "Koordinatsystem",
+      "labelDatumNone": "Ingen vertikalt datum",
+      "labelPsets": "Psets på instansene",
+      "emptyHint": "Legg til regler — etikettene fylles ut etter hvert"
+    },
+    "workspace": {
+      "emptyView": "Dette prosjektet har ingen EIR-regler ennå. Bytt til Rediger for å komponere kontrakten."
+    }
   }
 }

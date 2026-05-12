@@ -4,6 +4,7 @@ import { Map as MapIcon, Box, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { KartverketMap, type MapMarker } from './KartverketMap';
+import { EirIfcCubePreview } from './EirIfcCubePreview';
 import type { ActiveEirRule } from './eirRules';
 import type { AddressValue } from './eirConfig';
 
@@ -137,9 +138,21 @@ export function EirPreviewPanel({ rules }: EirPreviewPanelProps) {
       <PreviewWidget
         icon={Box}
         title={t('settings.eir.tabIfc', { defaultValue: 'Sample IFC' })}
-        bodyClassName="max-h-[clamp(20rem,40vh,28rem)] overflow-y-auto"
+        bodyClassName=""
       >
-        <IfcCubePreview rules={rules} />
+        {/*
+         * Side-by-side: 3D cube preview on the left, structured metadata
+         * tree on the right. Stacks vertically below ~lg so the right
+         * column stays usable in narrower viewports.
+         */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(0.375rem,0.6vw,0.625rem)] p-[clamp(0.375rem,0.6vw,0.625rem)]">
+          <div className="rounded-md border border-border/40 bg-muted/20 aspect-square min-h-[clamp(8rem,16vw,12rem)] relative overflow-hidden">
+            <EirIfcCubePreview rules={rules} />
+          </div>
+          <div className="rounded-md border border-border/40 bg-card/40 max-h-[clamp(16rem,32vh,22rem)] overflow-y-auto">
+            <IfcCubePreview rules={rules} />
+          </div>
+        </div>
       </PreviewWidget>
     </div>
   );

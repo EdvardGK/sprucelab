@@ -39,6 +39,13 @@ interface EirConfiguratorProps {
   values: Record<string, EirFieldValue>;
   onChange: (id: string, value: EirFieldValue) => void;
   fields: EirField[];
+  /**
+   * When `true`, render every field as a read-only `<dl>` row instead
+   * of an editable input. Empty values render as an amber em-dash to
+   * highlight gaps (matches the "modelers own the data; platform
+   * surfaces gaps" framing).
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -49,7 +56,28 @@ export function EirConfigurator({
   fields,
   values,
   onChange,
+  readOnly = false,
 }: EirConfiguratorProps) {
+  if (readOnly) {
+    return (
+      <dl className="flex flex-col gap-[clamp(0.375rem,0.6vh,0.625rem)]">
+        {fields.map((field) => {
+          if (field.dependsOn) {
+            const dep = values[field.dependsOn.fieldId];
+            if (dep !== field.dependsOn.equals) return null;
+          }
+          return (
+            <ReadOnlyFieldRow
+              key={field.id}
+              field={field}
+              value={values[field.id]}
+            />
+          );
+        })}
+      </dl>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-[clamp(0.5rem,0.8vh,0.875rem)]">
       {fields.map((field) => {
@@ -68,6 +96,78 @@ export function EirConfigurator({
       })}
     </div>
   );
+}
+
+/**
+ * View-mode renderer. Mirrors the inputs from `EirFieldRow` but as
+ * static `<dt>` + `<dd>` pairs. Empty values get an amber em-dash so
+ * gaps are visually obvious without re-introducing a "X% complete"
+ * score.
+ */
+function ReadOnlyFieldRow({
+  field,
+  value,
+}: {
+  field: EirField;
+  value: EirFieldValue;
+}) {
+  const formatted = formatReadOnlyValue(field, value);
+  const isEmpty = formatted.isEmpty;
+  return (
+    <div className="flex items-baseline gap-[clamp(0.375rem,0.6vw,0.75rem)]">
+      <dt className="flex-1 min-w-0 text-[clamp(0.6rem,0.72vw,0.78rem)] font-medium uppercase tracking-wide text-muted-foreground truncate">
+        {field.label}
+      </dt>
+      <dd
+        className={cn(
+          'text-[clamp(0.65rem,0.78vw,0.82rem)] font-medium text-right tabular-nums max-w-[60%] truncate',
+          isEmpty
+            ? 'text-amber-600 dark:text-amber-500'
+            : 'text-foreground'
+        )}
+        title={isEmpty ? undefined : formatted.text}
+      >
+        {formatted.text}
+      </dd>
+    </div>
+  );
+}
+
+function formatReadOnlyValue(
+  field: EirField,
+  value: EirFieldValue
+): { text: string; isEmpty: boolean } {
+  if (value === undefined || value === null || value === '') {
+    return { text: '—', isEmpty: true };
+  }
+  if (typeof value === 'boolean') {
+    return { text: value ? '✓' : '—', isEmpty: !value };
+  }
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return { text: '—', isEmpty: true };
+    return {
+      text: field.unit ? `${value} ${field.unit}` : String(value),
+      isEmpty: false,
+    };
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return { text: '—', isEmpty: true };
+    const opts = field.options ?? [];
+    const labels = value.map((v) => opts.find((o) => o.value === v)?.label ?? String(v));
+    if (labels.length <= 2) return { text: labels.join(', '), isEmpty: false };
+    return { text: `${labels.length} valgt`, isEmpty: false };
+  }
+  if (typeof value === 'object' && value !== null && 'adressetekst' in value) {
+    return { text: (value as AddressValue).adressetekst, isEmpty: false };
+  }
+  if (typeof value === 'string') {
+    if (field.options) {
+      const opt = field.options.find((o) => o.value === value);
+      return { text: opt?.label ?? value, isEmpty: false };
+    }
+    return { text: value, isEmpty: false };
+  }
+  return { text: '—', isEmpty: true };
 }
 
 function EirFieldRow({

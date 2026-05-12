@@ -1614,5 +1614,39 @@
       "addressNoMatch": "No matches.",
       "addressClear": "Clear"
     }
+  },
+  "eirBuilder": {
+    "mode": {
+      "label": "Builder mode",
+      "view": "View",
+      "edit": "Edit",
+      "editLocked": "You do not have edit access to this project."
+    },
+    "palette": {
+      "title": "Rule palette",
+      "hint": "Double-click or drag a row into the workspace.",
+      "tierLabel": "ISO 19650 tier",
+      "tier_oir_long": "Organizational Information Requirements",
+      "tier_air_long": "Asset Information Requirements",
+      "tier_pir_long": "Project Information Requirements",
+      "tier_eir_long": "Exchange Information Requirements",
+      "tierEmpty": "No requirements in this tier yet",
+      "responsibleRoleLabel": "Owner"
+    },
+    "card": {
+      "tierBadge": "ISO 19650 tier"
+    },
+    "cube": {
+      "canvasAria": "Sample IFC building cube",
+      "labelSchema": "IFC schema",
+      "labelMvdNone": "No MVD",
+      "labelCrs": "CRS",
+      "labelDatumNone": "No vertical datum",
+      "labelPsets": "Psets on instances",
+      "emptyHint": "Add rules — labels fill in live as you configure"
+    },
+    "workspace": {
+      "emptyView": "This project has no EIR rules yet. Switch to Edit to compose the contract."
+    }
   }
 }
