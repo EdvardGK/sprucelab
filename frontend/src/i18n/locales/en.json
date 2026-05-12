@@ -1557,6 +1557,17 @@
       "minutes": "{{count}}m ago",
       "hours": "{{count}}h ago",
       "days": "{{count}}d ago"
+    },
+    "detail": {
+      "instanceCount": "{{count}} instances",
+      "classification": "Classification",
+      "keyProperties": "Key properties",
+      "layerBuildup": "Layer buildup",
+      "allProperties": "All properties (Psets)",
+      "ns3451": "NS3451 code",
+      "ns3451Name": "NS3451 name",
+      "discipline": "Discipline",
+      "unit": "Representative unit"
     }
   }
 }

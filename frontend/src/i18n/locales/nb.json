@@ -1557,6 +1557,17 @@
       "minutes": "for {{count}}m siden",
       "hours": "for {{count}}t siden",
       "days": "for {{count}}d siden"
+    },
+    "detail": {
+      "instanceCount": "{{count}} forekomster",
+      "classification": "Klassifisering",
+      "keyProperties": "Nøkkelegenskaper",
+      "layerBuildup": "Lagoppbygning",
+      "allProperties": "Alle egenskaper (Psets)",
+      "ns3451": "NS3451-kode",
+      "ns3451Name": "NS3451-navn",
+      "discipline": "Fag",
+      "unit": "Representativ enhet"
     }
   }
 }

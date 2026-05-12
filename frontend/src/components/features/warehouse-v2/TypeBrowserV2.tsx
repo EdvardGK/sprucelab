@@ -12,6 +12,7 @@ import { TypeKpiGrid } from './TypeKpiGrid';
 import { TypeTreemap } from './TypeTreemap';
 import { TypeTopBarList } from './TypeTopBarList';
 import { TypeViewerPaneV2 } from './TypeViewerPaneV2';
+import { TypeDetailPanelV2 } from './TypeDetailPanelV2';
 import { TypeTableV2 } from './TypeTableV2';
 
 interface TypeBrowserV2Props {
@@ -188,6 +189,17 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
               </div>
             </DashboardGrid>
           </div>
+
+          {/* Optional detail panel — only when a type is selected */}
+          {selectedType && (
+            <div className="min-h-[clamp(320px,40vh,540px)]">
+              <TypeDetailPanelV2
+                type={selectedType}
+                onClose={() => setSelectedTypeId(null)}
+                className="h-full"
+              />
+            </div>
+          )}
 
           {/* Below the fold — Top-10 + Table. Scroll for it. */}
           <div className="h-[clamp(420px,55vh,720px)]">
