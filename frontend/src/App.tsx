@@ -1,6 +1,12 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+  useLocation,
+  useParams,
+} from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { queryClient } from './lib/query-client';
 import { Toaster } from './components/ui/toaster';
@@ -76,7 +82,11 @@ const router = createBrowserRouter([
       { path: "type-library", element: withSuspense(<ProjectTypeLibrary />) },
       { path: "material-library", element: withSuspense(<ProjectMaterialLibrary />) },
       { path: "field", element: withSuspense(<ProjectField />) },
-      { path: "settings", element: withSuspense(<ProjectSettingsPage />) },
+      // Project Config / EIR builder. The canonical path is `/eir`
+      // per `eir-bep-four-surfaces.md`; the old `/settings` URL is
+      // kept as a back-compat redirect (search params preserved).
+      { path: "eir", element: withSuspense(<ProjectSettingsPage />) },
+      { path: "settings", element: <SettingsToEirRedirect /> },
       { path: "workbench", element: withSuspense(<BIMWorkbench />) },
     ],
   },
@@ -91,6 +101,20 @@ const router = createBrowserRouter([
   // The token rides on the URL (`?token=…`) and is the sole credential.
   { path: "/embed/:dashboard", element: withSuspense(<EmbedDashboard />) },
 ]);
+
+/**
+ * Back-compat redirect for the legacy `/projects/:id/settings` URL.
+ * Forwards to `/projects/:id/eir`, preserving any search params (e.g.
+ * `?mode=edit&tier=pir`). React Router's <Navigate replace> is the
+ * SPA equivalent of a 302 — the URL in the bar updates and the user
+ * lands on the new route without an extra render cycle.
+ */
+function SettingsToEirRedirect() {
+  const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const search = location.search ?? '';
+  return <Navigate to={`/projects/${id}/eir${search}`} replace />;
+}
 
 function App() {
   return (

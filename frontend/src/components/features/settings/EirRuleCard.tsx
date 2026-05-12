@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, ChevronRight, GripVertical, X } from 'lucide-react';
+import { GripVertical, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import {
@@ -13,7 +12,6 @@ import {
   EIR_TIER_LABELS,
   type ActiveEirRule,
 } from './eirRules';
-import { summarizeRule } from './summarizeRule';
 
 export type EirCardMode = 'view' | 'edit';
 
@@ -26,13 +24,13 @@ interface EirRuleCardProps {
 }
 
 /**
- * One EIR rule = one card on the workspace grid. Cards collapse to a
- * scannable chip-line summary so a workspace of 10+ rules stays
- * readable. Drag handle lives on the left edge of the header; X
- * (hover-only) on the right. Header click toggles collapse.
+ * One EIR rule = one card on the document. Cards have a uniform
+ * outer height (`min-h-clamp(140px,16vh,200px)`) so the document
+ * scans cleanly without per-card jitter; inner content scrolls.
  *
  * In `mode="view"`, drag handles and the remove button are hidden, and
- * the body renders as a read-only `<dl>` of field values.
+ * the body renders as a read-only `<dl>` of label/value pairs (empty
+ * values become an amber em-dash).
  */
 export function EirRuleCard({
   rule,
@@ -42,7 +40,6 @@ export function EirRuleCard({
 }: EirRuleCardProps) {
   const { t } = useTranslation();
   const def = EIR_RULE_BY_KIND[rule.kind];
-  const [collapsed, setCollapsed] = useState(false);
   const isEdit = mode === 'edit';
   const {
     attributes,
@@ -61,22 +58,21 @@ export function EirRuleCard({
   };
 
   const Icon = def.icon;
-  const summary = summarizeRule(rule, def);
-  const showBody = !collapsed && !isDragging;
 
   return (
     <section
       ref={setNodeRef}
       style={style}
+      data-rule-id={rule.id}
       className={cn(
         'group flex flex-col rounded-lg border bg-card border-border/60 shadow-sm hover:shadow-md transition-shadow',
+        'min-h-[clamp(140px,16vh,200px)] max-h-[clamp(280px,38vh,440px)]',
         isDragging && 'shadow-lg ring-1 ring-primary/30'
       )}
     >
       <header
         className={cn(
-          'flex items-center gap-1.5 px-[clamp(0.5rem,0.8vw,0.875rem)] py-[clamp(0.375rem,0.6vh,0.625rem)]',
-          showBody && 'border-b border-border/40'
+          'flex items-center gap-1.5 px-[clamp(0.5rem,0.8vw,0.875rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] border-b border-border/40 shrink-0'
         )}
       >
         {isEdit && (
@@ -91,34 +87,24 @@ export function EirRuleCard({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => !c)}
-          className="flex-1 min-w-0 flex items-center gap-1.5 text-left rounded -ml-0.5 px-0.5 hover:bg-muted/30 py-0.5"
-          title={
-            collapsed
-              ? t('settings.eir.expand', { defaultValue: 'Expand' })
-              : t('settings.eir.collapse', { defaultValue: 'Collapse' })
-          }
+        <Icon className="h-[clamp(0.75rem,0.95vw,0.95rem)] w-[clamp(0.75rem,0.95vw,0.95rem)] text-muted-foreground shrink-0" />
+        <h3 className="text-[clamp(0.7rem,0.85vw,0.9rem)] font-semibold tracking-tight truncate flex-1 min-w-0">
+          {def.title}
+        </h3>
+        <span
+          className="text-[clamp(0.45rem,0.6vw,0.65rem)] font-semibold tracking-wide text-muted-foreground/80 rounded px-1 py-0.5 bg-muted/60 shrink-0"
+          title={t('eirBuilder.card.tierBadge', {
+            defaultValue: 'ISO 19650 tier',
+          })}
         >
-          {collapsed ? (
-            <ChevronRight className="h-[clamp(0.625rem,0.85vw,0.85rem)] w-[clamp(0.625rem,0.85vw,0.85rem)] text-muted-foreground/60 shrink-0" />
-          ) : (
-            <ChevronDown className="h-[clamp(0.625rem,0.85vw,0.85rem)] w-[clamp(0.625rem,0.85vw,0.85rem)] text-muted-foreground/60 shrink-0" />
-          )}
-          <Icon className="h-[clamp(0.75rem,0.95vw,0.95rem)] w-[clamp(0.75rem,0.95vw,0.95rem)] text-muted-foreground shrink-0" />
-          <h3 className="text-[clamp(0.7rem,0.85vw,0.9rem)] font-semibold tracking-tight truncate flex-1 min-w-0">
-            {def.title}
-          </h3>
-          <span
-            className="text-[clamp(0.45rem,0.6vw,0.65rem)] font-semibold tracking-wide text-muted-foreground/80 rounded px-1 py-0.5 bg-muted/60 shrink-0"
-            title={t('eirBuilder.card.tierBadge', {
-              defaultValue: 'ISO 19650 tier',
-            })}
-          >
-            {EIR_TIER_LABELS[def.tier]}
-          </span>
-        </button>
+          {EIR_TIER_LABELS[def.tier]}
+        </span>
+        <span
+          className="hidden sm:inline text-[clamp(0.45rem,0.6vw,0.65rem)] italic text-muted-foreground/70 truncate max-w-[40%] shrink-0"
+          title={def.responsibleRole}
+        >
+          {def.responsibleRole}
+        </span>
 
         {isEdit && (
           <button
@@ -135,22 +121,14 @@ export function EirRuleCard({
         )}
       </header>
 
-      {collapsed && summary && (
-        <div className="px-[clamp(0.625rem,1vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] text-[clamp(0.6rem,0.72vw,0.78rem)] text-muted-foreground leading-[1.45] line-clamp-2">
-          {summary}
-        </div>
-      )}
-
-      {showBody && (
-        <div className="px-[clamp(0.625rem,1vw,1rem)] py-[clamp(0.5rem,0.8vh,0.875rem)]">
-          <EirConfigurator
-            fields={def.fields}
-            values={rule.config as Record<string, EirFieldValue>}
-            onChange={(fieldId, value) => onConfigChange(rule.id, fieldId, value)}
-            readOnly={!isEdit}
-          />
-        </div>
-      )}
+      <div className="px-[clamp(0.625rem,1vw,1rem)] py-[clamp(0.5rem,0.8vh,0.875rem)] overflow-y-auto flex-1 min-h-0">
+        <EirConfigurator
+          fields={def.fields}
+          values={rule.config as Record<string, EirFieldValue>}
+          onChange={(fieldId, value) => onConfigChange(rule.id, fieldId, value)}
+          readOnly={!isEdit}
+        />
+      </div>
     </section>
   );
 }
