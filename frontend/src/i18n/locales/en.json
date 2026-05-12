@@ -1591,37 +1591,26 @@
   },
   "settings": {
     "title": "Project Config",
-    "subtitle": "EIR · BEP · Status",
-    "state": {
-      "live": "Live",
-      "partial": "Partial",
-      "planned": "Planned"
-    },
-    "column": {
-      "eir": "Requirement (EIR)",
-      "bep": "Commitment (BEP)",
-      "status": "Status"
-    },
+    "subtitleEirBuilder": "Compose the EIR — rules the project commits to",
     "eir": {
-      "placeholder": "Placeholder — no EIR document loaded yet",
-      "configurator": "Configurator — local edits, persistence in Phase 7"
+      "paletteTitle": "Rule palette",
+      "paletteHint": "Click to add. Drag cards in the workspace to reorder.",
+      "activeCount": "{{active}} of {{total}} rules active",
+      "removeRule": "Remove rule",
+      "dragHandle": "Drag to reorder",
+      "emptyTitle": "No EIR rules yet",
+      "emptyBody": "Pick rule kinds from the palette on the left. Each rule defines what the project commits to — CRS, basepoint, classification, naming, tagging, and so on."
     },
     "eirConfig": {
       "multiselectNone": "None selected",
-      "multiselectCount": "{{count}} selected"
-    },
-    "bep": {
-      "configure": "Configure",
-      "placeholderHint": "Form will land when this section is wired"
-    },
-    "status": {
-      "placeholderTitle": "Not configured yet",
-      "placeholderBody": "Live fulfillment will populate here once the BEP commitment is set and model data is in.",
-      "floorsLiveHint": "Wired — floor data and deviations render in the BEP column above.",
-      "floorsExplain": "Per-model deviations and the block-on-deviation gate are managed in the BEP column. A dedicated fulfillment summary lands when more sections are live."
-    },
-    "classification": {
-      "openTypesV2": "Open Types →"
+      "multiselectCount": "{{count}} selected",
+      "searchOptions": "Search…",
+      "noOptions": "No matches.",
+      "addressEmpty": "Search address…",
+      "addressSearch": "Adressesøk (min. 3 chars)",
+      "addressHint": "Type at least 3 characters. Searches Kartverket (Geonorge).",
+      "addressNoMatch": "No matches.",
+      "addressClear": "Clear"
     }
   }
 }
