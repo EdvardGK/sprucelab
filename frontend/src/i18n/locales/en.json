@@ -46,6 +46,7 @@
     "myRFIs": "My RFIs",
     "projects": "Projects",
     "models": "Models",
+    "floors": "Floors",
     "documents": "Documents & Claims",
     "drawings": "Drawings",
     "viewer3d": "3D Viewer",
@@ -1935,6 +1936,54 @@
         "reprocess": "Re-process",
         "delete": "Delete"
       }
+    },
+    "relative": {
+      "justNow": "just now",
+      "minutesAgo_one": "{{count}} min ago",
+      "minutesAgo_other": "{{count}} min ago",
+      "hoursAgo_one": "{{count}} hr ago",
+      "hoursAgo_other": "{{count}} hrs ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "monthsAgo_one": "{{count}} mo ago",
+      "monthsAgo_other": "{{count}} mo ago"
+    }
+  },
+  "projectsGallery": {
+    "title": "Projects",
+    "subtitle": "Pick a project to open",
+    "newProject": "New project",
+    "errorTitle": "Couldn't load projects",
+    "kpi": {
+      "projects": "Projects",
+      "models": "Models",
+      "types": "Types",
+      "instances": "Instances",
+      "storage": "Storage"
+    },
+    "sort": {
+      "label": "Sort",
+      "lastActivity": "Last activity",
+      "name": "Name",
+      "mostModels": "Most models",
+      "mostTypes": "Most types"
+    },
+    "filter": {
+      "label": "Show",
+      "active": "Active",
+      "all": "All",
+      "archived": "Archived"
+    },
+    "card": {
+      "models": "Models",
+      "instances": "Instances",
+      "updatedPrefix": "Updated"
+    },
+    "empty": {
+      "title": "No projects yet",
+      "subtitle": "Create your first project to start managing BIM models.",
+      "archivedTitle": "No archived projects",
+      "archivedSubtitle": "Archive an active project to see it here."
     },
     "relative": {
       "justNow": "just now",

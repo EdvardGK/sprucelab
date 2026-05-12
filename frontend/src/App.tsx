@@ -22,6 +22,7 @@ const ProjectsGallery = lazy(() => import('./pages/ProjectsGallery'));
 const ProjectShell = lazy(() => import('./pages/ProjectShell'));
 const ProjectDashboard = lazy(() => import('./pages/ProjectDashboard'));
 const ProjectModels = lazy(() => import('./pages/ProjectModels'));
+const ProjectFloorsPage = lazy(() => import('./pages/ProjectFloorsPage'));
 const ProjectMyPage = lazy(() => import('./pages/ProjectMyPage'));
 const ProjectDocuments = lazy(() => import('./pages/ProjectDocuments'));
 const ProjectClaimsPage = lazy(() => import('./pages/ProjectClaimsPage'));
@@ -72,6 +73,7 @@ const router = createBrowserRouter([
       { path: "dashboard", element: withSuspense(<ProjectDashboard />) },
       { path: "models", element: withSuspense(<ProjectModels />) },
       { path: "models/:modelId", element: withSuspense(<ModelWorkspace />) },
+      { path: "floors", element: withSuspense(<ProjectFloorsPage />) },
       { path: "my-page", element: withSuspense(<ProjectMyPage />) },
       { path: "viewer-groups", element: withSuspense(<ViewerGroups />) },
       { path: "viewer/:groupId", element: withSuspense(<FederatedViewer />) },

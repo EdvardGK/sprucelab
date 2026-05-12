@@ -46,6 +46,7 @@
     "myRFIs": "Mine RFI-er",
     "projects": "Prosjekter",
     "models": "Modeller",
+    "floors": "Etasjer",
     "documents": "Dokumenter og krav",
     "drawings": "Tegninger",
     "viewer3d": "3D-visning",
@@ -1935,6 +1936,54 @@
         "reprocess": "Reprosessér",
         "delete": "Slett"
       }
+    },
+    "relative": {
+      "justNow": "akkurat nå",
+      "minutesAgo_one": "{{count}} min siden",
+      "minutesAgo_other": "{{count}} min siden",
+      "hoursAgo_one": "{{count}} time siden",
+      "hoursAgo_other": "{{count}} timer siden",
+      "daysAgo_one": "{{count}} dag siden",
+      "daysAgo_other": "{{count}} dager siden",
+      "monthsAgo_one": "{{count}} md siden",
+      "monthsAgo_other": "{{count}} md siden"
+    }
+  },
+  "projectsGallery": {
+    "title": "Prosjekter",
+    "subtitle": "Velg et prosjekt å åpne",
+    "newProject": "Nytt prosjekt",
+    "errorTitle": "Kunne ikke laste prosjekter",
+    "kpi": {
+      "projects": "Prosjekter",
+      "models": "Modeller",
+      "types": "Typer",
+      "instances": "Instanser",
+      "storage": "Lagring"
+    },
+    "sort": {
+      "label": "Sortering",
+      "lastActivity": "Sist aktivitet",
+      "name": "Navn",
+      "mostModels": "Flest modeller",
+      "mostTypes": "Flest typer"
+    },
+    "filter": {
+      "label": "Vis",
+      "active": "Aktive",
+      "all": "Alle",
+      "archived": "Arkiverte"
+    },
+    "card": {
+      "models": "Modeller",
+      "instances": "Instanser",
+      "updatedPrefix": "Oppdatert"
+    },
+    "empty": {
+      "title": "Ingen prosjekter ennå",
+      "subtitle": "Opprett ditt første prosjekt for å begynne å administrere BIM-modeller.",
+      "archivedTitle": "Ingen arkiverte prosjekter",
+      "archivedSubtitle": "Arkivér et aktivt prosjekt for å se det her."
     },
     "relative": {
       "justNow": "akkurat nå",
