@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 
+import { DashboardGrid, type DashboardLayoutDefinition } from '@/components/Layout';
 import { useModels } from '@/hooks/use-models';
 import { useModelTypes, type IFCType } from '@/hooks/use-warehouse';
 
@@ -16,6 +17,25 @@ import { TypeTableV2 } from './TypeTableV2';
 interface TypeBrowserV2Props {
   projectId: string;
 }
+
+// Hero grid: KPI strip (1 row) + Treemap | Viewer (2 rows each, side by side).
+// Per design guide: 4 cols, equal-height rows via DashboardGrid.
+const HERO_LAYOUT: DashboardLayoutDefinition = {
+  rows: 3,
+  cols: 4,
+  layout: [
+    ['kpis', 'kpis', 'kpis', 'kpis'],
+    ['treemap', 'treemap', 'viewer', 'viewer'],
+    ['treemap', 'treemap', 'viewer', 'viewer'],
+  ],
+};
+
+// Below-the-fold grid: Top-10 (25%) + Table (75%).
+const BELOW_LAYOUT: DashboardLayoutDefinition = {
+  rows: 1,
+  cols: 4,
+  layout: [['top10', 'table', 'table', 'table']],
+};
 
 export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const { t } = useTranslation();
@@ -91,7 +111,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const isLoading = modelsLoading || (!!modelId && typesLoading);
 
   return (
-    <div className="flex flex-col gap-4 px-6 py-6">
+    <div className="flex flex-col gap-[clamp(0.5rem,1vh,1rem)] px-[clamp(1rem,2vw,1.5rem)] py-[clamp(0.75rem,1.5vh,1.25rem)]">
       <TypeBrowserHeaderV2 loading={isLoading} />
 
       <TypeBrowserFilterBarV2
@@ -118,38 +138,37 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         </div>
       ) : (
         <>
-          {/* Row 1: KPI cards full width (with callout traffic lights) */}
-          <div className="h-[220px]">
-            <TypeKpiGrid stats={stats} loading={isLoading} />
+          {/* Hero — KPIs (1/3 height) + Treemap | Viewer (2/3 height, 50/50).
+              Bounded so the main components fit the viewport on first paint. */}
+          <div className="h-[clamp(560px,calc(100vh-14rem),1100px)]">
+            <DashboardGrid layout={HERO_LAYOUT}>
+              <div id="kpis"><TypeKpiGrid stats={stats} loading={isLoading} /></div>
+              <div id="treemap"><TypeTreemap types={filteredTypes} /></div>
+              <div id="viewer">
+                <TypeViewerPaneV2
+                  modelId={modelId}
+                  selectedType={selectedType}
+                  onClearSelection={() => setSelectedTypeId(null)}
+                />
+              </div>
+            </DashboardGrid>
           </div>
 
-          {/* Row 2: Treemap (square) + Viewer (4:3), each at 50% width */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <div className="aspect-square">
-              <TypeTreemap types={filteredTypes} />
-            </div>
-            <div className="aspect-[4/3]">
-              <TypeViewerPaneV2
-                modelId={modelId}
-                selectedType={selectedType}
-                onClearSelection={() => setSelectedTypeId(null)}
-              />
-            </div>
-          </div>
-
-          {/* Row 3: Top-10 bar chart (25%) + Table (75%) */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[640px]">
-            <div className="md:col-span-1 min-h-0">
-              <TypeTopBarList types={filteredTypes} topN={10} fillHeight />
-            </div>
-            <div className="md:col-span-3 min-h-0">
-              <TypeTableV2
-                types={filteredTypes}
-                selectedTypeId={selectedTypeId}
-                onSelectType={setSelectedTypeId}
-                className="h-full"
-              />
-            </div>
+          {/* Below the fold — Top-10 + Table. Scroll for it. */}
+          <div className="h-[clamp(420px,55vh,720px)]">
+            <DashboardGrid layout={BELOW_LAYOUT}>
+              <div id="top10">
+                <TypeTopBarList types={filteredTypes} topN={10} fillHeight />
+              </div>
+              <div id="table">
+                <TypeTableV2
+                  types={filteredTypes}
+                  selectedTypeId={selectedTypeId}
+                  onSelectType={setSelectedTypeId}
+                  className="h-full"
+                />
+              </div>
+            </DashboardGrid>
           </div>
         </>
       )}
