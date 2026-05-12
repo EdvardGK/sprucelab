@@ -3,6 +3,7 @@ import { Layers, Hash, BarChart3, HelpCircle, Unlink, AlertTriangle } from 'luci
 
 import { DashboardTile } from '@/components/Layout';
 import { cn } from '@/lib/utils';
+import { useCountUp } from './useCountUp';
 
 export interface TypeKpiStats {
   totalTypes: number;
@@ -146,8 +147,15 @@ function KpiCard({
   fraction,
 }: KpiCardProps) {
   const toneStyles = TONE_STYLES[tone];
+  const animated = useCountUp(value, { fraction });
   return (
-    <DashboardTile id={id} className={cn('p-3 flex flex-col justify-between h-full', toneStyles.card)}>
+    <DashboardTile
+      id={id}
+      className={cn(
+        'p-3 flex flex-col justify-between h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+        toneStyles.card
+      )}
+    >
       <div className="flex items-center justify-between text-muted-foreground">
         <span className="text-[0.65rem] uppercase tracking-wide font-medium truncate">{label}</span>
         <span className={toneStyles.icon}>{icon}</span>
@@ -155,11 +163,11 @@ function KpiCard({
       <div>
         <div className={cn('text-2xl font-semibold tabular-nums tracking-tight leading-none', toneStyles.value)}>
           {loading ? (
-            <span className="inline-block h-7 w-16 bg-muted/50 rounded animate-pulse" />
+            <ShimmerBlock className="h-7 w-16" />
           ) : fraction ? (
-            value.toFixed(1)
+            animated.toFixed(1)
           ) : (
-            value.toLocaleString()
+            animated.toLocaleString()
           )}
         </div>
         {subValue && !loading && (
@@ -167,5 +175,16 @@ function KpiCard({
         )}
       </div>
     </DashboardTile>
+  );
+}
+
+function ShimmerBlock({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-block rounded bg-gradient-to-r from-muted/40 via-muted/70 to-muted/40 bg-[length:200%_100%] animate-[shimmer_1.5s_ease-in-out_infinite]',
+        className
+      )}
+    />
   );
 }

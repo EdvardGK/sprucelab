@@ -112,6 +112,11 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
 
   return (
     <div className="flex flex-col gap-[clamp(0.5rem,1vh,1rem)] px-[clamp(1rem,2vw,1.5rem)] py-[clamp(0.75rem,1.5vh,1.25rem)]">
+      {/* Signature gradient accent — skiplum-reports pattern */}
+      <div
+        className="h-[3px] w-full rounded-full bg-gradient-to-r from-[#D0D34D] via-[#157954] to-[#21263A]"
+        aria-hidden="true"
+      />
       <TypeBrowserHeaderV2 loading={isLoading} />
 
       <TypeBrowserFilterBarV2
