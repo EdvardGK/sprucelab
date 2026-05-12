@@ -255,10 +255,19 @@ export const EIR_RULES: EirRuleDefinition[] = [
   {
     kind: 'canonical_floors',
     title: 'Canonical floors',
-    blurb: 'Shared storey list with elevation tolerance.',
+    blurb: 'Storey list per scope. Add one rule per scope, or one project-wide.',
     group: 'geometry',
     icon: Layers,
+    maxInstances: Infinity,
     fields: [
+      {
+        id: 'scope',
+        label: 'Scope',
+        kind: 'text',
+        hint: 'Empty = project-wide (one canonical floor list for all). Otherwise name the scope this list applies to (e.g., "Building A"). Scopes themselves are declared in the Federation scopes rule and filled per-scope on the BEP.',
+        bepRole: 'BEP fills the actual floor list (code · name · elevation) per this scope.',
+        defaultValue: '',
+      },
       {
         id: 'elevation_tolerance_m',
         label: 'Elevation tolerance',
@@ -283,7 +292,7 @@ export const EIR_RULES: EirRuleDefinition[] = [
   {
     kind: 'scopes',
     title: 'Federation scopes',
-    blurb: 'Named federations driving viewer groups.',
+    blurb: 'Named federations + per-scope coordinate mode.',
     group: 'scope',
     icon: Boxes,
     fields: [
@@ -299,6 +308,18 @@ export const EIR_RULES: EirRuleDefinition[] = [
           { value: 'mep_split', label: 'MEP split' },
         ],
         defaultValue: ['building'],
+      },
+      {
+        id: 'allowed_coordinate_modes',
+        label: 'Allowed coordinate modes',
+        kind: 'multiselect',
+        bepRole: 'BEP picks per scope; modelers deliver accordingly.',
+        hint: 'Global = IFC vertices in the project CRS at world coordinates. Local = vertices offset so the basepoint is (0, 0, z); a federation transform lifts them back to world at viewer time. Local avoids float precision loss far from origin.',
+        options: [
+          { value: 'global', label: 'Global (world coords)' },
+          { value: 'local', label: 'Local (basepoint = origin)' },
+        ],
+        defaultValue: ['global', 'local'],
       },
     ],
   },
