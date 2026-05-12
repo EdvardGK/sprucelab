@@ -25,42 +25,42 @@ export function TypeTableV2({
 
   return (
     <DashboardTile id="types-table" className={cn('p-0 flex flex-col', className)}>
-      <div className="px-4 py-2 border-b border-border/60 flex items-center justify-between flex-shrink-0">
-        <h2 className="text-sm font-medium">{t('typesV2.table.title')}</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">
+      <div className="px-[clamp(0.625rem,1.2vw,1.25rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] border-b border-border/60 flex items-center justify-between flex-shrink-0">
+        <h2 className="text-[clamp(0.75rem,1vw,1rem)] font-medium">{t('typesV2.table.title')}</h2>
+        <span className="text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground tabular-nums">
           {t('typesV2.filter.totalCount', { count: types.length })}
         </span>
       </div>
 
       {types.length === 0 ? (
-        <div className="py-12 text-center text-xs text-muted-foreground">
+        <div className="py-12 text-center text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground">
           {t('typesV2.table.empty')}
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-auto">
-          <table className="w-full text-xs min-w-[1100px]">
+          <table className="w-full text-[clamp(0.65rem,0.8vw,0.85rem)] min-w-[1100px]">
             <thead className="bg-muted/30 sticky top-0 z-10">
               <tr className="text-left text-muted-foreground">
-                <th className="px-3 py-2 font-medium">{t('typesV2.table.col.ifcClass')}</th>
-                <th className="px-3 py-2 font-medium">{t('typesV2.table.col.typeName')}</th>
-                <th className="px-3 py-2 font-medium text-right">{t('typesV2.table.col.instances')}</th>
-                <th className="px-3 py-2 font-medium">{t('typesV2.table.col.ns3451')}</th>
-                <th className="px-3 py-2 font-medium text-center" title={t('typesV2.props.loadBearingLong')}>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium">{t('typesV2.table.col.ifcClass')}</th>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium">{t('typesV2.table.col.typeName')}</th>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium text-right">{t('typesV2.table.col.instances')}</th>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium">{t('typesV2.table.col.ns3451')}</th>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium text-center" title={t('typesV2.props.loadBearingLong')}>
                   {t('typesV2.table.col.loadBearing')}
                 </th>
-                <th className="px-3 py-2 font-medium text-center" title={t('typesV2.props.isExternalLong')}>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium text-center" title={t('typesV2.props.isExternalLong')}>
                   {t('typesV2.table.col.isExternal')}
                 </th>
-                <th className="px-3 py-2 font-medium" title={t('typesV2.props.fireRatingLong')}>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium" title={t('typesV2.props.fireRatingLong')}>
                   {t('typesV2.table.col.fireRating')}
                 </th>
-                <th className="px-3 py-2 font-medium" title={t('typesV2.props.acousticLong')}>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium" title={t('typesV2.props.acousticLong')}>
                   {t('typesV2.table.col.acoustic')}
                 </th>
-                <th className="px-3 py-2 font-medium" title={t('typesV2.props.thermalLong')}>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium" title={t('typesV2.props.thermalLong')}>
                   {t('typesV2.table.col.thermal')}
                 </th>
-                <th className="px-3 py-2 font-medium" title={t('typesV2.props.mmiLong')}>
+                <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium" title={t('typesV2.props.mmiLong')}>
                   {t('typesV2.table.col.mmi')}
                 </th>
               </tr>
@@ -112,58 +112,58 @@ function TypeRow({
           : 'hover:bg-muted/30 focus:bg-muted/30'
       )}
     >
-      <td className="px-3 py-2 font-mono text-[0.7rem] text-muted-foreground whitespace-nowrap">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-mono text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground whitespace-nowrap">
         {type.ifc_type.replace(/^Ifc/, '')}
       </td>
-      <td className="px-3 py-2 font-medium">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium">
         {type.type_name || (
           <span className="text-muted-foreground italic">{t('typesV2.table.unnamed')}</span>
         )}
       </td>
-      <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] text-right tabular-nums whitespace-nowrap">
         {type.instance_count.toLocaleString()}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] whitespace-nowrap">
         {ns3451Code ? (
-          <Badge variant="outline" className="font-mono text-[0.65rem]">
+          <Badge variant="outline" className="font-mono text-[clamp(0.6rem,0.7vw,0.75rem)]">
             {ns3451Code}
           </Badge>
         ) : (
           <MissingCell />
         )}
       </td>
-      <td className="px-3 py-2 text-center">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] text-center">
         <BoolCell value={props.loadBearing} />
       </td>
-      <td className="px-3 py-2 text-center">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] text-center">
         <BoolCell value={props.isExternal} />
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] whitespace-nowrap">
         {props.fireRating ? (
-          <span className="font-mono text-[0.7rem]">{props.fireRating}</span>
+          <span className="font-mono text-[clamp(0.65rem,0.75vw,0.8rem)]">{props.fireRating}</span>
         ) : (
           <MissingCell />
         )}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] whitespace-nowrap">
         {props.acousticRating ? (
-          <span className="font-mono text-[0.7rem]">{props.acousticRating}</span>
+          <span className="font-mono text-[clamp(0.65rem,0.75vw,0.8rem)]">{props.acousticRating}</span>
         ) : (
           <MissingCell />
         )}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] whitespace-nowrap">
         {props.thermalTransmittance !== null ? (
-          <span className="font-mono text-[0.7rem] tabular-nums">
+          <span className="font-mono text-[clamp(0.65rem,0.75vw,0.8rem)] tabular-nums">
             {props.thermalTransmittance.toFixed(2)}
           </span>
         ) : (
           <MissingCell />
         )}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] whitespace-nowrap">
         {props.mmi !== null ? (
-          <Badge variant="outline" className="font-mono text-[0.65rem]">
+          <Badge variant="outline" className="font-mono text-[clamp(0.6rem,0.7vw,0.75rem)]">
             {props.mmi}
           </Badge>
         ) : (
@@ -179,13 +179,13 @@ function BoolCell({ value }: { value: boolean | null }) {
   if (value) {
     return (
       <span className="inline-flex items-center justify-center text-[hsl(158_70%_28%)]">
-        <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+        <Check className="h-[clamp(0.75rem,1vw,1.125rem)] w-[clamp(0.75rem,1vw,1.125rem)]" strokeWidth={2.5} />
       </span>
     );
   }
   return (
     <span className="inline-flex items-center justify-center text-muted-foreground">
-      <Minus className="h-3.5 w-3.5" />
+      <Minus className="h-[clamp(0.75rem,1vw,1.125rem)] w-[clamp(0.75rem,1vw,1.125rem)]" />
     </span>
   );
 }

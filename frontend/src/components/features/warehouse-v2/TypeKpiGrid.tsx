@@ -36,24 +36,24 @@ export function TypeKpiGrid({ stats, loading }: TypeKpiGridProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 grid-rows-2 gap-3 h-full">
+    <div className="grid grid-cols-2 md:grid-cols-3 grid-rows-2 gap-[clamp(0.5rem,1vw,1rem)] h-full">
       <KpiCard
         id="kpi-total-types"
-        icon={<Layers className="h-4 w-4" />}
+        icon={<Layers className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.totalTypes')}
         value={stats.totalTypes}
         loading={loading}
       />
       <KpiCard
         id="kpi-instances"
-        icon={<Hash className="h-4 w-4" />}
+        icon={<Hash className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.instances')}
         value={stats.instances}
         loading={loading}
       />
       <KpiCard
         id="kpi-avg-per-type"
-        icon={<BarChart3 className="h-4 w-4" />}
+        icon={<BarChart3 className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.avgPerType')}
         value={stats.avgInstancesPerType}
         loading={loading}
@@ -61,7 +61,7 @@ export function TypeKpiGrid({ stats, loading }: TypeKpiGridProps) {
       />
       <KpiCard
         id="kpi-untyped"
-        icon={<HelpCircle className="h-4 w-4" />}
+        icon={<HelpCircle className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.untyped')}
         value={stats.untypedInstances}
         subValue={
@@ -74,7 +74,7 @@ export function TypeKpiGrid({ stats, loading }: TypeKpiGridProps) {
       />
       <KpiCard
         id="kpi-orphan"
-        icon={<Unlink className="h-4 w-4" />}
+        icon={<Unlink className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.orphan')}
         value={stats.orphanTypes}
         subValue={
@@ -87,7 +87,7 @@ export function TypeKpiGrid({ stats, loading }: TypeKpiGridProps) {
       />
       <KpiCard
         id="kpi-missing"
-        icon={<AlertTriangle className="h-4 w-4" />}
+        icon={<AlertTriangle className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('typesV2.stats.missingClassification')}
         value={stats.missingClassification}
         subValue={
@@ -152,18 +152,25 @@ function KpiCard({
     <DashboardTile
       id={id}
       className={cn(
-        'p-3 flex flex-col justify-between h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+        'p-[clamp(0.5rem,1vw,1rem)] flex flex-col justify-between h-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
         toneStyles.card
       )}
     >
       <div className="flex items-center justify-between text-muted-foreground">
-        <span className="text-[0.65rem] uppercase tracking-wide font-medium truncate">{label}</span>
-        <span className={toneStyles.icon}>{icon}</span>
+        <span className="text-[clamp(0.55rem,0.7vw,0.75rem)] uppercase tracking-wide font-medium truncate">
+          {label}
+        </span>
+        <span className={cn(toneStyles.icon, 'shrink-0')}>{icon}</span>
       </div>
       <div>
-        <div className={cn('text-2xl font-semibold tabular-nums tracking-tight leading-none', toneStyles.value)}>
+        <div
+          className={cn(
+            'text-[clamp(1.25rem,2.4vw,2.25rem)] font-semibold tabular-nums tracking-tight leading-none',
+            toneStyles.value
+          )}
+        >
           {loading ? (
-            <ShimmerBlock className="h-7 w-16" />
+            <ShimmerBlock className="h-[clamp(1.5rem,3vw,2.5rem)] w-[clamp(2.5rem,5vw,4rem)]" />
           ) : fraction ? (
             animated.toFixed(1)
           ) : (
@@ -171,7 +178,9 @@ function KpiCard({
           )}
         </div>
         {subValue && !loading && (
-          <div className="mt-1 text-[0.65rem] text-muted-foreground tabular-nums">{subValue}</div>
+          <div className="mt-[clamp(0.125rem,0.4vh,0.375rem)] text-[clamp(0.55rem,0.7vw,0.75rem)] text-muted-foreground tabular-nums">
+            {subValue}
+          </div>
         )}
       </div>
     </DashboardTile>

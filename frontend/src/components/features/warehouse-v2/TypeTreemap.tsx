@@ -31,10 +31,12 @@ export function TypeTreemap({ types }: TypeTreemapProps) {
   }, [types]);
 
   return (
-    <DashboardTile id="treemap-by-class" className="p-4 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <h2 className="text-sm font-medium">{t('typesV2.viz.treemapTitle')}</h2>
-        <span className="text-xs text-muted-foreground">
+    <DashboardTile id="treemap-by-class" className="p-[clamp(0.625rem,1.2vw,1.25rem)] flex flex-col h-full">
+      <div className="flex items-center justify-between mb-[clamp(0.5rem,1vh,0.875rem)] gap-[clamp(0.5rem,1vw,1rem)] flex-shrink-0">
+        <h2 className="text-[clamp(0.75rem,1vw,1rem)] font-medium">
+          {t('typesV2.viz.treemapTitle')}
+        </h2>
+        <span className="text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground truncate">
           {t('typesV2.viz.treemapSubtitle')}
         </span>
       </div>

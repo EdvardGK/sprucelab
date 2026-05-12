@@ -21,10 +21,10 @@ export function TypeViewerPaneV2({
 
   return (
     <DashboardTile id="viewer-pane" className="p-0 flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/60 flex-shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <Box className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <h2 className="text-xs font-medium truncate">
+      <div className="flex items-center justify-between px-[clamp(0.5rem,1vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] border-b border-border/60 flex-shrink-0">
+        <div className="flex items-center gap-[clamp(0.375rem,0.5vw,0.625rem)] min-w-0">
+          <Box className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)] text-muted-foreground shrink-0" />
+          <h2 className="text-[clamp(0.7rem,0.9vw,0.95rem)] font-medium truncate">
             {selectedType
               ? selectedType.type_name || t('typesV2.table.unnamed')
               : t('typesV2.viewer.empty')}
@@ -35,10 +35,10 @@ export function TypeViewerPaneV2({
             variant="ghost"
             size="sm"
             onClick={onClearSelection}
-            className="h-5 w-5 p-0"
+            className="h-[clamp(1rem,1.5vw,1.5rem)] w-[clamp(1rem,1.5vw,1.5rem)] p-0"
             title={t('typesV2.viewer.clear')}
           >
-            <X className="h-3 w-3" />
+            <X className="h-[clamp(0.625rem,0.9vw,0.875rem)] w-[clamp(0.625rem,0.9vw,0.875rem)]" />
           </Button>
         )}
       </div>
@@ -54,9 +54,9 @@ export function TypeViewerPaneV2({
             className="h-full w-full"
           />
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 px-4 text-center">
-            <Box className="h-8 w-8 opacity-30" />
-            <p className="text-xs">{t('typesV2.viewer.hint')}</p>
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-[clamp(0.375rem,0.6vh,0.75rem)] px-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
+            <Box className="h-[clamp(1.5rem,3vw,3rem)] w-[clamp(1.5rem,3vw,3rem)] opacity-30" />
+            <p className="text-[clamp(0.65rem,0.85vw,0.9rem)]">{t('typesV2.viewer.hint')}</p>
           </div>
         )}
       </div>

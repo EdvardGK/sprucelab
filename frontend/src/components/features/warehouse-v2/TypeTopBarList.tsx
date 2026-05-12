@@ -23,9 +23,9 @@ export function TypeTopBarList({ types, topN = 10, fillHeight = false }: TypeTop
   const maxCount = rows[0]?.instance_count ?? 0;
 
   return (
-    <DashboardTile id="top-bar-list" className="p-3 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <DashboardTile id="top-bar-list" className="p-[clamp(0.625rem,1.2vw,1.25rem)] flex flex-col h-full">
+      <div className="flex items-center justify-between mb-[clamp(0.375rem,0.75vh,0.75rem)] flex-shrink-0">
+        <h2 className="text-[clamp(0.6rem,0.8vw,0.85rem)] font-semibold uppercase tracking-wide text-muted-foreground">
           {t('typesV2.viz.topBarTitle', { count: rows.length })}
         </h2>
       </div>
@@ -45,7 +45,14 @@ export function TypeTopBarList({ types, topN = 10, fillHeight = false }: TypeTop
           {rows.map((row) => {
             const widthPct = maxCount > 0 ? (row.instance_count / maxCount) * 100 : 0;
             return (
-              <li key={row.id} className={fillHeight ? 'text-xs flex flex-col justify-center' : 'text-[0.7rem]'}>
+              <li
+                key={row.id}
+                className={
+                  fillHeight
+                    ? 'text-[clamp(0.65rem,0.8vw,0.85rem)] flex flex-col justify-center'
+                    : 'text-[clamp(0.6rem,0.75vw,0.8rem)]'
+                }
+              >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate font-medium" title={row.type_name}>
                     {row.type_name || t('typesV2.table.unnamed')}
@@ -57,12 +64,12 @@ export function TypeTopBarList({ types, topN = 10, fillHeight = false }: TypeTop
                 <div
                   className={
                     fillHeight
-                      ? 'mt-1 h-2 w-full rounded-full bg-muted/60 overflow-hidden'
-                      : 'mt-0.5 h-1 w-full rounded-full bg-muted/60 overflow-hidden'
+                      ? 'mt-1 h-[clamp(0.375rem,0.6vh,0.625rem)] w-full rounded-full bg-muted/60 overflow-hidden'
+                      : 'mt-0.5 h-[clamp(0.25rem,0.4vh,0.375rem)] w-full rounded-full bg-muted/60 overflow-hidden'
                   }
                 >
                   <div
-                    className="h-full rounded-full bg-[hsl(158_70%_28%)]"
+                    className="h-full rounded-full bg-[hsl(158_70%_28%)] transition-[width] duration-700 ease-out"
                     style={{ width: `${widthPct}%` }}
                   />
                 </div>
