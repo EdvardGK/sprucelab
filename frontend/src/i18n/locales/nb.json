@@ -1519,7 +1519,11 @@
     "viewer": {
       "empty": "3D-visning",
       "hint": "Velg en type i tabellen for å isolere den i 3D",
-      "clear": "Fjern valg"
+      "clear": "Fjern valg",
+      "filteredHint": "{{types}} typer · {{instances}} forekomster",
+      "instances": "forekomster",
+      "acrossTypes": "fordelt på {{count}} typer",
+      "filteredEmptyHint": "Filtrert til {{ifcClass}}. Velg en enkelt type for å isolere i 3D-visningen."
     },
     "table": {
       "title": "Alle typer",

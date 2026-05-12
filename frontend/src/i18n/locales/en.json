@@ -1519,7 +1519,11 @@
     "viewer": {
       "empty": "3D viewer",
       "hint": "Select a type below to isolate it in 3D",
-      "clear": "Clear selection"
+      "clear": "Clear selection",
+      "filteredHint": "{{types}} types · {{instances}} instances",
+      "instances": "instances",
+      "acrossTypes": "across {{count}} types",
+      "filteredEmptyHint": "Filtered to {{ifcClass}}. Select a single type to isolate in the 3D viewer."
     },
     "table": {
       "title": "All types",

@@ -20,18 +20,6 @@ interface TypeBrowserV2Props {
   projectId: string;
 }
 
-// Hero grid: KPI strip (1 row) + Treemap | Viewer (2 rows each, side by side).
-// Per design guide: 4 cols, equal-height rows via DashboardGrid.
-const HERO_LAYOUT: DashboardLayoutDefinition = {
-  rows: 3,
-  cols: 4,
-  layout: [
-    ['kpis', 'kpis', 'kpis', 'kpis'],
-    ['treemap', 'treemap', 'viewer', 'viewer'],
-    ['treemap', 'treemap', 'viewer', 'viewer'],
-  ],
-};
-
 // Below-the-fold grid: Top-10 (25%) + Table (75%).
 const BELOW_LAYOUT: DashboardLayoutDefinition = {
   rows: 1,
@@ -203,19 +191,29 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         </div>
       ) : (
         <>
-          {/* Hero — KPIs (1/3 height) + Treemap | Viewer (2/3 height, 50/50).
-              Bounded so the main components fit the viewport on first paint. */}
-          <div className="h-[clamp(560px,calc(100vh-14rem),1100px)]">
-            <DashboardGrid layout={HERO_LAYOUT}>
-              <div id="kpis">
-                <TypeKpiGrid
-                  stats={stats}
-                  totalStats={isFiltered ? totalStats : undefined}
-                  loading={isLoading}
-                  classColors={classColors}
-                />
-              </div>
-              <div id="treemap">
+          {/* Hero — KPI row + viz row.
+              Viz row: 2 cols (treemap + viewer) by default, 3 cols
+              (treemap + viewer + detail) when a single type is
+              selected. Treemap and viewer shrink equally to make room
+              for detail. */}
+          <div className="flex flex-col gap-[clamp(0.5rem,1vw,1rem)] h-[clamp(560px,calc(100vh-14rem),1100px)]">
+            <div className="flex-[1_1_28%] min-h-0">
+              <TypeKpiGrid
+                stats={stats}
+                totalStats={isFiltered ? totalStats : undefined}
+                loading={isLoading}
+                classColors={classColors}
+                activeIfcClass={ifcClassFilter}
+              />
+            </div>
+            <div
+              className={
+                selectedType
+                  ? 'flex-[2_1_72%] min-h-0 grid grid-cols-1 md:grid-cols-3 gap-[clamp(0.5rem,1vw,1rem)]'
+                  : 'flex-[2_1_72%] min-h-0 grid grid-cols-1 md:grid-cols-2 gap-[clamp(0.5rem,1vw,1rem)]'
+              }
+            >
+              <div className="min-h-0">
                 <TypeTreemap
                   types={filteredTypes}
                   activeIfcClass={ifcClassFilter}
@@ -225,27 +223,32 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                   }
                 />
               </div>
-              <div id="viewer">
+              <div className="min-h-0">
                 <TypeViewerPaneV2
                   modelId={modelId}
                   selectedType={selectedType}
+                  activeIfcClass={ifcClassFilter}
+                  filteredTypeCount={filteredTypes.length}
+                  filteredInstanceCount={filteredStats.instances}
+                  classColor={
+                    ifcClassFilter !== 'all'
+                      ? classColors.get(ifcClassFilter)
+                      : undefined
+                  }
                   onClearSelection={() => setSelectedTypeId(null)}
                 />
               </div>
-            </DashboardGrid>
+              {selectedType && (
+                <div className="min-h-0">
+                  <TypeDetailPanelV2
+                    type={selectedType}
+                    onClose={() => setSelectedTypeId(null)}
+                    className="h-full"
+                  />
+                </div>
+              )}
+            </div>
           </div>
-
-          {/* Optional detail panel — only when a type is selected.
-              Sizes to content with a max-h escape valve so a sparse
-              detail panel doesn't push the lists below the fold
-              further down than necessary. */}
-          {selectedType && (
-            <TypeDetailPanelV2
-              type={selectedType}
-              onClose={() => setSelectedTypeId(null)}
-              className="max-h-[clamp(360px,70vh,720px)]"
-            />
-          )}
 
           {/* Below the fold — Top-10 + Table. Scroll for it. */}
           <div className="h-[clamp(420px,55vh,720px)]">

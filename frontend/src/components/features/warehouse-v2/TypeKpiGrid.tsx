@@ -57,6 +57,9 @@ interface TypeKpiGridProps {
   totalStats?: TypeKpiStats;
   loading?: boolean;
   classColors?: Map<string, string>;
+  /** When set (not 'all'), sparklines render as single-class progress bars
+      in that class's color instead of full-distribution stacked bars. */
+  activeIfcClass?: string;
 }
 
 type Tone = 'neutral' | 'good' | 'warning' | 'danger';
@@ -68,8 +71,16 @@ function trafficLight(percent: number, thresholds: { warn: number; danger: numbe
   return 'warning';
 }
 
-export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpiGridProps) {
+export function TypeKpiGrid({
+  stats,
+  totalStats,
+  loading,
+  classColors,
+  activeIfcClass = 'all',
+}: TypeKpiGridProps) {
   const { t } = useTranslation();
+  const isFiltered = activeIfcClass !== 'all';
+  const filteredColor = isFiltered ? classColors?.get(activeIfcClass) : undefined;
 
   // Memoize sparkline data so the count-up animation doesn't re-key on render.
   const typesSegments = useMemo(
@@ -89,6 +100,27 @@ export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpi
     [stats.missingByClass, classColors]
   );
 
+  // When a class filter is active, replace the distribution sparkline with a
+  // single-class progress strip in that class's treemap color showing the
+  // filtered slice's share of the unfiltered total.
+  const renderSpark = (
+    distributionSpark: React.ReactNode,
+    filteredValue: number,
+    totalValue: number | undefined
+  ): React.ReactNode => {
+    if (!isFiltered) return distributionSpark;
+    const total = totalValue ?? 0;
+    const pct = total > 0 ? (filteredValue / total) * 100 : 0;
+    return (
+      <Sparkline
+        segments={[]}
+        variant="progress"
+        progressValue={pct}
+        progressColor={filteredColor ?? 'hsl(158 70% 28%)'}
+      />
+    );
+  };
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 grid-rows-2 gap-[clamp(0.5rem,1vw,1rem)] h-full">
       <KpiCard
@@ -98,7 +130,11 @@ export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpi
         value={stats.totalTypes}
         totalValue={totalStats?.totalTypes}
         loading={loading}
-        spark={<Sparkline segments={typesSegments} variant="stacked" />}
+        spark={renderSpark(
+          <Sparkline segments={typesSegments} variant="stacked" />,
+          stats.totalTypes,
+          totalStats?.totalTypes
+        )}
       />
       <KpiCard
         id="kpi-instances"
@@ -107,7 +143,11 @@ export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpi
         value={stats.instances}
         totalValue={totalStats?.instances}
         loading={loading}
-        spark={<Sparkline segments={instancesSegments} variant="stacked" />}
+        spark={renderSpark(
+          <Sparkline segments={instancesSegments} variant="stacked" />,
+          stats.instances,
+          totalStats?.instances
+        )}
       />
       <KpiCard
         id="kpi-avg-per-type"
@@ -117,7 +157,11 @@ export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpi
         totalValue={totalStats?.avgInstancesPerType}
         loading={loading}
         fraction
-        spark={<Sparkline segments={instancesSegments} variant="stacked" />}
+        spark={renderSpark(
+          <Sparkline segments={instancesSegments} variant="stacked" />,
+          stats.instances,
+          totalStats?.instances
+        )}
       />
       <KpiCard
         id="kpi-untyped"
@@ -132,11 +176,13 @@ export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpi
         }
         loading={loading}
         tone={trafficLight(stats.untypedPercent, { warn: 5, danger: 15 })}
-        spark={
+        spark={renderSpark(
           untypedSegments.length > 0
             ? <Sparkline segments={untypedSegments} variant="stacked" />
-            : <Sparkline segments={[]} variant="progress" progressValue={0} />
-        }
+            : <Sparkline segments={[]} variant="progress" progressValue={0} />,
+          stats.untypedInstances,
+          totalStats?.untypedInstances
+        )}
       />
       <KpiCard
         id="kpi-orphan"
@@ -151,14 +197,16 @@ export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpi
         }
         loading={loading}
         tone={trafficLight(stats.orphanPercent, { warn: 10, danger: 25 })}
-        spark={
+        spark={renderSpark(
           <Sparkline
             segments={[]}
             variant="progress"
             progressValue={stats.orphanPercent}
             progressColor="hsl(25 96% 61%)"
-          />
-        }
+          />,
+          stats.orphanTypes,
+          totalStats?.orphanTypes
+        )}
       />
       <KpiCard
         id="kpi-missing"
@@ -173,7 +221,11 @@ export function TypeKpiGrid({ stats, totalStats, loading, classColors }: TypeKpi
         }
         loading={loading}
         tone={trafficLight(stats.missingPercent, { warn: 25, danger: 60 })}
-        spark={<Sparkline segments={missingSegments} variant="stacked" />}
+        spark={renderSpark(
+          <Sparkline segments={missingSegments} variant="stacked" />,
+          stats.missingClassification,
+          totalStats?.missingClassification
+        )}
       />
     </div>
   );
