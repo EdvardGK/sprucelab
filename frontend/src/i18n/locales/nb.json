@@ -1614,5 +1614,64 @@
       "addressNoMatch": "Ingen treff.",
       "addressClear": "Tøm"
     }
+  },
+  "modelDash": {
+    "tabs": {
+      "overview": "Oversikt",
+      "qto": "Mengder",
+      "statistics": "Statistikk",
+      "validation": "Validering",
+      "metadata": "Metadata",
+      "scripts": "Skript",
+      "history": "Historikk"
+    },
+    "kpis": {
+      "elements": "Elementer",
+      "storeys": "Etasjer",
+      "systems": "Systemer",
+      "types": "Typer",
+      "untyped": "Utypede",
+      "orphan": "Foreldreløse",
+      "percentOfInstancesShort": "{{n}} forekomster",
+      "percentOfTypesShort": "{{n}} typer"
+    },
+    "rail": {
+      "emptyHint": "Velg en type i tre-kartet for å se detaljene her.",
+      "close": "Lukk detaljer",
+      "instances": "Forekomster",
+      "classification": "Klassifisering",
+      "ns3451": "NS-3451",
+      "flags": "Flagg",
+      "empty": "Tom",
+      "proxy": "Proxy",
+      "untyped": "Utypet",
+      "representation": "Representasjon",
+      "qualityCounters": "Kvalitetshull",
+      "loadbearingUnset": "LoadBearing ikke satt",
+      "isExternalUnset": "IsExternal ikke satt",
+      "fireRatingUnset": "FireRating ikke satt",
+      "materials": "Materialer",
+      "storeyDistribution": "Etasjer",
+      "missing": "Ikke angitt i modellen"
+    },
+    "stats": {
+      "typesByClass": "Typer og forekomster per IFC-klasse",
+      "repDistribution": "Geometri-representasjoner",
+      "topTypes": "Topp typer etter antall forekomster",
+      "topN": "Topp {{n}}",
+      "totalsLine": "{{types}} typer · {{instances}} forekomster",
+      "noClasses": "Ingen IFC-klasser i denne modellen.",
+      "noRepData": "Ingen geometri-representasjonsdata.",
+      "noTypes": "Ingen typer funnet.",
+      "noAnalysis": "Ingen analyse ennå — kjør analyse fra Oversikt-fanen."
+    },
+    "comingSoon": {
+      "nextRound": "Kommer i neste runde"
+    },
+    "roadmap": {
+      "validation": "Regel-for-regel godkjent/feilet mot prosjektets EIR — grønn/gul/rød og klikk-gjennom til typene som svikter.",
+      "scripts": "Kjør lagrede Python-/JS-skript mot denne modellen og send resultatet tilbake til dashbordet.",
+      "history": "Diff per opplasting: hvilke typer er lagt til, fjernet eller endret mellom denne versjonen og forrige."
+    }
   }
 }
