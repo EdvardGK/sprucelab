@@ -51,12 +51,32 @@ export type EirRuleKind =
 
 export type EirRuleGroup = 'geometry' | 'scope' | 'standards';
 
+/**
+ * ISO 19650 information-requirement hierarchy:
+ *  - OIR (Organizational Information Requirements)
+ *  - AIR (Asset Information Requirements)
+ *  - PIR (Project Information Requirements)
+ *  - EIR (Exchange Information Requirements)
+ *
+ * The configurator surfaces rules across all four tiers in a single palette
+ * filtered by tier tab. Most concrete delivery rules sit in EIR; some
+ * higher-level system choices (e.g., classification standard) sit in PIR.
+ */
+export type EirRuleTier = 'oir' | 'air' | 'pir' | 'eir';
+
 export interface EirRuleDefinition {
   kind: EirRuleKind;
   title: string;
   /** One-line description shown in the palette. */
   blurb: string;
   group: EirRuleGroup;
+  /** ISO 19650 tier this rule sits in. Default is `eir` if omitted. */
+  tier: EirRuleTier;
+  /**
+   * The role on the project who is expected to author the BEP response to
+   * this rule. Norwegian role names by default; the locale picks the form.
+   */
+  responsibleRole: string;
   icon: LucideIcon;
   /** Form fields rendered inside the rule card. */
   fields: EirField[];
@@ -99,6 +119,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Coordinate reference system',
     blurb: 'Allowed horizontal CRS + vertical datum.',
     group: 'geometry',
+    tier: 'eir',
+    responsibleRole: 'BIM-koordinator',
     icon: Compass,
     fields: [
       {
@@ -125,6 +147,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Project placement',
     blurb: 'Basepoint (always) + optional control point.',
     group: 'geometry',
+    tier: 'eir',
+    responsibleRole: 'BIM-koordinator',
     icon: MapPin,
     fields: [
       {
@@ -208,6 +232,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Site model',
     blurb: 'Lokasjonsplan / fastmerker / site context.',
     group: 'geometry',
+    tier: 'eir',
+    responsibleRole: 'BIM-koordinator',
     icon: Map,
     fields: [
       {
@@ -235,6 +261,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Project grid',
     blurb: 'File-uploaded coordination grid.',
     group: 'geometry',
+    tier: 'eir',
+    responsibleRole: 'BIM-koordinator',
     icon: Grid3x3,
     fields: [
       {
@@ -257,6 +285,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Canonical floors',
     blurb: 'Storey list per scope. Add one rule per scope, or one project-wide.',
     group: 'geometry',
+    tier: 'eir',
+    responsibleRole: 'BIM-koordinator',
     icon: Layers,
     maxInstances: Infinity,
     fields: [
@@ -294,6 +324,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Federation scopes',
     blurb: 'Named federations + per-scope coordinate mode.',
     group: 'scope',
+    tier: 'pir',
+    responsibleRole: 'Prosjektleder',
     icon: Boxes,
     fields: [
       {
@@ -328,6 +360,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Disciplines',
     blurb: 'Discipline codes + colors used everywhere.',
     group: 'scope',
+    tier: 'pir',
+    responsibleRole: 'Prosjektleder',
     icon: Users,
     fields: [
       {
@@ -348,6 +382,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Parties (Contract / Team / Lead)',
     blurb: 'Per-scope responsibility assignment.',
     group: 'scope',
+    tier: 'oir',
+    responsibleRole: 'Prosjektleder',
     icon: Landmark,
     fields: [
       {
@@ -370,6 +406,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Classification system',
     blurb: 'A single system + where the code is stored in IFC. Add the rule again per additional system.',
     group: 'standards',
+    tier: 'pir',
+    responsibleRole: 'Modellansvarlig',
     icon: FileSearch,
     maxInstances: Infinity,
     fields: [
@@ -406,6 +444,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Tagging namespace',
     blurb: 'One tag schema + syntax + IFC storage. Add again per additional namespace.',
     group: 'standards',
+    tier: 'eir',
+    responsibleRole: 'Prosjektleder',
     icon: Tags,
     maxInstances: Infinity,
     fields: [
@@ -450,6 +490,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'MMI / LOD matrix',
     blurb: 'Maturity per class per stage + where the value lives in IFC.',
     group: 'standards',
+    tier: 'eir',
+    responsibleRole: 'Modellansvarlig',
     icon: Activity,
     fields: [
       {
@@ -497,6 +539,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'IFC schema',
     blurb: 'Allowed IFC versions + MVD profile.',
     group: 'standards',
+    tier: 'eir',
+    responsibleRole: 'BIM-koordinator',
     icon: Boxes,
     fields: [
       {
@@ -534,6 +578,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Custom Pset',
     blurb: 'Project- or company-prefixed Psets (non-native IFC).',
     group: 'standards',
+    tier: 'eir',
+    responsibleRole: 'Prosjektleder',
     icon: Wrench,
     maxInstances: Infinity,
     fields: [
@@ -559,6 +605,8 @@ export const EIR_RULES: EirRuleDefinition[] = [
     title: 'Naming conventions',
     blurb: 'Templates for models, drawings, types, materials.',
     group: 'standards',
+    tier: 'eir',
+    responsibleRole: 'Prosjektleder',
     icon: Hash,
     fields: [
       {
@@ -611,6 +659,17 @@ export const EIR_GROUP_LABELS: Record<EirRuleGroup, string> = {
 };
 
 export const EIR_GROUP_ORDER: EirRuleGroup[] = ['geometry', 'scope', 'standards'];
+
+/** Tab order in the palette tier filter. EIR is the default landing tab. */
+export const EIR_TIER_ORDER: EirRuleTier[] = ['oir', 'air', 'pir', 'eir'];
+
+/** Short display label per tier (acronym). Long form lives in i18n. */
+export const EIR_TIER_LABELS: Record<EirRuleTier, string> = {
+  oir: 'OIR',
+  air: 'AIR',
+  pir: 'PIR',
+  eir: 'EIR',
+};
 
 /** Default is 1 (single instance per project). Use `Infinity` for unlimited. */
 export function ruleMaxInstances(def: EirRuleDefinition): number {

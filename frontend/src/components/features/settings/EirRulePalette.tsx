@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
@@ -7,15 +8,21 @@ import {
   EIR_RULES,
   EIR_GROUP_LABELS,
   EIR_GROUP_ORDER,
+  EIR_TIER_LABELS,
+  EIR_TIER_ORDER,
   ruleMaxInstances,
   type EirRuleDefinition,
   type EirRuleKind,
+  type EirRuleTier,
 } from './eirRules';
 
 interface EirRulePaletteProps {
   /** kind → how many instances currently in the workspace. */
   kindCounts: Map<EirRuleKind, number>;
   onAdd: (kind: EirRuleKind) => void;
+  /** Active ISO 19650 tier filter. */
+  tier: EirRuleTier;
+  onTierChange: (tier: EirRuleTier) => void;
 }
 
 /**
@@ -26,44 +33,134 @@ interface EirRulePaletteProps {
  *
  * Rules at their `maxInstances` cap are visually disabled and not
  * draggable. Same-kind dupes are blocked at this layer.
+ *
+ * A top SegmentedControl filters by ISO 19650 tier (OIR/AIR/PIR/EIR).
+ * Default tab is EIR — the everyday delivery contract.
  */
-export function EirRulePalette({ kindCounts, onAdd }: EirRulePaletteProps) {
+export function EirRulePalette({
+  kindCounts,
+  onAdd,
+  tier,
+  onTierChange,
+}: EirRulePaletteProps) {
   const { t } = useTranslation();
+
+  // Tier-filtered rule set + counts per tier (for the badge on each tab).
+  const tierCounts = useMemo(() => {
+    const m = new Map<EirRuleTier, number>();
+    for (const r of EIR_RULES) m.set(r.tier, (m.get(r.tier) ?? 0) + 1);
+    return m;
+  }, []);
+
+  const visibleRules = useMemo(
+    () => EIR_RULES.filter((r) => r.tier === tier),
+    [tier]
+  );
+
   return (
     <nav className="flex flex-col gap-[clamp(0.625rem,1vh,1rem)]">
       <header className="px-[clamp(0.25rem,0.4vw,0.5rem)]">
         <h2 className="text-[clamp(0.7rem,0.85vw,0.9rem)] font-semibold tracking-tight">
-          {t('settings.eir.paletteTitle', { defaultValue: 'Rule palette' })}
+          {t('eirBuilder.palette.title', { defaultValue: 'Rule palette' })}
         </h2>
         <p className="text-[clamp(0.55rem,0.7vw,0.75rem)] text-muted-foreground leading-[1.45] mt-0.5">
-          {t('settings.eir.paletteHint', {
+          {t('eirBuilder.palette.hint', {
             defaultValue: 'Double-click or drag a row into the workspace.',
           })}
         </p>
       </header>
 
-      {EIR_GROUP_ORDER.map((group) => {
-        const rules = EIR_RULES.filter((r) => r.group === group);
-        return (
-          <div key={group} className="flex flex-col">
-            <div className="px-[clamp(0.375rem,0.6vw,0.75rem)] py-[clamp(0.125rem,0.3vh,0.375rem)] text-[clamp(0.5rem,0.65vw,0.7rem)] uppercase tracking-wide font-semibold text-muted-foreground/80">
-              {EIR_GROUP_LABELS[group]}
+      <TierTabs
+        active={tier}
+        counts={tierCounts}
+        onChange={onTierChange}
+      />
+
+      {visibleRules.length === 0 ? (
+        <p className="px-[clamp(0.5rem,0.8vw,0.875rem)] py-[clamp(0.625rem,1vh,1rem)] text-[clamp(0.6rem,0.72vw,0.78rem)] text-muted-foreground italic leading-[1.5]">
+          {t('eirBuilder.palette.tierEmpty', {
+            defaultValue: 'No requirements in this tier yet',
+          })}
+        </p>
+      ) : (
+        EIR_GROUP_ORDER.map((group) => {
+          const rules = visibleRules.filter((r) => r.group === group);
+          if (rules.length === 0) return null;
+          return (
+            <div key={group} className="flex flex-col">
+              <div className="px-[clamp(0.375rem,0.6vw,0.75rem)] py-[clamp(0.125rem,0.3vh,0.375rem)] text-[clamp(0.5rem,0.65vw,0.7rem)] uppercase tracking-wide font-semibold text-muted-foreground/80">
+                {EIR_GROUP_LABELS[group]}
+              </div>
+              <ul className="flex flex-col gap-0.5">
+                {rules.map((rule) => (
+                  <li key={rule.kind}>
+                    <PaletteRow
+                      rule={rule}
+                      count={kindCounts.get(rule.kind) ?? 0}
+                      onAdd={onAdd}
+                    />
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="flex flex-col gap-0.5">
-              {rules.map((rule) => (
-                <li key={rule.kind}>
-                  <PaletteRow
-                    rule={rule}
-                    count={kindCounts.get(rule.kind) ?? 0}
-                    onAdd={onAdd}
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
+          );
+        })
+      )}
+    </nav>
+  );
+}
+
+function TierTabs({
+  active,
+  counts,
+  onChange,
+}: {
+  active: EirRuleTier;
+  counts: Map<EirRuleTier, number>;
+  onChange: (tier: EirRuleTier) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      role="tablist"
+      aria-label={t('eirBuilder.palette.tierLabel', { defaultValue: 'ISO 19650 tier' })}
+      className="flex items-stretch gap-0.5 rounded-md bg-muted/50 p-[clamp(0.125rem,0.2vw,0.25rem)] mx-[clamp(0.25rem,0.4vw,0.5rem)]"
+    >
+      {EIR_TIER_ORDER.map((tier) => {
+        const selected = tier === active;
+        const count = counts.get(tier) ?? 0;
+        return (
+          <button
+            key={tier}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={() => onChange(tier)}
+            title={t(`eirBuilder.palette.tier_${tier}_long`, {
+              defaultValue: EIR_TIER_LABELS[tier],
+            })}
+            className={cn(
+              'flex-1 inline-flex items-center justify-center gap-1 rounded px-1 py-[clamp(0.25rem,0.4vh,0.5rem)] text-[clamp(0.55rem,0.7vw,0.75rem)] font-semibold tracking-wide transition-colors',
+              selected
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <span>{EIR_TIER_LABELS[tier]}</span>
+            {count > 0 && (
+              <span
+                className={cn(
+                  'tabular-nums text-[clamp(0.45rem,0.6vw,0.65rem)] font-medium',
+                  selected ? 'text-muted-foreground' : 'text-muted-foreground/60'
+                )}
+              >
+                {count}
+              </span>
+            )}
+          </button>
         );
       })}
-    </nav>
+    </div>
   );
 }
 
@@ -156,6 +253,13 @@ function PaletteRow({
         </div>
         <p className="text-[clamp(0.55rem,0.7vw,0.75rem)] text-muted-foreground leading-[1.4] mt-0.5">
           {rule.blurb}
+        </p>
+        <p className="text-[clamp(0.5rem,0.65vw,0.7rem)] text-muted-foreground/70 mt-0.5 italic truncate">
+          {t('eirBuilder.palette.responsibleRoleLabel', {
+            defaultValue: 'Owner',
+          })}
+          {': '}
+          {rule.responsibleRole}
         </p>
       </div>
     </div>

@@ -8,13 +8,21 @@ import {
   EirConfigurator,
   type EirFieldValue,
 } from './EirConfigurator';
-import { EIR_RULE_BY_KIND, type ActiveEirRule } from './eirRules';
+import {
+  EIR_RULE_BY_KIND,
+  EIR_TIER_LABELS,
+  type ActiveEirRule,
+} from './eirRules';
 import { summarizeRule } from './summarizeRule';
+
+export type EirCardMode = 'view' | 'edit';
 
 interface EirRuleCardProps {
   rule: ActiveEirRule;
   onConfigChange: (id: string, fieldId: string, value: EirFieldValue) => void;
   onRemove: (id: string) => void;
+  /** View mode hides drag handle + X + swaps inputs to read-only. */
+  mode?: EirCardMode;
 }
 
 /**
@@ -22,15 +30,20 @@ interface EirRuleCardProps {
  * scannable chip-line summary so a workspace of 10+ rules stays
  * readable. Drag handle lives on the left edge of the header; X
  * (hover-only) on the right. Header click toggles collapse.
+ *
+ * In `mode="view"`, drag handles and the remove button are hidden, and
+ * the body renders as a read-only `<dl>` of field values.
  */
 export function EirRuleCard({
   rule,
   onConfigChange,
   onRemove,
+  mode = 'edit',
 }: EirRuleCardProps) {
   const { t } = useTranslation();
   const def = EIR_RULE_BY_KIND[rule.kind];
   const [collapsed, setCollapsed] = useState(false);
+  const isEdit = mode === 'edit';
   const {
     attributes,
     listeners,
@@ -38,7 +51,7 @@ export function EirRuleCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: rule.id });
+  } = useSortable({ id: rule.id, disabled: !isEdit });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -66,15 +79,17 @@ export function EirRuleCard({
           showBody && 'border-b border-border/40'
         )}
       >
-        <button
-          type="button"
-          className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground -ml-1 p-0.5 rounded touch-none shrink-0"
-          title={t('settings.eir.dragHandle', { defaultValue: 'Drag to reorder' })}
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-[clamp(0.75rem,0.95vw,0.95rem)] w-[clamp(0.75rem,0.95vw,0.95rem)]" />
-        </button>
+        {isEdit && (
+          <button
+            type="button"
+            className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground -ml-1 p-0.5 rounded touch-none shrink-0"
+            title={t('settings.eir.dragHandle', { defaultValue: 'Drag to reorder' })}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-[clamp(0.75rem,0.95vw,0.95rem)] w-[clamp(0.75rem,0.95vw,0.95rem)]" />
+          </button>
+        )}
 
         <button
           type="button"
@@ -95,19 +110,29 @@ export function EirRuleCard({
           <h3 className="text-[clamp(0.7rem,0.85vw,0.9rem)] font-semibold tracking-tight truncate flex-1 min-w-0">
             {def.title}
           </h3>
+          <span
+            className="text-[clamp(0.45rem,0.6vw,0.65rem)] font-semibold tracking-wide text-muted-foreground/80 rounded px-1 py-0.5 bg-muted/60 shrink-0"
+            title={t('eirBuilder.card.tierBadge', {
+              defaultValue: 'ISO 19650 tier',
+            })}
+          >
+            {EIR_TIER_LABELS[def.tier]}
+          </span>
         </button>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(rule.id);
-          }}
-          className="h-[clamp(1.25rem,1.5vw,1.5rem)] w-[clamp(1.25rem,1.5vw,1.5rem)] inline-flex items-center justify-center rounded hover:bg-destructive/10 hover:text-destructive text-muted-foreground/60 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-          title={t('settings.eir.removeRule', { defaultValue: 'Remove rule' })}
-        >
-          <X className="h-[clamp(0.625rem,0.85vw,0.85rem)] w-[clamp(0.625rem,0.85vw,0.85rem)]" />
-        </button>
+        {isEdit && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(rule.id);
+            }}
+            className="h-[clamp(1.25rem,1.5vw,1.5rem)] w-[clamp(1.25rem,1.5vw,1.5rem)] inline-flex items-center justify-center rounded hover:bg-destructive/10 hover:text-destructive text-muted-foreground/60 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+            title={t('settings.eir.removeRule', { defaultValue: 'Remove rule' })}
+          >
+            <X className="h-[clamp(0.625rem,0.85vw,0.85rem)] w-[clamp(0.625rem,0.85vw,0.85rem)]" />
+          </button>
+        )}
       </header>
 
       {collapsed && summary && (
@@ -122,6 +147,7 @@ export function EirRuleCard({
             fields={def.fields}
             values={rule.config as Record<string, EirFieldValue>}
             onChange={(fieldId, value) => onConfigChange(rule.id, fieldId, value)}
+            readOnly={!isEdit}
           />
         </div>
       )}
