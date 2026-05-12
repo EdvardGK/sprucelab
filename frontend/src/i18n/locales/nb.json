@@ -1614,5 +1614,56 @@
       "addressNoMatch": "Ingen treff.",
       "addressClear": "Tøm"
     }
+  },
+  "projectDash": {
+    "kpi": {
+      "models": "Modeller",
+      "elements": "Elementer",
+      "types": "Typer kartlagt",
+      "materials": "Materialer kartlagt",
+      "percentMapped": "{{percent}}% kartlagt",
+      "modelsEmpty": "Ingen modeller lastet opp ennå"
+    },
+    "health": {
+      "title": "Prosjekthelse",
+      "classification": "Klassifisering",
+      "units": "Enheter",
+      "materials": "Materialer",
+      "verification": "Verifisering"
+    },
+    "disciplines": {
+      "title": "Fagområder",
+      "viewData": "Vis data",
+      "empty": "Ingen fagområde-data",
+      "filterAria": "Filtrer på {{code}}"
+    },
+    "attention": {
+      "title": "Krever oppmerksomhet",
+      "openCount": "{{count}} åpne",
+      "moreCount": "+{{count}} til",
+      "emptyTitle": "Ingenting krever oppmerksomhet",
+      "emptyHint": "Åpne påstander vises her.",
+      "errorTitle": "Kunne ikke laste påstander",
+      "errorHint": "Prøv igjen fra påstandsinnboksen.",
+      "typeRule": "Regel",
+      "typeSpec": "Spec",
+      "typeRequirement": "Krav",
+      "typeConstraint": "Begrensning",
+      "typeFact": "Faktum",
+      "typeStoreyList": "Etasjer"
+    },
+    "recent": {
+      "title": "Nylig aktivitet",
+      "empty": "Ingen modellopplastinger ennå",
+      "statusReady": "Klar",
+      "statusProcessing": "Behandler",
+      "statusUploading": "Laster opp",
+      "statusError": "Feil",
+      "justNow": "akkurat nå",
+      "minutesAgo": "{{count}} min siden",
+      "hoursAgo": "{{count}} t siden",
+      "daysAgo": "{{count}} d siden",
+      "monthsAgo": "{{count}} mnd siden"
+    }
   }
 }
