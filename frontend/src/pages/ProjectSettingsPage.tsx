@@ -20,6 +20,7 @@ import {
 import { Eye, LayoutDashboard, Pencil } from 'lucide-react';
 
 import { AppLayout } from '@/components/Layout/AppLayout';
+import { PageShell } from '@/components/Layout';
 import { useProject } from '@/hooks/use-projects';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -216,24 +217,13 @@ export default function ProjectSettingsPage() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col h-full overflow-hidden gap-[clamp(0.5rem,1vh,1rem)] px-[clamp(1rem,2vw,1.5rem)] py-[clamp(0.75rem,1.5vh,1.25rem)]">
-        <div
-          className="h-[3px] w-full rounded-full bg-gradient-to-r from-[#D0D34D] via-[#157954] to-[#21263A]"
-          aria-hidden="true"
-        />
-
-        <header className="flex items-baseline justify-between gap-[clamp(0.5rem,1vw,1rem)] flex-shrink-0 flex-wrap">
-          <div className="flex items-baseline gap-[clamp(0.5rem,1vw,1rem)] flex-wrap">
-            <h1 className="text-[clamp(1rem,1.6vw,1.5rem)] font-semibold tracking-tight">
-              {t('settings.title')}
-            </h1>
-            <span className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground">
-              {t('settings.subtitleEirBuilder', {
-                defaultValue: 'Compose the EIR — rules the project commits to',
-              })}
-            </span>
-          </div>
-          <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)] flex-wrap">
+      <PageShell
+        title={t('settings.title')}
+        subtitle={t('settings.subtitleEirBuilder', {
+          defaultValue: 'Compose the EIR — rules the project commits to',
+        })}
+        headerRight={
+          <>
             <ModeToggle mode={mode} canEdit={canEdit} onChange={updateMode} />
             <span className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground">
               {project.name}
@@ -246,9 +236,9 @@ export default function ProjectSettingsPage() {
                 })}
               </span>
             </span>
-          </div>
-        </header>
-
+          </>
+        }
+      >
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -256,7 +246,7 @@ export default function ProjectSettingsPage() {
         >
           <div
             className={cn(
-              'flex-1 min-h-0 grid grid-cols-1 gap-[clamp(0.75rem,1.25vw,1.25rem)] overflow-hidden',
+              'min-h-[clamp(480px,70vh,960px)] grid grid-cols-1 gap-[clamp(0.75rem,1.25vw,1.25rem)]',
               mode === 'edit'
                 ? 'md:grid-cols-[clamp(14rem,16vw,18rem)_1fr] xl:grid-cols-[clamp(14rem,16vw,18rem)_1fr_clamp(20rem,24vw,28rem)]'
                 : 'xl:grid-cols-[1fr_clamp(20rem,24vw,28rem)]'
@@ -306,7 +296,7 @@ export default function ProjectSettingsPage() {
             </div>
           </div>
         </DndContext>
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }
