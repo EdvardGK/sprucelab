@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from ..models import Claim
@@ -52,6 +53,24 @@ class ClaimViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return ClaimListSerializer
         return ClaimSerializer
+
+    def create(self, request, *args, **kwargs):
+        raise MethodNotAllowed(
+            'POST',
+            detail='Claims are emitted by extraction; create via the extractor, not the API.',
+        )
+
+    def update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(
+            'PUT',
+            detail='Full-replace not supported on claims; PATCH the specific fields you want to change.',
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        raise MethodNotAllowed(
+            'DELETE',
+            detail='Claims cannot be deleted; use reject or bulk-dismiss to mark them as ignored.',
+        )
 
     def get_queryset(self):
         qs = Claim.objects.select_related(
