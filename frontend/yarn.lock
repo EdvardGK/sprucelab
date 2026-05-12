@@ -3356,6 +3356,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/leaflet@npm:^1.9, @types/leaflet@npm:^1.9.21":
+  version: 1.9.21
+  resolution: "@types/leaflet@npm:1.9.21"
+  dependencies:
+    "@types/geojson": "npm:*"
+  checksum: 10c0/96a86bdeff7bf56104242e97536f39005a53dd857853aa0c5de127ce2c72f3f36638f2a5b8d23e2e825a2bfe32113be731ab26634a3143413b891299c29621ce
+  languageName: node
+  linkType: hard
+
 "@types/mapbox__point-geometry@npm:*, @types/mapbox__point-geometry@npm:^0.1.4":
   version: 0.1.4
   resolution: "@types/mapbox__point-geometry@npm:0.1.4"
@@ -3401,6 +3410,26 @@ __metadata:
   version: 3.0.8
   resolution: "@types/plotly.js@npm:3.0.8"
   checksum: 10c0/7b8b26a07c8fb863ab1950089eb5c6f67896d65628409f17ab1beaf0a0ffa338cb2171aec108b2460205267ad65e67b10e739f8f74fbf476229202d4487d869b
+  languageName: node
+  linkType: hard
+
+"@types/proj4@npm:^2.19.0":
+  version: 2.19.0
+  resolution: "@types/proj4@npm:2.19.0"
+  dependencies:
+    proj4: "npm:*"
+  checksum: 10c0/3df1d7a3613461f3f1c5e0369668e50b02c0149233e235bf4b82af53a1f6c61acea633c9087b0a57ed211c873397c005af31082e202ac642b001d3c866d66871
+  languageName: node
+  linkType: hard
+
+"@types/proj4leaflet@npm:^1":
+  version: 1.0.12
+  resolution: "@types/proj4leaflet@npm:1.0.12"
+  dependencies:
+    "@types/geojson": "npm:*"
+    "@types/leaflet": "npm:^1.9"
+    proj4: "npm:^2.19.0"
+  checksum: 10c0/53897620d82202056ad81ba691b634ea567812c144c7865bb035eee63707d7585da24255a45410162bba063280159ceecc675783254c267c50e596bfbe1fe173
   languageName: node
   linkType: hard
 
@@ -4350,6 +4379,9 @@ __metadata:
     "@thatopen/components-front": "npm:^2.0.0"
     "@thatopen/fragments": "npm:~3.0.0"
     "@tremor/react": "npm:^3.13.0"
+    "@types/leaflet": "npm:^1.9.21"
+    "@types/proj4": "npm:^2.19.0"
+    "@types/proj4leaflet": "npm:^1"
     "@types/react": "npm:^18.2.43"
     "@types/react-dom": "npm:^18.2.17"
     "@types/react-plotly.js": "npm:^2.6.4"
@@ -4368,9 +4400,12 @@ __metadata:
     eslint-plugin-react-refresh: "npm:^0.4.5"
     i18next: "npm:^25.7.2"
     i18next-browser-languagedetector: "npm:^8.2.0"
+    leaflet: "npm:^1.9.4"
     lucide-react: "npm:^0.552.0"
     plotly.js: "npm:^3.3.1"
     postcss: "npm:^8.4.32"
+    proj4: "npm:^2.20.8"
+    proj4leaflet: "npm:^1.0.2"
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     react-i18next: "npm:^16.5.0"
@@ -7766,6 +7801,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"leaflet@npm:^1.9.4":
+  version: 1.9.4
+  resolution: "leaflet@npm:1.9.4"
+  checksum: 10c0/f639441dbb7eb9ae3fcd29ffd7d3508f6c6106892441634b0232fafb9ffb1588b05a8244ec7085de2c98b5ed703894df246898477836cfd0ce5b96d4717b5ca1
+  languageName: node
+  linkType: hard
+
 "levn@npm:^0.4.1":
   version: 0.4.1
   resolution: "levn@npm:0.4.1"
@@ -8015,6 +8057,13 @@ __metadata:
   version: 0.18.1
   resolution: "meshoptimizer@npm:0.18.1"
   checksum: 10c0/8a825c58b20b65585e8d00788843929b60c66ba4297e89afaa49f7c51ab9a0f7b9130f90cc9ad1b9b48b3d1bee3beb1bc93608acba0d73e78995c3e6e5ca436b
+  languageName: node
+  linkType: hard
+
+"mgrs@npm:1.0.0":
+  version: 1.0.0
+  resolution: "mgrs@npm:1.0.0"
+  checksum: 10c0/a360853be5a3b4f4734dbf0a193851c08039ccb6077362ab0f890cccd170ef88b59585129757da9fea4d7a313d7dc3ee88f37f594fc1ae3e4e8efc5353144d77
   languageName: node
   linkType: hard
 
@@ -9111,6 +9160,25 @@ __metadata:
   version: 2.0.1
   resolution: "process-nextick-args@npm:2.0.1"
   checksum: 10c0/bec089239487833d46b59d80327a1605e1c5287eaad770a291add7f45fda1bb5e28b38e0e061add0a1d0ee0984788ce74fa394d345eed1c420cacf392c554367
+  languageName: node
+  linkType: hard
+
+"proj4@npm:*, proj4@npm:^2.19.0, proj4@npm:^2.20.8, proj4@npm:^2.3.14":
+  version: 2.20.8
+  resolution: "proj4@npm:2.20.8"
+  dependencies:
+    mgrs: "npm:1.0.0"
+    wkt-parser: "npm:^1.5.5"
+  checksum: 10c0/a4488c5229d25260697ca925d06fc251e772d033e7d081f97ab8b01a37854378d4a48903c667c39aa9305febff59ad09dddc019be8866977cdd2767d3a774239
+  languageName: node
+  linkType: hard
+
+"proj4leaflet@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "proj4leaflet@npm:1.0.2"
+  dependencies:
+    proj4: "npm:^2.3.14"
+  checksum: 10c0/9e3d0a0cf3ee21285ab7636b27ca3dfedf92d4b10b7982be98331aabad634f82294ea1896a1e2f34fbcddaaa6b85313381091deb7bcfe4e0b376d2eae4aad291
   languageName: node
   linkType: hard
 
@@ -11212,6 +11280,13 @@ __metadata:
   bin:
     node-which: bin/which.js
   checksum: 10c0/fe9d6463fe44a76232bb6e3b3181922c87510a5b250a98f1e43a69c99c079b3f42ddeca7e03d3e5f2241bf2d334f5a7657cfa868b97c109f3870625842f4cc15
+  languageName: node
+  linkType: hard
+
+"wkt-parser@npm:^1.5.5":
+  version: 1.5.5
+  resolution: "wkt-parser@npm:1.5.5"
+  checksum: 10c0/4ed71c407a7f13b2ea49441f3e9607eb421fac513c384b71a52a33abbeafeeb67ab32ffce327894a2b276fadaa352f204c21d0a02e34183644fe41d3282fd735
   languageName: node
   linkType: hard
 

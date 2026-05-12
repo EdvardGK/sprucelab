@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/popover';
 import type { EirField, AddressValue } from './eirConfig';
 import { useKartverketAddressSearch } from './use-kartverket-address-search';
+import { KartverketMap } from './KartverketMap';
 
 export type EirFieldValue =
   | string
@@ -79,6 +80,7 @@ function EirFieldRow({
   value: EirFieldValue;
   onChange: (v: EirFieldValue) => void;
 }) {
+  const showMap = field.kind === 'address' && isAddressValue(value);
   return (
     <div className="flex flex-col gap-[clamp(0.25rem,0.4vh,0.5rem)]">
       <div className="flex items-center justify-between gap-3 min-h-[clamp(1.5rem,1.8vw,1.875rem)]">
@@ -96,6 +98,12 @@ function EirFieldRow({
           {field.hint && field.bepRole && <span> · </span>}
           {field.bepRole && <span className="italic">{field.bepRole}</span>}
         </div>
+      )}
+      {showMap && (
+        <KartverketMap
+          address={value as AddressValue}
+          className="w-full h-[clamp(12rem,28vh,18rem)] rounded-md overflow-hidden border border-border/60 bg-muted mt-[clamp(0.25rem,0.5vh,0.5rem)]"
+        />
       )}
     </div>
   );
