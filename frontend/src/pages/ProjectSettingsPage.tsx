@@ -1,7 +1,14 @@
 import { useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, Wrench, AlertCircle } from 'lucide-react';
+import {
+  Sparkles,
+  Wrench,
+  FileText,
+  Pencil,
+  Activity,
+  AlertCircle,
+} from 'lucide-react';
 
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { useProject } from '@/hooks/use-projects';
@@ -61,15 +68,20 @@ export default function ProjectSettingsPage() {
         />
 
         <header className="flex items-baseline justify-between gap-[clamp(0.5rem,1vw,1rem)] flex-shrink-0 flex-wrap">
-          <h1 className="text-[clamp(1rem,1.6vw,1.5rem)] font-semibold tracking-tight">
-            {t('settings.title')}
-          </h1>
+          <div className="flex items-baseline gap-[clamp(0.5rem,1vw,1rem)] flex-wrap">
+            <h1 className="text-[clamp(1rem,1.6vw,1.5rem)] font-semibold tracking-tight">
+              {t('settings.title')}
+            </h1>
+            <span className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground">
+              {t('settings.subtitle')}
+            </span>
+          </div>
           <span className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground">
             {project.name}
           </span>
         </header>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[clamp(14rem,18vw,18rem)_1fr] gap-[clamp(0.75rem,1.5vw,1.25rem)] overflow-hidden">
+        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[clamp(14rem,16vw,16rem)_1fr] gap-[clamp(0.75rem,1.5vw,1.25rem)] overflow-hidden">
           {/* Left sub-nav */}
           <aside className="overflow-y-auto pr-[clamp(0.25rem,0.5vw,0.5rem)]">
             <nav className="flex flex-col gap-[clamp(0.5rem,1vh,1rem)]">
@@ -107,9 +119,9 @@ export default function ProjectSettingsPage() {
             </nav>
           </aside>
 
-          {/* Right content */}
-          <main className="overflow-y-auto rounded-lg border border-border/60 bg-card p-[clamp(0.75rem,1.5vw,1.5rem)]">
-            <SectionContent section={section} projectId={project.id} />
+          {/* Right content — EIR · BEP · STATUS triad */}
+          <main className="overflow-y-auto">
+            <SectionTriad section={section} projectId={project.id} />
           </main>
         </div>
       </div>
@@ -142,7 +154,7 @@ function StateChip({ state }: { state: SettingsSection['state'] }) {
   );
 }
 
-function SectionContent({
+function SectionTriad({
   section,
   projectId,
 }: {
@@ -165,32 +177,11 @@ function SectionContent({
         <StateChip state={section.state} />
       </header>
 
-      {section.state === 'live' && section.id === 'floors' && (
-        <ProjectFloorsTab projectId={projectId} />
-      )}
-
-      {section.state !== 'live' && section.body && (
-        <div className="rounded-md border border-dashed border-border/60 bg-muted/20 p-[clamp(0.75rem,1.5vw,1.25rem)]">
-          <div className="flex items-start gap-2 text-muted-foreground">
-            <AlertCircle className="h-[clamp(0.875rem,1.2vw,1.125rem)] w-[clamp(0.875rem,1.2vw,1.125rem)] mt-[clamp(0.125rem,0.2vh,0.25rem)] shrink-0" />
-            <div className="flex flex-col gap-[clamp(0.375rem,0.6vh,0.625rem)]">
-              <h3 className="text-[clamp(0.75rem,0.95vw,1rem)] font-semibold text-foreground">
-                {t('settings.placeholder.title')}
-              </h3>
-              <ul className="flex flex-col gap-[clamp(0.25rem,0.4vh,0.5rem)] text-[clamp(0.7rem,0.85vw,0.95rem)]">
-                {section.body.map((line, i) => (
-                  <li key={i} className="leading-[1.45]">
-                    {line}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-[clamp(0.625rem,0.75vw,0.8rem)] text-muted-foreground/80 mt-[clamp(0.25rem,0.4vh,0.5rem)]">
-                {t('settings.placeholder.note')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.4fr_1fr] gap-[clamp(0.75rem,1.2vw,1.25rem)] items-stretch">
+        <EirColumn section={section} />
+        <BepColumn section={section} projectId={projectId} />
+        <StatusColumn section={section} projectId={projectId} />
+      </div>
 
       {section.id === 'classification' && (
         <Link
@@ -200,6 +191,170 @@ function SectionContent({
           {t('settings.classification.openTypesV2')}
         </Link>
       )}
+    </div>
+  );
+}
+
+function ColumnShell({
+  icon,
+  label,
+  hint,
+  children,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+  accent?: 'bep' | 'status' | null;
+}) {
+  return (
+    <section
+      className={cn(
+        'flex flex-col gap-[clamp(0.5rem,1vh,1rem)] rounded-lg border bg-card p-[clamp(0.75rem,1.2vw,1.25rem)]',
+        accent === 'bep' && 'border-primary/30',
+        accent === 'status' && 'border-[hsl(158_70%_28%/0.25)]',
+        !accent && 'border-border/60'
+      )}
+    >
+      <header className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <span className="shrink-0">{icon}</span>
+          <span className="text-[clamp(0.55rem,0.7vw,0.75rem)] uppercase tracking-wide font-semibold">
+            {label}
+          </span>
+        </div>
+        {hint && (
+          <span className="text-[clamp(0.55rem,0.65vw,0.7rem)] text-muted-foreground/70 italic truncate">
+            {hint}
+          </span>
+        )}
+      </header>
+      <div className="flex-1 min-h-0">{children}</div>
+    </section>
+  );
+}
+
+function EirColumn({ section }: { section: SettingsSection }) {
+  const { t } = useTranslation();
+  const eir = section.eirRequirement;
+  return (
+    <ColumnShell
+      icon={
+        <FileText className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)]" />
+      }
+      label={t('settings.column.eir')}
+      hint={eir.imported ? eir.sourceRef : t('settings.eir.placeholder')}
+    >
+      <blockquote className="relative pl-[clamp(0.5rem,0.9vw,0.875rem)] border-l-2 border-border/50">
+        <p className="text-[clamp(0.7rem,0.85vw,0.95rem)] text-foreground/85 italic leading-[1.55] whitespace-pre-line">
+          {eir.text}
+        </p>
+        {eir.sourceRef && (
+          <footer className="mt-[clamp(0.375rem,0.6vh,0.625rem)] text-[clamp(0.55rem,0.7vw,0.75rem)] text-muted-foreground not-italic">
+            {eir.sourceRef}
+          </footer>
+        )}
+      </blockquote>
+    </ColumnShell>
+  );
+}
+
+function BepColumn({
+  section,
+  projectId,
+}: {
+  section: SettingsSection;
+  projectId: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <ColumnShell
+      icon={
+        <Pencil className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)]" />
+      }
+      label={t('settings.column.bep')}
+      accent="bep"
+    >
+      {section.state === 'live' && section.id === 'floors' && (
+        <ProjectFloorsTab projectId={projectId} />
+      )}
+
+      {!(section.state === 'live' && section.id === 'floors') && section.bepBody && (
+        <div className="flex flex-col gap-[clamp(0.375rem,0.6vh,0.625rem)]">
+          <ul className="flex flex-col gap-[clamp(0.25rem,0.4vh,0.5rem)] text-[clamp(0.7rem,0.85vw,0.95rem)] leading-[1.5] text-foreground/85">
+            {section.bepBody.map((line, i) => (
+              <li key={i} className="pl-[clamp(0.5rem,0.8vw,0.75rem)] relative before:content-['•'] before:absolute before:left-0 before:text-muted-foreground">
+                {line}
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            disabled
+            className="mt-[clamp(0.5rem,0.8vh,1rem)] inline-flex items-center gap-1 self-start rounded-md bg-muted text-muted-foreground/70 px-[clamp(0.625rem,1vw,1rem)] py-[clamp(0.25rem,0.4vh,0.5rem)] text-[clamp(0.65rem,0.8vw,0.85rem)] font-medium cursor-not-allowed"
+            title={t('settings.bep.placeholderHint')}
+          >
+            {t('settings.bep.configure')}
+          </button>
+        </div>
+      )}
+    </ColumnShell>
+  );
+}
+
+function StatusColumn({ section }: { section: SettingsSection; projectId: string }) {
+  const { t } = useTranslation();
+  return (
+    <ColumnShell
+      icon={
+        <Activity className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)]" />
+      }
+      label={t('settings.column.status')}
+      accent="status"
+    >
+      {section.state === 'live' && section.id === 'floors' ? (
+        <FloorsStatus />
+      ) : (
+        <PlaceholderStatus />
+      )}
+    </ColumnShell>
+  );
+}
+
+function FloorsStatus() {
+  const { t } = useTranslation();
+  // Real wiring lands when we connect to useProjectScopes / useScopeFloors;
+  // for now we surface a friendly read-only state that points to the
+  // floors data already rendered in the BEP column.
+  return (
+    <div className="flex flex-col gap-[clamp(0.375rem,0.6vh,0.625rem)] text-[clamp(0.7rem,0.85vw,0.95rem)]">
+      <div className="flex items-center gap-2">
+        <span className="inline-block h-[clamp(0.5rem,0.7vw,0.625rem)] w-[clamp(0.5rem,0.7vw,0.625rem)] rounded-full bg-[hsl(158_70%_28%)]" />
+        <span className="text-muted-foreground">
+          {t('settings.status.floorsLiveHint')}
+        </span>
+      </div>
+      <p className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground/80">
+        {t('settings.status.floorsExplain')}
+      </p>
+    </div>
+  );
+}
+
+function PlaceholderStatus() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-[clamp(0.5rem,0.8vh,0.875rem)] text-[clamp(0.7rem,0.85vw,0.95rem)] text-muted-foreground">
+      <div className="flex items-center gap-2">
+        <AlertCircle className="h-[clamp(0.875rem,1.2vw,1.125rem)] w-[clamp(0.875rem,1.2vw,1.125rem)] shrink-0" />
+        <span className="font-medium text-foreground">
+          {t('settings.status.placeholderTitle')}
+        </span>
+      </div>
+      <p className="text-[clamp(0.65rem,0.8vw,0.85rem)] leading-[1.5]">
+        {t('settings.status.placeholderBody')}
+      </p>
     </div>
   );
 }

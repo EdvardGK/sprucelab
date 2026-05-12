@@ -1576,14 +1576,29 @@
   },
   "settings": {
     "title": "Project Config",
+    "subtitle": "EIR · BEP · Status",
     "state": {
       "live": "Live",
       "partial": "Partial",
       "planned": "Planned"
     },
-    "placeholder": {
-      "title": "What this section will configure",
-      "note": "Awaiting backend wiring. Section structure + scope locked; form work is queued."
+    "column": {
+      "eir": "Requirement (EIR)",
+      "bep": "Commitment (BEP)",
+      "status": "Status"
+    },
+    "eir": {
+      "placeholder": "Placeholder — no EIR document loaded yet"
+    },
+    "bep": {
+      "configure": "Configure",
+      "placeholderHint": "Form will land when this section is wired"
+    },
+    "status": {
+      "placeholderTitle": "Not configured yet",
+      "placeholderBody": "Live fulfillment will populate here once the BEP commitment is set and model data is in.",
+      "floorsLiveHint": "Wired — floor data and deviations render in the BEP column above.",
+      "floorsExplain": "Per-model deviations and the block-on-deviation gate are managed in the BEP column. A dedicated fulfillment summary lands when more sections are live."
     },
     "classification": {
       "openTypesV2": "Open Types v2 →"

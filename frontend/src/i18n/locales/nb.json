@@ -1576,14 +1576,29 @@
   },
   "settings": {
     "title": "Prosjektoppsett",
+    "subtitle": "EIR · BEP · Status",
     "state": {
       "live": "Aktiv",
       "partial": "Delvis",
       "planned": "Planlagt"
     },
-    "placeholder": {
-      "title": "Hva denne seksjonen vil styre",
-      "note": "Venter på backend-kobling. Struktur + omfang er bestemt; skjemaarbeid står i kø."
+    "column": {
+      "eir": "Krav (EIR)",
+      "bep": "Forpliktelse (BEP)",
+      "status": "Status"
+    },
+    "eir": {
+      "placeholder": "Plassholder — ingen EIR lastet inn ennå"
+    },
+    "bep": {
+      "configure": "Konfigurer",
+      "placeholderHint": "Skjema kommer når denne seksjonen er koblet"
+    },
+    "status": {
+      "placeholderTitle": "Ikke konfigurert ennå",
+      "placeholderBody": "Statusoppfølging vises her når BEP-forpliktelsen er satt og modelldata foreligger.",
+      "floorsLiveHint": "Koblet — etasjedata og avvik vises i BEP-kolonnen over.",
+      "floorsExplain": "Per-modell avvik og publiseringssperren styres fra BEP-kolonnen. Egen statusoppsummering kommer når flere seksjoner er aktive."
     },
     "classification": {
       "openTypesV2": "Åpne Typer v2 →"
