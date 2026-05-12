@@ -29,6 +29,7 @@ def _pin_api_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("spruce.verify.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.scripts.get_api_url", lambda: TEST_API_URL)
     monkeypatch.setattr("spruce.webhooks.get_api_url", lambda: TEST_API_URL)
+    monkeypatch.setattr("spruce.claims.get_api_url", lambda: TEST_API_URL)
 
 
 @pytest.fixture
