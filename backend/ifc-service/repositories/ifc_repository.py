@@ -58,6 +58,7 @@ class TypeData:
     has_ifc_type_object: bool = True  # True if backed by IfcTypeObject, False if synthetic from ObjectType
     representative_unit: Optional[str] = None  # Inferred procurement unit (m2/m/pcs) for TypeMapping
     definition_layers: List[TypeLayerData] = field(default_factory=list)
+    entity_ifc_type: str = ''  # IFC class of instances (e.g. "IfcWall" for IfcWallType)
 
 
 # =============================================================================
@@ -236,14 +237,15 @@ class IFCRepository:
                 type_data.instance_count,
                 type_data.has_ifc_type_object,
                 'primary',
+                type_data.entity_ifc_type or '',
             ))
 
         async with get_transaction() as conn:
             await conn.executemany(
                 """
                 INSERT INTO ifc_types (
-                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties, instance_count, has_ifc_type_object, ownership_status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    id, model_id, type_guid, type_name, ifc_type, predefined_type, properties, instance_count, has_ifc_type_object, ownership_status, entity_ifc_type
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 ON CONFLICT (model_id, type_guid) DO NOTHING
                 """,
                 records

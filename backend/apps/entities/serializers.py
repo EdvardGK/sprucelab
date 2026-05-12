@@ -59,7 +59,7 @@ class IFCTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = IFCType
-        fields = ['id', 'model', 'type_guid', 'type_name', 'ifc_type', 'properties']
+        fields = ['id', 'model', 'type_guid', 'type_name', 'ifc_type', 'entity_ifc_type', 'properties']
 
 
 class SpatialHierarchySerializer(serializers.ModelSerializer):
@@ -232,7 +232,7 @@ class IFCTypeWithMappingSerializer(serializers.ModelSerializer):
     class Meta:
         model = IFCType
         fields = [
-            'id', 'model', 'type_guid', 'type_name', 'ifc_type',
+            'id', 'model', 'type_guid', 'type_name', 'ifc_type', 'entity_ifc_type',
             'properties', 'mapping', 'instance_count'
         ]
 
@@ -851,6 +851,7 @@ class ClaimSerializer(serializers.ModelSerializer):
     original_filename = serializers.CharField(
         source='source_file.original_filename', read_only=True,
     )
+    assignee_username = serializers.CharField(source='assignee.username', read_only=True, allow_null=True, default=None)
 
     class Meta:
         model = Claim
@@ -861,12 +862,14 @@ class ClaimSerializer(serializers.ModelSerializer):
             'claim_type', 'confidence',
             'status', 'promoted_to_config', 'config_section', 'config_payload',
             'superseded_by', 'rejected_reason', 'origin_observation',
+            'assignee', 'assignee_username', 'assigned_at', 'due_date',
             'extracted_at', 'decided_at', 'decided_by',
         ]
         read_only_fields = [
             'source_file', 'document', 'extraction_run',
             'promoted_to_config', 'config_section', 'config_payload',
             'superseded_by', 'rejected_reason', 'origin_observation',
+            'assignee_username', 'assigned_at',
             'extracted_at', 'decided_at', 'decided_by',
         ]
 
@@ -876,6 +879,7 @@ class ClaimListSerializer(serializers.ModelSerializer):
 
     project = serializers.UUIDField(source='source_file.project_id', read_only=True)
     snippet = serializers.SerializerMethodField()
+    assignee_username = serializers.CharField(source='assignee.username', read_only=True, allow_null=True, default=None)
 
     class Meta:
         model = Claim
@@ -884,6 +888,7 @@ class ClaimListSerializer(serializers.ModelSerializer):
             'snippet', 'normalized',
             'claim_type', 'confidence', 'status',
             'origin_observation',
+            'assignee', 'assignee_username', 'assigned_at', 'due_date',
             'extracted_at',
         ]
 

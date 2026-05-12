@@ -307,6 +307,16 @@ class IFCType(models.Model):
         help_text="Number of instances of this type in the model"
     )
 
+    entity_ifc_type = models.CharField(
+        max_length=80, blank=True, default='',
+        db_index=True,
+        help_text=(
+            'IFC class of instances of this type (e.g. "IfcWall" for an IfcWallType). '
+            'Populated by the FastAPI extractor via IfcRelDefinesByType. '
+            'Empty when the extractor could not find any related instance.'
+        ),
+    )
+
     # Track whether this type is backed by an IfcTypeObject
     has_ifc_type_object = models.BooleanField(
         default=True,

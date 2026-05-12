@@ -157,6 +157,16 @@ class Claim(models.Model):
     )
     rejected_reason = models.TextField(blank=True)
 
+    # Assignment — who is responsible for resolving this claim.
+    assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assigned_claims',
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+
     # Audit timestamps.
     extracted_at = models.DateTimeField(auto_now_add=True)
     decided_at = models.DateTimeField(null=True, blank=True)
