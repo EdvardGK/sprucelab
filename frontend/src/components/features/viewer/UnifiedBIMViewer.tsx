@@ -1661,8 +1661,24 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           modelData: { name: string; file_url: string },
           modelId: string,
         ): LoadedModel => {
-          worldRef.current!.scene!.three.add(v3Model.object);
-          v3Model.useCamera(worldRef.current!.camera!.three as THREE.PerspectiveCamera | THREE.OrthographicCamera);
+          // Guard against unmount-mid-load and camera-not-yet-init races.
+          // The world's camera is created synchronously during init, but if
+          // this finalize callback fires after the viewer has unmounted (user
+          // clicked away, route changed), worldRef.current is null and the
+          // previous `!` assertions crashed with "Cannot read properties of
+          // null (reading 'camera')".
+          const world = worldRef.current;
+          const sceneThree = world?.scene?.three;
+          const cameraThree = world?.camera?.three;
+          if (!sceneThree || !cameraThree) {
+            // Soft-abort: dispose what we built and bubble a friendlier error.
+            try { v3Model.dispose?.(); } catch { /* noop */ }
+            throw new Error(
+              'Viewer world unmounted before fragments finalized; aborting model attach'
+            );
+          }
+          sceneThree.add(v3Model.object);
+          v3Model.useCamera(cameraThree as THREE.PerspectiveCamera | THREE.OrthographicCamera);
           modelIdMapRef.current.set(v3Model.modelId, modelId);
 
           const loadedModel: LoadedModel = {
