@@ -671,13 +671,21 @@
     "unclassified": "Uklassifisert",
     "missingValue": "Ikke satt",
     "kpi": {
-      "title": "Oversikt over materialbibliotek",
+      "title": "Materialdashboard",
       "totalMaterials": "Materialer",
       "totalSets": "Sett",
+      "totalQuantity": "Total mengde",
+      "mappedToProduct": "Koblet til produkt",
       "classified": "Klassifisert",
       "epdLinked": "Med EPD",
       "procurementLinked": "Med produkt",
-      "modelsLoaded": "Modeller lastet"
+      "modelsLoaded": "Modeller lastet",
+      "totalCost": "Estimert kostnad",
+      "totalGwp": "Total GWP",
+      "mixedUnits": "Blandede enheter",
+      "mixedUnitsHint": "Materialer er målt i blandede enheter — viser dominerende akse",
+      "costMissingHint": "Ingen materialer har enhetspris ennå",
+      "gwpMissingHint": "Ingen EPD-koblede materialer har GWP-data ennå"
     },
     "viz": {
       "treemapTitle": "Familier etter mengde",
@@ -724,7 +732,37 @@
       "quantity": "Mengde",
       "usedIn": "Brukt i",
       "lca": "LCA",
-      "procurement": "Innkjøp"
+      "procurement": "Innkjøp",
+      "product": "Produkt",
+      "epd": "EPD",
+      "cost": "Kostnad",
+      "gwp": "GWP"
+    },
+    "shown": "{{shown}} av {{total}}",
+    "topN": {
+      "title": "Topp {{count}}",
+      "empty": "Ingen materialer med denne metrikken ennå",
+      "noCost": "Ingen produktkostnader koblet ennå",
+      "noGwp": "Ingen EPD-er koblet ennå",
+      "axisLabel": "Sorteringsakse",
+      "axis": {
+        "quantity": "Mengde",
+        "cost": "Kostnad",
+        "gwp": "GWP"
+      }
+    },
+    "sandwich": {
+      "title": "Lagsammensetning · {{occurrences}} forekomster i {{types}} typer",
+      "ariaLabel": "Sandwich-stack for {{name}} ({{occurrences}} lag-forekomster)"
+    },
+    "donut": {
+      "title": "Bruk per type",
+      "typesLabel": "typer",
+      "other": "Andre ({{count}})"
+    },
+    "sphere": {
+      "aria": "PBR-materialforhåndsvisning for {{name}}",
+      "loading": "Forhåndsvisning venter…"
     },
     "detail": {
       "material": "Material",
@@ -742,12 +780,14 @@
       "procurementReadiness": "Innkjøpsstatus",
       "procurementReady": "Produkt og leverandør tilknyttet",
       "procurementMissing": "Ingen produkt eller leverandør. Spesifikasjon er generisk.",
-      "selectPrompt": "Velg et material eller sett for å se detaljer",
+      "selectPrompt": "Velg et material for å se detaljer",
       "composition": "Sammensetning",
       "layerOccurrences": "Lag-forekomster",
       "layersEmpty": "Dette materialet har ingen registrerte lag-forekomster ennå.",
       "usageEmpty": "Ikke referert av noen type ennå.",
-      "preview": "Forhåndsvisning",
+      "preview": "Geometri",
+      "appearance": "Utseende",
+      "appearanceHint": "PBR-forhåndsvisning — shader fra familie",
       "showingOneOf": "Viser {{name}} ({{index}} av {{total}})",
       "noModelUsage": "Ingen modellbruk ennå",
       "tab": {

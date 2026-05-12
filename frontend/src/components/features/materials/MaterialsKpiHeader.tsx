@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Boxes, Layers as LayersIcon, Tag, Leaf, ShoppingCart, Server } from 'lucide-react';
+import {
+  Boxes,
+  Ruler,
+  Leaf,
+  ShoppingCart,
+  Coins,
+  CloudFog,
+} from 'lucide-react';
 
 import { DashboardTile } from '@/components/Layout';
 import { cn } from '@/lib/utils';
@@ -11,6 +18,7 @@ import type {
   AggregatedMaterial,
   ProjectMaterialsSummary,
 } from '@/hooks/use-project-materials';
+import { pickDominantUnit } from '@/hooks/use-project-materials';
 
 type Tone = 'neutral' | 'good' | 'warning' | 'danger';
 
@@ -22,9 +30,14 @@ interface MaterialsKpiHeaderProps {
 }
 
 /**
- * KPI grid + live freshness badge for the Materials page. Mirrors the
- * shape of TypeKpiGrid: 6 cards, tone rings, count-up, mini sparkline,
- * raw counts (not percentages) — gaps show an amber em-dash.
+ * Materials dash KPI row — six tiles aligned with the four axes the
+ * dashboard surfaces (QTO · Cost · Product mapping · LCA) plus total
+ * materials count and total quantity.
+ *
+ * Modelers-own-data: every tile renders raw counts (not "Mapped %"),
+ * with amber em-dash when source data is missing. Cost + GWP tiles
+ * surface em-dash until `unit_cost` / `gwp_per_unit` land on the
+ * AggregatedMaterial record (the hook keeps them null for now).
  */
 export function MaterialsKpiHeader({
   summary,
@@ -34,9 +47,7 @@ export function MaterialsKpiHeader({
 }: MaterialsKpiHeaderProps) {
   const { t } = useTranslation();
 
-  // Distribution by family for sparklines, reused across cards. The
-  // dominant-family sparkline gives every KPI a visual hook into the
-  // family palette the rest of the page uses.
+  // Distribution by family — reused as the sparkline under "Total materials".
   const familySegments: SparkSegment[] = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const m of materials) counts[m.family] = (counts[m.family] || 0) + 1;
@@ -51,12 +62,29 @@ export function MaterialsKpiHeader({
       }));
   }, [materials]);
 
-  const classifiedSegments: SparkSegment[] = useMemo(() => {
+  // Top materials by dominant-unit quantity — sparkline under "Total quantity".
+  const topQuantitySegments: SparkSegment[] = useMemo(() => {
+    return materials
+      .map((m) => {
+        const unit = pickDominantUnit(m.quantities_by_unit);
+        const qty = unit ? m.quantities_by_unit[unit] : 0;
+        return { m, qty };
+      })
+      .filter(({ qty }) => qty > 0)
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 8)
+      .map(({ m, qty }) => ({
+        key: m.key,
+        value: qty,
+        color: familyColor(m.family),
+        label: m.name,
+      }));
+  }, [materials]);
+
+  const productSegments: SparkSegment[] = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const m of materials) {
-      if (m.family !== 'other' && m.family_confidence !== 'unknown') {
-        counts[m.family] = (counts[m.family] || 0) + 1;
-      }
+      if (m.has_product) counts[m.family] = (counts[m.family] || 0) + 1;
     }
     return Object.entries(counts)
       .filter(([, v]) => v > 0)
@@ -83,23 +111,6 @@ export function MaterialsKpiHeader({
       }));
   }, [materials]);
 
-  const procurementSegments: SparkSegment[] = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const m of materials) {
-      if (m.has_product) counts[m.family] = (counts[m.family] || 0) + 1;
-    }
-    return Object.entries(counts)
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => b[1] - a[1])
-      .map(([key, value]) => ({
-        key,
-        value,
-        color: familyColor(key as Parameters<typeof familyColor>[0]),
-      }));
-  }, [materials]);
-
-  const totalModels = summary.models_loaded + summary.models_pending;
-
   return (
     <div className="flex flex-col gap-[clamp(0.5rem,1vw,0.875rem)]">
       <div className="flex items-center justify-between gap-[clamp(0.5rem,1vw,1rem)] flex-wrap">
@@ -114,144 +125,120 @@ export function MaterialsKpiHeader({
           id="kpi-mat-total-materials"
           icon={<Boxes className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
           label={t('materialBrowser.kpi.totalMaterials')}
-          value={summary.total_materials}
-          totalValue={undefined}
+          rawValue={summary.total_materials}
+          renderValue={(animated) => animated.toLocaleString()}
           loading={loading}
           spark={<Sparkline segments={familySegments} variant="stacked" />}
         />
+
         <KpiCard
-          id="kpi-mat-total-sets"
-          icon={<LayersIcon className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-          label={t('materialBrowser.kpi.totalSets')}
-          value={summary.total_sets}
+          id="kpi-mat-total-quantity"
+          icon={<Ruler className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+          label={t('materialBrowser.kpi.totalQuantity')}
+          rawValue={summary.total_quantity}
+          fraction
+          renderValue={(animated) =>
+            summary.dominant_unit
+              ? `${formatQty(animated)} ${summary.dominant_unit}`
+              : '—'
+          }
+          missing={!summary.dominant_unit}
+          missingHint={
+            summary.mixed_units ? t('materialBrowser.kpi.mixedUnits') : undefined
+          }
+          subline={
+            summary.mixed_units
+              ? t('materialBrowser.kpi.mixedUnitsHint')
+              : undefined
+          }
           loading={loading}
-          spark={<Sparkline segments={familySegments} variant="stacked" />}
+          spark={<Sparkline segments={topQuantitySegments} variant="stacked" />}
         />
+
         <KpiCard
-          id="kpi-mat-classified"
-          icon={<Tag className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-          label={t('materialBrowser.kpi.classified')}
-          value={summary.classified_count}
+          id="kpi-mat-product"
+          icon={<ShoppingCart className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+          label={t('materialBrowser.kpi.mappedToProduct')}
+          rawValue={summary.procurement_linked_count}
           totalValue={summary.total_materials}
+          renderValue={(animated) => animated.toLocaleString()}
+          missing={
+            summary.procurement_linked_count === 0 && summary.total_materials > 0
+          }
+          tone={
+            summary.procurement_linked_count === 0
+              ? 'warning'
+              : summary.procurement_linked_count >= summary.total_materials * 0.9
+                ? 'good'
+                : summary.procurement_linked_count >= summary.total_materials * 0.5
+                  ? 'neutral'
+                  : 'warning'
+          }
           loading={loading}
-          tone={toneFromShare(summary.classified_count, summary.total_materials, {
-            warn: 0.7,
-            good: 0.9,
-          })}
           spark={
-            classifiedSegments.length > 0 ? (
-              <Sparkline segments={classifiedSegments} variant="stacked" />
+            productSegments.length > 0 ? (
+              <Sparkline segments={productSegments} variant="stacked" />
             ) : (
-              <Sparkline
-                segments={[]}
-                variant="progress"
-                progressValue={0}
-              />
+              <Sparkline segments={[]} variant="progress" progressValue={0} />
             )
           }
         />
+
         <KpiCard
           id="kpi-mat-epd"
           icon={<Leaf className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
           label={t('materialBrowser.kpi.epdLinked')}
-          value={summary.epd_linked_count}
+          rawValue={summary.epd_linked_count}
           totalValue={summary.total_materials}
+          renderValue={(animated) => animated.toLocaleString()}
           missing={summary.epd_linked_count === 0 && summary.total_materials > 0}
-          loading={loading}
           tone={
             summary.epd_linked_count === 0
-              ? 'danger'
-              : toneFromShare(summary.epd_linked_count, summary.total_materials, {
-                  warn: 0.5,
-                  good: 0.9,
-                })
+              ? 'warning'
+              : summary.epd_linked_count >= summary.total_materials * 0.9
+                ? 'good'
+                : 'neutral'
           }
+          loading={loading}
           spark={
             epdSegments.length > 0 ? (
               <Sparkline segments={epdSegments} variant="stacked" />
             ) : (
-              <Sparkline
-                segments={[]}
-                variant="progress"
-                progressValue={0}
-                progressColor="hsl(0 70% 55%)"
-              />
+              <Sparkline segments={[]} variant="progress" progressValue={0} />
             )
           }
         />
+
         <KpiCard
-          id="kpi-mat-procurement"
-          icon={<ShoppingCart className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-          label={t('materialBrowser.kpi.procurementLinked')}
-          value={summary.procurement_linked_count}
-          totalValue={summary.total_materials}
-          missing={summary.procurement_linked_count === 0 && summary.total_materials > 0}
+          id="kpi-mat-cost"
+          icon={<Coins className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+          label={t('materialBrowser.kpi.totalCost')}
+          rawValue={summary.total_cost_nok ?? 0}
+          fraction
+          renderValue={(animated) =>
+            summary.total_cost_nok === null ? '—' : formatNok(animated)
+          }
+          missing={summary.total_cost_nok === null}
+          missingHint={t('materialBrowser.kpi.costMissingHint')}
           loading={loading}
-          tone={
-            summary.procurement_linked_count === 0
-              ? 'danger'
-              : toneFromShare(summary.procurement_linked_count, summary.total_materials, {
-                  warn: 0.5,
-                  good: 0.9,
-                })
-          }
-          spark={
-            procurementSegments.length > 0 ? (
-              <Sparkline segments={procurementSegments} variant="stacked" />
-            ) : (
-              <Sparkline
-                segments={[]}
-                variant="progress"
-                progressValue={0}
-                progressColor="hsl(0 70% 55%)"
-              />
-            )
-          }
         />
+
         <KpiCard
-          id="kpi-mat-models"
-          icon={<Server className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-          label={t('materialBrowser.kpi.modelsLoaded')}
-          value={summary.models_loaded}
-          totalValue={totalModels}
+          id="kpi-mat-gwp"
+          icon={<CloudFog className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+          label={t('materialBrowser.kpi.totalGwp')}
+          rawValue={summary.total_gwp_kg_co2e ?? 0}
+          fraction
+          renderValue={(animated) =>
+            summary.total_gwp_kg_co2e === null ? '—' : formatCo2e(animated)
+          }
+          missing={summary.total_gwp_kg_co2e === null}
+          missingHint={t('materialBrowser.kpi.gwpMissingHint')}
           loading={loading}
-          tone={
-            summary.models_pending > 0
-              ? 'warning'
-              : summary.models_loaded === 0
-              ? 'neutral'
-              : 'good'
-          }
-          spark={
-            <Sparkline
-              segments={[]}
-              variant="progress"
-              progressValue={
-                totalModels > 0 ? (summary.models_loaded / totalModels) * 100 : 0
-              }
-              progressColor={
-                summary.models_pending > 0
-                  ? 'hsl(25 96% 61%)'
-                  : 'hsl(158 70% 28%)'
-              }
-            />
-          }
         />
       </div>
     </div>
   );
-}
-
-function toneFromShare(
-  count: number,
-  total: number,
-  thresholds: { warn: number; good: number },
-): Tone {
-  if (total <= 0) return 'neutral';
-  const share = count / total;
-  if (share >= thresholds.good) return 'good';
-  if (share >= thresholds.warn) return 'warning';
-  return 'danger';
 }
 
 const TONE_STYLES: Record<Tone, { card: string; value: string; icon: string }> = {
@@ -281,11 +268,19 @@ interface KpiCardProps {
   id: string;
   icon: React.ReactNode;
   label: string;
-  value: number;
+  rawValue: number;
+  /** Render the live count-up value as a formatted string. */
+  renderValue: (animated: number) => string;
+  /** Allow fractional count-up (default rounds to int). */
+  fraction?: boolean;
   /** Unfiltered/total reference shown faded as "/ N". */
   totalValue?: number;
-  /** When true and value is 0, the value renders as an amber em-dash. */
+  /** When true, value renders as amber em-dash regardless of rawValue. */
   missing?: boolean;
+  /** Tooltip hint when missing. */
+  missingHint?: string;
+  /** Optional subline under the value (small, muted). */
+  subline?: string;
   loading?: boolean;
   tone?: Tone;
   spark?: React.ReactNode;
@@ -295,17 +290,20 @@ function KpiCard({
   id,
   icon,
   label,
-  value,
+  rawValue,
+  renderValue,
+  fraction,
   totalValue,
   missing,
+  missingHint,
+  subline,
   loading,
   tone = 'neutral',
   spark,
 }: KpiCardProps) {
   const toneStyles = TONE_STYLES[tone];
-  const animated = useCountUp(value);
-  const showTotal = totalValue !== undefined && totalValue !== value;
-  const showMissing = missing && value === 0;
+  const animated = useCountUp(rawValue, { fraction });
+  const showTotal = totalValue !== undefined && totalValue !== rawValue;
 
   return (
     <DashboardTile
@@ -325,9 +323,10 @@ function KpiCard({
         <div className="flex items-baseline gap-[clamp(0.25rem,0.5vw,0.5rem)] flex-wrap">
           {loading ? (
             <ShimmerBlock className="h-[clamp(1.5rem,3vw,2.5rem)] w-[clamp(2.5rem,5vw,4rem)]" />
-          ) : showMissing ? (
+          ) : missing ? (
             <span
               className="text-[clamp(1.25rem,2.4vw,2.25rem)] font-semibold tabular-nums tracking-tight leading-none text-amber-600 dark:text-amber-400"
+              title={missingHint}
               aria-label="missing"
             >
               —
@@ -335,19 +334,24 @@ function KpiCard({
           ) : (
             <span
               className={cn(
-                'text-[clamp(1.25rem,2.4vw,2.25rem)] font-semibold tabular-nums tracking-tight leading-none',
+                'text-[clamp(1.1rem,2vw,1.8rem)] font-semibold tabular-nums tracking-tight leading-none',
                 toneStyles.value,
               )}
             >
-              {animated.toLocaleString()}
+              {renderValue(animated)}
             </span>
           )}
-          {showTotal && !loading && !showMissing && totalValue !== undefined && (
+          {showTotal && !loading && !missing && totalValue !== undefined && (
             <span className="text-[clamp(0.65rem,0.9vw,0.95rem)] text-muted-foreground/70 tabular-nums leading-none">
               / {totalValue.toLocaleString()}
             </span>
           )}
         </div>
+        {subline && !loading && !missing && (
+          <div className="mt-0.5 text-[clamp(0.5rem,0.7vw,0.65rem)] text-muted-foreground/70">
+            {subline}
+          </div>
+        )}
       </div>
       {spark && !loading && (
         <div className="mt-[clamp(0.25rem,0.5vh,0.5rem)]">{spark}</div>
@@ -367,11 +371,32 @@ function ShimmerBlock({ className }: { className?: string }) {
   );
 }
 
+function formatQty(n: number): string {
+  if (n >= 1000) return n.toFixed(0);
+  if (n >= 10) return n.toFixed(1);
+  return n.toFixed(2);
+}
+
+function formatNok(n: number): string {
+  try {
+    return new Intl.NumberFormat('nb-NO', {
+      style: 'currency',
+      currency: 'NOK',
+      maximumFractionDigits: 0,
+    }).format(n);
+  } catch {
+    return `kr ${n.toFixed(0)}`;
+  }
+}
+
+function formatCo2e(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)} t CO₂e`;
+  return `${n.toFixed(0)} kg CO₂e`;
+}
+
 /**
- * "Updated N min ago" badge with a pulsing green dot. Re-renders on an
- * interval so the relative time stays current without a hard refetch.
- * Mirrors the LiveFreshness widget from warehouse-v2 but speaks the
- * materialBrowser i18n namespace.
+ * "Updated N min ago" badge — same pattern as warehouse-v2's freshness
+ * widget, retained from the previous KPI header.
  */
 function MaterialsFreshness({
   dataUpdatedAt,
