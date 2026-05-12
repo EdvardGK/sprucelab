@@ -1760,8 +1760,10 @@
       "editLocked": "You do not have edit access to this project."
     },
     "palette": {
-      "title": "Rule palette",
+      "title": "Add a rule",
       "hint": "Double-click or drag a row into the workspace.",
+      "popoverHint": "Click a rule to add it to the document — or drag it onto a tier section.",
+      "dragTitle": "Drag",
       "tierLabel": "ISO 19650 tier",
       "tier_oir_long": "Organizational Information Requirements",
       "tier_air_long": "Asset Information Requirements",
@@ -1784,6 +1786,51 @@
     },
     "workspace": {
       "emptyView": "This project has no EIR rules yet. Switch to Edit to compose the contract."
+    },
+    "tier": {
+      "ruleCount": "{{count}} rule(s)",
+      "addCta": "Add a rule to this tier",
+      "addShort": "Add rule",
+      "addFirst": "Add the first rule",
+      "emptyView": "No {{tier}} rules yet.",
+      "emptyEdit": "No {{tier}} rules yet. Click + to add the first one.",
+      "oir": {
+        "long": "Organizational Information Requirements",
+        "description": "Why the organisation is doing this — the higher-order goals and roles that frame every project."
+      },
+      "air": {
+        "long": "Asset Information Requirements",
+        "description": "How the finished asset must behave once handed over to operations."
+      },
+      "pir": {
+        "long": "Project Information Requirements",
+        "description": "How the project is run end-to-end — the systems, conventions, and parties involved."
+      },
+      "eir": {
+        "long": "Exchange Information Requirements",
+        "description": "What every delivery must carry — the concrete exchange contract every modeler signs."
+      }
+    },
+    "tierFilter": {
+      "label": "ISO 19650 tier filter",
+      "all": "All"
+    },
+    "addRule": {
+      "label": "Add rule",
+      "title": "Open the rule palette"
+    },
+    "preview": {
+      "title": "Preview",
+      "button": "Preview",
+      "tabDocument": "Document",
+      "tabMap": "Map",
+      "tab3d": "3D",
+      "tabIds": "IDS XML",
+      "docEmpty": "Add rules to see the EIR document take shape.",
+      "idsStubNote": "IDS XML export — placeholder; backend export lands in Phase 7.",
+      "idsAria": "IDS XML placeholder",
+      "copy": "Copy",
+      "copied": "Copied"
     }
   },
   "modelDash": {

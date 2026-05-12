@@ -170,10 +170,10 @@ export function Sidebar() {
                 <span>{t('nav.dashboard')}</span>
               </Link>
               <Link
-                to={`/projects/${projectId}/settings`}
+                to={`/projects/${projectId}/eir`}
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/settings`)
+                  isActive(`/projects/${projectId}/eir`)
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-text-secondary hover:bg-surface hover:text-text-primary'
                 )}

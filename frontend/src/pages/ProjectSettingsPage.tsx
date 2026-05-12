@@ -5,35 +5,30 @@ import {
   DndContext,
   PointerSensor,
   KeyboardSensor,
-  useDroppable,
   useSensor,
   useSensors,
   closestCenter,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  arrayMove,
-  rectSortingStrategy,
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
-import { Eye, LayoutDashboard, Pencil } from 'lucide-react';
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { Eye, Pencil, PanelRight } from 'lucide-react';
 
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { PageShell } from '@/components/Layout';
 import { useProject } from '@/hooks/use-projects';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  EIR_RULES,
   EIR_RULE_BY_KIND,
+  EIR_TIER_LABELS,
+  EIR_TIER_ORDER,
   makeActiveRule,
   ruleMaxInstances,
   type ActiveEirRule,
   type EirRuleKind,
   type EirRuleTier,
 } from '@/components/features/settings/eirRules';
-import { EirRulePalette } from '@/components/features/settings/EirRulePalette';
-import { EirRuleCard } from '@/components/features/settings/EirRuleCard';
+import { EirRulePaletteSheet } from '@/components/features/settings/EirRulePaletteSheet';
+import { EirDocumentSection } from '@/components/features/settings/EirDocumentSection';
 import { EirPreviewPanel } from '@/components/features/settings/EirPreviewPanel';
 import type { EirFieldValue } from '@/components/features/settings/EirConfigurator';
 import { cn } from '@/lib/utils';
@@ -46,35 +41,45 @@ const DEFAULT_KINDS: EirRuleKind[] = [
   'classification',
 ];
 
-const WORKSPACE_DROPPABLE_ID = 'eir-workspace';
-
 type BuilderMode = 'view' | 'edit';
+type TierFilter = EirRuleTier | 'all';
+
+const TIER_FILTER_ORDER: TierFilter[] = ['all', ...EIR_TIER_ORDER];
 
 function parseMode(raw: string | null): BuilderMode {
   return raw === 'edit' ? 'edit' : 'view';
 }
 
-function parseTier(raw: string | null): EirRuleTier {
+function parseTierFilter(raw: string | null): TierFilter {
   if (raw === 'oir' || raw === 'air' || raw === 'pir' || raw === 'eir') return raw;
-  return 'eir';
+  return 'all';
 }
 
+/**
+ * Project Config / EIR builder.
+ *
+ * Documents-first: the workspace is a structured ISO 19650 document
+ * (OIR / AIR / PIR / EIR tier sections). Editor mode overlays drag
+ * handles, X buttons, inline edit affordances, and a "+ Add rule"
+ * popover; view mode renders the same layout as static `<dl>` rows
+ * with amber em-dash for gaps.
+ *
+ * Route: `/projects/:id/eir`. `/projects/:id/settings` is kept as a
+ * redirect for back-compat (handled at the App router level).
+ */
 export default function ProjectSettingsPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { data: project, isLoading } = useProject(id!);
   const { user } = useAuth();
 
-  // ── URL-synced state: ?mode=view|edit and ?tier=eir|pir|... ─────────
+  // ── URL-synced state ────────────────────────────────────────────
+  // ?mode=view|edit  · ?tier=all|oir|air|pir|eir
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = parseMode(searchParams.get('mode'));
-  const tier = parseTier(searchParams.get('tier'));
+  const tierFilter = parseTierFilter(searchParams.get('tier'));
 
-  // Role gating: try to read a role flag off the supabase user object,
-  // fall back to "any authed user may edit". A proper role-claim layer
-  // lives in Phase 7 backend (BEP responses + ISO 19650 join flow).
-  // TODO: wire role-based gating once user.role / membership.role
-  // ships in the frontend auth context.
+  // Role gating (same logic Track D shipped).
   const userMetadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const appMetadata = (user?.app_metadata ?? {}) as Record<string, unknown>;
   const rawRole =
@@ -82,8 +87,6 @@ export default function ProjectSettingsPage() {
     (appMetadata.role as string | undefined) ??
     null;
   const isEditorRaw = userMetadata.is_editor ?? appMetadata.is_editor;
-  // If we DO find a role / is_editor flag, gate edit mode to it.
-  // Otherwise treat any authed user as eligible (worktree fallback).
   const hasRolePlumbing = rawRole !== null || typeof isEditorRaw === 'boolean';
   const canEdit = hasRolePlumbing
     ? rawRole === null
@@ -93,13 +96,12 @@ export default function ProjectSettingsPage() {
 
   const updateMode = useCallback(
     (next: BuilderMode) => {
-      // Block escalation to edit when role gating refuses it.
       if (next === 'edit' && !canEdit) return;
       setSearchParams(
         (prev) => {
           const out = new URLSearchParams(prev);
           if (next === 'edit') out.set('mode', 'edit');
-          else out.delete('mode'); // view is default
+          else out.delete('mode');
           return out;
         },
         { replace: true }
@@ -108,12 +110,12 @@ export default function ProjectSettingsPage() {
     [canEdit, setSearchParams]
   );
 
-  const updateTier = useCallback(
-    (next: EirRuleTier) => {
+  const updateTierFilter = useCallback(
+    (next: TierFilter) => {
       setSearchParams(
         (prev) => {
           const out = new URLSearchParams(prev);
-          if (next === 'eir') out.delete('tier'); // eir is default
+          if (next === 'all') out.delete('tier');
           else out.set('tier', next);
           return out;
         },
@@ -126,6 +128,9 @@ export default function ProjectSettingsPage() {
   const [rules, setRules] = useState<ActiveEirRule[]>(() =>
     DEFAULT_KINDS.map(makeActiveRule)
   );
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  // mobile/md preview panel slide-up state
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -138,53 +143,111 @@ export default function ProjectSettingsPage() {
     return m;
   }, [rules]);
 
-  const tryAddRule = (kind: EirRuleKind) => {
-    if (mode !== 'edit') return false;
-    const max = ruleMaxInstances(EIR_RULE_BY_KIND[kind]);
-    const current = kindCounts.get(kind) ?? 0;
-    if (current >= max) return false;
-    setRules((prev) => [...prev, makeActiveRule(kind)]);
-    return true;
-  };
+  // Group rules by their tier for the document sections.
+  const rulesByTier = useMemo(() => {
+    const m = new Map<EirRuleTier, ActiveEirRule[]>();
+    for (const tier of EIR_TIER_ORDER) m.set(tier, []);
+    for (const r of rules) {
+      const def = EIR_RULE_BY_KIND[r.kind];
+      m.get(def.tier)?.push(r);
+    }
+    return m;
+  }, [rules]);
 
-  const removeRule = (ruleId: string) => {
-    if (mode !== 'edit') return;
-    setRules((prev) => prev.filter((r) => r.id !== ruleId));
-  };
+  const visibleTiers = useMemo(
+    () => (tierFilter === 'all' ? EIR_TIER_ORDER : [tierFilter]),
+    [tierFilter]
+  );
 
-  const updateRuleField = (
-    ruleId: string,
-    fieldId: string,
-    value: EirFieldValue
-  ) => {
-    if (mode !== 'edit') return;
-    setRules((prev) =>
-      prev.map((r) =>
-        r.id === ruleId
-          ? { ...r, config: { ...r.config, [fieldId]: value } }
-          : r
-      )
-    );
-  };
+  const tryAddRule = useCallback(
+    (kind: EirRuleKind) => {
+      if (mode !== 'edit') return null;
+      const def = EIR_RULE_BY_KIND[kind];
+      const max = ruleMaxInstances(def);
+      const current = kindCounts.get(kind) ?? 0;
+      if (current >= max) return null;
+      const created = makeActiveRule(kind);
+      setRules((prev) => [...prev, created]);
+      // Scroll to + briefly highlight the new card on the next paint.
+      requestAnimationFrame(() => {
+        const node = document.querySelector(
+          `[data-rule-id="${created.id}"]`
+        ) as HTMLElement | null;
+        if (node) {
+          node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          node.classList.add('ring-2', 'ring-primary/60');
+          setTimeout(() => {
+            node.classList.remove('ring-2', 'ring-primary/60');
+          }, 1400);
+        }
+      });
+      return created;
+    },
+    [kindCounts, mode]
+  );
+
+  const removeRule = useCallback(
+    (ruleId: string) => {
+      if (mode !== 'edit') return;
+      setRules((prev) => prev.filter((r) => r.id !== ruleId));
+    },
+    [mode]
+  );
+
+  const updateRuleField = useCallback(
+    (ruleId: string, fieldId: string, value: EirFieldValue) => {
+      if (mode !== 'edit') return;
+      setRules((prev) =>
+        prev.map((r) =>
+          r.id === ruleId ? { ...r, config: { ...r.config, [fieldId]: value } } : r
+        )
+      );
+    },
+    [mode]
+  );
+
+  /**
+   * Open the rule palette with the popover pre-scoped to a specific
+   * tier. We do that by switching the page-level tier filter to that
+   * tier (since the popover mirrors it). 'all' → show every rule
+   * kind grouped by tier.
+   */
+  const openPaletteForTier = useCallback(
+    (tier: EirRuleTier) => {
+      // Don't override the user's All filter — only narrow if the
+      // current filter is a different specific tier.
+      if (tierFilter !== 'all' && tierFilter !== tier) {
+        updateTierFilter(tier);
+      }
+      setPaletteOpen(true);
+    },
+    [tierFilter, updateTierFilter]
+  );
 
   const onDragEnd = (event: DragEndEvent) => {
     if (mode !== 'edit') return;
     const { active, over } = event;
     if (!over) return;
     const data = active.data.current as
-      | { source?: 'palette'; kind?: EirRuleKind }
+      | { source?: 'palette'; kind?: EirRuleKind; tier?: EirRuleTier }
       | undefined;
 
-    // Palette drag → add (only if dropped on the workspace or a rule).
+    // Palette → workspace drop. If dropped on a tier section's
+    // droppable id or on an existing rule, add the rule.
     if (data?.source === 'palette' && data.kind) {
-      const droppedOnWorkspace =
-        over.id === WORKSPACE_DROPPABLE_ID ||
-        rules.some((r) => r.id === over.id);
-      if (droppedOnWorkspace) tryAddRule(data.kind);
+      const overId = String(over.id);
+      const droppedOnTierSection = overId.startsWith('eir-section-');
+      const droppedOnRule = rules.some((r) => r.id === over.id);
+      if (droppedOnTierSection || droppedOnRule) {
+        tryAddRule(data.kind);
+        setPaletteOpen(false);
+      }
       return;
     }
 
-    // Sortable reorder within the workspace.
+    // Sortable reorder within the workspace (one flat list — tier
+    // membership is rule-defined, so reorder is visual only within a
+    // tier section's column).
     if (active.id !== over.id) {
       setRules((prev) => {
         const oldIndex = prev.findIndex((r) => r.id === active.id);
@@ -215,6 +278,8 @@ export default function ProjectSettingsPage() {
     );
   }
 
+  const isEditMode = mode === 'edit';
+
   return (
     <AppLayout>
       <PageShell
@@ -224,18 +289,24 @@ export default function ProjectSettingsPage() {
         })}
         headerRight={
           <>
-            <ModeToggle mode={mode} canEdit={canEdit} onChange={updateMode} />
-            <span className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground">
+            <span className="hidden md:inline text-[clamp(0.6rem,0.75vw,0.78rem)] text-muted-foreground tabular-nums">
               {project.name}
-              {' · '}
-              <span className="tabular-nums">
-                {t('settings.eir.activeCount', {
-                  defaultValue: '{{active}} of {{total}} rule kinds in use',
-                  active: kindCounts.size,
-                  total: EIR_RULES.length,
-                })}
-              </span>
             </span>
+            <TierFilterControl tier={tierFilter} onChange={updateTierFilter} />
+            <ModeToggle mode={mode} canEdit={canEdit} onChange={updateMode} />
+            {isEditMode && (
+              <EirRulePaletteSheet
+                open={paletteOpen}
+                onOpenChange={setPaletteOpen}
+                kindCounts={kindCounts}
+                onAdd={(kind) => {
+                  tryAddRule(kind);
+                  setPaletteOpen(false);
+                }}
+                tier={tierFilter}
+                disabled={!canEdit}
+              />
+            )}
           </>
         }
       >
@@ -244,60 +315,83 @@ export default function ProjectSettingsPage() {
           collisionDetection={closestCenter}
           onDragEnd={onDragEnd}
         >
-          <div
-            className={cn(
-              'min-h-[clamp(480px,70vh,960px)] grid grid-cols-1 gap-[clamp(0.75rem,1.25vw,1.25rem)]',
-              mode === 'edit'
-                ? 'md:grid-cols-[clamp(14rem,16vw,18rem)_1fr] xl:grid-cols-[clamp(14rem,16vw,18rem)_1fr_clamp(20rem,24vw,28rem)]'
-                : 'xl:grid-cols-[1fr_clamp(20rem,24vw,28rem)]'
-            )}
-          >
-            {mode === 'edit' && (
-              <aside className="overflow-y-auto pr-[clamp(0.25rem,0.5vw,0.5rem)]">
-                <EirRulePalette
-                  kindCounts={kindCounts}
-                  onAdd={tryAddRule}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_clamp(280px,28vw,420px)] gap-[clamp(0.75rem,1.5vw,1.5rem)]">
+            <main className="flex flex-col gap-[clamp(1rem,2vh,1.75rem)] min-w-0">
+              {visibleTiers.map((tier) => (
+                <EirDocumentSection
+                  key={tier}
                   tier={tier}
-                  onTierChange={updateTier}
+                  rules={rulesByTier.get(tier) ?? []}
+                  mode={mode}
+                  onConfigChange={updateRuleField}
+                  onRemove={removeRule}
+                  onAddRuleToTier={openPaletteForTier}
                 />
-              </aside>
-            )}
-            <WorkspaceDropZone hasRules={rules.length > 0} disabled={mode !== 'edit'}>
-              <SortableContext
-                items={rules.map((r) => r.id)}
-                strategy={rectSortingStrategy}
-                disabled={mode !== 'edit'}
-              >
-                {rules.length === 0 ? (
-                  <EmptyWorkspace mode={mode} />
-                ) : (
-                  <div
-                    className="grid gap-[clamp(0.625rem,1vw,1rem)] pb-[clamp(1rem,2vh,2rem)] items-start"
-                    style={{
-                      gridTemplateColumns:
-                        'repeat(auto-fill, minmax(clamp(18rem, 22vw, 22rem), 1fr))',
-                    }}
-                  >
-                    {rules.map((rule) => (
-                      <EirRuleCard
-                        key={rule.id}
-                        rule={rule}
-                        onConfigChange={updateRuleField}
-                        onRemove={removeRule}
-                        mode={mode}
-                      />
-                    ))}
-                  </div>
-                )}
-              </SortableContext>
-            </WorkspaceDropZone>
-            <div className="hidden xl:flex flex-col min-h-0 overflow-hidden">
-              <EirPreviewPanel rules={rules} />
-            </div>
+              ))}
+            </main>
+
+            {/* Right preview column — visible at lg+ */}
+            <aside className="hidden lg:flex flex-col min-w-0">
+              <div className="lg:sticky lg:top-[clamp(0.75rem,1.5vh,1.25rem)]">
+                <EirPreviewPanel
+                  rules={rules}
+                  className="max-h-[calc(100vh-clamp(8rem,16vh,12rem))]"
+                />
+              </div>
+            </aside>
           </div>
         </DndContext>
+
+        {/* md- preview slide-up sheet */}
+        <PreviewMobileTrigger
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+        />
+        {previewOpen && (
+          <div className="lg:hidden fixed inset-0 z-40 flex flex-col bg-background/95 backdrop-blur-sm">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h2 className="text-base font-semibold">
+                {t('eirBuilder.preview.title', { defaultValue: 'Preview' })}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="rounded-md px-3 py-1 text-sm font-medium hover:bg-muted/50"
+              >
+                {t('common.close', { defaultValue: 'Close' })}
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden p-3">
+              <EirPreviewPanel rules={rules} className="h-full" />
+            </div>
+          </div>
+        )}
       </PageShell>
     </AppLayout>
+  );
+}
+
+function PreviewMobileTrigger({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  if (open) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenChange(true)}
+      className={cn(
+        'lg:hidden fixed bottom-[clamp(1rem,2vh,1.75rem)] right-[clamp(1rem,2vw,1.75rem)] z-30',
+        'inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold shadow-lg hover:bg-primary/90 transition-colors'
+      )}
+    >
+      <PanelRight className="h-4 w-4" />
+      <span>{t('eirBuilder.preview.button', { defaultValue: 'Preview' })}</span>
+    </button>
   );
 }
 
@@ -368,52 +462,46 @@ function ModeToggle({
   );
 }
 
-function WorkspaceDropZone({
-  hasRules,
-  disabled,
-  children,
+function TierFilterControl({
+  tier,
+  onChange,
 }: {
-  hasRules: boolean;
-  disabled: boolean;
-  children: React.ReactNode;
+  tier: TierFilter;
+  onChange: (next: TierFilter) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: WORKSPACE_DROPPABLE_ID,
-    disabled,
-  });
-  return (
-    <main
-      ref={setNodeRef}
-      className={cn(
-        'overflow-y-auto pr-[clamp(0.25rem,0.5vw,0.5rem)] transition-colors rounded-lg',
-        isOver && !disabled && 'bg-primary/5 ring-1 ring-primary/30',
-        !hasRules && 'min-h-[60vh]'
-      )}
-    >
-      {children}
-    </main>
-  );
-}
-
-function EmptyWorkspace({ mode }: { mode: BuilderMode }) {
   const { t } = useTranslation();
   return (
-    <div className="h-full flex flex-col items-center justify-center text-center gap-[clamp(0.5rem,1vh,1rem)] px-[clamp(1rem,2vw,2rem)] text-muted-foreground py-[clamp(2rem,6vh,4rem)]">
-      <LayoutDashboard className="h-[clamp(2rem,4vw,3.5rem)] w-[clamp(2rem,4vw,3.5rem)] opacity-30" />
-      <p className="text-[clamp(0.8rem,1vw,1.05rem)] font-medium text-foreground">
-        {t('settings.eir.emptyTitle', { defaultValue: 'No EIR rules yet' })}
-      </p>
-      <p className="text-[clamp(0.7rem,0.85vw,0.9rem)] max-w-[40ch] leading-[1.5]">
-        {mode === 'edit'
-          ? t('settings.eir.emptyBody', {
-              defaultValue:
-                'Drag a rule from the palette on the left into this area — or double-click a palette row to add it.',
-            })
-          : t('eirBuilder.workspace.emptyView', {
-              defaultValue:
-                'This project has no EIR rules yet. Switch to Edit to compose the contract.',
-            })}
-      </p>
+    <div
+      role="tablist"
+      aria-label={t('eirBuilder.tierFilter.label', {
+        defaultValue: 'ISO 19650 tier filter',
+      })}
+      className="inline-flex items-stretch rounded-md bg-muted/50 p-[clamp(0.125rem,0.2vw,0.25rem)]"
+    >
+      {TIER_FILTER_ORDER.map((tf) => {
+        const selected = tf === tier;
+        const label =
+          tf === 'all'
+            ? t('eirBuilder.tierFilter.all', { defaultValue: 'All' })
+            : EIR_TIER_LABELS[tf];
+        return (
+          <button
+            key={tf}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={() => onChange(tf)}
+            className={cn(
+              'inline-flex items-center justify-center rounded px-[clamp(0.4rem,0.65vw,0.75rem)] py-[clamp(0.25rem,0.4vh,0.5rem)] text-[clamp(0.55rem,0.7vw,0.78rem)] font-semibold tracking-wide transition-colors tabular-nums',
+              selected
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }

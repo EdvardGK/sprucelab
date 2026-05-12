@@ -1760,8 +1760,10 @@
       "editLocked": "Du har ikke redigeringstilgang til dette prosjektet."
     },
     "palette": {
-      "title": "Regelpalett",
+      "title": "Legg til en regel",
       "hint": "Dobbeltklikk eller dra en rad inn i arbeidsflaten.",
+      "popoverHint": "Klikk en regel for å legge den til i dokumentet — eller dra den til en nivå-seksjon.",
+      "dragTitle": "Dra",
       "tierLabel": "ISO 19650-nivå",
       "tier_oir_long": "Organisasjonens informasjonskrav (OIR)",
       "tier_air_long": "Asset Information Requirements (AIR)",
@@ -1784,6 +1786,51 @@
     },
     "workspace": {
       "emptyView": "Dette prosjektet har ingen EIR-regler ennå. Bytt til Rediger for å komponere kontrakten."
+    },
+    "tier": {
+      "ruleCount": "{{count}} regel(er)",
+      "addCta": "Legg til en regel i dette nivået",
+      "addShort": "Legg til regel",
+      "addFirst": "Legg til den første regelen",
+      "emptyView": "Ingen {{tier}}-regler ennå.",
+      "emptyEdit": "Ingen {{tier}}-regler ennå. Klikk + for å legge til den første.",
+      "oir": {
+        "long": "Organisasjonens informasjonskrav (OIR)",
+        "description": "Hvorfor organisasjonen gjør dette — overordnede mål og roller som rammer inn hvert prosjekt."
+      },
+      "air": {
+        "long": "Asset Information Requirements (AIR)",
+        "description": "Hvordan det ferdige bygget skal oppføre seg når det overleveres til drift."
+      },
+      "pir": {
+        "long": "Prosjektets informasjonskrav (PIR)",
+        "description": "Hvordan prosjektet drives ende-til-ende — systemer, konvensjoner og parter."
+      },
+      "eir": {
+        "long": "Utvekslingsinformasjonskrav (EIR)",
+        "description": "Hva hver leveranse må bære — den konkrete utvekslingskontrakten hver modellør signerer."
+      }
+    },
+    "tierFilter": {
+      "label": "ISO 19650 nivåfilter",
+      "all": "Alle"
+    },
+    "addRule": {
+      "label": "Legg til regel",
+      "title": "Åpne regelpaletten"
+    },
+    "preview": {
+      "title": "Forhåndsvisning",
+      "button": "Forhåndsvis",
+      "tabDocument": "Dokument",
+      "tabMap": "Kart",
+      "tab3d": "3D",
+      "tabIds": "IDS XML",
+      "docEmpty": "Legg til regler for å se EIR-dokumentet ta form.",
+      "idsStubNote": "IDS XML-eksport — plassholder; backend-eksport leveres i fase 7.",
+      "idsAria": "IDS XML plassholder",
+      "copy": "Kopier",
+      "copied": "Kopiert"
     }
   },
   "modelDash": {

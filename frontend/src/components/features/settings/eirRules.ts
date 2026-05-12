@@ -671,6 +671,25 @@ export const EIR_TIER_LABELS: Record<EirRuleTier, string> = {
   eir: 'EIR',
 };
 
+/** Long-form tier names (English fallback; i18n overrides). */
+export const EIR_TIER_LONG_LABELS: Record<EirRuleTier, string> = {
+  oir: 'Organizational Information Requirements',
+  air: 'Asset Information Requirements',
+  pir: 'Project Information Requirements',
+  eir: 'Exchange Information Requirements',
+};
+
+/** One-sentence "why this tier exists" copy — shown beneath the tier
+ *  heading in the document view. Strings are English fallbacks; the
+ *  i18n layer (`eirBuilder.tier.<tier>.description`) overrides at runtime.
+ */
+export const EIR_TIER_DESCRIPTIONS: Record<EirRuleTier, string> = {
+  oir: 'Why the organisation is doing this — the higher-order goals and roles that frame every project.',
+  air: 'How the finished asset must behave once handed over to operations.',
+  pir: 'How the project is run end-to-end — the systems, conventions, and parties involved.',
+  eir: 'What every delivery must carry — the concrete exchange contract every modeler signs.',
+};
+
 /** Default is 1 (single instance per project). Use `Infinity` for unlimited. */
 export function ruleMaxInstances(def: EirRuleDefinition): number {
   return def.maxInstances ?? 1;
