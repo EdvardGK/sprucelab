@@ -218,15 +218,12 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
               <div className="min-h-0">
                 <TypeViewerPaneV2
                   modelId={modelId}
+                  types={types}
                   selectedType={selectedType}
                   activeIfcClass={ifcClassFilter}
                   filteredTypeCount={filteredTypes.length}
                   filteredInstanceCount={filteredStats.instances}
-                  classColor={
-                    ifcClassFilter !== 'all'
-                      ? classColors.get(ifcClassFilter)
-                      : undefined
-                  }
+                  classColors={classColors}
                   onClearSelection={() => setSelectedTypeId(null)}
                 />
               </div>

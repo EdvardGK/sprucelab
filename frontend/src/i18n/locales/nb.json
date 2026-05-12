@@ -1578,6 +1578,7 @@
       "unit": "Representativ enhet"
     },
     "rail": {
+      "ariaLabel": "Datafelt for visning",
       "emptyHint": "Velg en type eller filtrer på klasse for å se detaljer her.",
       "ifcClass": "IFC-klasse",
       "types": "Typer",

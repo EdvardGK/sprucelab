@@ -1,33 +1,88 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, X, Filter, Layers } from 'lucide-react';
+import { Box, X, Filter } from 'lucide-react';
 
 import { DashboardTile } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { InlineViewer } from '@/components/features/viewer/InlineViewer';
+import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer';
 import type { IFCType } from '@/hooks/use-warehouse';
 
 import { TypeDataRail } from './TypeDataRail';
 
 interface TypeViewerPaneV2Props {
   modelId: string;
+  /** All types in the active model (unfiltered). Used to build the
+      typeVisibility map for UnifiedBIMViewer. */
+  types: IFCType[];
   selectedType: IFCType | null;
   /** Active IFC class filter (or 'all'). When set and no type is selected,
-      the viewer pane shows a class-scoped state instead of the empty hint. */
+      UnifiedBIMViewer isolates that class. */
   activeIfcClass?: string;
   filteredTypeCount?: number;
   filteredInstanceCount?: number;
-  /** Color of the filtered class in the shared class-color map. */
-  classColor?: string;
+  /** Shared class→color map from buildClassColorMap. */
+  classColors?: Map<string, string>;
   onClearSelection: () => void;
+}
+
+/**
+ * Convert our `ifcClass → color` Map (keyed by IFC TYPE class, e.g.,
+ * IfcWallType) into the format UnifiedBIMViewer expects (keyed by the
+ * INSTANCE class, e.g., IfcWall, plus the bare class name).
+ *
+ * The viewer's type discovery surfaces instance entity classes
+ * (IfcWall, IfcSlab) — type-class names like IfcWallType only appear on
+ * the model upload side, not at runtime in the loaded fragments.
+ */
+function classColorMapForViewer(classColors: Map<string, string>): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const [typeClass, hex] of classColors.entries()) {
+    const entity = typeClass.replace(/Type$/, '').replace(/Style$/, '');
+    map[entity] = hex; // 'IfcWall'
+    map[entity.replace(/^Ifc/, '')] = hex; // 'Wall'
+  }
+  return map;
+}
+
+/**
+ * Build typeVisibility for UnifiedBIMViewer.
+ *
+ * - When `activeIfcClass === 'all'`: omit/return empty → all classes
+ *   visible (viewer default).
+ * - When `activeIfcClass` is set (e.g., 'IfcWallType'): build a
+ *   complete map with all known entity classes flipped to false except
+ *   the filtered class's entity (e.g., 'IfcWall' = true).
+ */
+function buildTypeVisibility(
+  types: IFCType[],
+  activeIfcClass: string
+): Record<string, boolean> | undefined {
+  if (activeIfcClass === 'all') return undefined;
+
+  const entityClasses = new Set<string>();
+  for (const t of types) {
+    entityClasses.add(t.ifc_type.replace(/Type$/, '').replace(/Style$/, ''));
+  }
+  const filteredEntity = activeIfcClass.replace(/Type$/, '').replace(/Style$/, '');
+
+  const map: Record<string, boolean> = {};
+  for (const cls of entityClasses) {
+    map[cls] = cls === filteredEntity;
+    // Some viewers index by bare class too — set both to be safe.
+    map[cls.replace(/^Ifc/, '')] = cls === filteredEntity;
+  }
+  return map;
 }
 
 export function TypeViewerPaneV2({
   modelId,
+  types,
   selectedType,
   activeIfcClass = 'all',
   filteredTypeCount = 0,
   filteredInstanceCount = 0,
-  classColor,
+  classColors,
   onClearSelection,
 }: TypeViewerPaneV2Props) {
   const { t } = useTranslation();
@@ -38,6 +93,17 @@ export function TypeViewerPaneV2({
       ? activeIfcClass.replace(/^Ifc/, '')
       : t('typesV2.viewer.empty');
 
+  const viewerClassColorMap = useMemo(
+    () => (classColors ? classColorMapForViewer(classColors) : undefined),
+    [classColors]
+  );
+  const typeVisibility = useMemo(
+    () => buildTypeVisibility(types, activeIfcClass),
+    [types, activeIfcClass]
+  );
+  const filteredClassColor =
+    activeIfcClass !== 'all' ? classColors?.get(activeIfcClass) : undefined;
+
   return (
     <DashboardTile id="viewer-pane" className="p-0 flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between px-[clamp(0.5rem,1vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] border-b border-border/60 flex-shrink-0">
@@ -45,7 +111,7 @@ export function TypeViewerPaneV2({
           {isClassFiltered ? (
             <Filter
               className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)] shrink-0"
-              style={{ color: classColor ?? 'currentColor' }}
+              style={{ color: filteredClassColor ?? 'currentColor' }}
             />
           ) : (
             <Box className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)] text-muted-foreground shrink-0" />
@@ -75,84 +141,44 @@ export function TypeViewerPaneV2({
         )}
       </div>
 
-      {/* Body: viewer canvas (flex-1) + internal data rail (fixed width). */}
-      <div className="flex-1 min-h-0 flex">
-        <div className="flex-1 min-w-0">
-          {selectedType ? (
-            <InlineViewer
-              key={selectedType.id}
-              modelId={modelId}
-              typeId={selectedType.id}
-              typeName={selectedType.type_name}
-              ifcType={selectedType.ifc_type}
-              definitionLayers={selectedType.mapping?.definition_layers}
-              className="h-full w-full"
-            />
-          ) : isClassFiltered ? (
-            <ClassFilteredState
-              ifcClass={activeIfcClass}
-              classColor={classColor}
-              instanceCount={filteredInstanceCount}
-              typeCount={filteredTypeCount}
-            />
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-[clamp(0.375rem,0.6vh,0.75rem)] px-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
-              <Box className="h-[clamp(1.5rem,3vw,3rem)] w-[clamp(1.5rem,3vw,3rem)] opacity-30" />
-              <p className="text-[clamp(0.65rem,0.85vw,0.9rem)]">{t('typesV2.viewer.hint')}</p>
-            </div>
-          )}
-        </div>
+      {/* Body: viewer canvas (full-bleed) + glass-HUD data rail overlay. */}
+      <div className="flex-1 min-h-0 relative bg-black/5">
+        {selectedType ? (
+          <InlineViewer
+            key={selectedType.id}
+            modelId={modelId}
+            typeId={selectedType.id}
+            typeName={selectedType.type_name}
+            ifcType={selectedType.ifc_type}
+            definitionLayers={selectedType.mapping?.definition_layers}
+            className="h-full w-full"
+          />
+        ) : (
+          <UnifiedBIMViewer
+            key={`v2-pane-${modelId}`}
+            modelId={modelId}
+            showPropertiesPanel={false}
+            showModelInfo={false}
+            showControls={false}
+            classColorMap={viewerClassColorMap}
+            typeVisibility={typeVisibility}
+          />
+        )}
 
-        <div className="w-[clamp(200px,14vw,300px)] shrink-0 border-l border-border/60 overflow-y-auto bg-muted/10">
+        {/* Glass HUD overlay — viewer-companion data rail. */}
+        <aside
+          className="absolute top-[clamp(0.5rem,1vh,0.875rem)] right-[clamp(0.5rem,1vh,0.875rem)] bottom-[clamp(0.5rem,1vh,0.875rem)] w-[clamp(220px,16vw,300px)] bg-card/85 backdrop-blur-md border border-border/40 rounded-lg shadow-lg overflow-y-auto z-10"
+          aria-label={t('typesV2.rail.ariaLabel')}
+        >
           <TypeDataRail
             selectedType={selectedType}
             activeIfcClass={activeIfcClass}
             filteredTypeCount={filteredTypeCount}
             filteredInstanceCount={filteredInstanceCount}
-            classColor={classColor}
+            classColor={filteredClassColor}
           />
-        </div>
+        </aside>
       </div>
     </DashboardTile>
-  );
-}
-
-function ClassFilteredState({
-  ifcClass,
-  classColor,
-  instanceCount,
-  typeCount,
-}: {
-  ifcClass: string;
-  classColor?: string;
-  instanceCount: number;
-  typeCount: number;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="h-full flex flex-col items-center justify-center text-center px-[clamp(0.75rem,1.5vw,1.5rem)] gap-[clamp(0.5rem,1vh,1rem)]">
-      <div
-        className="h-[clamp(2rem,4vw,3.5rem)] w-[clamp(2rem,4vw,3.5rem)] rounded-md flex items-center justify-center"
-        style={{ background: classColor ?? 'hsl(var(--muted))' }}
-      >
-        <Layers className="h-[clamp(1rem,2vw,1.75rem)] w-[clamp(1rem,2vw,1.75rem)] text-white" />
-      </div>
-      <div>
-        <p className="text-[clamp(0.85rem,1.1vw,1.125rem)] font-semibold tabular-nums">
-          {instanceCount.toLocaleString()}{' '}
-          <span className="font-normal text-muted-foreground">
-            {t('typesV2.viewer.instances')}
-          </span>
-        </p>
-        <p className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground mt-0.5 tabular-nums">
-          {t('typesV2.viewer.acrossTypes', { count: typeCount })}
-        </p>
-      </div>
-      <p className="text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground/80 max-w-[28ch] leading-[1.45]">
-        {t('typesV2.viewer.filteredEmptyHint', {
-          ifcClass: ifcClass.replace(/^Ifc/, ''),
-        })}
-      </p>
-    </div>
   );
 }

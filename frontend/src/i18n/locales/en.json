@@ -1578,6 +1578,7 @@
       "unit": "Representative unit"
     },
     "rail": {
+      "ariaLabel": "Viewer data rail",
       "emptyHint": "Select a type or filter by class to see details here.",
       "ifcClass": "IFC class",
       "types": "Types",
