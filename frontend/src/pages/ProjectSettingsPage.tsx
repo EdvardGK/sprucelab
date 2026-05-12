@@ -187,7 +187,7 @@ function SectionTriad({
 
       {section.id === 'classification' && (
         <Link
-          to={`/projects/${projectId}/types?v=2`}
+          to={`/projects/${projectId}/types`}
           className="inline-flex items-center gap-1 self-start rounded-full bg-primary/10 text-primary px-3 py-1.5 text-[clamp(0.65rem,0.8vw,0.85rem)] font-medium hover:bg-primary/20 transition-colors"
         >
           {t('settings.classification.openTypesV2')}

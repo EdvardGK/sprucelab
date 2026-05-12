@@ -1621,7 +1621,7 @@
       "floorsExplain": "Per-modell avvik og publiseringssperren styres fra BEP-kolonnen. Egen statusoppsummering kommer når flere seksjoner er aktive."
     },
     "classification": {
-      "openTypesV2": "Åpne Typer v2 →"
+      "openTypesV2": "Åpne Typer →"
     }
   }
 }

@@ -1621,7 +1621,7 @@
       "floorsExplain": "Per-model deviations and the block-on-deviation gate are managed in the BEP column. A dedicated fulfillment summary lands when more sections are live."
     },
     "classification": {
-      "openTypesV2": "Open Types v2 →"
+      "openTypesV2": "Open Types →"
     }
   }
 }
