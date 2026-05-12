@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Box, X, Filter, Layers } from 'lucide-react';
+import { Box, X, Filter, Layers, HelpCircle } from 'lucide-react';
 
 import { DashboardTile } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -92,15 +92,22 @@ export function TypeViewerPaneV2({
       <div className="flex-1 min-h-0 flex">
         <div className="flex-1 min-w-0">
           {selectedType ? (
-            <InlineViewer
-              key={selectedType.id}
-              modelId={modelId}
-              typeId={selectedType.id}
-              typeName={selectedType.type_name}
-              ifcType={selectedType.ifc_type}
-              definitionLayers={selectedType.mapping?.definition_layers}
-              className="h-full w-full"
-            />
+            selectedType.type_guid ? (
+              <InlineViewer
+                key={selectedType.id}
+                modelId={modelId}
+                typeId={selectedType.id}
+                typeName={selectedType.type_name}
+                ifcType={selectedType.ifc_type}
+                definitionLayers={selectedType.mapping?.definition_layers}
+                className="h-full w-full"
+              />
+            ) : (
+              <UntypedState
+                type={selectedType}
+                onClear={onClearSelection}
+              />
+            )
           ) : isClassFiltered ? (
             <ClassFilteredState
               ifcClass={activeIfcClass}
@@ -127,6 +134,45 @@ export function TypeViewerPaneV2({
         </div>
       </div>
     </DashboardTile>
+  );
+}
+
+function UntypedState({
+  type,
+  onClear,
+}: {
+  type: IFCType;
+  onClear: () => void;
+}) {
+  const { t } = useTranslation();
+  const entityClass = type.ifc_type
+    .replace(/::<untyped>$/i, '')
+    .replace(/^Ifc/, '');
+  return (
+    <div className="h-full flex flex-col items-center justify-center text-center px-[clamp(0.75rem,1.5vw,1.5rem)] gap-[clamp(0.5rem,1vh,1rem)]">
+      <div className="h-[clamp(2rem,4vw,3.5rem)] w-[clamp(2rem,4vw,3.5rem)] rounded-md flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+        <HelpCircle className="h-[clamp(1rem,2vw,1.75rem)] w-[clamp(1rem,2vw,1.75rem)] text-amber-600 dark:text-amber-400" />
+      </div>
+      <div>
+        <p className="text-[clamp(0.85rem,1.1vw,1.125rem)] font-semibold">
+          {t('typesV2.viewer.untypedTitle', { ifcClass: entityClass })}
+        </p>
+        <p className="text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground mt-0.5 tabular-nums">
+          {type.instance_count.toLocaleString()} {t('typesV2.viewer.instances')}
+        </p>
+      </div>
+      <p className="text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground/80 max-w-[34ch] leading-[1.5]">
+        {t('typesV2.viewer.untypedExplain')}
+      </p>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onClear}
+        className="text-[clamp(0.65rem,0.8vw,0.85rem)]"
+      >
+        {t('typesV2.viewer.untypedDismiss')}
+      </Button>
+    </div>
   );
 }
 
