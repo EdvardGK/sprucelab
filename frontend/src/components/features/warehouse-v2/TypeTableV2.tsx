@@ -41,6 +41,7 @@ export function TypeTableV2({
           <table className="w-full text-[clamp(0.65rem,0.8vw,0.85rem)] min-w-[1100px]">
             <thead className="bg-muted/30 sticky top-0 z-10">
               <tr className="text-left text-muted-foreground">
+                <th className="px-[clamp(0.25rem,0.5vw,0.5rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium w-[clamp(0.75rem,1.5vw,1.25rem)]" aria-label={t('typesV2.table.col.status')} />
                 <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium">{t('typesV2.table.col.ifcClass')}</th>
                 <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium">{t('typesV2.table.col.typeName')}</th>
                 <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium text-right">{t('typesV2.table.col.instances')}</th>
@@ -82,6 +83,29 @@ export function TypeTableV2({
   );
 }
 
+function computeCompletenessTone(
+  type: IFCType,
+  props: ReturnType<typeof extractTypeProperties>
+): { tone: 'good' | 'warning' | 'danger'; missing: string[] } {
+  const missing: string[] = [];
+  if (!type.mapping?.ns3451_code) missing.push('NS3451');
+  if (props.loadBearing === null) missing.push('Load-bearing');
+  if (props.isExternal === null) missing.push('External');
+  if (props.fireRating === null) missing.push('Fire rating');
+  if (props.acousticRating === null) missing.push('Acoustic');
+  if (props.thermalTransmittance === null) missing.push('U-value');
+  if (props.mmi === null) missing.push('MMI');
+  if (missing.length === 0) return { tone: 'good', missing };
+  if (missing.length <= 3) return { tone: 'warning', missing };
+  return { tone: 'danger', missing };
+}
+
+const DOT_STYLES: Record<'good' | 'warning' | 'danger', string> = {
+  good: 'bg-[hsl(158_70%_28%)]',
+  warning: 'bg-amber-500',
+  danger: 'bg-red-500',
+};
+
 function TypeRow({
   type,
   selected,
@@ -94,6 +118,7 @@ function TypeRow({
   const { t } = useTranslation();
   const ns3451Code = type.mapping?.ns3451_code;
   const props = extractTypeProperties(type.properties);
+  const completeness = computeCompletenessTone(type, props);
 
   return (
     <tr
@@ -112,6 +137,28 @@ function TypeRow({
           : 'hover:bg-muted/30 focus:bg-muted/30'
       )}
     >
+      <td className="px-[clamp(0.25rem,0.5vw,0.5rem)] py-[clamp(0.375rem,0.6vh,0.625rem)]">
+        <span
+          className={cn(
+            'inline-block h-[clamp(0.4rem,0.6vw,0.625rem)] w-[clamp(0.4rem,0.6vw,0.625rem)] rounded-full',
+            DOT_STYLES[completeness.tone]
+          )}
+          title={
+            completeness.missing.length === 0
+              ? t('typesV2.flags.completeTooltip')
+              : t('typesV2.flags.missingTooltip', {
+                  fields: completeness.missing.join(', '),
+                })
+          }
+          aria-label={
+            completeness.missing.length === 0
+              ? t('typesV2.flags.completeTooltip')
+              : t('typesV2.flags.missingTooltip', {
+                  fields: completeness.missing.join(', '),
+                })
+          }
+        />
+      </td>
       <td className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-mono text-[clamp(0.6rem,0.75vw,0.8rem)] text-muted-foreground whitespace-nowrap">
         {type.ifc_type.replace(/^Ifc/, '')}
       </td>

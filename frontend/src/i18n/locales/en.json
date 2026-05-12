@@ -1524,6 +1524,7 @@
       "empty": "No types match the current filters.",
       "unnamed": "Unnamed type",
       "col": {
+        "status": "Status",
         "ifcClass": "IFC class",
         "typeName": "Type name",
         "instances": "Instances",
@@ -1545,7 +1546,9 @@
       "mmiLong": "Modeling Maturity Index"
     },
     "flags": {
-      "missing": "Missing"
+      "missing": "Missing",
+      "completeTooltip": "All key fields present",
+      "missingTooltip": "Missing: {{fields}}"
     }
   }
 }

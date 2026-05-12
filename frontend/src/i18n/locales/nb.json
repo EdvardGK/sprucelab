@@ -1524,14 +1524,15 @@
       "empty": "Ingen typer matcher gjeldende filtre.",
       "unnamed": "Navnløs type",
       "col": {
+        "status": "Status",
         "ifcClass": "IFC-klasse",
         "typeName": "Typenavn",
         "instances": "Forekomster",
         "ns3451": "NS3451",
-        "loadBearing": "BÆR",
-        "isExternal": "YT",
-        "fireRating": "Brann",
-        "acoustic": "Lyd",
+        "loadBearing": "Bærende",
+        "isExternal": "Ytre",
+        "fireRating": "Brannmotstand",
+        "acoustic": "Lydklasse",
         "thermal": "U-verdi",
         "mmi": "MMI"
       }
@@ -1545,7 +1546,9 @@
       "mmiLong": "Modelleringsmodenhetsindeks"
     },
     "flags": {
-      "missing": "Mangler"
+      "missing": "Mangler",
+      "completeTooltip": "Alle nøkkelfelt er fylt ut",
+      "missingTooltip": "Mangler: {{fields}}"
     }
   }
 }
