@@ -747,6 +747,9 @@
       "layerOccurrences": "Lag-forekomster",
       "layersEmpty": "Dette materialet har ingen registrerte lag-forekomster ennå.",
       "usageEmpty": "Ikke referert av noen type ennå.",
+      "preview": "Forhåndsvisning",
+      "showingOneOf": "Viser {{name}} ({{index}} av {{total}})",
+      "noModelUsage": "Ingen modellbruk ennå",
       "tab": {
         "definition": "Definisjon",
         "layers": "Lag",

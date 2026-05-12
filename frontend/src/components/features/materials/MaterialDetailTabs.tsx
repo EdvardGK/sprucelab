@@ -5,9 +5,11 @@ import { ExternalLink, Leaf, ShoppingCart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { InlineViewer } from '@/components/features/viewer/InlineViewer';
 import { familyColor } from './familyColors';
 import type {
   AggregatedMaterial,
+  MaterialTypeUsage,
   MaterialUnit,
 } from '@/hooks/use-project-materials';
 
@@ -138,8 +140,59 @@ function DefinitionTab({ material }: { material: AggregatedMaterial }) {
   const units = (Object.keys(material.quantities_by_unit) as MaterialUnit[])
     .filter((u) => material.quantities_by_unit[u] > 0);
 
+  // First associated type — drives the mini viewer. Dedupe by type_id so the
+  // "1 of N" count reflects unique types, not raw usage rows (a type can
+  // appear multiple times if a material reappears across layer orders).
+  const uniqueUsages = useMemo<MaterialTypeUsage[]>(
+    () =>
+      Array.from(
+        new Map(material.used_in_types.map((u) => [u.type_id, u])).values(),
+      ),
+    [material.used_in_types],
+  );
+  const firstUsage = uniqueUsages[0] ?? null;
+
   return (
     <div className="space-y-[clamp(0.625rem,1.2vw,1rem)]">
+      {/* Mini viewer — shows the first associated type's geometry. The
+          Materials hook ships one MaterialTypeUsage per layer occurrence,
+          so we dedupe by type_id before picking the head. */}
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="text-[clamp(0.5rem,0.9vw,0.6875rem)] uppercase tracking-wide text-text-tertiary">
+            {t('materialBrowser.detail.preview')}
+          </div>
+          {firstUsage && uniqueUsages.length > 1 && (
+            <div className="text-[clamp(0.5rem,0.85vw,0.6875rem)] text-text-tertiary tabular-nums">
+              {t('materialBrowser.detail.showingOneOf', {
+                name: firstUsage.type_name ?? firstUsage.ifc_type,
+                index: 1,
+                total: uniqueUsages.length,
+              })}
+            </div>
+          )}
+          {firstUsage && uniqueUsages.length === 1 && (
+            <div className="text-[clamp(0.5rem,0.85vw,0.6875rem)] text-text-tertiary truncate max-w-[60%]">
+              {firstUsage.type_name ?? firstUsage.ifc_type}
+            </div>
+          )}
+        </div>
+        <div className="h-[clamp(160px,22vh,240px)] w-full overflow-hidden rounded border border-border/60">
+          {firstUsage ? (
+            <InlineViewer
+              modelId={firstUsage.model_id}
+              typeId={firstUsage.type_id}
+              typeName={firstUsage.type_name}
+              ifcType={firstUsage.ifc_type}
+            />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center bg-zinc-950 text-[clamp(0.55rem,0.9vw,0.75rem)] text-white/40">
+              {t('materialBrowser.detail.noModelUsage')}
+            </div>
+          )}
+        </div>
+      </div>
+
       {material.raw_names.length > 1 && (
         <div>
           <div className="text-[clamp(0.5rem,0.9vw,0.6875rem)] uppercase tracking-wide text-text-tertiary">
