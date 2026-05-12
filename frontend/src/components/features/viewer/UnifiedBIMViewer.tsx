@@ -169,6 +169,22 @@ interface UnifiedBIMViewerProps {
 
   // Element coloring by IFC class (matches treemap palette)
   classColorMap?: Record<string, string>;  // e.g. { 'IfcWall': '#157954', 'Wall': '#157954' }
+
+  /**
+   * If true, the viewer paints with an alpha-0 clear color and a null scene
+   * background so the host element's background shows through. Useful for
+   * embedding mini viewers inside cards where we want the model to "float"
+   * on the card's bg. Default: false — existing call sites are unaffected.
+   */
+  transparentBackground?: boolean;
+
+  /**
+   * Extra className applied to the viewer's outer wrapper. When omitted, the
+   * wrapper keeps its default `bg-gray-900` and existing call sites render
+   * unchanged. Pass an empty string or your own bg classes alongside
+   * `transparentBackground` to fully unset the dark backdrop.
+   */
+  className?: string;
 }
 
 // ElementProperties is now imported from ElementPropertiesPanel
@@ -219,6 +235,8 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   autoFitToView = true,
   initialCameraPosition,
   classColorMap,
+  transparentBackground = false,
+  className,
 }, ref) {
   // Handle convenience prop: modelId → modelIds
   const modelIds = modelIdsProp || (singleModelId ? [singleModelId] : []);
@@ -513,11 +531,27 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         // 3. Setup Scene
         world.scene = new OBC.SimpleScene(components);
         world.scene.setup();
-        world.scene.three.background = new THREE.Color(0x202932);
+        // When transparentBackground is on, leave the scene background null so
+        // the renderer's alpha-0 clear color shows through to the host card.
+        if (transparentBackground) {
+          world.scene.three.background = null;
+        } else {
+          world.scene.three.background = new THREE.Color(0x202932);
+        }
 
         // 4. Setup Renderer (post-processing for SSAO + edges + clean outlines).
         // Falls back to no-AO mode if URL has ?ao=off (large federated escape hatch).
-        world.renderer = new OBCF.PostproductionRenderer(components, container);
+        // Pass `alpha: true` through to the underlying WebGLRenderer when
+        // transparentBackground is on, so the canvas blends with whatever
+        // sits behind it (used by mini-viewer model cards).
+        world.renderer = new OBCF.PostproductionRenderer(
+          components,
+          container,
+          transparentBackground ? { alpha: true } : undefined,
+        );
+        if (transparentBackground) {
+          world.renderer.three.setClearColor(0x000000, 0);
+        }
         // Pixel ratio policy:
         //   - No `?dpr=` override: clamp window.devicePixelRatio to [0.5, 2].
         //     Sharp on retina (DPR=2), no overdraw on DPR=3 phones.
@@ -2318,8 +2352,17 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // Calculate total element count
   const totalElements = loadedModelsRef.current.reduce((sum, m) => sum + m.elementCount, 0);
 
+  // Outer wrapper: caller can override the dark backdrop via `className`.
+  // Default preserves existing `bg-gray-900` look. With transparentBackground
+  // we drop the dark bg so the host element's color shows through.
+  const wrapperClass = className !== undefined
+    ? `relative w-full h-full ${className}`
+    : transparentBackground
+      ? 'relative w-full h-full'
+      : 'relative w-full h-full bg-gray-900';
+
   return (
-    <div className="relative w-full h-full bg-gray-900">
+    <div className={wrapperClass}>
       {/* 3D Viewer Container */}
       <div ref={containerRef} className="w-full h-full" />
 

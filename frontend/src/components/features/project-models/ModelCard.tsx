@@ -86,28 +86,38 @@ function ModelCardImpl({
           'focus-within:ring-2 focus-within:ring-primary/40'
         )}
       >
-        {/* Left — mini viewer */}
-        <div className="relative bg-zinc-950 overflow-hidden">
-          {isReady && shouldMount ? (
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="h-4 w-4 text-white/40 animate-spin" />
-                </div>
-              }
-            >
-              <UnifiedBIMViewer
-                modelId={model.id}
-                showPropertiesPanel={false}
-                showModelInfo={false}
-                showControls={false}
-                showFilterHUD={false}
-                autoFitToView
-              />
-            </Suspense>
-          ) : (
-            <ViewerPlaceholder status={model.status} />
-          )}
+        {/* Left — mini viewer.
+            The 180px column was previously filled top-to-bottom by the
+            viewer, producing a portrait canvas that stretched the model
+            (camera fits-to-canvas-aspect). We now center a square viewport
+            inside the column so the model renders with its natural aspect,
+            and pass `transparentBackground` so the card's `bg-card` shows
+            through — the model reads as floating, not panel-in-panel. */}
+        <div className="relative grid place-items-center overflow-hidden">
+          <div className="aspect-square w-[clamp(140px,12vw,180px)]">
+            {isReady && shouldMount ? (
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                  </div>
+                }
+              >
+                <UnifiedBIMViewer
+                  modelId={model.id}
+                  showPropertiesPanel={false}
+                  showModelInfo={false}
+                  showControls={false}
+                  showFilterHUD={false}
+                  autoFitToView
+                  transparentBackground
+                  className=""
+                />
+              </Suspense>
+            ) : (
+              <ViewerPlaceholder status={model.status} />
+            )}
+          </div>
         </div>
 
         {/* Right — info */}
@@ -167,24 +177,27 @@ export const ModelCard = memo(ModelCardImpl);
 
 function ViewerPlaceholder({ status }: { status: Model['status'] }) {
   const { t } = useTranslation();
+  // Placeholder content reads against the card's bg now that we've dropped
+  // the dark zinc-950 backdrop in favor of a floating model. Use the muted
+  // foreground tokens so it stays readable in both light and dark themes.
   if (status === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-white/40 gap-1.5 px-2 text-center">
-        <AlertCircle className="h-5 w-5 text-red-400/70" />
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1.5 px-2 text-center">
+        <AlertCircle className="h-5 w-5 text-red-500/70" />
         <span className="text-[0.65rem]">{t('projectModels.card.viewerError')}</span>
       </div>
     );
   }
   if (status !== 'ready') {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-white/40 gap-1.5 px-2 text-center">
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1.5 px-2 text-center">
         <Loader2 className="h-4 w-4 animate-spin" />
         <span className="text-[0.65rem]">{t('projectModels.card.viewerProcessing')}</span>
       </div>
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center h-full text-white/30 gap-1.5 px-2 text-center">
+    <div className="flex flex-col items-center justify-center h-full text-muted-foreground/70 gap-1.5 px-2 text-center">
       <BoxIcon className="h-5 w-5" />
       <span className="text-[0.65rem]">{t('projectModels.card.viewerQueued')}</span>
     </div>
