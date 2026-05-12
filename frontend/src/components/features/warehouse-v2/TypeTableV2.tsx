@@ -56,7 +56,7 @@ export function TypeTableV2({
       ) : (
         <div className="flex-1 min-h-0 overflow-auto">
           <table className="w-full text-[clamp(0.65rem,0.8vw,0.85rem)] min-w-[1100px]">
-            <thead className="bg-muted/30 sticky top-0 z-10">
+            <thead className="bg-card sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
               <tr className="text-left text-muted-foreground">
                 <th className="px-[clamp(0.25rem,0.5vw,0.5rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium w-[clamp(0.75rem,1.5vw,1.25rem)]" aria-label={t('typesV2.table.col.status')} />
                 <th className="px-[clamp(0.5rem,0.9vw,1rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] font-medium">{t('typesV2.table.col.ifcClass')}</th>
