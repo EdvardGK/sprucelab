@@ -8,7 +8,7 @@
 
 ## Recently shipped
 
-- [x] **Phase 3 Type page v2 first cut** (2026-05-11, commit `e41c272`) -- new `/projects/:id/types?v=2` route renders the four-section skiplum-reports layout (header + filter bar + treemap/top-20 row + table) wired to real model data. v1 untouched; round-trip link in both directions. New `frontend/src/components/features/warehouse-v2/` directory (6 files), no new deps, no backend changes. Detail pane + manual classification + cards view + materials port deferred to Phase 3b/3c/3d/3.x.
+- [x] **Phase 3 Type page v2 — final shape** (2026-05-11, commits `e41c272` → `fba012d`) -- new `/projects/:id/types?v=2` shipped + iterated through 7 commits to final 3-row layout: row 1 = 6-KPI traffic-light grid (Total · Instances · Avg/type / Untyped · Orphan · Missing classification, with amber/red rings + value coloring on threshold), row 2 = treemap (aspect-square) + 3D viewer (aspect-[4/3]) at 50/50 width with click-row-to-isolate, row 3 = Top-10 bar chart (25%) + types table (75%) at h-[640px] with sticky thead and internal scroll. Property columns full-worded (Load-bearing · External · Fire rating · Acoustic rating · U-value · MMI) extracted via tolerant Pset_*Common probe at `warehouse-v2/typeProperties.ts`. Reframe: "modelers own the data, platform suggests + surfaces gaps" — no "Mapped %" framing, missing values render as amber em-dash. v1 untouched.
 - [x] **Webhook System Phase 1** (2026-04-29, snapshot `b73a1d5`) -- `WebhookSubscription` + `WebhookDelivery` in `apps/automation/`, HMAC-SHA256 dispatcher, Celery `deliver_webhook_task` with exponential backoff + auto-disable, ViewSets at `/api/automation/webhook-{subscriptions,deliveries}/`. Four events wired: `model.processed`, `document.processed`, `claim.extracted`, `verification.complete`.
 - [x] **CLI Expansion -- spruce {types,verify,scripts}** (2026-05-10, commit `991cce9`) -- Typer + Rich + httpx (mirrors `embed.py`). All commands support `--json`. Entry point `cli/spruce/cli.py`. Backend quirks documented: `verify` is POST not GET; `types classify` uses bulk-update with single-element mappings; `types export` streams binary to stdout.
 - [x] **PR 1.5 SavedFiltersDropdown** (2026-05-10, commit `e2f7b0c`) -- `useSavedFilters` hook + Radix dropdown UI mounted in `CanvasOverlays.tsx` chip row. Restore semantics = full replace via `useProjectFilterActions.replace()`. i18n keys `filters.saved.*` (en + nb with proper æøå).
@@ -26,13 +26,15 @@
 
 ## Active backlog
 
-### Phase 3 -- Type page v2 (first cut shipped; follow-ups remain)
-- [x] Phase 3 first cut at `?v=2` (commit `e41c272`)
-- [ ] **Phase 3b**: Detail pane on row click — inline `UnifiedBIMViewer` + `HUDScene`, classification triple, properties grid, layer buildup, MMI/EIR/systems; wires `useProjectFilter` cross-filter
-- [ ] **Phase 3c**: Manual classification UI (ConfirmedClassPill + ClassificationCombobox)
+### Phase 3 -- Type page v2 (final shape shipped; follow-ups remain)
+- [x] Phase 3 first cut + 6 iteration commits (final commit `fba012d`)
+- [ ] **Phase 3b**: Detail pane on row click — currently only viewer isolation works. Add classification triple + properties grid + layer buildup + MMI/EIR/systems beside or below the viewer. Wire `useProjectFilter` cross-filter (PowerBI-style)
+- [ ] **Phase 3b.1**: Notes + "Flag this type" → creates `Claim` with the selected type as origin (backend `Claim` model already exists, used by ClaimInbox)
+- [ ] **Phase 3c**: Dedicated type-workspace route at `/projects/:id/types/workspace?type=:id` — modeler-style manual classification UI lives there (currently still in v1 `TypeBrowser` 3-column form). Per `feedback-modelers-own-data-platform-suggests.md`
 - [ ] **Phase 3d**: Cards view toggle
 - [ ] **Phase 3.x**: Materials port at `/projects/:id/materials?v=2`
-- [ ] Tune coverage strip metric (`computeCoverage` in `TypeTableV2.tsx`) against real EIRs once Phase 7 lands
+- [ ] MMI distribution per type — needs per-instance aggregation (new `useTypeMmiDistribution(typeId)` hook + likely a new backend endpoint)
+- [ ] Confirm "Orphan" semantic with user: currently = types with `instance_count === 0`; might mean orphan entities (no spatial hierarchy) instead
 
 ### CLI follow-ups
 - [ ] Live API smoke against dev server: `spruce types list --model <id> --json`, `spruce verify --model <id>`, `spruce scripts list`. Only `--help` verified at ship time.
@@ -115,5 +117,5 @@
 
 ---
 
-**Next Action**: Phase 3b -- Type detail pane (inline viewer + classification triple + properties grid + cross-filter)
-**Then**: Phase 3c/3d/3.x, then Embed PR 5+
+**Next Action**: Phase 3b -- Detail pane on type row click (classification triple + properties grid + layer buildup; viewer isolation already works)
+**Then**: Phase 3b.1 (notes + Flag-this-type → Claim), Phase 3c (dedicated type workspace), Phase 3.x (Materials port), Embed PR 5+
