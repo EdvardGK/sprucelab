@@ -1524,6 +1524,7 @@
       "empty": "No types match the current filters.",
       "unnamed": "Unnamed type",
       "filterByClass": "Filter to {{class}}",
+      "clearFilters": "Clear filters",
       "col": {
         "status": "Status",
         "ifcClass": "IFC class",

@@ -15,6 +15,7 @@ interface TypeTableV2Props {
   onIfcClassClick?: (ifcClass: string) => void;
   activeIfcClass?: string;
   classColors?: Map<string, string>;
+  onClearFilters?: () => void;
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export function TypeTableV2({
   onIfcClassClick,
   activeIfcClass = 'all',
   classColors,
+  onClearFilters,
   className,
 }: TypeTableV2Props) {
   const { t } = useTranslation();
@@ -39,8 +41,17 @@ export function TypeTableV2({
       </div>
 
       {types.length === 0 ? (
-        <div className="py-12 text-center text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground">
-          {t('typesV2.table.empty')}
+        <div className="py-[clamp(2rem,5vh,4rem)] flex flex-col items-center gap-[clamp(0.5rem,1vh,1rem)] text-center text-[clamp(0.65rem,0.8vw,0.85rem)] text-muted-foreground">
+          <span>{t('typesV2.table.empty')}</span>
+          {onClearFilters && (activeIfcClass !== 'all') && (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-[clamp(0.625rem,1vw,1rem)] py-[clamp(0.25rem,0.4vh,0.5rem)] text-[clamp(0.65rem,0.8vw,0.85rem)] font-medium hover:bg-primary/20 transition-colors"
+            >
+              {t('typesV2.table.clearFilters')}
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-auto">
@@ -153,11 +164,11 @@ function TypeRow({
           : 'hover:bg-muted/30 focus:bg-muted/30'
       )}
     >
-      <td className="px-[clamp(0.25rem,0.5vw,0.5rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] relative">
+      <td className="px-[clamp(0.5rem,0.8vw,0.875rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] relative">
         {classColor && (
           <span
             aria-hidden="true"
-            className="absolute left-0 top-0 bottom-0 w-[3px]"
+            className="absolute left-0 top-0 bottom-0 w-[4px]"
             style={{ background: classColor }}
           />
         )}

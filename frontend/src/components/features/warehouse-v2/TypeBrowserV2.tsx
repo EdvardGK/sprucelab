@@ -242,6 +242,10 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                   }
                   activeIfcClass={ifcClassFilter}
                   classColors={classColors}
+                  onClearFilters={() => {
+                    setIfcClassFilter('all');
+                    setSearchQuery('');
+                  }}
                   className="h-full"
                 />
               </div>
