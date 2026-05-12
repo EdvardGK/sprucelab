@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DashboardTile } from '@/components/Layout';
+import { DrillTarget } from '@/components/filters/DrillTarget';
 import { treemapLayout } from '@/lib/treemap';
 import type { IFCType } from '@/hooks/use-warehouse';
 
@@ -13,20 +14,25 @@ const TREEMAP_COLORS = [
 
 interface TypeTreemapProps {
   types: IFCType[];
+  /** Currently active IFC-class filter ("all" = none). */
+  activeIfcClass?: string;
+  /** Click handler receiving the full IFC class name (with "Ifc" prefix). */
+  onClassClick?: (ifcClass: string) => void;
 }
 
-export function TypeTreemap({ types }: TypeTreemapProps) {
+export function TypeTreemap({ types, activeIfcClass = 'all', onClassClick }: TypeTreemapProps) {
   const { t } = useTranslation();
 
   const items = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const counts: Record<string, { value: number; fullClass: string }> = {};
     for (const type of types) {
       if (type.instance_count <= 0) continue;
       const cls = type.ifc_type.replace(/^Ifc/, '');
-      counts[cls] = (counts[cls] || 0) + type.instance_count;
+      if (!counts[cls]) counts[cls] = { value: 0, fullClass: type.ifc_type };
+      counts[cls].value += type.instance_count;
     }
     return Object.entries(counts)
-      .map(([label, value]) => ({ label, value }))
+      .map(([label, { value, fullClass }]) => ({ label, value, fullClass }))
       .sort((a, b) => b.value - a.value);
   }, [types]);
 
@@ -47,17 +53,42 @@ export function TypeTreemap({ types }: TypeTreemapProps) {
             {t('typesV2.viz.empty')}
           </div>
         ) : (
-          <TreemapCanvas items={items} />
+          <TreemapCanvas
+            items={items}
+            activeIfcClass={activeIfcClass}
+            onClassClick={onClassClick}
+          />
         )}
       </div>
     </DashboardTile>
   );
 }
 
-function TreemapCanvas({ items }: { items: { label: string; value: number }[] }) {
+function TreemapCanvas({
+  items,
+  activeIfcClass,
+  onClassClick,
+}: {
+  items: { label: string; value: number; fullClass: string }[];
+  activeIfcClass?: string;
+  onClassClick?: (ifcClass: string) => void;
+}) {
   const W = 800;
   const H = 450;
-  const rects = useMemo(() => treemapLayout(items, W, H), [items]);
+  const rects = useMemo(
+    () =>
+      treemapLayout(
+        items.map((i) => ({ label: i.label, value: i.value })),
+        W,
+        H
+      ),
+    [items]
+  );
+  const fullByLabel = useMemo(() => {
+    const m = new Map<string, string>();
+    items.forEach((i) => m.set(i.label, i.fullClass));
+    return m;
+  }, [items]);
 
   return (
     <div className="absolute inset-0">
@@ -68,31 +99,54 @@ function TreemapCanvas({ items }: { items: { label: string; value: number }[] })
         const pctH = (r.h / H) * 100;
         const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
         const showLabel = pctW > 6 && pctH > 6;
+        const fullClass = fullByLabel.get(r.label) ?? 'Ifc' + r.label;
+        const isActive =
+          activeIfcClass !== undefined && activeIfcClass !== 'all' && activeIfcClass === fullClass;
+        const interactive = !!onClassClick;
+        const tileStyle: React.CSSProperties = {
+          left: `${pctX}%`,
+          top: `${pctY}%`,
+          width: `${pctW}%`,
+          height: `${pctH}%`,
+          background: color,
+          opacity: isActive ? 1 : 0.9,
+        };
+        const tileClassName =
+          'absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center text-white transition-opacity duration-200';
+        const tileContent = showLabel && (
+          <>
+            <span className="text-[clamp(0.55rem,0.9vw,0.75rem)] font-medium leading-tight truncate max-w-full px-1">
+              {r.label}
+            </span>
+            <span className="text-[clamp(0.5rem,0.8vw,0.65rem)] opacity-80 tabular-nums">
+              {r.value.toLocaleString()}
+            </span>
+          </>
+        );
+        if (!interactive) {
+          return (
+            <div
+              key={r.label}
+              className={tileClassName}
+              style={tileStyle}
+              title={`${r.label}: ${r.value.toLocaleString()}`}
+            >
+              {tileContent}
+            </div>
+          );
+        }
         return (
-          <div
+          <DrillTarget
             key={r.label}
-            className="absolute border border-black/30 overflow-hidden flex flex-col items-center justify-center text-white"
-            style={{
-              left: `${pctX}%`,
-              top: `${pctY}%`,
-              width: `${pctW}%`,
-              height: `${pctH}%`,
-              background: color,
-              opacity: 0.9,
-            }}
+            active={isActive}
+            ariaLabel={`Filter by ${r.label}`}
             title={`${r.label}: ${r.value.toLocaleString()}`}
+            className={tileClassName}
+            style={tileStyle}
+            onActivate={() => onClassClick!(fullClass)}
           >
-            {showLabel && (
-              <>
-                <span className="text-[clamp(0.55rem,0.9vw,0.75rem)] font-medium leading-tight truncate max-w-full px-1">
-                  {r.label}
-                </span>
-                <span className="text-[clamp(0.5rem,0.8vw,0.65rem)] opacity-80 tabular-nums">
-                  {r.value.toLocaleString()}
-                </span>
-              </>
-            )}
-          </div>
+            {tileContent}
+          </DrillTarget>
         );
       })}
     </div>

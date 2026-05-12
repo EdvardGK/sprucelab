@@ -179,7 +179,15 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
           <div className="h-[clamp(560px,calc(100vh-14rem),1100px)]">
             <DashboardGrid layout={HERO_LAYOUT}>
               <div id="kpis"><TypeKpiGrid stats={stats} loading={isLoading} /></div>
-              <div id="treemap"><TypeTreemap types={filteredTypes} /></div>
+              <div id="treemap">
+                <TypeTreemap
+                  types={filteredTypes}
+                  activeIfcClass={ifcClassFilter}
+                  onClassClick={(cls) =>
+                    setIfcClassFilter((curr) => (curr === cls ? 'all' : cls))
+                  }
+                />
+              </div>
               <div id="viewer">
                 <TypeViewerPaneV2
                   modelId={modelId}

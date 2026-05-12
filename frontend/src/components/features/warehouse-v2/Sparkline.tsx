@@ -54,7 +54,7 @@ export function Sparkline({
     return (
       <div className={className}>
         <div
-          className="h-[clamp(0.25rem,0.5vh,0.5rem)] w-full rounded-full overflow-hidden"
+          className="h-[clamp(0.5rem,0.9vh,0.75rem)] w-full rounded-full overflow-hidden"
           style={{ background: trackColor }}
         >
           <div
@@ -71,7 +71,7 @@ export function Sparkline({
     return (
       <div className={className}>
         <div
-          className="h-[clamp(0.25rem,0.5vh,0.5rem)] w-full rounded-full"
+          className="h-[clamp(0.5rem,0.9vh,0.75rem)] w-full rounded-full"
           style={{ background: trackColor }}
         />
       </div>
@@ -87,7 +87,7 @@ export function Sparkline({
   return (
     <div className={className}>
       <div
-        className="h-[clamp(0.25rem,0.5vh,0.5rem)] w-full rounded-full overflow-hidden flex"
+        className="h-[clamp(0.5rem,0.9vh,0.75rem)] w-full rounded-full overflow-hidden flex"
         style={{ background: trackColor }}
       >
         {sorted.map((seg) => {
