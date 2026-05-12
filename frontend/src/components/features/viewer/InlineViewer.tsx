@@ -38,6 +38,12 @@ interface InlineViewerProps {
   guidsOverride?: string[];
   /** Show a spinner while parent is collecting GUIDs for `guidsOverride`. */
   guidsOverrideLoading?: boolean;
+  /**
+   * Pass-through to UnifiedBIMViewer — when true, the underlying canvas
+   * paints with alpha 0 so the host card's background shows through.
+   * Default: false. Existing call sites unaffected.
+   */
+  transparentBackground?: boolean;
 }
 
 function InlineViewerImpl({
@@ -49,6 +55,7 @@ function InlineViewerImpl({
   className,
   guidsOverride,
   guidsOverrideLoading,
+  transparentBackground = false,
 }: InlineViewerProps) {
   const { t } = useTranslation();
   const [viewDimension, setViewDimension] = useState<ViewDimension>('3d');
@@ -165,7 +172,11 @@ function InlineViewerImpl({
             </div>
           }
         >
-          <GuidOverrideViewer modelId={modelId} guids={guidsOverride!} />
+          <GuidOverrideViewer
+            modelId={modelId}
+            guids={guidsOverride!}
+            transparentBackground={transparentBackground}
+          />
         </Suspense>
       </div>
     );
@@ -219,6 +230,7 @@ function InlineViewerImpl({
             modelId={modelId}
             instances={instances}
             currentIndex={currentIndex}
+            transparentBackground={transparentBackground}
           />
         </Suspense>
         {/* Back button */}
@@ -342,9 +354,11 @@ function DimensionToggle({
 function GuidOverrideViewer({
   modelId,
   guids,
+  transparentBackground,
 }: {
   modelId: string;
   guids: string[];
+  transparentBackground?: boolean;
 }) {
   const isolation = useMemo(
     () => ({
@@ -363,6 +377,7 @@ function GuidOverrideViewer({
       showModelInfo={false}
       showControls={false}
       showFilterHUD={false}
+      transparentBackground={transparentBackground}
     />
   );
 }
@@ -374,10 +389,12 @@ function ShowModelViewer({
   modelId,
   instances,
   currentIndex,
+  transparentBackground,
 }: {
   modelId: string;
   instances: { ifc_guid: string }[];
   currentIndex: number;
+  transparentBackground?: boolean;
 }) {
   const isolation = useMemo(
     () => ({
@@ -397,6 +414,7 @@ function ShowModelViewer({
       showModelInfo={false}
       showControls={false}
       showFilterHUD={false}
+      transparentBackground={transparentBackground}
     />
   );
 }

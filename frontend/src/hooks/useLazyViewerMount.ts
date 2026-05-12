@@ -85,6 +85,20 @@ export function useLazyViewerMount(
       return;
     }
 
+    // Synchronous initial-viewport check.
+    //
+    // Previous behavior: rely entirely on IntersectionObserver to fire its
+    // first callback. Those callbacks are scheduled asynchronously after
+    // layout, and N cards in the viewport on initial paint did not all
+    // fire in the same microtask — the eye perceived viewers mounting one
+    // by one. By probing `getBoundingClientRect()` here, every card whose
+    // ref is already inside the (expanded) viewport claims a slot on its
+    // very first effect run, so the first N cards mount in parallel.
+    if (isElementInViewport(el, rootMargin)) {
+      inViewRef.current = true;
+      tryClaim();
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -157,4 +171,57 @@ export function useLazyViewerMount(
 // Test/dev helper: read the current active mount count.
 export function __getActiveViewerMounts() {
   return activeMounts;
+}
+
+/**
+ * Cheap synchronous viewport check matching the IntersectionObserver's
+ * `rootMargin` semantics. Used at mount time so the first batch of
+ * already-in-viewport cards can claim slots without waiting for the
+ * observer's first async callback (the prior bug — viewers appeared to
+ * load serially, one per layout pass).
+ *
+ * `rootMargin` accepts the standard CSS-shorthand string ("200px",
+ * "10px 20px", "0px 10% 0px 10%", etc). We tolerate `px` and `%` units;
+ * anything else falls back to 0.
+ */
+function isElementInViewport(el: Element, rootMargin: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const rect = el.getBoundingClientRect();
+  const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+  const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+  const [mTop, mRight, mBottom, mLeft] = parseRootMargin(rootMargin, vw, vh);
+  // Element overlaps the viewport (expanded by margins) on both axes.
+  return (
+    rect.bottom + mBottom > 0 &&
+    rect.top - mTop < vh &&
+    rect.right + mRight > 0 &&
+    rect.left - mLeft < vw
+  );
+}
+
+function parseRootMargin(
+  rootMargin: string,
+  vw: number,
+  vh: number,
+): [number, number, number, number] {
+  const parts = rootMargin.trim().split(/\s+/);
+  if (parts.length === 0) return [0, 0, 0, 0];
+  // CSS shorthand: 1 → all, 2 → vert/horiz, 3 → top/horiz/bottom, 4 → t/r/b/l.
+  const toPx = (raw: string, axis: 'v' | 'h'): number => {
+    if (!raw) return 0;
+    if (raw.endsWith('%')) {
+      const pct = parseFloat(raw) / 100;
+      return Number.isFinite(pct) ? pct * (axis === 'v' ? vh : vw) : 0;
+    }
+    const n = parseFloat(raw);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const expand = (arr: string[]): [string, string, string, string] => {
+    if (arr.length === 1) return [arr[0], arr[0], arr[0], arr[0]];
+    if (arr.length === 2) return [arr[0], arr[1], arr[0], arr[1]];
+    if (arr.length === 3) return [arr[0], arr[1], arr[2], arr[1]];
+    return [arr[0], arr[1], arr[2], arr[3]];
+  };
+  const [t, r, b, l] = expand(parts);
+  return [toPx(t, 'v'), toPx(r, 'h'), toPx(b, 'v'), toPx(l, 'h')];
 }
