@@ -671,13 +671,21 @@
     "unclassified": "Unclassified",
     "missingValue": "Not set",
     "kpi": {
-      "title": "Material library overview",
+      "title": "Materials dashboard",
       "totalMaterials": "Materials",
       "totalSets": "Sets",
+      "totalQuantity": "Total quantity",
+      "mappedToProduct": "Mapped to product",
       "classified": "Classified",
       "epdLinked": "EPD-linked",
       "procurementLinked": "Procurement-linked",
-      "modelsLoaded": "Models loaded"
+      "modelsLoaded": "Models loaded",
+      "totalCost": "Total est. cost",
+      "totalGwp": "Total GWP",
+      "mixedUnits": "Mixed units",
+      "mixedUnitsHint": "Materials measured in mixed units — showing the dominant axis",
+      "costMissingHint": "No materials carry a product unit cost yet",
+      "gwpMissingHint": "No EPD-linked materials carry GWP data yet"
     },
     "viz": {
       "treemapTitle": "Families by quantity",
@@ -724,7 +732,37 @@
       "quantity": "Quantity",
       "usedIn": "Used in",
       "lca": "LCA",
-      "procurement": "Procurement"
+      "procurement": "Procurement",
+      "product": "Product",
+      "epd": "EPD",
+      "cost": "Cost",
+      "gwp": "GWP"
+    },
+    "shown": "{{shown}} of {{total}}",
+    "topN": {
+      "title": "Top {{count}}",
+      "empty": "No materials with this metric yet",
+      "noCost": "No product costs linked yet",
+      "noGwp": "No EPDs linked yet",
+      "axisLabel": "Ranking axis",
+      "axis": {
+        "quantity": "Qty",
+        "cost": "Cost",
+        "gwp": "GWP"
+      }
+    },
+    "sandwich": {
+      "title": "Layer composition · {{occurrences}} occurrences across {{types}} types",
+      "ariaLabel": "Sandwich stack for {{name}} ({{occurrences}} layer occurrences)"
+    },
+    "donut": {
+      "title": "Usage by type",
+      "typesLabel": "types",
+      "other": "Other ({{count}})"
+    },
+    "sphere": {
+      "aria": "PBR material preview for {{name}}",
+      "loading": "Preview waiting…"
     },
     "detail": {
       "material": "Material",
@@ -742,12 +780,14 @@
       "procurementReadiness": "Procurement readiness",
       "procurementReady": "Product and supplier linked",
       "procurementMissing": "No product or supplier. Specification is generic.",
-      "selectPrompt": "Select a material or set to see details",
+      "selectPrompt": "Select a material to see details",
       "composition": "Composition",
       "layerOccurrences": "Layer occurrences",
       "layersEmpty": "This material has no recorded layer occurrences yet.",
       "usageEmpty": "Not yet referenced by any type.",
-      "preview": "Preview",
+      "preview": "Geometry",
+      "appearance": "Appearance",
+      "appearanceHint": "PBR preview — shader derived from family",
       "showingOneOf": "Showing {{name}} ({{index}} of {{total}})",
       "noModelUsage": "No model usage yet",
       "tab": {

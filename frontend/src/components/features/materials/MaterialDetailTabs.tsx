@@ -7,6 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { InlineViewer } from '@/components/features/viewer/InlineViewer';
 import { familyColor } from './familyColors';
+import { MaterialSpherePreview } from './MaterialSpherePreview';
+import { MaterialSandwichStack } from './MaterialSandwichStack';
+import { MaterialUsageDonut } from './MaterialUsageDonut';
 import type {
   AggregatedMaterial,
   MaterialTypeUsage,
@@ -19,13 +22,20 @@ interface MaterialDetailTabsProps {
 }
 
 /**
- * Tabbed detail panel for the Materials page. Four tabs:
+ * Detail rail for a single material. Three tabs:
  *
- * - Definition — name, family, aliases, quantities
- * - Layers — compact stacked-bar showing every layer occurrence of the
- *   material across the project. Lift of the TypeDataRail layer pattern.
- * - Where-used — per-type usage list, navigates to Type page
+ * - Definition — PBR sphere preview + sandwich-stack OR donut + quantities
+ * - Used in   — per-type usage list, navigates to Type page
  * - Readiness — LCA + procurement lights with explanations
+ *
+ * The Definition tab picks ONE viz based on the material's nature:
+ *   - Layered (has thickness in at least one used_in_types entry)
+ *       -> MaterialSandwichStack
+ *   - Non-layered (bulk use, e.g. furniture or fittings)
+ *       -> MaterialUsageDonut
+ *
+ * Sandwich + donut are mutually exclusive by design — the spec is that
+ * the visualization mirrors the material's physics.
  */
 export function MaterialDetailTabs({
   material,
@@ -84,18 +94,12 @@ export function MaterialDetailTabs({
       </div>
 
       <Tabs defaultValue="definition" className="w-full">
-        <TabsList className="grid grid-cols-4 h-auto p-0.5 bg-muted/60">
+        <TabsList className="grid grid-cols-3 h-auto p-0.5 bg-muted/60">
           <TabsTrigger
             value="definition"
             className="text-[clamp(0.55rem,0.85vw,0.75rem)] py-1"
           >
             {t('materialBrowser.detail.tab.definition')}
-          </TabsTrigger>
-          <TabsTrigger
-            value="layers"
-            className="text-[clamp(0.55rem,0.85vw,0.75rem)] py-1"
-          >
-            {t('materialBrowser.detail.tab.layers')}
           </TabsTrigger>
           <TabsTrigger
             value="usage"
@@ -112,11 +116,10 @@ export function MaterialDetailTabs({
         </TabsList>
 
         <TabsContent value="definition" className="mt-[clamp(0.5rem,1vw,0.875rem)]">
-          <DefinitionTab material={material} />
-        </TabsContent>
-
-        <TabsContent value="layers" className="mt-[clamp(0.5rem,1vw,0.875rem)]">
-          <LayersTab material={material} />
+          <DefinitionTab
+            material={material}
+            onNavigateToType={onNavigateToType}
+          />
         </TabsContent>
 
         <TabsContent value="usage" className="mt-[clamp(0.5rem,1vw,0.875rem)]">
@@ -135,14 +138,19 @@ export function MaterialDetailTabs({
   );
 }
 
-function DefinitionTab({ material }: { material: AggregatedMaterial }) {
+function DefinitionTab({
+  material,
+  onNavigateToType,
+}: {
+  material: AggregatedMaterial;
+  onNavigateToType: (typeId: string, modelId: string) => void;
+}) {
   const { t } = useTranslation();
   const units = (Object.keys(material.quantities_by_unit) as MaterialUnit[])
     .filter((u) => material.quantities_by_unit[u] > 0);
 
   // First associated type — drives the mini viewer. Dedupe by type_id so the
-  // "1 of N" count reflects unique types, not raw usage rows (a type can
-  // appear multiple times if a material reappears across layer orders).
+  // "1 of N" count reflects unique types, not raw usage rows.
   const uniqueUsages = useMemo<MaterialTypeUsage[]>(
     () =>
       Array.from(
@@ -152,11 +160,36 @@ function DefinitionTab({ material }: { material: AggregatedMaterial }) {
   );
   const firstUsage = uniqueUsages[0] ?? null;
 
+  // Decide sandwich vs donut viz. Sandwich requires at least one usage
+  // with a real thickness — otherwise the donut tells the share-of-total
+  // story more honestly.
+  const hasLayerData = material.used_in_types.some(
+    (u) => u.thickness_mm !== null && (u.thickness_mm ?? 0) > 0,
+  );
+
   return (
     <div className="space-y-[clamp(0.625rem,1.2vw,1rem)]">
-      {/* Mini viewer — shows the first associated type's geometry. The
-          Materials hook ships one MaterialTypeUsage per layer occurrence,
-          so we dedupe by type_id before picking the head. */}
+      {/* PBR sphere — the "this is what this material looks like" cue */}
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="text-[clamp(0.5rem,0.9vw,0.6875rem)] uppercase tracking-wide text-text-tertiary">
+            {t('materialBrowser.detail.appearance')}
+          </div>
+          <div className="text-[clamp(0.45rem,0.7vw,0.6rem)] text-text-tertiary italic">
+            {t('materialBrowser.detail.appearanceHint')}
+          </div>
+        </div>
+        <MaterialSpherePreview material={material} />
+      </div>
+
+      {/* Sandwich-stack OR donut, picked by the material's nature */}
+      {hasLayerData ? (
+        <MaterialSandwichStack material={material} />
+      ) : (
+        <MaterialUsageDonut material={material} onTypeClick={onNavigateToType} />
+      )}
+
+      {/* Geometry preview from the first associated type */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="text-[clamp(0.5rem,0.9vw,0.6875rem)] uppercase tracking-wide text-text-tertiary">
@@ -177,7 +210,7 @@ function DefinitionTab({ material }: { material: AggregatedMaterial }) {
             </div>
           )}
         </div>
-        <div className="h-[clamp(160px,22vh,240px)] w-full overflow-hidden rounded border border-border/60">
+        <div className="h-[clamp(140px,18vh,200px)] w-full overflow-hidden rounded border border-border/60">
           {firstUsage ? (
             <InlineViewer
               modelId={firstUsage.model_id}
@@ -262,99 +295,6 @@ function DefinitionTab({ material }: { material: AggregatedMaterial }) {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function LayersTab({ material }: { material: AggregatedMaterial }) {
-  const { t } = useTranslation();
-  // Group usages by their layer occurrence — sum thickness × instances
-  // per type, and show the resulting strip. Re-uses the compact
-  // horizontal stacked-bar idiom from TypeDataRail.
-  const occurrences = useMemo(() => {
-    return material.used_in_types
-      .map((u) => ({
-        type_id: u.type_id,
-        type_name: u.type_name ?? u.ifc_type,
-        ifc_type: u.ifc_type,
-        thickness_mm: u.thickness_mm,
-        instance_count: u.instance_count,
-        layer_order: u.layer_order,
-      }))
-      .sort((a, b) => b.instance_count - a.instance_count)
-      .slice(0, 14);
-  }, [material]);
-
-  const totalThickness = useMemo(
-    () => occurrences.reduce((s, o) => s + (o.thickness_mm ?? 0), 0),
-    [occurrences],
-  );
-  const hasThickness = totalThickness > 0;
-
-  if (occurrences.length === 0) {
-    return (
-      <div className="text-[clamp(0.625rem,1vw,0.75rem)] text-text-tertiary">
-        {t('materialBrowser.detail.layersEmpty')}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-[clamp(0.5rem,1vw,0.875rem)]">
-      <div className="text-[clamp(0.5rem,0.9vw,0.6875rem)] uppercase tracking-wide text-text-tertiary">
-        {t('materialBrowser.detail.layerOccurrences')}
-      </div>
-      {/* The stacked strip */}
-      <div className="flex h-[clamp(1.25rem,2vh,1.75rem)] w-full rounded overflow-hidden border border-border/60">
-        {occurrences.map((o, i) => {
-          const share = hasThickness
-            ? ((o.thickness_mm ?? 0) / totalThickness) * 100
-            : 100 / occurrences.length;
-          const color = familyColor(material.family);
-          return (
-            <div
-              key={`${o.type_id}-${o.layer_order}-${i}`}
-              style={{
-                width: `${Math.max(share, 1.5)}%`,
-                background: color,
-                opacity: 0.55 + (i % 5) * 0.09,
-              }}
-              title={`${o.type_name} · ${o.thickness_mm ?? '—'} mm · ${o.instance_count} instances`}
-            />
-          );
-        })}
-      </div>
-      {/* Legend */}
-      <ul className="flex flex-col gap-[clamp(0.125rem,0.3vh,0.3rem)] text-[clamp(0.55rem,0.8vw,0.75rem)] text-muted-foreground">
-        {occurrences.map((o, i) => (
-          <li
-            key={`${o.type_id}-${o.layer_order}-${i}-leg`}
-            className="flex items-center gap-1.5"
-          >
-            <span
-              className="h-[clamp(0.45rem,0.55vw,0.6rem)] w-[clamp(0.45rem,0.55vw,0.6rem)] rounded-sm shrink-0"
-              style={{
-                background: familyColor(material.family),
-                opacity: 0.55 + (i % 5) * 0.09,
-              }}
-            />
-            <span className="truncate flex-1 text-text-primary">{o.type_name}</span>
-            {o.thickness_mm !== null && o.thickness_mm > 0 ? (
-              <span className="tabular-nums shrink-0">{o.thickness_mm} mm</span>
-            ) : (
-              <span
-                className="tabular-nums shrink-0 text-amber-600 dark:text-amber-400"
-                title={t('materialBrowser.missingValue')}
-              >
-                —
-              </span>
-            )}
-            <span className="tabular-nums shrink-0 text-text-tertiary">
-              ×{o.instance_count}
-            </span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DashboardTile } from '@/components/Layout';
@@ -108,8 +108,28 @@ interface TreemapCanvasProps {
 
 function TreemapCanvas({ items, activeFamily, onFamilyClick }: TreemapCanvasProps) {
   const { t } = useTranslation();
-  const W = 800;
-  const H = 450;
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // The tiling algorithm is aspect-sensitive — pass the *actual* container
+  // dimensions in so a squarish wrapper yields squarish tiles instead of
+  // the sliver-rows you get when you feed a 16:9 W/H into a 4:3 container.
+  // Default to a 4:3 surface (matches aspect-[4/3] wrappers used by the
+  // dash) until the ResizeObserver kicks in.
+  const [size, setSize] = useState({ W: 640, H: 480 });
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const apply = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w > 0 && h > 0) setSize({ W: w, H: h });
+    };
+    apply();
+    const obs = new ResizeObserver(apply);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { W, H } = size;
   const rects = useMemo(
     () =>
       treemapLayout(
@@ -117,7 +137,7 @@ function TreemapCanvas({ items, activeFamily, onFamilyClick }: TreemapCanvasProp
         W,
         H,
       ),
-    [items],
+    [items, W, H],
   );
   const statsByFamily = useMemo(() => {
     const m = new Map<
@@ -134,7 +154,7 @@ function TreemapCanvas({ items, activeFamily, onFamilyClick }: TreemapCanvasProp
   }, [items]);
 
   return (
-    <div className="absolute inset-0">
+    <div ref={containerRef} className="absolute inset-0">
       {rects.map((r) => {
         const family = r.label as FamilyKey;
         const stats = statsByFamily.get(r.label) ?? {

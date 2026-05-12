@@ -52,6 +52,12 @@ export interface AggregatedMaterial {
   has_epd: boolean;
   /** True if any usage is linked to a product (future — from ProductLibrary) */
   has_product: boolean;
+  // TODO: backend exposes unit_cost (NOK / dominant unit) on Material — until
+  // then this is always null and the dash shows em-dash for cost.
+  unit_cost: number | null;
+  // TODO: backend exposes gwp_per_unit (kg CO2e / dominant unit) — until then
+  // this is null and dash shows em-dash for GWP.
+  gwp_per_unit: number | null;
 }
 
 export interface MaterialSet {
@@ -103,6 +109,15 @@ export interface ProjectMaterialsSummary {
   models_loaded: number;
   models_pending: number;
   loading: boolean;
+  /** Total quantity across all materials in the dominant unit. */
+  total_quantity: number;
+  dominant_unit: MaterialUnit | null;
+  /** True when materials carry mixed units (no single dominant axis). */
+  mixed_units: boolean;
+  /** Sum of (quantity × unit_cost) — null when no material has unit_cost. */
+  total_cost_nok: number | null;
+  /** Sum of (quantity × gwp_per_unit) — null when no EPD-linked material has GWP. */
+  total_gwp_kg_co2e: number | null;
 }
 
 export interface ProjectMaterialsData {
@@ -170,6 +185,8 @@ export function aggregateProjectMaterials(inputs: AggregateInput[]): Omit<Projec
             used_in_types: [],
             has_epd: false,
             has_product: false,
+            unit_cost: null,
+            gwp_per_unit: null,
           };
           materialsByKey.set(key, material);
         } else if (!material.raw_names.includes(layer.material_name)) {
@@ -308,6 +325,41 @@ function buildSummary(
     0,
   );
 
+  // Total quantity: pick the dominant unit across the whole project.
+  // Mixed units are common, so we surface that as a flag instead of
+  // crunching numbers across incompatible axes.
+  const unitTotals: Record<MaterialUnit, number> = { m2: 0, m: 0, m3: 0, kg: 0, pcs: 0 };
+  for (const m of data.materials) {
+    for (const u of Object.keys(m.quantities_by_unit) as MaterialUnit[]) {
+      unitTotals[u] += m.quantities_by_unit[u];
+    }
+  }
+  const unitEntries = (Object.entries(unitTotals) as [MaterialUnit, number][])
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const dominantUnit = unitEntries[0]?.[0] ?? null;
+  const totalQuantity = unitEntries[0]?.[1] ?? 0;
+  const mixedUnits = unitEntries.length > 1;
+
+  // Cost + GWP totals — `unit_cost` / `gwp_per_unit` are null today (see
+  // TODO on AggregatedMaterial). When any material has these fields,
+  // sum (qty × per-unit) using each material's own dominant unit. If no
+  // material carries the field, surface null so the KPI tile shows the
+  // amber em-dash instead of a fabricated zero.
+  let totalCost: number | null = null;
+  let totalGwp: number | null = null;
+  for (const m of data.materials) {
+    const dominantForMat = pickDominantUnit(m.quantities_by_unit);
+    if (!dominantForMat) continue;
+    const q = m.quantities_by_unit[dominantForMat];
+    if (m.unit_cost !== null) {
+      totalCost = (totalCost ?? 0) + q * m.unit_cost;
+    }
+    if (m.has_epd && m.gwp_per_unit !== null) {
+      totalGwp = (totalGwp ?? 0) + q * m.gwp_per_unit;
+    }
+  }
+
   return {
     total_materials: total,
     total_sets: data.sets.length,
@@ -323,7 +375,26 @@ function buildSummary(
     models_loaded: modelsLoaded,
     models_pending: modelsPending,
     loading: modelsPending > 0,
+    total_quantity: totalQuantity,
+    dominant_unit: dominantUnit,
+    mixed_units: mixedUnits,
+    total_cost_nok: totalCost,
+    total_gwp_kg_co2e: totalGwp,
   };
+}
+
+/**
+ * Pick the unit with the largest aggregated quantity for a single material.
+ * Used both for the KPI summation and for the per-material rankings on
+ * the materials dash.
+ */
+export function pickDominantUnit(
+  quantities: Record<MaterialUnit, number>,
+): MaterialUnit | null {
+  const entries = (Object.entries(quantities) as [MaterialUnit, number][])
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  return entries[0]?.[0] ?? null;
 }
 
 // =============================================================================
