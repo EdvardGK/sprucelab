@@ -23,6 +23,7 @@
     "settings": "Settings",
     "help": "Help",
     "language": "Language",
+    "signOut": "Sign out",
     "types": "types",
     "instances": "instances",
     "of": "of",
@@ -68,7 +69,10 @@
     "workbench": "Workbench",
     "bep": "BEP",
     "field": "FIELD & COMPLIANCE",
-    "fieldChecklists": "Checklists"
+    "fieldChecklists": "Checklists",
+    "currentProject": "Current project",
+    "tools": "Tools",
+    "pickProjectHint": "Pick a project to see its modules"
   },
   "workbench": {
     "title": "BIM Workbench",

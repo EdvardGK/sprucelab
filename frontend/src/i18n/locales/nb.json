@@ -23,6 +23,7 @@
     "settings": "Innstillinger",
     "help": "Hjelp",
     "language": "Språk",
+    "signOut": "Logg ut",
     "types": "typer",
     "instances": "instanser",
     "of": "av",
@@ -68,7 +69,10 @@
     "workbench": "Arbeidsbenk",
     "bep": "BEP",
     "field": "FELT & KONTROLL",
-    "fieldChecklists": "Sjekklister"
+    "fieldChecklists": "Sjekklister",
+    "currentProject": "Aktivt prosjekt",
+    "tools": "Verktøy",
+    "pickProjectHint": "Velg et prosjekt for å se modulene"
   },
   "workbench": {
     "title": "BIM-arbeidsbenk",

@@ -1,13 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Home,
   FileText,
   Folder,
   Search,
   Plus,
-  ChevronDown,
   Settings,
   HelpCircle,
   BarChart3,
@@ -22,28 +20,84 @@ import {
   PenLine,
   ClipboardList,
   SlidersHorizontal,
+  LogOut,
+  Globe,
+  PanelLeftClose,
+  PanelLeft,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuPortal,
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { useProject } from '@/hooks/use-projects';
-import { LanguageSelector } from '@/components/LanguageSelector';
+import { useAuth } from '@/contexts/AuthContext';
+import { languages, type LanguageCode } from '@/i18n';
+
+const COLLAPSED_STORAGE_KEY = 'sprucelab.sidebar.collapsed';
+
+interface NavItemSpec {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  /** Used when the route matches a prefix beyond `to` (e.g. /viewer/:id under /viewer-groups). */
+  matchPrefixes?: string[];
+}
 
 export function Sidebar() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const [workspaceOpen, setWorkspaceOpen] = useState(true);
-  const [developerOpen, setDeveloperOpen] = useState(true);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
-  // Detect if we're in a project context
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === '1';
+  });
+
+  // Persist collapse state
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? '1' : '0');
+  }, [collapsed]);
+
+  // cmd+B (mac) / ctrl+B to toggle collapse
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b' && !e.shiftKey && !e.altKey) {
+        const target = e.target as HTMLElement | null;
+        // Don't intercept inside inputs/textareas/contenteditable
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        setCollapsed((c) => !c);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Detect project context from URL
   const projectId = useMemo(() => {
-    const match = location.pathname.match(/^\/projects\/([^\/]+)/);
+    const match = location.pathname.match(/^\/projects\/([^/]+)/);
     return match ? match[1] : null;
   }, [location.pathname]);
 
-  // Get workbench view from URL search params (dashboard, library, classify, materials, stats)
   const workbenchView = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return params.get('view') || 'dashboard';
@@ -51,394 +105,413 @@ export function Sidebar() {
 
   const { data: currentProject } = useProject(projectId || '');
 
-  const isActive = (path: string) => {
+  const isActive = (path: string, prefixes?: string[]) => {
     if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
+    if (location.pathname === path) return true;
+    if (location.pathname.startsWith(`${path}/`)) return true;
+    if (prefixes) {
+      return prefixes.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
+    }
+    return false;
   };
 
+  // Fixed top nav: always available regardless of project context
+  const topNav: NavItemSpec[] = [
+    { to: '/my-page', icon: User, label: t('nav.myPage') },
+    { to: '/projects', icon: Folder, label: t('nav.projects') },
+  ];
+
+  // Project items: only render when a project is active
+  const projectNav: NavItemSpec[] | null = projectId && currentProject ? [
+    { to: `/projects/${projectId}/dashboard`, icon: BarChart3, label: t('nav.dashboard') },
+    {
+      to: `/projects/${projectId}/viewer-groups`,
+      icon: Box,
+      label: t('nav.viewer3d'),
+      matchPrefixes: [`/projects/${projectId}/viewer`],
+    },
+    { to: `/projects/${projectId}/models`, icon: Layers, label: t('nav.models') },
+    { to: `/projects/${projectId}/types`, icon: FileText, label: t('nav.types'), matchPrefixes: [`/projects/${projectId}/type-library`] },
+    { to: `/projects/${projectId}/material-library`, icon: Box, label: t('nav.materialLibrary') },
+    { to: `/projects/${projectId}/drawings`, icon: Image, label: t('nav.drawings') },
+    { to: `/projects/${projectId}/documents`, icon: FileStack, label: t('nav.documents') },
+    { to: `/projects/${projectId}/eir`, icon: SlidersHorizontal, label: t('nav.projectConfig') },
+    { to: `/projects/${projectId}/field`, icon: ClipboardList, label: t('nav.fieldChecklists') },
+  ] : null;
+
+  // Workbench sub-routes (only when in project context). Active state pivots on ?view=.
+  const workbenchNav = projectId && currentProject ? [
+    {
+      to: `/projects/${projectId}/workbench?view=verification`,
+      basePath: `/projects/${projectId}/workbench`,
+      view: 'verification',
+      icon: ShieldCheck,
+      label: t('workbench.verification'),
+    },
+    {
+      to: `/projects/${projectId}/workbench?view=ifc-editing`,
+      basePath: `/projects/${projectId}/workbench`,
+      view: 'ifc-editing',
+      icon: PenLine,
+      label: t('workbench.ifcEditing'),
+    },
+  ] : null;
+
+  // Tools section: always present
+  const toolsNav: NavItemSpec[] = [
+    { to: '/dev/processing-reports', icon: Bug, label: t('nav.processingReports') },
+    { to: '/settings/webhooks', icon: Webhook, label: t('nav.webhooks') },
+  ];
+
   return (
-    <aside className="flex w-64 flex-col border-r border-white/30 bg-white/60 backdrop-blur-xl">
-      {/* Workspace selector */}
-      <div className="border-b border-white/30 p-3">
-        <button
-          onClick={() => navigate('/')}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface transition-colors"
-          aria-label="Go to workspace home"
-        >
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-xs font-semibold text-primary-foreground">
+    <TooltipProvider delayDuration={150}>
+      <aside
+        className={cn(
+          'flex flex-col border-r border-border bg-card transition-[width] duration-150',
+          collapsed ? 'w-[3.5rem]' : 'w-64',
+        )}
+        aria-label="Primary navigation"
+      >
+        {/* Workspace header */}
+        <div className="flex items-center gap-2 border-b border-border px-3 py-3">
+          <button
+            onClick={() => navigate('/')}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-primary text-xs font-medium text-primary-foreground"
+            aria-label="Go to workspace home"
+          >
             SF
-          </div>
-          <span className="flex-1 truncate text-left font-medium">Spruce Forge</span>
-          <Home className="h-4 w-4 text-text-tertiary" />
-        </button>
-      </div>
-
-      {/* Search and actions */}
-      <div className="flex items-center gap-2 border-b border-white/30 p-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex-1 justify-start gap-2"
-          aria-label={t('common.search')}
-          onClick={() => {
-            if (import.meta.env.DEV) console.log('Search clicked - feature coming soon');
-          }}
-        >
-          <Search className="h-4 w-4" />
-          <span className="text-text-secondary">{t('common.search')}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0"
-          aria-label="Create new"
-          onClick={() => setCreateProjectOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2 pb-4">
-        {/* Main navigation - only when NOT in project */}
-        {!projectId && (
-          <div className="mb-4 space-y-0.5">
-            <Link
-              to="/my-page"
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                isActive('/my-page')
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-              )}
-            >
-              <User className="h-4 w-4" />
-              <span>{t('nav.myPage')}</span>
-            </Link>
-          </div>
-        )}
-
-        {/* Project-specific navigation (only when in project context) */}
-        {projectId && currentProject && (
-          <div className="mb-4">
-            <div className="px-3 py-1.5 text-xs text-text-tertiary font-medium truncate">
-              {currentProject.name}
-            </div>
-
-            {/* User section */}
-            <div className="mt-3 space-y-0.5">
-              <Link
-                to={`/projects/${projectId}/my-page`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  location.pathname === `/projects/${projectId}/my-page`
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <User className="h-4 w-4" />
-                <span>{t('nav.myPage')}</span>
-              </Link>
-
-              {/* 3D Viewer link */}
-              <Link
-                to={`/projects/${projectId}/viewer-groups`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/viewer-groups`) || isActive(`/projects/${projectId}/viewer/`)
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Box className="h-4 w-4" />
-                <span>{t('nav.viewer3d')}</span>
-              </Link>
-            </div>
-
-            {/* Project Overview */}
-            <div className="mt-4 space-y-0.5">
-              <Link
-                to={`/projects/${projectId}/dashboard`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  location.pathname === `/projects/${projectId}/dashboard`
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span>{t('nav.dashboard')}</span>
-              </Link>
-              <Link
-                to={`/projects/${projectId}/eir`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/eir`)
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span>{t('nav.projectConfig')}</span>
-              </Link>
-            </div>
-
-            {/* Files section */}
-            <div className="mt-4">
-              <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                {t('nav.files')}
-              </div>
-              <div className="mt-1 space-y-0.5">
-                <Link
-                  to={`/projects/${projectId}/models`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    location.pathname === `/projects/${projectId}/models`
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <Layers className="h-4 w-4" />
-                  <span>{t('nav.models')}</span>
-                </Link>
-                <Link
-                  to={`/projects/${projectId}/drawings`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/drawings`)
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <Image className="h-4 w-4" />
-                  <span>{t('nav.drawings')}</span>
-                </Link>
-                <Link
-                  to={`/projects/${projectId}/documents`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/documents`)
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <FileStack className="h-4 w-4" />
-                  <span>{t('nav.documents')}</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Data section */}
-            <div className="mt-4">
-              <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                {t('nav.data')}
-              </div>
-              <div className="mt-1 space-y-0.5">
-                <Link
-                  to={`/projects/${projectId}/types`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/types`) || isActive(`/projects/${projectId}/type-library`)
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>{t('nav.types')}</span>
-                </Link>
-                <Link
-                  to={`/projects/${projectId}/material-library`}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    isActive(`/projects/${projectId}/material-library`)
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                  )}
-                >
-                  <Box className="h-4 w-4" />
-                  <span>{t('nav.materialLibrary')}</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* BIM Workbench section */}
-        {projectId && currentProject && (
-          <div className="mb-4">
-            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-              {t('workbench.title')}
-            </div>
-            <div className="mt-1 space-y-0.5">
-              <Link
-                to={`/projects/${projectId}/workbench?view=verification`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/workbench`) && workbenchView === 'verification'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                <span>{t('workbench.verification')}</span>
-              </Link>
-              <Link
-                to={`/projects/${projectId}/workbench?view=ifc-editing`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/workbench`) && workbenchView === 'ifc-editing'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <PenLine className="h-4 w-4" />
-                <span>{t('workbench.ifcEditing')}</span>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Field & Compliance section */}
-        {projectId && currentProject && (
-          <div className="mb-4">
-            <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-              {t('nav.field')}
-            </div>
-            <div className="mt-1 space-y-0.5">
-              <Link
-                to={`/projects/${projectId}/field`}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive(`/projects/${projectId}/field`)
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <ClipboardList className="h-4 w-4" />
-                <span>{t('nav.fieldChecklists')}</span>
-              </Link>
-            </div>
-          </div>
-        )}
-
-
-        {/* Workspace section (only when NOT in project context) */}
-        {!projectId && (
-          <div className="mb-4">
-          <button
-            onClick={() => setWorkspaceOpen(!workspaceOpen)}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary hover:bg-surface transition-colors"
-          >
-            <ChevronDown
-              className={cn(
-                'h-3 w-3 transition-transform',
-                !workspaceOpen && '-rotate-90'
-              )}
-            />
-            <span>{t('nav.workspace')}</span>
           </button>
-
-          {workspaceOpen && (
-            <div className="mt-1 space-y-0.5">
-              <Link
-                to="/projects"
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 pl-8 text-sm transition-colors',
-                  location.pathname === '/projects'
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Folder className="h-4 w-4" />
-                <span>{t('nav.projects')}</span>
-              </Link>
-            </div>
+          {!collapsed && (
+            <span className="flex-1 truncate text-sm text-foreground">Spruce Forge</span>
           )}
-          </div>
-        )}
-
-        {/* Developer section (only when NOT in project context) */}
-        {!projectId && (
-          <div className="mb-4">
-          <button
-            onClick={() => setDeveloperOpen(!developerOpen)}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary hover:bg-surface transition-colors"
-          >
-            <ChevronDown
-              className={cn(
-                'h-3 w-3 transition-transform',
-                !developerOpen && '-rotate-90'
-              )}
-            />
-            <span>{t('nav.developer')}</span>
-          </button>
-
-          {developerOpen && (
-            <div className="mt-1 space-y-0.5">
-              <Link
-                to="/dev/processing-reports"
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 pl-8 text-sm transition-colors',
-                  isActive('/dev/processing-reports')
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Bug className="h-4 w-4" />
-                <span>{t('nav.processingReports')}</span>
-              </Link>
-              <Link
-                to="/settings/webhooks"
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 pl-8 text-sm transition-colors',
-                  isActive('/settings/webhooks')
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface hover:text-text-primary'
-                )}
-              >
-                <Webhook className="h-4 w-4" />
-                <span>{t('nav.webhooks')}</span>
-              </Link>
-            </div>
-          )}
-          </div>
-        )}
-      </nav>
-
-      {/* User profile */}
-      <div className="border-t border-border p-2">
-        <button
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-surface transition-colors"
-          aria-label="User menu"
-        >
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-            U
-          </div>
-          <span className="flex-1 truncate text-left text-text-primary">User</span>
-          <Settings className="h-4 w-4 text-text-tertiary" />
-        </button>
-
-        <div className="mt-1 flex items-center gap-1">
-          <LanguageSelector />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label={t('common.help')}
-            onClick={() => {
-              if (import.meta.env.DEV) console.log('Help clicked - feature coming soon');
-            }}
-          >
-            <HelpCircle className="h-4 w-4" />
-          </Button>
+          <SidebarIconButton
+            icon={collapsed ? PanelLeft : PanelLeftClose}
+            label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={() => setCollapsed((c) => !c)}
+            collapsed={collapsed && false /* keep button visible in both modes */}
+          />
         </div>
-      </div>
 
-      {/* Create Project Dialog */}
-      <CreateProjectDialog
-        open={createProjectOpen}
-        onOpenChange={setCreateProjectOpen}
-      />
-    </aside>
+        {/* Search + create */}
+        {!collapsed ? (
+          <div className="flex items-center gap-1 border-b border-border px-3 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 flex-1 justify-start gap-2 px-2 text-muted-foreground hover:bg-transparent hover:text-foreground"
+              aria-label={t('common.search')}
+              onClick={() => {
+                if (import.meta.env.DEV) console.log('Search clicked - feature coming soon');
+              }}
+            >
+              <Search className="h-4 w-4" />
+              <span className="text-sm">{t('common.search')}</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+              aria-label="Create new"
+              onClick={() => setCreateProjectOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1 border-b border-border px-1 py-2">
+            <SidebarIconButton icon={Search} label={t('common.search')} onClick={() => { /* search */ }} collapsed />
+            <SidebarIconButton icon={Plus} label="Create" onClick={() => setCreateProjectOpen(true)} collapsed />
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className={cn('flex-1 overflow-y-auto py-2', collapsed ? 'px-1' : 'px-2')}>
+          {/* Fixed top section: always available */}
+          <SidebarSection collapsed={collapsed}>
+            {topNav.map((item) => (
+              <SidebarItem
+                key={item.to}
+                to={item.to}
+                icon={item.icon}
+                label={item.label}
+                active={isActive(item.to, item.matchPrefixes)}
+                collapsed={collapsed}
+              />
+            ))}
+          </SidebarSection>
+
+          {/* Current project: conditional items, stable section position */}
+          <SidebarSection
+            collapsed={collapsed}
+            label={t('nav.currentProject')}
+            secondaryLabel={currentProject?.name}
+          >
+            {projectNav ? (
+              projectNav.map((item) => (
+                <SidebarItem
+                  key={item.to}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
+                  active={isActive(item.to, item.matchPrefixes)}
+                  collapsed={collapsed}
+                />
+              ))
+            ) : (
+              !collapsed && (
+                <p className="px-3 py-1 text-[0.7rem] text-muted-foreground/70">
+                  {t('nav.pickProjectHint')}
+                </p>
+              )
+            )}
+          </SidebarSection>
+
+          {/* Workbench: still under current project, but its own header for clarity */}
+          {workbenchNav && (
+            <SidebarSection collapsed={collapsed} label={t('workbench.title')}>
+              {workbenchNav.map((item) => {
+                const active = location.pathname.startsWith(item.basePath) && workbenchView === item.view;
+                return (
+                  <SidebarItem
+                    key={item.to}
+                    to={item.to}
+                    icon={item.icon}
+                    label={item.label}
+                    active={active}
+                    collapsed={collapsed}
+                  />
+                );
+              })}
+            </SidebarSection>
+          )}
+
+          {/* Tools: always available */}
+          <SidebarSection collapsed={collapsed} label={t('nav.tools')}>
+            {toolsNav.map((item) => (
+              <SidebarItem
+                key={item.to}
+                to={item.to}
+                icon={item.icon}
+                label={item.label}
+                active={isActive(item.to, item.matchPrefixes)}
+                collapsed={collapsed}
+              />
+            ))}
+          </SidebarSection>
+        </nav>
+
+        {/* Footer: single user menu trigger */}
+        <div className="border-t border-border p-2">
+          <SidebarUserMenu collapsed={collapsed} />
+        </div>
+
+        <CreateProjectDialog open={createProjectOpen} onOpenChange={setCreateProjectOpen} />
+      </aside>
+    </TooltipProvider>
   );
 }
+
+// Section: label rendered single-case, weight/color hierarchy only.
+interface SidebarSectionProps {
+  label?: string;
+  secondaryLabel?: string;
+  collapsed?: boolean;
+  children: ReactNode;
+}
+
+function SidebarSection({ label, secondaryLabel, collapsed, children }: SidebarSectionProps) {
+  return (
+    <div className="mb-4">
+      {!collapsed && label && (
+        <div className="flex items-baseline gap-2 px-3 pb-1 pt-1">
+          <span className="text-[0.7rem] text-muted-foreground">{label}</span>
+          {secondaryLabel && (
+            <span className="truncate text-[0.7rem] text-muted-foreground/70" title={secondaryLabel}>
+              · {secondaryLabel}
+            </span>
+          )}
+        </div>
+      )}
+      <div className={cn('flex flex-col', collapsed ? 'gap-1 items-center' : 'gap-px')}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Item: no background pill on active; subtle text color/weight only.
+interface SidebarItemProps {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  active?: boolean;
+  collapsed?: boolean;
+}
+
+function SidebarItem({ to, icon: Icon, label, active, collapsed }: SidebarItemProps) {
+  const className = cn(
+    'flex items-center rounded-md text-sm transition-colors',
+    collapsed
+      ? 'h-9 w-9 justify-center'
+      : 'gap-3 px-3 py-1.5',
+    active
+      ? 'text-primary font-medium'
+      : 'text-muted-foreground hover:text-foreground',
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link to={to} className={className} aria-label={label} aria-current={active ? 'page' : undefined}>
+            <Icon className="h-4 w-4" />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8}>
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Link to={to} className={className} aria-current={active ? 'page' : undefined}>
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{label}</span>
+    </Link>
+  );
+}
+
+// Icon button used in top header (search, plus, panel toggle).
+interface SidebarIconButtonProps {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+  collapsed?: boolean;
+}
+
+function SidebarIconButton({ icon: Icon, label, onClick, collapsed }: SidebarIconButtonProps) {
+  const btn = (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+    >
+      <Icon className="h-4 w-4" />
+    </button>
+  );
+  if (!collapsed) return btn;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{btn}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+// User menu: single trigger, language/help/sign-out collapsed inside.
+interface SidebarUserMenuProps {
+  collapsed?: boolean;
+}
+
+function SidebarUserMenu({ collapsed }: SidebarUserMenuProps) {
+  const { t, i18n } = useTranslation();
+  const { user, signOut } = useAuth();
+
+  const displayName =
+    (user?.user_metadata as { display_name?: string; first_name?: string } | undefined)?.display_name ||
+    (user?.user_metadata as { first_name?: string } | undefined)?.first_name ||
+    user?.email?.split('@')[0] ||
+    'User';
+  const email = user?.email ?? '';
+  const initial = displayName.charAt(0).toUpperCase();
+
+  const trigger = collapsed ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={displayName}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[0.7rem] font-medium text-primary-foreground">
+            {initial}
+          </span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>{displayName}</TooltipContent>
+    </Tooltip>
+  ) : (
+    <button
+      type="button"
+      aria-label="User menu"
+      className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+    >
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[0.7rem] font-medium text-primary-foreground">
+        {initial}
+      </span>
+      <span className="flex-1 truncate text-left text-foreground">{displayName}</span>
+      <Settings className="h-4 w-4" />
+    </button>
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="end" sideOffset={8} className="w-60">
+        <DropdownMenuLabel className="flex flex-col gap-0.5 font-normal">
+          <span className="text-sm font-medium text-foreground">{displayName}</span>
+          {email && (
+            <span className="truncate text-[0.7rem] text-muted-foreground">{email}</span>
+          )}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Globe className="mr-2 h-4 w-4" />
+            <span>{t('common.language')}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={i18n.language}
+                onValueChange={(v) => i18n.changeLanguage(v as LanguageCode)}
+              >
+                {languages.map((lang) => (
+                  <DropdownMenuRadioItem key={lang.code} value={lang.code}>
+                    <span className="mr-2">{lang.flag}</span>
+                    {lang.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            if (import.meta.env.DEV) console.log('Help clicked - feature coming soon');
+          }}
+        >
+          <HelpCircle className="mr-2 h-4 w-4" />
+          <span>{t('common.help')}</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={async () => {
+            try {
+              await signOut();
+            } catch (err) {
+              if (import.meta.env.DEV) console.error('Sign out failed', err);
+            }
+          }}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>{t('common.signOut')}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
