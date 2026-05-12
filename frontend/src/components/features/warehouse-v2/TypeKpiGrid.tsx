@@ -15,12 +15,11 @@ const KPI_PALETTE = [
   '#34d399', '#fbbf24',
 ];
 
-function colorForClass(_ifcClass: string, index: number): string {
-  // Stable color by ordinal — relies on caller to pass sorted classes.
-  return KPI_PALETTE[index % KPI_PALETTE.length];
-}
-
-function toSegments(distribution: Record<string, number>, limit = 12): SparkSegment[] {
+function toSegments(
+  distribution: Record<string, number>,
+  classColors?: Map<string, string>,
+  limit = 12
+): SparkSegment[] {
   const entries = Object.entries(distribution)
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1])
@@ -28,7 +27,7 @@ function toSegments(distribution: Record<string, number>, limit = 12): SparkSegm
   return entries.map(([key, value], i) => ({
     key,
     value,
-    color: colorForClass(key, i),
+    color: classColors?.get(key) ?? KPI_PALETTE[i % KPI_PALETTE.length],
     label: key.replace(/^Ifc/, ''),
   }));
 }
@@ -55,6 +54,7 @@ export interface TypeKpiStats {
 interface TypeKpiGridProps {
   stats: TypeKpiStats;
   loading?: boolean;
+  classColors?: Map<string, string>;
 }
 
 type Tone = 'neutral' | 'good' | 'warning' | 'danger';
@@ -66,17 +66,26 @@ function trafficLight(percent: number, thresholds: { warn: number; danger: numbe
   return 'warning';
 }
 
-export function TypeKpiGrid({ stats, loading }: TypeKpiGridProps) {
+export function TypeKpiGrid({ stats, loading, classColors }: TypeKpiGridProps) {
   const { t } = useTranslation();
 
   // Memoize sparkline data so the count-up animation doesn't re-key on render.
-  const typesSegments = useMemo(() => toSegments(stats.typesByClass), [stats.typesByClass]);
-  const instancesSegments = useMemo(
-    () => toSegments(stats.instancesByClass),
-    [stats.instancesByClass]
+  const typesSegments = useMemo(
+    () => toSegments(stats.typesByClass, classColors),
+    [stats.typesByClass, classColors]
   );
-  const untypedSegments = useMemo(() => toSegments(stats.untypedByClass), [stats.untypedByClass]);
-  const missingSegments = useMemo(() => toSegments(stats.missingByClass), [stats.missingByClass]);
+  const instancesSegments = useMemo(
+    () => toSegments(stats.instancesByClass, classColors),
+    [stats.instancesByClass, classColors]
+  );
+  const untypedSegments = useMemo(
+    () => toSegments(stats.untypedByClass, classColors),
+    [stats.untypedByClass, classColors]
+  );
+  const missingSegments = useMemo(
+    () => toSegments(stats.missingByClass, classColors),
+    [stats.missingByClass, classColors]
+  );
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 grid-rows-2 gap-[clamp(0.5rem,1vw,1rem)] h-full">

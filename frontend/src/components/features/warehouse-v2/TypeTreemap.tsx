@@ -16,11 +16,18 @@ interface TypeTreemapProps {
   types: IFCType[];
   /** Currently active IFC-class filter ("all" = none). */
   activeIfcClass?: string;
+  /** Shared color map. Falls back to ordinal palette if omitted. */
+  classColors?: Map<string, string>;
   /** Click handler receiving the full IFC class name (with "Ifc" prefix). */
   onClassClick?: (ifcClass: string) => void;
 }
 
-export function TypeTreemap({ types, activeIfcClass = 'all', onClassClick }: TypeTreemapProps) {
+export function TypeTreemap({
+  types,
+  activeIfcClass = 'all',
+  classColors,
+  onClassClick,
+}: TypeTreemapProps) {
   const { t } = useTranslation();
 
   const items = useMemo(() => {
@@ -56,6 +63,7 @@ export function TypeTreemap({ types, activeIfcClass = 'all', onClassClick }: Typ
           <TreemapCanvas
             items={items}
             activeIfcClass={activeIfcClass}
+            classColors={classColors}
             onClassClick={onClassClick}
           />
         )}
@@ -67,10 +75,12 @@ export function TypeTreemap({ types, activeIfcClass = 'all', onClassClick }: Typ
 function TreemapCanvas({
   items,
   activeIfcClass,
+  classColors,
   onClassClick,
 }: {
   items: { label: string; value: number; fullClass: string }[];
   activeIfcClass?: string;
+  classColors?: Map<string, string>;
   onClassClick?: (ifcClass: string) => void;
 }) {
   const W = 800;
@@ -97,9 +107,9 @@ function TreemapCanvas({
         const pctY = (r.y / H) * 100;
         const pctW = (r.w / W) * 100;
         const pctH = (r.h / H) * 100;
-        const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
-        const showLabel = pctW > 6 && pctH > 6;
         const fullClass = fullByLabel.get(r.label) ?? 'Ifc' + r.label;
+        const color = classColors?.get(fullClass) ?? TREEMAP_COLORS[i % TREEMAP_COLORS.length];
+        const showLabel = pctW > 6 && pctH > 6;
         const isActive =
           activeIfcClass !== undefined && activeIfcClass !== 'all' && activeIfcClass === fullClass;
         const interactive = !!onClassClick;

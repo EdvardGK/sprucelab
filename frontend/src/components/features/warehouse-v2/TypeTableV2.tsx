@@ -14,6 +14,7 @@ interface TypeTableV2Props {
   onSelectType: (id: string) => void;
   onIfcClassClick?: (ifcClass: string) => void;
   activeIfcClass?: string;
+  classColors?: Map<string, string>;
   className?: string;
 }
 
@@ -23,6 +24,7 @@ export function TypeTableV2({
   onSelectType,
   onIfcClassClick,
   activeIfcClass = 'all',
+  classColors,
   className,
 }: TypeTableV2Props) {
   const { t } = useTranslation();
@@ -79,6 +81,7 @@ export function TypeTableV2({
                   onSelect={() => onSelectType(type.id)}
                   onIfcClassClick={onIfcClassClick}
                   activeIfcClass={activeIfcClass}
+                  classColor={classColors?.get(type.ifc_type)}
                 />
               ))}
             </tbody>
@@ -118,12 +121,14 @@ function TypeRow({
   onSelect,
   onIfcClassClick,
   activeIfcClass,
+  classColor,
 }: {
   type: IFCType;
   selected: boolean;
   onSelect: () => void;
   onIfcClassClick?: (ifcClass: string) => void;
   activeIfcClass?: string;
+  classColor?: string;
 }) {
   const { t } = useTranslation();
   const ns3451Code = type.mapping?.ns3451_code;
@@ -148,10 +153,17 @@ function TypeRow({
           : 'hover:bg-muted/30 focus:bg-muted/30'
       )}
     >
-      <td className="px-[clamp(0.25rem,0.5vw,0.5rem)] py-[clamp(0.375rem,0.6vh,0.625rem)]">
+      <td className="px-[clamp(0.25rem,0.5vw,0.5rem)] py-[clamp(0.375rem,0.6vh,0.625rem)] relative">
+        {classColor && (
+          <span
+            aria-hidden="true"
+            className="absolute left-0 top-0 bottom-0 w-[3px]"
+            style={{ background: classColor }}
+          />
+        )}
         <span
           className={cn(
-            'inline-block h-[clamp(0.4rem,0.6vw,0.625rem)] w-[clamp(0.4rem,0.6vw,0.625rem)] rounded-full',
+            'inline-block h-[clamp(0.4rem,0.6vw,0.625rem)] w-[clamp(0.4rem,0.6vw,0.625rem)] rounded-full ml-[clamp(0.125rem,0.2vw,0.25rem)]',
             DOT_STYLES[completeness.tone]
           )}
           title={

@@ -11,6 +11,7 @@ import { TypeBrowserFilterBarV2 } from './TypeBrowserFilterBarV2';
 import { TypeKpiGrid } from './TypeKpiGrid';
 import { TypeTreemap } from './TypeTreemap';
 import { TypeTopBarList } from './TypeTopBarList';
+import { buildClassColorMap } from './classColors';
 import { TypeViewerPaneV2 } from './TypeViewerPaneV2';
 import { TypeDetailPanelV2 } from './TypeDetailPanelV2';
 import { TypeTableV2 } from './TypeTableV2';
@@ -139,6 +140,11 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     [filteredTypes, selectedTypeId]
   );
 
+  // Shared ifcClass → color map: build from the unfiltered types so
+  // colors stay stable as the user filters. The treemap, KPI sparklines,
+  // and the table row stripe all consume this.
+  const classColors = useMemo(() => buildClassColorMap(types), [types]);
+
   const isLoading = modelsLoading || (!!modelId && typesLoading);
 
   return (
@@ -178,11 +184,14 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
               Bounded so the main components fit the viewport on first paint. */}
           <div className="h-[clamp(560px,calc(100vh-14rem),1100px)]">
             <DashboardGrid layout={HERO_LAYOUT}>
-              <div id="kpis"><TypeKpiGrid stats={stats} loading={isLoading} /></div>
+              <div id="kpis">
+                <TypeKpiGrid stats={stats} loading={isLoading} classColors={classColors} />
+              </div>
               <div id="treemap">
                 <TypeTreemap
                   types={filteredTypes}
                   activeIfcClass={ifcClassFilter}
+                  classColors={classColors}
                   onClassClick={(cls) =>
                     setIfcClassFilter((curr) => (curr === cls ? 'all' : cls))
                   }
@@ -232,6 +241,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                     setIfcClassFilter((curr) => (curr === cls ? 'all' : cls))
                   }
                   activeIfcClass={ifcClassFilter}
+                  classColors={classColors}
                   className="h-full"
                 />
               </div>
