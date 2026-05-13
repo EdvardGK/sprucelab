@@ -65,6 +65,7 @@ export interface Model {
   material_count: number;
   processing_error: string | null;
   discipline: string | null;
+  is_primary_for_discipline: boolean;
   task_id: string | null;
   created_at: string;
   updated_at: string;

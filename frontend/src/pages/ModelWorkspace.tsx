@@ -101,6 +101,22 @@ export default function ModelWorkspace() {
                   <h1 className="text-xl font-semibold text-text-primary">{model.name}</h1>
                   <p className="text-sm text-text-tertiary">Version {model.version_number}</p>
                 </div>
+                {model.discipline && (
+                  <span
+                    className="text-[0.65rem] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-text-primary/5 text-text-primary border border-border"
+                    title="Model discipline"
+                  >
+                    {model.discipline}
+                  </span>
+                )}
+                {model.is_primary_for_discipline && (
+                  <span
+                    className="text-[0.65rem] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-[hsl(158_70%_28%/0.12)] text-[hsl(158_70%_28%)] border border-[hsl(158_70%_28%/0.3)]"
+                    title="Primary model for this discipline"
+                  >
+                    main
+                  </span>
+                )}
                 <ModelStatusBadge status={model.status} />
               </div>
             </div>
@@ -510,19 +526,13 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   return (
     <>
       <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full flex flex-col gap-[clamp(0.4rem,0.8vw,0.75rem)]">
-        {/* Row 0 — KPI cluster (Track C lift). 6 tiles: Elements, Storeys,
-            Systems, Types, Untyped %, Orphan %. Replaces the previous
-            QualityCard + 4 KpiCards strip — Quality moves down beside the
-            geometry bar. */}
+        {/* Row 0 — KPI cluster (Dion-lens rework). 7 type-and-quality tiles:
+            Types · Classified · With material · Untyped · Reuse · Proxy+Userdef ·
+            Orphan. Element count is volume (lives in Elements card below);
+            context (schema/CRS/authoring tool) lives in the Metadata tab. */}
         <AnalysisKpiCluster
           analysis={analysis}
-          elementCountFallback={model.element_count}
-          storeyCountFallback={model.storey_count}
-          systemCountFallback={
-            // Treat 0 as "not surfaced" since the analysis run doesn't
-            // currently break out systems. Show em-dash instead of zero.
-            model.system_count > 0 ? model.system_count : null
-          }
+          storeyVerification={storeyVerification}
           classColorMap={classColorMap}
         />
 
@@ -636,13 +646,11 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             )}
           </div>
 
-          {/* Row 2: Model info + Quality (left) | Geometry bar (right).
-              min-h is intentionally modest — cards earn their height
-              from content, not from a clamp floor. */}
-          <div className="col-span-2">
-            <ModelInfoCard analysis={analysis} stats={stats} />
-          </div>
-          <div className="col-span-2">
+          {/* Row 2: Quality (left) | Geometry bar (right).
+              ModelInfoCard removed — schema/CRS/authoring tool/units already
+              live in the Metadata tab; surfacing them twice was the duplicate
+              you flagged. */}
+          <div className="col-span-3">
             <QualityCard
               analysis={analysis}
               stats={stats}
@@ -651,7 +659,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               onViewData={() => setDrillSource({ type: 'quality' })}
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-3">
             <Card className="overflow-hidden card-accent-forest h-full">
               <CardContent className="p-3 flex flex-col h-full">
                 <CardHeader
@@ -1117,120 +1125,6 @@ function GeometryClassTable({
         return <div key={label}>{row}</div>;
       })}
     </div>
-  );
-}
-
-// ─── Model Info Card (combined Context / Units / Coordinates) ────────────────
-
-function ModelInfoCard({ analysis, stats }: { analysis: ModelAnalysis; stats: AnalysisStats }) {
-  const unitRows: [string, string][] = analysis.units && typeof analysis.units === 'object'
-    ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
-        if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
-          return [k, (v as { symbol?: string }).symbol || '?'];
-        }
-        return [k, String(v ?? '—')];
-      })
-    : [];
-
-  const coordRows: [string, string][] = [];
-  if (analysis.coordinates && typeof analysis.coordinates === 'object') {
-    const c = analysis.coordinates as Record<string, unknown>;
-    if (c.crs) coordRows.push(['CRS', String(c.crs)]);
-    if (c.true_north) coordRows.push(['True N', `${(c.true_north as { angle_deg?: number }).angle_deg ?? 0}°`]);
-    if (c.wcs_origin) {
-      const o = c.wcs_origin as { x?: number; y?: number; z?: number };
-      coordRows.push(['WCS', `${o.x ?? 0}, ${o.y ?? 0}, ${o.z ?? 0}`]);
-    }
-  }
-
-  const sections = [
-    { title: 'Context', rows: [
-      ['Project', analysis.project_name || '—'],
-      ['Building', analysis.building_name || '—'],
-      ['App', analysis.application || '—'],
-      ['Schema', analysis.ifc_schema || '—'],
-    ] as [string, string][] },
-    { title: 'Units', rows: unitRows.length ? unitRows : [['—', 'N/A']] as [string, string][] },
-    { title: 'Coords', rows: coordRows.length ? coordRows : [['—', 'N/A']] as [string, string][] },
-  ];
-
-  // Top 3 IFC classes by instance count — surfaces the dominant disciplines
-  // without requiring a separate card. Data comes from stats.classCounts which
-  // is already derived from analysis.types.
-  const topClasses = Object.entries(stats.classCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-  const maxClassCount = topClasses[0]?.[1] ?? 0;
-
-  return (
-    <Card className="card-accent-lavender h-full">
-      <CardContent className="px-3 py-2 flex flex-col gap-2">
-        <div className="grid grid-cols-3 gap-x-3">
-          {sections.map((s) => (
-            <div key={s.title}>
-              <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wide mb-0.5">{s.title}</h4>
-              {s.rows.map(([label, value]) => (
-                <div key={label} className="flex justify-between text-[0.7rem] leading-snug">
-                  <span className="text-text-tertiary">{label}</span>
-                  <span className="text-text-secondary font-medium truncate ml-1">{value}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        {/* Top classes mini list — surfaces dominant disciplines */}
-        {topClasses.length > 0 && (
-          <div className="border-t border-border pt-1.5">
-            <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wide mb-1">Top classes</h4>
-            <div className="flex flex-col gap-[clamp(0.15rem,0.3vw,0.25rem)]">
-              {topClasses.map(([cls, count]) => {
-                const label = cls.replace(/^Ifc/, '');
-                const pct = maxClassCount > 0 ? (count / maxClassCount) * 100 : 0;
-                return (
-                  <div key={cls} className="flex flex-col">
-                    <div className="flex items-baseline justify-between gap-1 text-[clamp(0.5rem,0.75vw,0.65rem)]">
-                      <span className="truncate text-text-secondary" title={cls}>{label}</span>
-                      <span className="tabular-nums text-text-primary font-medium shrink-0">{count.toLocaleString()}</span>
-                    </div>
-                    <div className="h-[4px] w-full rounded-full bg-muted/50 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-[hsl(260_60%_55%/0.6)] transition-[width] duration-700 ease-out"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Type health summary */}
-        <div className="border-t border-border pt-1.5 flex gap-3 text-[clamp(0.5rem,0.75vw,0.65rem)]">
-          <div className="flex flex-col">
-            <span className="text-text-tertiary uppercase tracking-wide">Types</span>
-            <span className="font-semibold tabular-nums text-text-primary">{analysis.total_types.toLocaleString()}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-text-tertiary uppercase tracking-wide">Untyped</span>
-            <span className={`font-semibold tabular-nums ${stats.untypedCount > 0 ? 'text-amber-500' : 'text-text-primary'}`}>
-              {stats.untypedCount > 0 ? stats.untypedCount.toLocaleString() : 'None'}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-text-tertiary uppercase tracking-wide">Empty</span>
-            <span className={`font-semibold tabular-nums ${stats.emptyTypes > 0 ? 'text-amber-500' : 'text-text-primary'}`}>
-              {stats.emptyTypes > 0 ? stats.emptyTypes.toLocaleString() : 'None'}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-text-tertiary uppercase tracking-wide">Inst/type</span>
-            <span className="font-semibold tabular-nums text-text-primary">{stats.typeRatio.toLocaleString()}</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 

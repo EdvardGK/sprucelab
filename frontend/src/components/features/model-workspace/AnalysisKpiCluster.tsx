@@ -2,18 +2,20 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Boxes,
-  Layers3,
-  Network,
   Shapes,
   HelpCircle,
   Unlink,
+  Layers,
+  CheckCheck,
+  AlertTriangle,
+  Repeat,
 } from 'lucide-react';
 
 import { DashboardTile } from '@/components/Layout';
 import { cn } from '@/lib/utils';
 import { Sparkline, type SparkSegment } from '@/components/features/warehouse-v2/Sparkline';
 import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
-import type { ModelAnalysis } from '@/lib/api-types';
+import type { ModelAnalysis, ModelStoreyVerification } from '@/lib/api-types';
 
 const KPI_PALETTE = [
   '#157954', '#C7CEE8', '#D0D34D', '#21263A', '#2dd4a0',
@@ -23,11 +25,8 @@ const KPI_PALETTE = [
 
 export interface AnalysisKpiClusterProps {
   analysis: ModelAnalysis;
-  /** Optional fallbacks when the model record has the raw counts but the
-   *  analysis hasn't materialised systems/etc. yet. */
-  elementCountFallback?: number;
-  storeyCountFallback?: number;
-  systemCountFallback?: number | null;
+  /** Orphan count comes from the storey-verification endpoint (already wired). */
+  storeyVerification?: ModelStoreyVerification | null;
   /** Class→color map matching the treemap (without `Ifc` prefix). */
   classColorMap?: Record<string, string>;
 }
@@ -57,33 +56,21 @@ const TONE_STYLES: Record<Tone, { card: string; value: string; icon: string }> =
   },
 };
 
-function trafficLight(
-  percent: number,
-  thresholds: { warn: number; danger: number }
-): Tone {
+function trafficLight(percent: number, thresholds: { warn: number; danger: number }): Tone {
   if (percent <= 0) return 'good';
   if (percent >= thresholds.danger) return 'danger';
   if (percent >= thresholds.warn) return 'warning';
-  return 'warning';
+  return 'good';
 }
 
 export function AnalysisKpiCluster({
   analysis,
-  elementCountFallback,
-  storeyCountFallback,
-  systemCountFallback,
+  storeyVerification,
   classColorMap,
 }: AnalysisKpiClusterProps) {
   const { t } = useTranslation();
-
   const stats = useMemo(() => computeKpiStats(analysis), [analysis]);
 
-  // Sparkline data per metric. We always use the unfiltered analysis set
-  // so the macro vocabulary stays cohesive across the cluster.
-  const instancesSegments = useMemo(
-    () => toSegments(stats.instancesByClass, classColorMap),
-    [stats.instancesByClass, classColorMap]
-  );
   const typesSegments = useMemo(
     () => toSegments(stats.typesByClass, classColorMap),
     [stats.typesByClass, classColorMap]
@@ -93,43 +80,52 @@ export function AnalysisKpiCluster({
     [stats.untypedByClass, classColorMap]
   );
 
-  const elementCount = stats.totalInstances || elementCountFallback || 0;
-  const storeyCount =
-    analysis.total_storeys || storeyCountFallback || 0;
-  const systemCount = systemCountFallback ?? 0;
+  const orphanCount = storeyVerification?.orphan_count ?? null;
+  const totalProducts = stats.totalInstances || storeyVerification?.total_products || 0;
+  const orphanPercent = totalProducts > 0 && orphanCount != null
+    ? (orphanCount / totalProducts) * 100
+    : 0;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-[clamp(0.4rem,0.8vw,0.75rem)]">
-      <KpiTile
-        id="kpi-elements"
-        icon={<Boxes className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-        label={t('modelDash.kpis.elements')}
-        value={elementCount}
-        spark={
-          <Sparkline segments={instancesSegments} variant="stacked" />
-        }
-      />
-      <KpiTile
-        id="kpi-storeys"
-        icon={<Layers3 className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-        label={t('modelDash.kpis.storeys')}
-        value={storeyCount}
-        missingValue={storeyCount === 0}
-      />
-      <KpiTile
-        id="kpi-systems"
-        icon={<Network className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-        label={t('modelDash.kpis.systems')}
-        value={systemCount}
-        missingValue={systemCount === 0 && systemCountFallback === null}
-      />
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
+      {/* 1 — Types (count + unused subdata) */}
       <KpiTile
         id="kpi-types"
         icon={<Shapes className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('modelDash.kpis.types')}
         value={analysis.total_types}
+        subValue={t('modelDash.kpis.usedUnusedShort', {
+          used: (analysis.total_types - stats.unusedTypes).toLocaleString(),
+          unused: stats.unusedTypes.toLocaleString(),
+        })}
         spark={<Sparkline segments={typesSegments} variant="stacked" />}
       />
+
+      {/* 2 — Classified (pending backend aggregation) */}
+      <KpiTile
+        id="kpi-classified"
+        icon={<CheckCheck className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+        label={t('modelDash.kpis.classified')}
+        value={0}
+        suffix="%"
+        fraction
+        missingValue
+        subValue={t('modelDash.kpis.pendingExtraction')}
+      />
+
+      {/* 3 — With material (pending backend aggregation) */}
+      <KpiTile
+        id="kpi-with-material"
+        icon={<Layers className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+        label={t('modelDash.kpis.withMaterial')}
+        value={0}
+        suffix="%"
+        fraction
+        missingValue
+        subValue={t('modelDash.kpis.pendingExtraction')}
+      />
+
+      {/* 4 — Untyped */}
       <KpiTile
         id="kpi-untyped"
         icon={<HelpCircle className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
@@ -154,24 +150,90 @@ export function AnalysisKpiCluster({
           )
         }
       />
+
+      {/* 5 — Reuse ratio (IfcMappedItem share) */}
       <KpiTile
-        id="kpi-orphan"
-        icon={<Unlink className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-        label={t('modelDash.kpis.orphan')}
-        value={stats.orphanPercent}
+        id="kpi-reuse"
+        icon={<Repeat className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+        label={t('modelDash.kpis.reuse')}
+        value={stats.reusePercent}
         suffix="%"
         fraction
-        tone={trafficLight(stats.orphanPercent, { warn: 10, danger: 25 })}
-        subValue={t('modelDash.kpis.percentOfTypesShort', {
-          n: stats.orphanTypes.toLocaleString(),
+        tone={
+          stats.reusePercent >= 30
+            ? 'good'
+            : stats.reusePercent >= 10
+            ? 'warning'
+            : 'danger'
+        }
+        subValue={t('modelDash.kpis.mappedRatioShort', {
+          mapped: stats.mappedInstances.toLocaleString(),
+          total: stats.totalInstances.toLocaleString(),
         })}
         spark={
           <Sparkline
             segments={[]}
             variant="progress"
-            progressValue={stats.orphanPercent}
+            progressValue={stats.reusePercent}
+            progressColor="hsl(158 70% 28%)"
+          />
+        }
+      />
+
+      {/* 6 — Proxy + USERDEFINED (code smell) */}
+      <KpiTile
+        id="kpi-proxy-userdef"
+        icon={<AlertTriangle className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+        label={t('modelDash.kpis.proxyUserdef')}
+        value={stats.proxyUserdefPercent}
+        suffix="%"
+        fraction
+        tone={trafficLight(stats.proxyUserdefPercent, { warn: 2, danger: 10 })}
+        subValue={t('modelDash.kpis.percentOfInstancesShort', {
+          n: stats.proxyUserdefInstances.toLocaleString(),
+        })}
+        spark={
+          <Sparkline
+            segments={[]}
+            variant="progress"
+            progressValue={stats.proxyUserdefPercent}
             progressColor="hsl(25 96% 61%)"
           />
+        }
+      />
+
+      {/* 7 — Orphan (elements outside spatial hierarchy) */}
+      <KpiTile
+        id="kpi-orphan"
+        icon={<Unlink className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+        label={t('modelDash.kpis.orphan')}
+        value={orphanCount ?? 0}
+        missingValue={orphanCount == null}
+        tone={
+          orphanCount == null
+            ? 'neutral'
+            : orphanCount === 0
+            ? 'good'
+            : orphanPercent < 5
+            ? 'warning'
+            : 'danger'
+        }
+        subValue={
+          orphanCount != null
+            ? t('modelDash.kpis.orphanShare', {
+                pct: orphanPercent.toFixed(1),
+              })
+            : t('modelDash.kpis.pendingExtraction')
+        }
+        spark={
+          orphanCount != null ? (
+            <Sparkline
+              segments={[]}
+              variant="progress"
+              progressValue={Math.min(orphanPercent, 100)}
+              progressColor="hsl(25 96% 61%)"
+            />
+          ) : undefined
         }
       />
     </div>
@@ -185,7 +247,6 @@ interface KpiTileProps {
   value: number;
   suffix?: string;
   fraction?: boolean;
-  /** When true, render an amber em-dash instead of the value (modelers-own-data). */
   missingValue?: boolean;
   subValue?: string;
   tone?: Tone;
@@ -270,8 +331,11 @@ interface KpiStats {
   totalInstances: number;
   untypedInstances: number;
   untypedPercent: number;
-  orphanTypes: number;
-  orphanPercent: number;
+  unusedTypes: number;
+  mappedInstances: number;
+  reusePercent: number;
+  proxyUserdefInstances: number;
+  proxyUserdefPercent: number;
   typesByClass: Record<string, number>;
   instancesByClass: Record<string, number>;
   untypedByClass: Record<string, number>;
@@ -280,43 +344,49 @@ interface KpiStats {
 function computeKpiStats(analysis: ModelAnalysis): KpiStats {
   let totalInstances = 0;
   let untypedInstances = 0;
-  let orphanTypes = 0;
+  let unusedTypes = 0;
+  let mappedInstances = 0;
+  let proxyUserdefInstances = 0;
   const typesByClass: Record<string, number> = {};
   const instancesByClass: Record<string, number> = {};
   const untypedByClass: Record<string, number> = {};
 
   for (const t of analysis.types) {
     totalInstances += t.instance_count;
-    const cls = (t.element_class || t.type_class.replace(/Type$/, '')).replace(
-      /^Ifc/,
-      ''
-    );
+    const cls = (t.element_class || t.type_class.replace(/Type$/, '')).replace(/^Ifc/, '');
     typesByClass[cls] = (typesByClass[cls] || 0) + 1;
-    instancesByClass[cls] =
-      (instancesByClass[cls] || 0) + t.instance_count;
+    instancesByClass[cls] = (instancesByClass[cls] || 0) + t.instance_count;
 
     if (t.is_untyped) {
       untypedInstances += t.instance_count;
-      untypedByClass[cls] =
-        (untypedByClass[cls] || 0) + t.instance_count;
+      untypedByClass[cls] = (untypedByClass[cls] || 0) + t.instance_count;
     }
-    // "Orphan" = type definition with zero instances.
     if (t.is_empty || t.instance_count === 0) {
-      orphanTypes++;
+      unusedTypes++;
+    }
+    if (typeof t.mapped_item_count === 'number') {
+      mappedInstances += t.mapped_item_count;
+    }
+    const predefinedUserdef = typeof t.predefined_type === 'string'
+      && t.predefined_type.toUpperCase() === 'USERDEFINED';
+    if (t.is_proxy || predefinedUserdef) {
+      proxyUserdefInstances += t.instance_count;
     }
   }
 
-  const untypedPercent =
-    totalInstances > 0 ? (untypedInstances / totalInstances) * 100 : 0;
-  const orphanPercent =
-    analysis.total_types > 0 ? (orphanTypes / analysis.total_types) * 100 : 0;
+  const untypedPercent = totalInstances > 0 ? (untypedInstances / totalInstances) * 100 : 0;
+  const reusePercent = totalInstances > 0 ? (mappedInstances / totalInstances) * 100 : 0;
+  const proxyUserdefPercent = totalInstances > 0 ? (proxyUserdefInstances / totalInstances) * 100 : 0;
 
   return {
     totalInstances,
     untypedInstances,
     untypedPercent,
-    orphanTypes,
-    orphanPercent,
+    unusedTypes,
+    mappedInstances,
+    reusePercent,
+    proxyUserdefInstances,
+    proxyUserdefPercent,
     typesByClass,
     instancesByClass,
     untypedByClass,
@@ -339,3 +409,6 @@ function toSegments(
     label: key,
   }));
 }
+
+// Re-export for surfaces that need the placeholder reference (Boxes)
+export { Boxes };

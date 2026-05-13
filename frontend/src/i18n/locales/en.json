@@ -1901,8 +1901,16 @@
       "types": "Types",
       "untyped": "Untyped",
       "orphan": "Orphan",
+      "classified": "Classified",
+      "withMaterial": "With material",
+      "reuse": "Reuse ratio",
+      "proxyUserdef": "Proxy + Userdef",
       "percentOfInstancesShort": "{{n}} instances",
-      "percentOfTypesShort": "{{n}} types"
+      "percentOfTypesShort": "{{n}} types",
+      "usedUnusedShort": "{{used}} used · {{unused}} unused",
+      "mappedRatioShort": "{{mapped}} / {{total}} mapped",
+      "orphanShare": "{{pct}}% outside spatial tree",
+      "pendingExtraction": "Data extraction pending"
     },
     "storeys": {
       "empty": "No storeys",
@@ -1911,7 +1919,7 @@
       "statusRename": "Elevation matches; name differs from canonical",
       "statusDeviating": "Does not match any canonical floor",
       "missingCanonical": "Canonical floor missing from this model",
-      "orphanLabel": "Not attached to storey",
+      "orphanLabel": "Orphan",
       "orphanTooltip": "IFC products outside the spatial hierarchy (project/site/building/storey/zone)"
     },
     "rail": {

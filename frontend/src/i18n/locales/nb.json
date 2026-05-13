@@ -1900,9 +1900,17 @@
       "systems": "Systemer",
       "types": "Typer",
       "untyped": "Utypede",
-      "orphan": "Foreldreløse",
+      "orphan": "Orphan",
+      "classified": "Klassifisert",
+      "withMaterial": "Med materiale",
+      "reuse": "Gjenbruksandel",
+      "proxyUserdef": "Proxy + Userdef",
       "percentOfInstancesShort": "{{n}} forekomster",
-      "percentOfTypesShort": "{{n}} typer"
+      "percentOfTypesShort": "{{n}} typer",
+      "usedUnusedShort": "{{used}} brukt · {{unused}} ubrukt",
+      "mappedRatioShort": "{{mapped}} / {{total}} mappet",
+      "orphanShare": "{{pct}}% utenfor romlig hierarki",
+      "pendingExtraction": "Venter på data"
     },
     "storeys": {
       "empty": "Ingen etasjer",
@@ -1911,7 +1919,7 @@
       "statusRename": "Høyde matcher; navn avviker fra kanonisk",
       "statusDeviating": "Matcher ingen kanonisk etasje",
       "missingCanonical": "Kanonisk etasje mangler i denne modellen",
-      "orphanLabel": "Ikke tilknyttet etasje",
+      "orphanLabel": "Orphan",
       "orphanTooltip": "IFC-produkter utenfor det romlige hierarkiet (prosjekt/site/bygg/etasje/sone)"
     },
     "rail": {
