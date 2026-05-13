@@ -27,6 +27,9 @@ python-pptx>=1.0.0    # PPTX -> markdown per slide
 # Geometry (for spatial stitching - point-in-polygon)
 shapely>=2.0.0
 
+# Thumbnail generation (PNG snapshot of IFC models)
+matplotlib>=3.8.0
+
 # CRS lookup (coordinate reference systems)
 pyproj>=3.6.0
 
