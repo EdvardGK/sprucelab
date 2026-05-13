@@ -7,6 +7,7 @@ import {
   Layers3,
   Loader2,
   MoreVertical,
+  Palette,
   RefreshCw,
   Trash2,
   Type as TypeIcon,
@@ -158,6 +159,7 @@ function ModelCardImpl({
             elements={isReady ? model.element_count : null}
             storeys={isReady ? model.storey_count : null}
             types={isReady ? model.type_count : null}
+            materials={isReady ? model.material_count : null}
           />
 
           {/* Top-3 IFC classes (or error message) */}
@@ -213,52 +215,57 @@ function CardKpiStrip({
   elements,
   storeys,
   types,
+  materials,
 }: {
   elements: number | null;
   storeys: number | null;
   types: number | null;
+  materials: number | null;
 }) {
   const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-3 gap-[clamp(0.25rem,0.5vw,0.5rem)]">
+    <div className="grid grid-cols-4 gap-[clamp(0.25rem,0.5vw,0.5rem)]">
       <CardKpi
-        label={t('projectModels.card.kpi.elements')}
+        srLabel={t('projectModels.card.kpi.elements')}
         value={elements}
         icon={<BoxIcon className="h-3 w-3" />}
       />
       <CardKpi
-        label={t('projectModels.card.kpi.storeys')}
+        srLabel={t('projectModels.card.kpi.storeys')}
         value={storeys}
         icon={<Layers3 className="h-3 w-3" />}
       />
       <CardKpi
-        label={t('projectModels.card.kpi.types')}
+        srLabel={t('projectModels.card.kpi.types')}
         value={types}
         icon={<TypeIcon className="h-3 w-3" />}
+      />
+      <CardKpi
+        srLabel={t('projectModels.card.kpi.materials')}
+        value={materials}
+        icon={<Palette className="h-3 w-3" />}
       />
     </div>
   );
 }
 
 function CardKpi({
-  label,
+  srLabel,
   value,
   icon,
 }: {
-  label: string;
+  srLabel: string;
   value: number | null;
   icon: React.ReactNode;
 }) {
   const animated = useCountUp(value ?? 0);
   const isMissing = value === null || value === 0;
   return (
-    <div className="flex flex-col min-w-0">
-      <div className="flex items-center gap-1 text-muted-foreground">
-        <span className="shrink-0">{icon}</span>
-        <span className="text-[clamp(0.5rem,0.65vw,0.65rem)] uppercase tracking-wide truncate">
-          {label}
-        </span>
-      </div>
+    <div className="flex flex-col items-start min-w-0">
+      <span className="shrink-0 text-muted-foreground" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="sr-only">{srLabel}</span>
       <span
         className={cn(
           'text-[clamp(0.75rem,1.2vw,1rem)] font-semibold tabular-nums leading-tight',

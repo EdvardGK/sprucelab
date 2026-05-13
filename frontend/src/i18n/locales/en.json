@@ -1976,7 +1976,8 @@
       "kpi": {
         "elements": "Elements",
         "storeys": "Storeys",
-        "types": "Types"
+        "types": "Types",
+        "materials": "Materials"
       },
       "menu": {
         "reprocess": "Re-process",

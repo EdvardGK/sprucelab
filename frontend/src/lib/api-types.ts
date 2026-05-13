@@ -62,6 +62,7 @@ export interface Model {
   system_count: number;
   type_count: number;
   mapped_type_count: number;
+  material_count: number;
   processing_error: string | null;
   discipline: string | null;
   task_id: string | null;

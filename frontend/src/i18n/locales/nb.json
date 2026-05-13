@@ -1976,7 +1976,8 @@
       "kpi": {
         "elements": "Elementer",
         "storeys": "Etasjer",
-        "types": "Typer"
+        "types": "Typer",
+        "materials": "Materialer"
       },
       "menu": {
         "reprocess": "Reprosessér",
