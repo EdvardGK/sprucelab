@@ -12,6 +12,7 @@ import {
   User,
   Layers,
   FileStack,
+  ListChecks,
   Image,
   Box,
   Bug,
@@ -135,6 +136,7 @@ export function Sidebar() {
     { to: `/projects/${projectId}/material-library`, icon: Box, label: t('nav.materialLibrary') },
     { to: `/projects/${projectId}/drawings`, icon: Image, label: t('nav.drawings') },
     { to: `/projects/${projectId}/documents`, icon: FileStack, label: t('nav.documents') },
+    { to: `/projects/${projectId}/claims`, icon: ListChecks, label: t('nav.claims') },
     { to: `/projects/${projectId}/eir`, icon: SlidersHorizontal, label: t('nav.projectConfig') },
     { to: `/projects/${projectId}/field`, icon: ClipboardList, label: t('nav.fieldChecklists') },
   ] : null;
