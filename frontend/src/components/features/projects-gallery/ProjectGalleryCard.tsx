@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Box as BoxIcon, Layers, Package } from 'lucide-react';
+import { Layers, Package } from 'lucide-react';
 
 import { Sparkline, type SparkSegment } from '@/components/features/warehouse-v2/Sparkline';
 import { cn } from '@/lib/utils';
@@ -56,16 +56,12 @@ interface ProjectGalleryCardProps {
 }
 
 /**
- * Single project tile rendered in the gallery grid. Two-column layout:
- *   - left: static thumbnail (typically a rendering; backend may also
- *     serve a federated-model snapshot or a Kartverket map tile)
- *   - right: name, relative-time, description, tiny KPI strip
- *     (models / instances), IFC discipline sparkbar
- *
- * Static <img> only — never a live WebGL viewer per card. The Speckle
- * pattern: thumbnail at rest, "Open project" affordance on hover, click
- * the whole card to navigate. Replaces the prior "no 3D thumbnails"
- * rule which was about avoiding per-card WebGL contexts, not images.
+ * Single project tile rendered in the gallery grid. Content-only for now:
+ * name + last-activity + description + KPI strip + IFC discipline
+ * sparkbar. The thumbnail/cover-image pattern is parked — narrow side
+ * columns marginalize the actual data. Project.thumbnail_url remains in
+ * the type contract for when we re-introduce a content-first thumbnail
+ * treatment (full-width banner? large square card? TBD).
  */
 export function ProjectGalleryCard({ project, models }: ProjectGalleryCardProps) {
   const { t } = useTranslation();
@@ -101,51 +97,12 @@ export function ProjectGalleryCard({ project, models }: ProjectGalleryCardProps)
     <Link
       to={`/projects/${project.id}`}
       className={cn(
-        'group block h-[clamp(180px,22vh,220px)] rounded-lg border border-border bg-card overflow-hidden',
-        'grid grid-cols-[clamp(120px,14vw,160px)_1fr]',
+        'group block h-[180px] rounded-lg border border-border bg-card',
+        'p-[clamp(0.625rem,1vw,0.875rem)] flex flex-col gap-[clamp(0.25rem,0.5vh,0.5rem)]',
         'transition-colors duration-150 hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30'
       )}
     >
-      {/* Left — cover thumbnail (or placeholder). Static image only. */}
-      <div className="relative h-full w-full overflow-hidden border-r border-border bg-muted/30">
-        {project.thumbnail_url ? (
-          <img
-            src={project.thumbnail_url}
-            alt={project.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground/60 gap-1.5 px-2 text-center">
-            <BoxIcon className="h-5 w-5" />
-            <span className="text-[0.6rem]">{t('projectsGallery.card.noCover')}</span>
-          </div>
-        )}
-        <div
-          className={cn(
-            'absolute inset-0 flex items-center justify-center',
-            'bg-background/60 backdrop-blur-[2px]',
-            'opacity-0 group-hover:opacity-100 transition-opacity duration-150',
-            'pointer-events-none'
-          )}
-        >
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5',
-              'rounded-full border border-border bg-card px-2.5 py-1',
-              'text-[0.65rem] font-medium text-foreground shadow-sm'
-            )}
-          >
-            <BoxIcon className="h-3 w-3" />
-            {t('projectsGallery.card.openProject')}
-          </span>
-        </div>
-      </div>
-
-      {/* Right — existing metadata column. */}
-      <div className="p-[clamp(0.625rem,1vw,0.875rem)] flex flex-col gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
+      <div className="flex flex-col h-full gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
         <div className="flex items-start justify-between gap-2 min-w-0">
           <div className="min-w-0 flex-1">
             <h3 className="text-[clamp(0.85rem,1.1vw,1rem)] font-semibold text-text-primary truncate">

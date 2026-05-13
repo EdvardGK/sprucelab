@@ -35,15 +35,15 @@ interface ModelCardProps {
 }
 
 /**
- * Tactical model card — 220-260px tall, two-column grid:
- *   - left: 180x180 mini 3D viewer (lazy-mounted, concurrency-capped)
- *   - right: name + version + status + tiny KPI strip + top-3 IFC classes
+ * Tactical model card — content-only for now. Backend snapshot pipeline
+ * (matplotlib-rendered PNG at Model.thumbnail_url) is shipped server-side
+ * but intentionally NOT rendered here yet — we found the thumbnail was
+ * marginalizing the data. Re-introduce when the snapshot aesthetic is
+ * worth the real estate; the field + i18n keys are already in place.
  *
- * Replaces the previous bloated `h-44` card. Click anywhere on the card
- * navigates to the model workspace; the kebab menu and any internal links
- * stop propagation so they don't trigger that navigation.
- *
- * Modelers-own-data rule: gaps render as amber em-dash, never "Mapped %".
+ * Click anywhere on the card navigates to the model workspace; the kebab
+ * menu and any internal links stop propagation so they don't trigger that
+ * navigation. Modelers-own-data rule: gaps render as amber em-dash.
  */
 function ModelCardImpl({
   projectId,
@@ -67,66 +67,13 @@ function ModelCardImpl({
       <div
         className={cn(
           'relative bg-card border border-border rounded-md overflow-hidden',
-          'h-[clamp(170px,22vh,200px)]',
-          'grid grid-cols-[clamp(96px,10vw,120px)_1fr]',
+          'h-[clamp(140px,18vh,170px)]',
           'transition-all duration-200',
           'hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md',
           'focus-within:ring-2 focus-within:ring-primary/40'
         )}
       >
-        {/* Left — thumbnail (or placeholder).
-            Static image, NOT a live WebGL viewer: gallery is aggregation,
-            not interaction. The live viewer mount per card stacked WebGL
-            contexts, ran 6× backdrop-blur loading modals in parallel,
-            and raced the v3 fragments worker against unmount — all of
-            which evaporates with a plain <img>. Backend will populate
-            `thumbnail_url` during fragments generation; until then,
-            the placeholder is graceful.
-
-            Hover reveals an "Open in 3D" affordance (Speckle pattern) so
-            the image reads as "preview → click to interact" rather than
-            "static asset." The whole card already links to the workspace,
-            so the overlay is just a visual cue, not a separate target. */}
-        <div className="relative grid place-items-center overflow-hidden border-r border-border bg-muted/30">
-          <div className="relative aspect-square w-[clamp(80px,8vw,108px)]">
-            {isReady && model.thumbnail_url ? (
-              <img
-                src={model.thumbnail_url}
-                alt={model.name}
-                className="h-full w-full object-contain"
-                loading="lazy"
-                decoding="async"
-                draggable={false}
-              />
-            ) : (
-              <ViewerPlaceholder status={model.status} />
-            )}
-            {isReady && (
-              <div
-                className={cn(
-                  'absolute inset-0 flex items-center justify-center',
-                  'bg-background/60 backdrop-blur-[2px]',
-                  'opacity-0 group-hover:opacity-100 transition-opacity duration-150',
-                  'pointer-events-none'
-                )}
-              >
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1.5',
-                    'rounded-full border border-border bg-card px-2.5 py-1',
-                    'text-[0.65rem] font-medium text-foreground shadow-sm'
-                  )}
-                >
-                  <BoxIcon className="h-3 w-3" />
-                  {t('projectModels.card.openIn3d')}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right — info */}
-        <div className="flex flex-col p-[clamp(0.5rem,1vw,0.875rem)] gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
+        <div className="flex flex-col h-full p-[clamp(0.625rem,1vw,0.875rem)] gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
           {/* Header — name + version + status + updated */}
           <div className="flex items-start justify-between gap-[clamp(0.375rem,0.6vw,0.625rem)] min-w-0">
             <div className="min-w-0 flex-1">
@@ -180,35 +127,6 @@ function ModelCardImpl({
 export const ModelCard = memo(ModelCardImpl);
 
 // --- subcomponents ---
-
-function ViewerPlaceholder({ status }: { status: Model['status'] }) {
-  const { t } = useTranslation();
-  // Placeholder content reads against the card's bg now that we've dropped
-  // the dark zinc-950 backdrop in favor of a floating model. Use the muted
-  // foreground tokens so it stays readable in both light and dark themes.
-  if (status === 'error') {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1.5 px-2 text-center">
-        <AlertCircle className="h-5 w-5 text-red-500/70" />
-        <span className="text-[0.65rem]">{t('projectModels.card.viewerError')}</span>
-      </div>
-    );
-  }
-  if (status !== 'ready') {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1.5 px-2 text-center">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-[0.65rem]">{t('projectModels.card.viewerProcessing')}</span>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col items-center justify-center h-full text-muted-foreground/70 gap-1.5 px-2 text-center">
-      <BoxIcon className="h-5 w-5" />
-      <span className="text-[0.65rem]">{t('projectModels.card.viewerQueued')}</span>
-    </div>
-  );
-}
 
 function CardKpiStrip({
   elements,
