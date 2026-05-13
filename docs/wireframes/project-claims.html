@@ -1,0 +1,42 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Claims</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects/:id/claims</span><span class="title">Claims</span><span class="note">Extracted assertions · inbox · bulk actions</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">G55 · Claims</span><span class="right"><span class="pill pill-mono">bulk: assign · resolve · dismiss</span></span></div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="nav-section">Project G55</div>
+      <a href="project-dashboard.html">Dashboard</a>
+      <a href="project-models.html">Models</a>
+      <a href="project-types.html">Types</a>
+      <a href="project-material-library.html">Materials</a>
+      <a href="project-documents.html">Documents</a>
+      <span class="nav-item active">Claims</span>
+      <a href="project-drawings.html">Drawings</a>
+      <a href="project-floors.html">Floors</a>
+      <a href="viewer-groups.html">Viewers</a>
+      <a href="project-field.html">Field</a>
+      <a href="project-workbench.html">Workbench</a>
+    </aside>
+    <main class="col">
+      <div class="grid-4">
+        <div class="block"><div class="block-label">Open</div><div class="block-value">14</div></div>
+        <div class="block tone-warn"><div class="block-label">Awaiting promotion</div><div class="block-value">3</div></div>
+        <div class="block"><div class="block-label">Resolved 7d</div><div class="block-value">42</div></div>
+        <div class="block"><div class="block-label">Dismissed</div><div class="block-value">11</div></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap"><span class="pill pill-mono">type: any</span><span class="pill pill-mono">severity: any</span><span class="pill pill-mono">assignee: me</span><span class="pill pill-mono">status: open</span></div>
+      <div class="block" style="padding:0">
+        <table class="table">
+          <thead><tr><th><input type="checkbox"></th><th>Type</th><th>Subject</th><th>Severity</th><th>Source</th><th>Assignee</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><input type="checkbox"></td><td>storey_list</td><td>5 storeys in Structure.ifc</td><td><span class="pill pill-warn tiny">warn</span></td><td class="dim">claim #213</td><td>edk</td><td>open</td></tr>
+            <tr><td><input type="checkbox"></td><td>type_merge_candidate</td><td>3× IfcWallType identical signature</td><td><span class="pill pill-warn tiny">warn</span></td><td class="dim">Architecture.ifc</td><td>—</td><td>open</td></tr>
+            <tr><td><input type="checkbox"></td><td>storey_deviation</td><td>Mezz at +5.1m → no canonical match</td><td><span class="pill pill-danger tiny">error</span></td><td class="dim">Structure.ifc</td><td>edk</td><td>open</td></tr>
+            <tr><td><input type="checkbox"></td><td>property_missing</td><td>23 walls missing LoadBearing</td><td><span class="pill tiny">info</span></td><td class="dim">Structure.ifc</td><td>—</td><td>open</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+</body></html>

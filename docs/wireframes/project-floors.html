@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Project Floors</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects/:id/floors</span><span class="title">Project Floors</span><span class="note">Canonical floors + per-model deviation matrix</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">G55 · Floors</span><span class="right"><span class="pill pill-mono">tolerance 0.2m</span><span class="pill pill-good">+ Floor</span></span></div>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="nav-section">Project G55</div>
+      <a href="project-dashboard.html">Dashboard</a>
+      <a href="project-models.html">Models</a>
+      <a href="project-types.html">Types</a>
+      <a href="project-material-library.html">Materials</a>
+      <a href="project-documents.html">Documents</a>
+      <a href="project-claims.html">Claims</a>
+      <a href="project-drawings.html">Drawings</a>
+      <span class="nav-item active">Floors</span>
+      <a href="viewer-groups.html">Viewers</a>
+      <a href="project-field.html">Field</a>
+      <a href="project-workbench.html">Workbench</a>
+    </aside>
+    <main class="col">
+      <div class="block">
+        <div class="block-label">Canonical floors (scope: Building A)</div>
+        <table class="table">
+          <thead><tr><th>Code</th><th>Name</th><th>Elevation</th><th>Aliases</th><th>Promoted from</th></tr></thead>
+          <tbody>
+            <tr><td>04</td><td>Plan 04</td><td class="tabular">12.9 m</td><td class="dim">L04</td><td class="dim">claim #213</td></tr>
+            <tr><td>03</td><td>Plan 03</td><td class="tabular">9.8 m</td><td class="dim">L03</td><td class="dim">claim #213</td></tr>
+            <tr><td>02</td><td>Plan 02</td><td class="tabular">6.3 m</td><td class="dim">L02</td><td class="dim">claim #213</td></tr>
+            <tr><td>01</td><td>Plan 01</td><td class="tabular">3.2 m</td><td class="dim">L01</td><td class="dim">claim #213</td></tr>
+            <tr><td>U2</td><td>Plan U2</td><td class="tabular">-6.5 m</td><td class="dim">B1, U02</td><td class="dim">claim #213</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="block">
+        <div class="block-label">Per-model diff matrix</div>
+        <table class="table">
+          <thead><tr><th>Model</th><th>04</th><th>03</th><th>02</th><th>01</th><th>U2</th><th>Extras</th></tr></thead>
+          <tbody>
+            <tr><td>Architecture.ifc</td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td>—</td></tr>
+            <tr><td>Structure.ifc</td><td><span class="pill pill-warn tiny">miss</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-warn tiny">Mezz +5.1m</span></td></tr>
+            <tr><td>Electrical.ifc</td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td><span class="pill pill-good tiny">✓</span></td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+</body></html>

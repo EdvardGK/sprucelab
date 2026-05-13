@@ -1,0 +1,74 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Types</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects/:id/types</span><span class="title">Types</span><span class="note">Cross-filter: click chart/chip = filter; DrillModal demoted</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">G55 · Types</span><span class="right"><span class="pill pill-mono">scope: Building A</span><span class="pill pill-mono">discipline: all</span></span></div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="nav-section">Project G55</div>
+      <a href="project-dashboard.html">Dashboard</a>
+      <a href="project-models.html">Models</a>
+      <span class="nav-item active">Types</span>
+      <a href="project-material-library.html">Materials</a>
+      <a href="project-documents.html">Documents</a>
+      <a href="project-claims.html">Claims</a>
+      <a href="project-drawings.html">Drawings</a>
+      <a href="project-floors.html">Floors</a>
+      <a href="viewer-groups.html">Viewers</a>
+      <a href="project-field.html">Field</a>
+      <a href="project-workbench.html">Workbench</a>
+    </aside>
+    <main class="col">
+
+      <div class="grid-6">
+        <div class="block"><div class="block-label">Types</div><div class="block-value">486</div><div class="tiny dim">+12 vs last upload</div></div>
+        <div class="block"><div class="block-label">Used / Unused</div><div class="block-value">474<span class="tiny dim">/12</span></div></div>
+        <div class="block tone-warn"><div class="block-label">Untyped instances</div><div class="block-value">32</div></div>
+        <div class="block"><div class="block-label">Classified (NS3451)</div><div class="block-value">71<span class="tiny dim">%</span></div><div class="bar" style="margin-top:4px"><div class="fill" style="width:71%"></div></div></div>
+        <div class="block"><div class="block-label">With material</div><div class="block-value">68<span class="tiny dim">%</span></div></div>
+        <div class="block tone-warn"><div class="block-label">Proxy + Userdef</div><div class="block-value">3.2<span class="tiny dim">%</span></div></div>
+      </div>
+
+      <div class="grid-12">
+        <div class="span-8 col">
+          <div class="block">
+            <div class="block-label">By IFC class</div>
+            <div style="display:flex;align-items:flex-end;gap:3px;height:80px;margin-top:6px">
+              <div style="flex:7;background:#157954;height:90%;border-radius:2px;color:white;padding:4px;font-size:10px">Wall 412</div>
+              <div style="flex:4;background:#C7CEE8;height:60%;border-radius:2px;color:#21263A;padding:4px;font-size:10px">Slab 228</div>
+              <div style="flex:3;background:#D0D34D;height:50%;border-radius:2px;color:#21263A;padding:4px;font-size:10px">Door 94</div>
+              <div style="flex:3;background:#21263A;height:38%;border-radius:2px;color:white;padding:4px;font-size:10px">Beam 68</div>
+              <div style="flex:5;background:#2dd4a0;height:75%;border-radius:2px;color:#21263A;padding:4px;font-size:10px">Window 142</div>
+              <div style="flex:2;background:#a78bfa;height:30%;border-radius:2px;color:white;padding:4px;font-size:10px">Col 53</div>
+            </div>
+          </div>
+          <div class="block" style="padding:0">
+            <table class="table">
+              <thead><tr><th>Class</th><th>Type</th><th>Instances</th><th>Material</th><th>NS3451</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>IfcWallType</td><td>VG_W_BET_300</td><td class="tabular">142</td><td>Concrete C30</td><td>234.1</td><td><span class="pill pill-good tiny">classified</span></td></tr>
+                <tr><td>IfcWallType</td><td>VG_W_LK_200</td><td class="tabular">88</td><td>Lightw. conc.</td><td>234.2</td><td><span class="pill pill-good tiny">classified</span></td></tr>
+                <tr><td>IfcSlabType</td><td>DEKK_BET_250</td><td class="tabular">228</td><td>Concrete C35</td><td>231.1</td><td><span class="pill pill-good tiny">classified</span></td></tr>
+                <tr><td>IfcBeamType</td><td>BJ_HE220A</td><td class="tabular">68</td><td>Steel S355</td><td><span class="em-dash">—</span></td><td><span class="pill pill-warn tiny">unclassified</span></td></tr>
+                <tr><td>IfcDoorType</td><td>D_W_900x2100</td><td class="tabular">94</td><td>—</td><td><span class="em-dash">—</span></td><td><span class="pill pill-warn tiny">no material</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="span-4 col">
+          <div class="block">
+            <div class="block-label">Top-N by instance count</div>
+            <div class="list-row"><span class="name">VG_W_BET_300</span><span class="meta">142</span></div>
+            <div class="list-row"><span class="name">DEKK_BET_250</span><span class="meta">228</span></div>
+            <div class="list-row"><span class="name">D_W_900x2100</span><span class="meta">94</span></div>
+            <div class="list-row"><span class="name">BJ_HE220A</span><span class="meta">68</span></div>
+          </div>
+          <div class="block">
+            <div class="block-label">Drill (modal, secondary)</div>
+            <div class="tiny dim">click 🔍 in any card header for raw rows</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body></html>

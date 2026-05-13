@@ -1,0 +1,86 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Project Dashboard</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects/:id/dashboard</span><span class="title">Project Dashboard</span><span class="note">EIR fulfillment ribbon · attention feed · recent activity</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">Projects · G55 · Dashboard</span><span class="right"><span class="pill">G55 — Office tower</span></span></div>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="nav-section">Project G55</div>
+      <span class="nav-item active">Dashboard</span>
+      <a href="project-models.html">Models</a>
+      <a href="project-types.html">Types</a>
+      <a href="project-material-library.html">Materials</a>
+      <a href="project-documents.html">Documents</a>
+      <a href="project-claims.html">Claims</a>
+      <a href="project-drawings.html">Drawings</a>
+      <a href="project-floors.html">Floors</a>
+      <a href="viewer-groups.html">Viewers</a>
+      <a href="project-field.html">Field</a>
+      <a href="project-workbench.html">Workbench</a>
+      <div class="nav-section">Setup</div>
+      <a href="project-eir.html">EIR builder</a>
+      <a href="project-type-library.html">Type library</a>
+      <a href="project-my-page.html">My page</a>
+    </aside>
+
+    <main class="col">
+      <div class="block">
+        <div class="block-label">EIR fulfillment</div>
+        <div class="row" style="align-items:center;gap:12px">
+          <div style="font-size:28px;font-weight:600">4<span class="tiny dim"> / 13</span></div>
+          <div class="flex-1">
+            <div class="bar"><div class="fill" style="width:30%"></div></div>
+            <div class="tiny dim" style="margin-top:4px">31% — 9 rules awaiting commitment in BEP</div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:4px">
+          <span class="pill pill-good tiny">CRS ✓</span>
+          <span class="pill pill-good tiny">basepoint ✓</span>
+          <span class="pill pill-good tiny">canonical floors ✓</span>
+          <span class="pill pill-good tiny">disciplines ✓</span>
+          <span class="pill pill-warn tiny">MMI</span>
+          <span class="pill pill-warn tiny">classification</span>
+          <span class="pill tiny">IDS specs</span>
+          <span class="pill tiny">naming</span>
+          <span class="pill tiny">LoD</span>
+        </div>
+      </div>
+
+      <div class="grid-12">
+        <div class="span-8 col">
+          <div class="block">
+            <div class="block-label">Attention feed</div>
+            <div class="list-row"><span class="pill pill-danger tiny">error</span><span class="name">G55_RIB · storey "Mezz" deviates from canonical (+2.5m)</span><span class="meta">today</span></div>
+            <div class="list-row"><span class="pill pill-warn tiny">warn</span><span class="name">G55_ARK · 5/13 EIR rules unanswered</span><span class="meta">2h</span></div>
+            <div class="list-row"><span class="pill pill-warn tiny">warn</span><span class="name">G55_RIE · type merge candidate ×3 IfcCableSegmentType</span><span class="meta">yesterday</span></div>
+            <div class="list-row"><span class="pill tiny">info</span><span class="name">Backfill — 6/6 thumbnails done</span><span class="meta">14m</span></div>
+          </div>
+          <div class="block">
+            <div class="block-label">Federated overview</div>
+            <div class="grid-3" style="gap:6px">
+              <div class="block-tight block"><div class="tiny dim">ARK</div><div style="font-weight:600">G55_ARK</div><div class="tiny dim">3 421 elements</div></div>
+              <div class="block-tight block"><div class="tiny dim">RIB</div><div style="font-weight:600">G55_RIB</div><div class="tiny dim">2 187 elements</div></div>
+              <div class="block-tight block"><div class="tiny dim">RIE</div><div style="font-weight:600">G55_RIE</div><div class="tiny dim">5 091 elements</div></div>
+            </div>
+            <div class="mock-viewer h-12" style="margin-top:8px">Federated mini-viewer (mock)</div>
+          </div>
+        </div>
+        <div class="span-4 col">
+          <div class="block"><div class="block-label">KPIs</div>
+            <div class="list-row"><span class="name">Models</span><span class="meta">7</span></div>
+            <div class="list-row"><span class="name">Types</span><span class="meta">486</span></div>
+            <div class="list-row"><span class="name">Materials</span><span class="meta">38</span></div>
+            <div class="list-row"><span class="name">Storeys (canonical)</span><span class="meta">5</span></div>
+            <div class="list-row"><span class="name">Open claims</span><span class="meta">14</span></div>
+          </div>
+          <div class="block"><div class="block-label">Recent activity</div>
+            <div class="list-row"><span class="name">Architecture.ifc v3 uploaded</span><span class="meta">14m</span></div>
+            <div class="list-row"><span class="name">32 claims resolved (bulk)</span><span class="meta">1h</span></div>
+            <div class="list-row"><span class="name">EIR rule "basepoint" added</span><span class="meta">2d</span></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body></html>

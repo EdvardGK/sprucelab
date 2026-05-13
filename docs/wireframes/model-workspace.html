@@ -1,0 +1,161 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Model Workspace</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects/:id/models/:modelId</span><span class="title">Model Workspace</span><span class="note">Per-model dash (incl. shipped storey verification + KPI proposal)</span></div>
+
+  <div class="app-header">
+    <span class="logo">sprucelab</span>
+    <span class="crumbs">G55 · Models · Architecture.ifc</span>
+    <span class="right">
+      <span class="pill pill-mono">ARK</span>
+      <span class="pill pill-good">main</span>
+      <span class="pill pill-good">Ready</span>
+    </span>
+  </div>
+
+  <div class="tabs">
+    <span class="tab active">Overview</span>
+    <span class="tab">QTO</span>
+    <span class="tab">Statistics</span>
+    <span class="tab">Validation</span>
+    <span class="tab">Metadata</span>
+    <span class="tab">Scripts</span>
+    <span class="tab">History</span>
+  </div>
+
+  <!-- Dion-lens KPI strip -->
+  <div class="grid-6" style="margin-bottom:10px">
+    <div class="block">
+      <div class="block-label">Schema</div>
+      <div style="font-size:18px;font-weight:600;line-height:1.05">IFC4</div>
+      <div class="tiny dim">Reference View</div>
+      <div class="tiny dim" style="margin-top:4px">Revit 2024.2</div>
+    </div>
+    <div class="block tone-good">
+      <div class="block-label">Georef</div>
+      <div class="block-value">EPSG:25833</div>
+      <div class="tiny dim">+ MapConversion</div>
+    </div>
+    <div class="block tone-warn">
+      <div class="block-label">Elements</div>
+      <div class="block-value">1 247</div>
+      <div class="tiny dim">32 untyped · 2.6%</div>
+      <div class="spark" style="margin-top:4px">
+        <i style="height:5px"></i><i style="height:9px;background:#C7CEE8"></i><i style="height:14px"></i><i style="height:11px;background:#D0D34D"></i><i style="height:8px"></i><i style="height:6px;background:#C7CEE8"></i><i style="height:4px"></i><i style="height:3px"></i>
+      </div>
+    </div>
+    <div class="block tone-warn">
+      <div class="block-label">Reuse ratio</div>
+      <div class="block-value">42<span class="tiny dim">%</span></div>
+      <div class="tiny dim">528 / 1 247 mapped</div>
+      <div class="bar warn" style="margin-top:4px"><div class="fill" style="width:42%"></div></div>
+    </div>
+    <div class="block tone-warn">
+      <div class="block-label">Proxy + Userdef</div>
+      <div class="block-value">3.2<span class="tiny dim">%</span></div>
+      <div class="tiny dim">40 of 1 247</div>
+    </div>
+    <div class="block tone-warn">
+      <div class="block-label">Orphan</div>
+      <div class="block-value">18</div>
+      <div class="tiny dim">1.4% outside spatial tree</div>
+    </div>
+  </div>
+
+  <!-- 6-col grid: storeys + treemap left | viewer right -->
+  <div class="grid-12" style="gap:8px">
+    <div class="span-6 col">
+      <div class="block">
+        <div class="row" style="align-items:center">
+          <div class="block-label" style="flex:1">Storeys — IFC products + canonical verification</div>
+          <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="#d4d4d4" stroke-width="2"/><circle cx="9" cy="9" r="7" fill="none" stroke="#157954" stroke-width="2" stroke-dasharray="33 44" transform="rotate(-90 9 9)"/></svg>
+        </div>
+        <!-- storey rows w/ status edge -->
+        <div style="font-size:11px;margin-top:6px;display:grid;grid-template-columns:3px 5rem 3rem 1fr 3em;gap:6px;align-items:center;color:var(--ink-soft)">
+          <span style="background:#157954;width:3px;height:18px;border-radius:1px"></span>
+          <span>Plan 03</span><span class="tabular dim">9.8m</span>
+          <div class="bar"><div class="fill" style="width:100%"></div></div>
+          <span class="tabular" style="text-align:right">412</span>
+
+          <span style="background:#157954;width:3px;height:18px;border-radius:1px"></span>
+          <span>Plan 02</span><span class="tabular dim">6.3m</span>
+          <div class="bar"><div class="fill" style="width:75%"></div></div>
+          <span class="tabular" style="text-align:right">309</span>
+
+          <span style="background:#157954;width:3px;height:18px;border-radius:1px"></span>
+          <span>Plan 01</span><span class="tabular dim">3.2m</span>
+          <div class="bar"><div class="fill" style="width:60%"></div></div>
+          <span class="tabular" style="text-align:right">248</span>
+
+          <span style="background:#d97706;width:3px;height:18px;border-radius:1px"></span>
+          <span style="font-style:italic" class="dim">Mezz</span><span class="tabular dim">5.1m</span>
+          <div class="bar warn"><div class="fill" style="width:20%"></div></div>
+          <span class="tabular" style="text-align:right">83</span>
+
+          <span style="background:#157954;width:3px;height:18px;border-radius:1px"></span>
+          <span>Plan U2</span><span class="tabular dim">-6.5m</span>
+          <div class="bar"><div class="fill" style="width:50%"></div></div>
+          <span class="tabular" style="text-align:right">213</span>
+
+          <span style="background:#d97706;width:3px;height:18px;border-radius:1px;opacity:0.5"></span>
+          <span class="dim" style="font-style:italic">Plan 04 (canonical)</span><span class="tabular dim">12.9m</span>
+          <div class="bar"></div>
+          <span class="dim" style="text-align:right">—</span>
+
+          <!-- orphan row -->
+          <span style="background:#d97706;width:3px;height:18px;border-radius:1px"></span>
+          <span style="font-style:italic" class="dim">Ikke tilknyttet etasje</span><span class="dim">—</span>
+          <div class="bar warn"><div class="fill" style="width:8%;background:#d97706"></div></div>
+          <span class="tabular" style="text-align:right;color:#d97706">18</span>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-label">Elements — treemap by IFC class</div>
+        <div style="display:grid;grid-template-columns:3fr 2fr 1.5fr 1fr;grid-template-rows:1fr 1fr;gap:2px;height:220px;margin-top:6px">
+          <div style="background:#157954;color:white;padding:6px;font-size:11px;border-radius:2px">IfcWall <span class="tiny" style="opacity:0.7">412</span></div>
+          <div style="background:#C7CEE8;color:#21263A;padding:6px;font-size:11px;border-radius:2px">IfcSlab <span class="tiny">228</span></div>
+          <div style="background:#D0D34D;color:#21263A;padding:6px;font-size:11px;border-radius:2px">IfcDoor <span class="tiny">94</span></div>
+          <div style="background:#21263A;color:white;padding:6px;font-size:11px;border-radius:2px;grid-row:span 2">IfcBeam<br><span class="tiny" style="opacity:0.7">68</span></div>
+          <div style="background:#2dd4a0;color:#21263A;padding:6px;font-size:11px;border-radius:2px">IfcWindow <span class="tiny">142</span></div>
+          <div style="background:#a78bfa;color:white;padding:6px;font-size:11px;border-radius:2px">IfcColumn <span class="tiny">53</span></div>
+          <div style="background:#fbbf24;color:#21263A;padding:6px;font-size:10px;border-radius:2px">IfcRailing <span class="tiny">22</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="span-6 col">
+      <div class="block" style="padding:0;overflow:hidden">
+        <div class="mock-viewer" style="height:420px">3D viewer (mock)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- bottom row -->
+  <div class="grid-3" style="margin-top:8px">
+    <div class="block">
+      <div class="block-label">Model info</div>
+      <div class="list-row"><span class="name">Authoring tool</span><span class="meta">Revit 2024.2</span></div>
+      <div class="list-row"><span class="name">File size</span><span class="meta">42 MB</span></div>
+      <div class="list-row"><span class="name">Version</span><span class="meta">v3</span></div>
+      <div class="list-row"><span class="name">Discipline</span><span class="meta">ARK · main</span></div>
+    </div>
+    <div class="block">
+      <div class="block-label">Quality</div>
+      <div class="list-row"><span class="name">Schema valid</span><span class="pill pill-good tiny">pass</span></div>
+      <div class="list-row"><span class="name">Geom open-ability</span><span class="pill pill-good tiny">pass</span></div>
+      <div class="list-row"><span class="name">Duplicate GUIDs</span><span class="pill pill-good tiny">0</span></div>
+      <div class="list-row"><span class="name">EIR fulfillment</span><span class="pill pill-warn tiny">4/13</span></div>
+    </div>
+    <div class="block">
+      <div class="block-label">Geometry</div>
+      <div class="row" style="height:60px;align-items:flex-end;gap:2px">
+        <div style="flex:3;background:#157954;height:90%;border-radius:2px"></div>
+        <div style="flex:2;background:#C7CEE8;height:75%;border-radius:2px"></div>
+        <div style="flex:2;background:#D0D34D;height:50%;border-radius:2px"></div>
+        <div style="flex:1;background:#21263A;height:25%;border-radius:2px"></div>
+      </div>
+      <div class="tiny dim" style="margin-top:4px">BREP · MappedRep · SurfaceModel · Tessellated</div>
+    </div>
+  </div>
+</div>
+</body></html>

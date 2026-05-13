@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprucelab — Model dash KPI (Dion lens)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --silver: #D6D9D8;
+    --lavender: #C7CEE8;
+    --lime: #D0D34D;
+    --forest: #157954;
+    --navy: #21263A;
+
+    --bg: #eeeeed;
+    --bg-gradient: linear-gradient(135deg, #eeeeed 0%, #e4e6f0 50%, #eeeeed 100%);
+    --card: #ffffff;
+    --text-primary: #21263A;
+    --text-secondary: #525d78;
+    --text-tertiary: #717b94;
+    --border: #d2d4d3;
+    --border-light: #e2e8f0;
+
+    --tone-good: #157954;
+    --tone-good-soft: rgba(21, 121, 84, 0.12);
+    --tone-warning: #d97706;
+    --tone-warning-soft: rgba(217, 119, 6, 0.12);
+    --tone-danger: #dc2626;
+    --tone-danger-soft: rgba(220, 38, 38, 0.12);
+    --tone-info: #475569;
+
+    --shadow-sm: 0 1px 3px rgba(33, 38, 58, 0.06);
+    --shadow-md: 0 8px 24px rgba(33, 38, 58, 0.08);
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-gradient);
+    min-height: 100vh;
+    color: var(--text-primary);
+    padding: 32px;
+    line-height: 1.4;
+  }
+
+  .frame {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  .frame-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .frame-caption {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    max-width: 720px;
+  }
+
+  /* ── Header bar (above KPI strip) ─────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 12px;
+  }
+
+  .header .back {
+    color: var(--text-tertiary);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+  }
+  .header .back:hover { background: rgba(0,0,0,0.04); }
+
+  .header .model-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .pill-cluster {
+    display: flex;
+    gap: 6px;
+    margin-left: 4px;
+  }
+
+  .pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .pill-discipline {
+    background: rgba(33, 38, 58, 0.06);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+  }
+
+  .pill-role-main {
+    background: var(--tone-good-soft);
+    color: var(--tone-good);
+    border: 1px solid rgba(21, 121, 84, 0.3);
+  }
+
+  .pill-role-special {
+    background: rgba(100, 116, 139, 0.12);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+
+  .pill-role-deprecated {
+    background: rgba(220, 38, 38, 0.08);
+    color: var(--tone-danger);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    text-decoration: line-through;
+  }
+
+  .status-badge {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--tone-good);
+    background: var(--tone-good-soft);
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
+  .status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tone-good);
+  }
+
+  /* ── KPI strip ────────────────────────────────────────────────────── */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+
+  .tile {
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 138px;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+  .tile.tone-good { box-shadow: inset 0 0 0 1px rgba(21, 121, 84, 0.28), var(--shadow-sm); }
+  .tile.tone-warning { box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.32), var(--shadow-sm); }
+  .tile.tone-danger { box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.36), var(--shadow-sm); }
+
+  .tile-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-tertiary);
+  }
+
+  .tile-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    color: var(--text-tertiary);
+  }
+
+  .tile-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--text-tertiary);
+  }
+  .tile.tone-good .tile-icon { color: var(--tone-good); }
+  .tile.tone-warning .tile-icon { color: var(--tone-warning); }
+  .tile.tone-danger .tile-icon { color: var(--tone-danger); }
+
+  .tile-value {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .tile.tone-good .tile-value { color: var(--tone-good); }
+  .tile.tone-warning .tile-value { color: var(--tone-warning); }
+  .tile.tone-danger .tile-value { color: var(--tone-danger); }
+
+  .tile-value-suffix {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .tile-subdata {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    margin-top: 4px;
+  }
+
+  .tile-viz {
+    margin-top: 10px;
+    height: 18px;
+  }
+
+  /* Schema tile: two-line label (IFC4 / RV) ───────────────────────── */
+  .schema-stack {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.05;
+  }
+  .schema-stack .schema-major {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .schema-stack .schema-mvd {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* Sparkline bars (stacked) ────────────────────────────────────────── */
+  .sparkline {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 18px;
+    width: 100%;
+  }
+  .sparkline .bar {
+    flex: 1;
+    border-radius: 1px;
+    background: var(--forest);
+    min-height: 2px;
+  }
+
+  /* Progress bar ───────────────────────────────────────────────────── */
+  .progress {
+    height: 6px;
+    width: 100%;
+    background: rgba(33, 38, 58, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress .fill {
+    height: 100%;
+    border-radius: 999px;
+  }
+  .progress-label {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Em-dash fallback ───────────────────────────────────────────────── */
+  .em-dash {
+    color: var(--tone-warning);
+    font-weight: 500;
+    opacity: 0.85;
+  }
+
+  /* ── Today/before contrast row ────────────────────────────────────── */
+  .contrast-section {
+    margin-top: 56px;
+  }
+
+  .contrast-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .legend {
+    margin-top: 32px;
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-sm);
+  }
+  .legend h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); font-weight: 600; margin-bottom: 8px; }
+  .legend ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 32px; }
+  .legend li { display: flex; gap: 8px; align-items: baseline; }
+  .legend .key {
+    color: var(--text-primary);
+    font-weight: 500;
+    min-width: 130px;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <div class="frame-label">Model dash — KPI cluster (Dion lens)</div>
+  <p class="frame-caption">
+    Six tiles, Dion Moult-prioritized: schema/MVD, georeferencing, elements (with untyped subdata), reuse ratio, proxy+USERDEFINED code-smells, true orphans (outside spatial hierarchy). Discipline + role move out of the strip into the header pill cluster.
+  </p>
+
+  <!-- ── Model header ──────────────────────────────────────────────── -->
+  <div class="header">
+    <span class="back">← Models</span>
+    <span class="model-name">Architecture.ifc</span>
+    <div class="pill-cluster">
+      <span class="pill pill-discipline">ARK</span>
+      <span class="pill pill-role-main">main</span>
+    </div>
+    <span class="status-badge">Ready</span>
+  </div>
+
+  <!-- ── KPI strip ─────────────────────────────────────────────────── -->
+  <div class="kpi-strip">
+
+    <!-- 1. Schema + MVD -->
+    <div class="tile">
+      <div class="tile-head">
+        <span class="tile-label">Schema</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      </div>
+      <div class="schema-stack">
+        <span class="schema-major">IFC4</span>
+        <span class="schema-mvd">Reference View</span>
+      </div>
+      <div class="tile-subdata">Revit 2024.2</div>
+    </div>
+
+    <!-- 2. Georef -->
+    <div class="tile tone-good">
+      <div class="tile-head">
+        <span class="tile-label">Georef</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+      </div>
+      <div class="tile-value">EPSG:25833</div>
+      <div class="tile-subdata">+ MapConversion · ETRS89 / UTM 33N</div>
+    </div>
+
+    <!-- 3. Elements -->
+    <div class="tile tone-warning">
+      <div class="tile-head">
+        <span class="tile-label">Elements</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <div>
+        <div class="tile-value">1 247</div>
+        <div class="tile-subdata">32 untyped · 2.6 %</div>
+      </div>
+      <div class="tile-viz">
+        <div class="sparkline">
+          <div class="bar" style="height:6px"></div>
+          <div class="bar" style="height:10px;background:#C7CEE8"></div>
+          <div class="bar" style="height:13px"></div>
+          <div class="bar" style="height:17px;background:#D0D34D"></div>
+          <div class="bar" style="height:18px"></div>
+          <div class="bar" style="height:14px;background:#C7CEE8"></div>
+          <div class="bar" style="height:10px"></div>
+          <div class="bar" style="height:7px"></div>
+          <div class="bar" style="height:5px;background:#D0D34D"></div>
+          <div class="bar" style="height:3px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Reuse ratio -->
+    <div class="tile tone-warning">
+      <div class="tile-head">
+        <span class="tile-label">Reuse ratio</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      </div>
+      <div>
+        <div class="tile-value">42<span class="tile-value-suffix">%</span></div>
+        <div class="tile-subdata">528 / 1 247 mapped</div>
+      </div>
+      <div class="tile-viz">
+        <div class="progress">
+          <div class="fill" style="width:42%;background:var(--tone-warning)"></div>
+        </div>
+        <div class="progress-label">IfcMappedItem share</div>
+      </div>
+    </div>
+
+    <!-- 5. Proxy + USERDEFINED -->
+    <div class="tile tone-warning">
+      <div class="tile-head">
+        <span class="tile-label">Proxy + Userdef</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <div class="tile-value">3.2<span class="tile-value-suffix">%</span></div>
+        <div class="tile-subdata">40 of 1 247 products</div>
+      </div>
+      <div class="tile-viz">
+        <div class="sparkline">
+          <div class="bar" style="height:4px;background:#d97706"></div>
+          <div class="bar" style="height:2px;background:#d97706"></div>
+          <div class="bar" style="height:8px;background:#d97706"></div>
+          <div class="bar" style="height:3px;background:#d97706"></div>
+          <div class="bar" style="height:11px;background:#d97706"></div>
+          <div class="bar" style="height:5px;background:#d97706"></div>
+          <div class="bar" style="height:2px;background:#d97706"></div>
+          <div class="bar" style="height:6px;background:#d97706"></div>
+          <div class="bar" style="height:3px;background:#d97706"></div>
+          <div class="bar" style="height:1px;background:#d97706"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Orphan -->
+    <div class="tile tone-warning">
+      <div class="tile-head">
+        <span class="tile-label">Orphan</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      </div>
+      <div>
+        <div class="tile-value">18</div>
+        <div class="tile-subdata">1.4 % of products outside spatial tree</div>
+      </div>
+      <div class="tile-viz">
+        <div class="progress">
+          <div class="fill" style="width:1.4%;background:var(--tone-warning);min-width:3px"></div>
+        </div>
+        <div class="progress-label">Not contained in any storey/zone</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Em-dash fallback example ──────────────────────────────────── -->
+  <div class="contrast-section">
+    <div class="contrast-title">Fallback — model missing CRS declaration</div>
+    <p class="frame-caption">When a tile's underlying data is absent, render an amber em-dash with a soft tone. Never an "ERROR" pill — modelers-own-data, the gap is filterable info, not a failure.</p>
+    <div class="kpi-strip">
+      <div class="tile tone-warning">
+        <div class="tile-head">
+          <span class="tile-label">Georef</span>
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+        </div>
+        <div class="tile-value em-dash">—</div>
+        <div class="tile-subdata">No IfcProjectedCRS · No MapConversion</div>
+      </div>
+      <div class="tile">
+        <div class="tile-head">
+          <span class="tile-label">Reuse ratio</span>
+        </div>
+        <div class="tile-value em-dash">—</div>
+        <div class="tile-subdata">Analysis hasn't surfaced reuse data</div>
+      </div>
+      <div class="tile">
+        <div class="tile-head">
+          <span class="tile-label">Proxy + Userdef</span>
+        </div>
+        <div class="tile-value em-dash">—</div>
+        <div class="tile-subdata">PredefinedType not extracted</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Today (for contrast) ──────────────────────────────────────── -->
+  <div class="contrast-section">
+    <div class="contrast-title">Today — for contrast</div>
+    <p class="frame-caption">Current strip: 4 counts + 2 percent tiles, two of them mislabeled ("Orphan" = empty types; "Untyped" duplicates Elements). No schema, no georef, no reuse, no code-smell visibility. Storeys repeats the card below.</p>
+    <div class="kpi-strip">
+      <div class="tile">
+        <div class="tile-head"><span class="tile-label">Elements</span></div>
+        <div class="tile-value">1 247</div>
+        <div class="tile-viz">
+          <div class="sparkline">
+            <div class="bar" style="height:6px"></div>
+            <div class="bar" style="height:10px;background:#C7CEE8"></div>
+            <div class="bar" style="height:13px"></div>
+            <div class="bar" style="height:17px;background:#D0D34D"></div>
+            <div class="bar" style="height:18px"></div>
+            <div class="bar" style="height:14px;background:#C7CEE8"></div>
+            <div class="bar" style="height:10px"></div>
+            <div class="bar" style="height:7px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="tile">
+        <div class="tile-head"><span class="tile-label">Storeys</span></div>
+        <div class="tile-value">5</div>
+        <div class="tile-subdata" style="opacity:0">·</div>
+      </div>
+      <div class="tile">
+        <div class="tile-head"><span class="tile-label">Systems</span></div>
+        <div class="tile-value em-dash">—</div>
+      </div>
+      <div class="tile">
+        <div class="tile-head"><span class="tile-label">Types</span></div>
+        <div class="tile-value">240</div>
+      </div>
+      <div class="tile tone-warning">
+        <div class="tile-head"><span class="tile-label">Untyped</span></div>
+        <div class="tile-value">2.6<span class="tile-value-suffix">%</span></div>
+        <div class="tile-subdata">32 instances</div>
+      </div>
+      <div class="tile tone-warning">
+        <div class="tile-head"><span class="tile-label">Orphan <span style="color:#dc2626">(mislabeled)</span></span></div>
+        <div class="tile-value">5.0<span class="tile-value-suffix">%</span></div>
+        <div class="tile-subdata">12 types</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Legend / data-source key ──────────────────────────────────── -->
+  <div class="legend">
+    <h3>Data source key</h3>
+    <ul>
+      <li><span class="key">Schema + MVD</span> <code>analysis.ifc_schema</code> + <code>mvd_name</code> (new extraction)</li>
+      <li><span class="key">Georef</span> <code>crs_declared</code> + <code>crs_epsg</code> + <code>crs_has_mapconversion</code> (new extraction)</li>
+      <li><span class="key">Elements</span> <code>analysis.total_products</code> + <code>untyped_instances</code> (today)</li>
+      <li><span class="key">Reuse ratio</span> <code>Σ mapped_item_count / Σ representations</code> (aggregate today's per-type)</li>
+      <li><span class="key">Proxy + Userdef</span> <code>proxy_count</code> + <code>userdefined_count</code> (new aggregation)</li>
+      <li><span class="key">Orphan</span> <code>total_products − Σ storey.element_count</code> (today, computed in storey-verification)</li>
+      <li><span class="key">Discipline pill</span> <code>Model.discipline</code> (today, auto-inferred from filename)</li>
+      <li><span class="key">Role pill</span> <code>Model.scope_role</code> (new tri-state field) — interim: <code>is_primary_for_discipline</code> proxy</li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>

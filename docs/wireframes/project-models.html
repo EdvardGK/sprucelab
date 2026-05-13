@@ -1,0 +1,91 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Project Models</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects/:id/models</span><span class="title">Models Gallery</span><span class="note">cards-big · cards-small · table</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">Projects · G55 · Models</span><span class="right"><span class="pill pill-mono">filter discipline</span><span class="pill pill-mono">⊞ ▤ ☰</span><span class="pill pill-good">+ Upload</span></span></div>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="nav-section">Project G55</div>
+      <a href="project-dashboard.html">Dashboard</a>
+      <span class="nav-item active">Models</span>
+      <a href="project-types.html">Types</a>
+      <a href="project-material-library.html">Materials</a>
+      <a href="project-documents.html">Documents</a>
+      <a href="project-claims.html">Claims</a>
+      <a href="project-drawings.html">Drawings</a>
+      <a href="project-floors.html">Floors</a>
+      <a href="viewer-groups.html">Viewers</a>
+      <a href="project-field.html">Field</a>
+      <a href="project-workbench.html">Workbench</a>
+    </aside>
+    <main class="col">
+
+      <div class="row" style="flex-wrap:wrap">
+        <span class="pill pill-mono">scope: main only</span>
+        <span class="pill pill-mono">discipline: all</span>
+        <span class="pill pill-mono">vintage: any</span>
+      </div>
+
+      <div class="block-label">cards-big — banner thumbnail on top</div>
+      <div class="grid-4 gap-lg">
+        <div class="block" style="padding:0;overflow:hidden">
+          <div class="mock-viewer" style="height:80px">thumb</div>
+          <div style="padding:8px 10px">
+            <div style="font-weight:600;font-size:13px">Architecture.ifc</div>
+            <div class="tiny dim">ARK · IFC4 RV · 3 421 elements</div>
+            <div style="margin-top:6px" class="row gap-sm"><span class="pill pill-good tiny">main</span><span class="pill pill-good tiny">Ready</span></div>
+          </div>
+        </div>
+        <div class="block" style="padding:0;overflow:hidden">
+          <div class="mock-viewer" style="height:80px">thumb</div>
+          <div style="padding:8px 10px">
+            <div style="font-weight:600;font-size:13px">Structure.ifc</div>
+            <div class="tiny dim">RIB · IFC4 · 2 187 elements</div>
+            <div style="margin-top:6px" class="row gap-sm"><span class="pill pill-good tiny">main</span><span class="pill pill-warn tiny">Storey deviation</span></div>
+          </div>
+        </div>
+        <div class="block" style="padding:0;overflow:hidden">
+          <div class="mock-viewer" style="height:80px">thumb</div>
+          <div style="padding:8px 10px">
+            <div style="font-weight:600;font-size:13px">Electrical.ifc</div>
+            <div class="tiny dim">RIE · IFC4 · 5 091 elements</div>
+            <div style="margin-top:6px" class="row gap-sm"><span class="pill pill-good tiny">main</span></div>
+          </div>
+        </div>
+        <div class="block" style="padding:0;overflow:hidden;opacity:0.7">
+          <div class="mock-viewer" style="height:80px">thumb</div>
+          <div style="padding:8px 10px">
+            <div style="font-weight:600;font-size:13px">RIBprefab.ifc</div>
+            <div class="tiny dim">RIB · special-purpose</div>
+            <div style="margin-top:6px" class="row gap-sm"><span class="pill tiny">special</span><span class="pill pill-good tiny">Ready</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="block-label" style="margin-top:8px">cards-small — text-only</div>
+      <div class="grid-6 gap-sm">
+        <div class="block-tight block">Architecture<div class="tiny dim">ARK · main</div></div>
+        <div class="block-tight block">Structure<div class="tiny dim">RIB · main</div></div>
+        <div class="block-tight block">Electrical<div class="tiny dim">RIE · main</div></div>
+        <div class="block-tight block">RIBprefab<div class="tiny dim">RIB · special</div></div>
+        <div class="block-tight block">Ventilation<div class="tiny dim">RIV · main</div></div>
+        <div class="block-tight block">Plumbing<div class="tiny dim">VVS · main</div></div>
+      </div>
+
+      <div class="block-label" style="margin-top:8px">table mode</div>
+      <div class="block" style="padding:0">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Discipline</th><th>Role</th><th>Schema</th><th>Elements</th><th>Storey verif.</th><th>Updated</th></tr></thead>
+          <tbody>
+            <tr><td>Architecture.ifc</td><td>ARK</td><td><span class="pill pill-good tiny">main</span></td><td>IFC4 RV</td><td class="tabular">3 421</td><td><span class="pill pill-good tiny">5/5</span></td><td class="dim">14m</td></tr>
+            <tr><td>Structure.ifc</td><td>RIB</td><td><span class="pill pill-good tiny">main</span></td><td>IFC4</td><td class="tabular">2 187</td><td><span class="pill pill-warn tiny">4/5</span></td><td class="dim">2h</td></tr>
+            <tr><td>Electrical.ifc</td><td>RIE</td><td><span class="pill pill-good tiny">main</span></td><td>IFC4</td><td class="tabular">5 091</td><td><span class="pill pill-good tiny">5/5</span></td><td class="dim">1d</td></tr>
+            <tr style="opacity:0.7"><td>RIBprefab.ifc</td><td>RIB</td><td><span class="pill tiny">special</span></td><td>IFC4</td><td class="tabular">912</td><td>—</td><td class="dim">3d</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Projects Gallery</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects</span><span class="title">Projects Gallery</span><span class="note">View toggle: table · cards-big · cards-small</span></div>
+
+  <div class="app-header">
+    <span class="logo">sprucelab</span>
+    <span class="crumbs">Projects</span>
+    <span class="right">
+      <span class="pill pill-mono">filter</span>
+      <span class="pill pill-mono">sort</span>
+      <span class="pill pill-mono">⊞ ▤ ☰</span>
+      <span class="pill pill-good">+ New</span>
+    </span>
+  </div>
+
+  <div class="grid-12">
+    <div class="span-3 col">
+      <div class="block">
+        <div class="block-label">Total projects</div>
+        <div class="block-value">12</div>
+      </div>
+      <div class="block">
+        <div class="block-label">Filter by org</div>
+        <div class="list-row"><span class="name">All</span><span class="meta">12</span></div>
+        <div class="list-row"><span class="name">Skiplum</span><span class="meta">8</span></div>
+        <div class="list-row"><span class="name">External</span><span class="meta">4</span></div>
+      </div>
+    </div>
+
+    <div class="span-9 col">
+      <div class="block-label">cards-big mode (default; banner image at top, KPIs below)</div>
+      <div class="grid-3 gap-lg">
+        <div class="block" style="padding:0;overflow:hidden">
+          <div class="mock-viewer" style="height:80px">thumbnail</div>
+          <div style="padding:8px 10px">
+            <div style="font-weight:600;font-size:13px">G55 · Office tower</div>
+            <div class="tiny dim">7 models · IFC4 · 2 disciplines</div>
+            <div style="margin-top:6px" class="row gap-sm">
+              <span class="pill pill-good">Ready</span>
+              <span class="pill">EIR 4/13</span>
+            </div>
+          </div>
+        </div>
+        <div class="block" style="padding:0;overflow:hidden">
+          <div class="mock-viewer" style="height:80px">thumbnail</div>
+          <div style="padding:8px 10px">
+            <div style="font-weight:600;font-size:13px">A4 · Hospital</div>
+            <div class="tiny dim">4 models · IFC2X3+IFC4 (mix)</div>
+            <div style="margin-top:6px" class="row gap-sm">
+              <span class="pill pill-warn">Schema mix</span>
+              <span class="pill">EIR 1/9</span>
+            </div>
+          </div>
+        </div>
+        <div class="block" style="padding:0;overflow:hidden">
+          <div class="mock-viewer" style="height:80px">thumbnail</div>
+          <div style="padding:8px 10px">
+            <div style="font-weight:600;font-size:13px">B12 · School</div>
+            <div class="tiny dim">3 models · IFC4X3</div>
+            <div style="margin-top:6px" class="row gap-sm">
+              <span class="pill">Draft</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="block-label" style="margin-top:12px">cards-small mode (text-only)</div>
+      <div class="grid-4 gap-sm">
+        <div class="block-tight block">G55 — Office tower<div class="tiny dim">7 models</div></div>
+        <div class="block-tight block">A4 — Hospital<div class="tiny dim">4 models</div></div>
+        <div class="block-tight block">B12 — School<div class="tiny dim">3 models</div></div>
+        <div class="block-tight block">C09 — Apt block<div class="tiny dim">2 models</div></div>
+      </div>
+
+      <div class="block-label" style="margin-top:12px">table mode</div>
+      <div class="block" style="padding:0">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Org</th><th>Models</th><th>Schema</th><th>EIR</th><th>Updated</th></tr></thead>
+          <tbody>
+            <tr><td>G55 — Office tower</td><td>Skiplum</td><td>7</td><td>IFC4</td><td>4/13</td><td class="dim">14m ago</td></tr>
+            <tr><td>A4 — Hospital</td><td>Skiplum</td><td>4</td><td>mix</td><td>1/9</td><td class="dim">2h ago</td></tr>
+            <tr><td>B12 — School</td><td>External</td><td>3</td><td>IFC4X3</td><td>—</td><td class="dim">yesterday</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

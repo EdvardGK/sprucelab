@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Webhook Deliveries</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/settings/webhooks/deliveries</span><span class="title">Webhook Deliveries</span><span class="note">Log of all delivery attempts</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">Settings · Webhooks · Deliveries</span><span class="right"><span class="pill pill-mono">filter: failed only</span><span class="pill pill-mono">retry all</span></span></div>
+
+  <div class="grid-4" style="margin-bottom:12px">
+    <div class="block"><div class="block-label">Last 24h</div><div class="block-value">214</div><div class="block-sub">deliveries</div></div>
+    <div class="block"><div class="block-label">Succeeded</div><div class="block-value">211</div></div>
+    <div class="block tone-warn"><div class="block-label">Failed</div><div class="block-value">3</div></div>
+    <div class="block"><div class="block-label">Avg latency</div><div class="block-value">142<span class="tiny dim">ms</span></div></div>
+  </div>
+
+  <div class="block" style="padding:0">
+    <table class="table">
+      <thead><tr><th>When</th><th>Event</th><th>URL</th><th>Status</th><th>Duration</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="dim tabular">14:32:08</td><td><code>model.fragments.complete</code></td><td><code>external.example/hook</code></td><td><span class="pill pill-good">200</span></td><td class="tabular dim">132ms</td><td class="dim">⋯</td></tr>
+        <tr><td class="dim tabular">14:30:42</td><td><code>claim.created</code></td><td><code>external.example/hook</code></td><td><span class="pill pill-danger">500</span></td><td class="tabular dim">2s timeout</td><td class="dim">retry</td></tr>
+        <tr><td class="dim tabular">14:28:11</td><td><code>type.classified</code></td><td><code>zapier.com/...</code></td><td><span class="pill pill-good">200</span></td><td class="tabular dim">98ms</td><td class="dim">⋯</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body></html>

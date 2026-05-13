@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Documents</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects/:id/documents</span><span class="title">Documents</span><span class="note">Files in — PDFs, Office, drawings, JSON</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">G55 · Documents</span><span class="right"><span class="pill pill-good">+ Upload</span></span></div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="nav-section">Project G55</div>
+      <a href="project-dashboard.html">Dashboard</a>
+      <a href="project-models.html">Models</a>
+      <a href="project-types.html">Types</a>
+      <a href="project-material-library.html">Materials</a>
+      <span class="nav-item active">Documents</span>
+      <a href="project-claims.html">Claims</a>
+      <a href="project-drawings.html">Drawings</a>
+      <a href="project-floors.html">Floors</a>
+      <a href="viewer-groups.html">Viewers</a>
+      <a href="project-field.html">Field</a>
+      <a href="project-workbench.html">Workbench</a>
+    </aside>
+    <main class="col">
+      <div class="row" style="flex-wrap:wrap"><span class="pill pill-mono">type: any</span><span class="pill pill-mono">extracted: any</span><span class="pill pill-mono">⊞ ☰</span></div>
+      <div class="block" style="padding:0">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Claims</th><th>Uploaded</th></tr></thead>
+          <tbody>
+            <tr><td>BEP_v3.pdf</td><td>PDF</td><td>2.4 MB</td><td><span class="pill tiny">8 extracted</span></td><td class="dim">2h</td></tr>
+            <tr><td>EIR_GS.pdf</td><td>PDF</td><td>1.1 MB</td><td><span class="pill tiny">13 extracted</span></td><td class="dim">1d</td></tr>
+            <tr><td>fastmerker.kof</td><td>KOF</td><td>4 KB</td><td><span class="pill pill-good tiny">parsed</span></td><td class="dim">3d</td></tr>
+            <tr><td>tegningsliste.xlsx</td><td>Excel</td><td>22 KB</td><td><span class="pill tiny">queue</span></td><td class="dim">5d</td></tr>
+            <tr><td>contract.docx</td><td>DOCX</td><td>78 KB</td><td>—</td><td class="dim">2w</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="block"><div class="block-label">Extraction queue</div>
+        <div class="list-row"><span class="name">tegningsliste.xlsx → openpyxl</span><span class="meta">queued</span></div>
+        <div class="list-row"><span class="name">BEP_v3.pdf → pdfplumber + LLM claims</span><span class="meta">running</span></div>
+      </div>
+    </main>
+  </div>
+</div>
+</body></html>

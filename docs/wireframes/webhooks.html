@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Webhooks</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/settings/webhooks</span><span class="title">Webhooks</span><span class="note">Subscriptions list</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">Settings · Webhooks</span><span class="right"><span class="pill pill-good">+ New subscription</span></span></div>
+
+  <div class="block" style="padding:0">
+    <table class="table">
+      <thead><tr><th></th><th>URL</th><th>Events</th><th>Last delivery</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr><td><input type="checkbox"></td><td><code>external.example.com/hook</code></td><td><span class="pill tiny">model.* (4)</span></td><td class="dim">14m ago</td><td><span class="pill pill-good">200</span></td><td class="dim">⋯</td></tr>
+        <tr><td><input type="checkbox"></td><td><code>n8n.example.io/webhooks/abc</code></td><td><span class="pill tiny">claim.created</span></td><td class="dim">1h ago</td><td><span class="pill pill-danger">500</span></td><td class="dim">⋯</td></tr>
+        <tr><td><input type="checkbox"></td><td><code>zapier.com/hooks/...</code></td><td><span class="pill tiny">all (12)</span></td><td class="dim">3h ago</td><td><span class="pill pill-good">200</span></td><td class="dim">⋯</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="block" style="margin-top:12px">
+    <div class="block-label">Event catalogue</div>
+    <div class="row" style="flex-wrap:wrap;gap:4px">
+      <span class="pill pill-mono tiny">model.uploaded</span>
+      <span class="pill pill-mono tiny">model.fragments.complete</span>
+      <span class="pill pill-mono tiny">model.analysis.complete</span>
+      <span class="pill pill-mono tiny">model.validation.failed</span>
+      <span class="pill pill-mono tiny">claim.created</span>
+      <span class="pill pill-mono tiny">claim.resolved</span>
+      <span class="pill pill-mono tiny">type.classified</span>
+      <span class="pill pill-mono tiny">scope.canonical_floors.updated</span>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sprucelab — Wireframe kit</title>
+<link rel="stylesheet" href="_light.css">
+</head>
+<body>
+<div class="page-frame">
+  <div class="page-head">
+    <span class="route">docs/wireframes/</span>
+    <span class="title">Light wireframe kit</span>
+    <span class="note">Structural only · mock viewers · no live data</span>
+  </div>
+
+  <div class="block" style="margin-bottom:16px">
+    <div class="block-label">Purpose</div>
+    <div style="font-size:12px; color:var(--ink-soft); margin-top:4px">
+      One wireframe per page, light-and-fast. Iterate layout without WebGL/data-fetch overhead.
+      Viewers are hatched mock blocks. All wireframes share <code>_light.css</code>.
+    </div>
+  </div>
+
+  <div style="margin-top:12px; margin-bottom:6px; font-family:ui-monospace,monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-mute)">Top-level</div>
+  <div class="wf-index">
+    <a href="welcome.html"><div class="code">/</div><div class="name">Welcome</div><div class="desc">Landing / marketing</div></a>
+    <a href="my-page.html"><div class="code">/my-page</div><div class="name">My Page</div><div class="desc">User home dashboard</div></a>
+    <a href="projects-gallery.html"><div class="code">/projects</div><div class="name">Projects Gallery</div><div class="desc">All projects, table+cards modes</div></a>
+    <a href="admin.html"><div class="code">/admin</div><div class="name">Admin</div><div class="desc">Org-level dashboard</div></a>
+    <a href="webhooks.html"><div class="code">/settings/webhooks</div><div class="name">Webhooks</div><div class="desc">Subscriptions list</div></a>
+    <a href="webhook-deliveries.html"><div class="code">/settings/webhooks/deliveries</div><div class="name">Webhook Deliveries</div><div class="desc">Delivery log</div></a>
+    <a href="embed.html"><div class="code">/embed/:dashboard</div><div class="name">Embed Surface</div><div class="desc">External embeddable dashboards</div></a>
+    <a href="type-library-global.html"><div class="code">/type-library</div><div class="name">Type Library (global)</div><div class="desc">Cross-project canonical types</div></a>
+  </div>
+
+  <div style="margin-top:16px; margin-bottom:6px; font-family:ui-monospace,monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-mute)">Project shell — /projects/:id/</div>
+  <div class="wf-index">
+    <a href="project-dashboard.html"><div class="code">dashboard</div><div class="name">Project Dashboard</div><div class="desc">Overview, KPIs, recent activity</div></a>
+    <a href="project-models.html"><div class="code">models</div><div class="name">Models Gallery</div><div class="desc">Per-project model cards</div></a>
+    <a href="model-workspace.html"><div class="code">models/:modelId</div><div class="name">Model Workspace</div><div class="desc">Single-model dash + viewer (mock)</div></a>
+    <a href="model-kpi-dion.html"><div class="code">models/:modelId (KPI proposal)</div><div class="name">Model KPI — Dion lens</div><div class="desc">Schema/Georef/Reuse/Proxy/Orphan</div></a>
+    <a href="project-floors.html"><div class="code">floors</div><div class="name">Project Floors</div><div class="desc">Canonical floors + per-model diff</div></a>
+    <a href="project-my-page.html"><div class="code">my-page</div><div class="name">Project My Page</div><div class="desc">My role + my issues in this project</div></a>
+    <a href="viewer-groups.html"><div class="code">viewer-groups</div><div class="name">Viewer Groups</div><div class="desc">Saved federated model sets</div></a>
+    <a href="federated-viewer.html"><div class="code">viewer/:groupId</div><div class="name">Federated Viewer</div><div class="desc">Multi-model dash + viewer (mock)</div></a>
+    <a href="project-documents.html"><div class="code">documents</div><div class="name">Documents</div><div class="desc">Files in — PDFs, drawings, Office</div></a>
+    <a href="project-claims.html"><div class="code">claims</div><div class="name">Claims</div><div class="desc">Extracted assertions / inbox</div></a>
+    <a href="project-drawings.html"><div class="code">drawings</div><div class="name">Drawings</div><div class="desc">DWG/DXF/PDF sheets</div></a>
+    <a href="project-types.html"><div class="code">types</div><div class="name">Types Page</div><div class="desc">Type browser + cross-filter</div></a>
+    <a href="project-type-library.html"><div class="code">type-library</div><div class="name">Project Type Library</div><div class="desc">Project-scoped classification</div></a>
+    <a href="project-material-library.html"><div class="code">material-library</div><div class="name">Materials Dashboard</div><div class="desc">QTO + LCA + EPD</div></a>
+    <a href="project-field.html"><div class="code">field</div><div class="name">Field Compliance</div><div class="desc">On-site checklists</div></a>
+    <a href="project-eir.html"><div class="code">eir</div><div class="name">EIR Rule Builder</div><div class="desc">Palette + workspace</div></a>
+    <a href="project-workbench.html"><div class="code">workbench</div><div class="name">BIM Workbench</div><div class="desc">Scripting + automation</div></a>
+  </div>
+
+  <div style="margin-top:24px; font-size:11px; color:var(--ink-mute)">
+    To iterate: open a file directly in browser, edit HTML, refresh. No build step.
+    Real components live under <code>frontend/src/</code>; these are stand-ins for layout review only.
+  </div>
+</div>
+</body>
+</html>

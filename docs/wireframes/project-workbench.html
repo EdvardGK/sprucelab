@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>BIM Workbench</title><link rel="stylesheet" href="_light.css"></head><body>
+<div class="page-frame">
+  <div class="page-head"><span class="route">/projects/:id/workbench</span><span class="title">BIM Workbench</span><span class="note">Scripts · automation · agent-first surface</span></div>
+  <div class="app-header"><span class="logo">sprucelab</span><span class="crumbs">G55 · Workbench</span><span class="right"><span class="pill pill-mono">capabilities · MCP · llms.txt</span></span></div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="nav-section">Project G55</div>
+      <a href="project-dashboard.html">Dashboard</a>
+      <a href="project-models.html">Models</a>
+      <a href="project-types.html">Types</a>
+      <a href="project-material-library.html">Materials</a>
+      <a href="project-documents.html">Documents</a>
+      <a href="project-claims.html">Claims</a>
+      <a href="project-drawings.html">Drawings</a>
+      <a href="project-floors.html">Floors</a>
+      <a href="viewer-groups.html">Viewers</a>
+      <a href="project-field.html">Field</a>
+      <span class="nav-item active">Workbench</span>
+    </aside>
+    <main class="col">
+      <div class="grid-12">
+        <aside class="span-3 block col">
+          <div class="block-label">Scripts</div>
+          <div class="list-row"><span class="name">QTO Analyzer</span><span class="meta">v3</span></div>
+          <div class="list-row"><span class="name">Storey deviation report</span><span class="meta">v1</span></div>
+          <div class="list-row"><span class="name">EPD enricher</span><span class="meta">v2</span></div>
+          <div class="list-row"><span class="name">Naming check</span><span class="meta">v1</span></div>
+          <div class="row" style="margin-top:6px"><span class="pill pill-good tiny">+ New</span></div>
+        </aside>
+        <main class="span-9 col">
+          <div class="block" style="padding:0">
+            <div style="padding:6px 10px;border-bottom:1px solid var(--line);background:rgba(0,0,0,0.03);font-family:ui-monospace,monospace;font-size:11px">QTO Analyzer.py · save · run · publish · ▶ run</div>
+            <pre style="margin:0;padding:10px;font-family:ui-monospace,monospace;font-size:11px;background:white;min-height:240px;white-space:pre-wrap">from spruce import client
+
+result = client.types.list(project='G55', filter={'has_material': True})
+total = sum(t.area_m2 for t in result.items)
+print(f"Total area: {total:.0f} m²")
+
+# Emit a claim back to the inbox
+client.claims.create(
+    project='G55',
+    type='qto_total',
+    statement=f'QTO total: {total:.0f} m²',
+    confidence=1.0,
+)
+</pre>
+          </div>
+          <div class="block">
+            <div class="block-label">Last run</div>
+            <div class="tiny dim">14m ago · ok · 14 320 m² · 1 claim emitted</div>
+          </div>
+        </main>
+      </div>
+    </main>
+  </div>
+</div>
+</body></html>
