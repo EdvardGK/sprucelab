@@ -1,4 +1,4 @@
-import { LayoutGrid, Rows3 } from 'lucide-react';
+import { LayoutGrid, Grid3x3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
@@ -50,7 +50,7 @@ export function CardDensityToggle({ density, onChange, className }: CardDensityT
         onClick={() => onChange('small')}
         className={cn(buttonBase, density === 'small' ? activeCls : idleCls)}
       >
-        <Rows3 className="h-3.5 w-3.5" />
+        <Grid3x3 className="h-3.5 w-3.5" />
       </button>
     </div>
   );
