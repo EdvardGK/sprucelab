@@ -2023,7 +2023,9 @@
     "card": {
       "models": "Models",
       "instances": "Instances",
-      "updatedPrefix": "Updated"
+      "updatedPrefix": "Updated",
+      "openProject": "Open project",
+      "noCover": "No cover image"
     },
     "empty": {
       "title": "No projects yet",

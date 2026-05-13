@@ -14,6 +14,17 @@ export interface Project {
   created_at: string;
   updated_at: string;
   model_count?: number;
+  /**
+   * Project cover image. Same contract as Model.thumbnail_url — a single
+   * URL that the backend resolves from one of several sources:
+   *   1. User-uploaded rendering (typical: architectural visualization)
+   *   2. Federated-model auto-snapshot (composite of project's models)
+   *   3. Localized Kartverket+OSM map tile (site-environment vision)
+   * The source choice is a project setting (Project Config / EIR); the
+   * frontend just renders whatever URL the backend returns. Null until
+   * any source ships; cards fall back to a placeholder.
+   */
+  thumbnail_url?: string | null;
 }
 
 export interface CreateProjectRequest {
