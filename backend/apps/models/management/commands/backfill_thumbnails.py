@@ -75,7 +75,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opts):
         ifc_service_url: str = settings.IFC_SERVICE_URL.rstrip('/')
-        endpoint = f"{ifc_service_url}/fragments/thumbnail-only"
+        endpoint = f"{ifc_service_url}/api/v1/fragments/thumbnail-only"
 
         qs = Model.objects.filter(status='ready').exclude(file_url__isnull=True).exclude(file_url='')
 
