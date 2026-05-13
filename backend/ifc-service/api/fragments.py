@@ -99,6 +99,13 @@ class FragmentResult(BaseModel):
     error: Optional[str] = None
 
 
+class ThumbnailOnlyResult(BaseModel):
+    """Result of a thumbnail-only generation pass (used by the backfill)."""
+    model_id: str
+    thumbnail_url: Optional[str] = None
+    error: Optional[str] = None
+
+
 # Path to conversion script
 SCRIPT_PATH = Path(__file__).parent.parent / "scripts" / "convert-to-fragments.mjs"
 
@@ -154,6 +161,71 @@ async def generate_fragments_sync(request: FragmentRequest):
 
     result = await _generate_fragments(request.model_id, request.ifc_url)
     return result
+
+
+@router.post("/thumbnail-only", response_model=ThumbnailOnlyResult)
+async def generate_thumbnail_only(request: FragmentRequest):
+    """Generate just the thumbnail PNG, skipping the fragments build.
+
+    Used by the ``backfill_thumbnails`` Django management command to
+    populate ``Model.thumbnail_url`` for models that pre-date the
+    snapshot pipeline. Synchronous: caller waits for the URL and
+    writes it back immediately.
+    """
+    result = await _generate_thumbnail_only(request.model_id, request.ifc_url)
+    return result
+
+
+async def _generate_thumbnail_only(model_id: str, ifc_url: str) -> ThumbnailOnlyResult:
+    """Core thumbnail-only logic. Downloads IFC, renders PNG, uploads."""
+    import asyncio as _asyncio
+    from services.thumbnail_service import generate_thumbnail_png
+
+    temp_dir = None
+    try:
+        temp_dir = tempfile.mkdtemp(prefix="thumbnail_", dir=settings.TEMP_DIR)
+        ifc_path = os.path.join(temp_dir, "model.ifc")
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(ifc_url, timeout=300.0)
+            response.raise_for_status()
+            with open(ifc_path, "wb") as f:
+                f.write(response.content)
+
+        png_bytes = await _asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: generate_thumbnail_png(ifc_path),
+        )
+
+        storage_key = f"models/{model_id}/thumbnail.png"
+        thumbnail_url = await _upload_bytes_to_supabase(
+            storage_key=storage_key,
+            data=png_bytes,
+            content_type="image/png",
+        )
+
+        logger.info(
+            "thumbnail_backfilled model_id=%s url=%s size_bytes=%d",
+            model_id,
+            thumbnail_url,
+            len(png_bytes),
+        )
+        return ThumbnailOnlyResult(model_id=model_id, thumbnail_url=thumbnail_url)
+
+    except Exception as exc:
+        import traceback as _tb
+        logger.error(
+            "thumbnail_backfill_failed model_id=%s error=%s\n%s",
+            model_id,
+            exc,
+            _tb.format_exc(),
+        )
+        return ThumbnailOnlyResult(model_id=model_id, error=str(exc))
+
+    finally:
+        if temp_dir and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 async def generate_fragments_background(model_id: str, ifc_url: str, callback_url: str):
