@@ -81,9 +81,15 @@ export function AnalysisKpiCluster({
   );
 
   const orphanCount = storeyVerification?.orphan_count ?? null;
-  const totalProducts = stats.totalInstances || storeyVerification?.total_products || 0;
-  const orphanPercent = totalProducts > 0 && orphanCount != null
-    ? (orphanCount / totalProducts) * 100
+  // Use physical_total as the denominator — non-physical IFC products
+  // (openings, annotations, grids) never live in storey containment and
+  // would inflate the orphan ratio if counted.
+  const physicalTotal = storeyVerification?.physical_total
+    ?? storeyVerification?.total_products
+    ?? stats.totalInstances
+    ?? 0;
+  const orphanPercent = physicalTotal > 0 && orphanCount != null
+    ? (orphanCount / physicalTotal) * 100
     : 0;
 
   return (

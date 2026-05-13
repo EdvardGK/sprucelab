@@ -307,3 +307,46 @@ def test_orphan_count_clamps_non_negative_when_no_canonical(model):
     payload = compute_storey_verification(model)
     assert payload["has_canonical"] is False
     assert payload["orphan_count"] == 10
+
+
+def test_orphan_excludes_non_physical_classes(model, scope):
+    """Openings / annotations / grids never live in storey containment —
+    they shouldn't inflate the orphan metric. Physical_total should
+    subtract those from total_products before computing orphan."""
+    from apps.entities.models.reporting import AnalysisType
+
+    _set_canonical(scope, [{"name": "01", "elevation_m": 0.0}])
+    analysis = _seed_analysis(model, [
+        {"name": "01", "elevation": 0.0, "element_count": 100},
+    ], total_products=180)
+
+    # Seed 80 non-physical instances split across the excluded classes.
+    AnalysisType.objects.create(
+        analysis=analysis,
+        type_class="IfcOpeningElementType",
+        element_class="IfcOpeningElement",
+        type_name="Wall opening",
+        instance_count=60,
+    )
+    AnalysisType.objects.create(
+        analysis=analysis,
+        type_class="IfcAnnotationType",
+        element_class="IfcAnnotation",
+        type_name="Dim",
+        instance_count=15,
+    )
+    AnalysisType.objects.create(
+        analysis=analysis,
+        type_class="IfcGridType",
+        element_class="IfcGrid",
+        type_name="Grid",
+        instance_count=5,
+    )
+
+    payload = compute_storey_verification(model)
+    assert payload["total_products"] == 180
+    assert payload["non_physical_count"] == 80
+    assert payload["physical_total"] == 100
+    # 100 physical products, all 100 in storeys → 0 orphans (not 80 like the
+    # naive total_products − sum_storey calc would have given).
+    assert payload["orphan_count"] == 0

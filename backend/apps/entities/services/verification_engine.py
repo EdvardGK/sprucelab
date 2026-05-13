@@ -526,6 +526,21 @@ STOREY_MATCH_RULE_ID = 'storey_match'
 STOREY_MATCH_RULE_NAME = 'Storey deviation'
 
 
+# IFC product classes that are NEVER expected in IfcRelContainedInSpatialStructure
+# pointing at a storey. Counting them as orphans (= "products outside spatial
+# hierarchy") would inflate the metric with non-physical products — openings
+# live inside walls via IfcRelVoidsElement, annotations are markup, grids are
+# project-level, virtual elements are synthetic placeholders.
+_NON_PHYSICAL_IFC_CLASSES = {
+    'IfcOpeningElement',
+    'IfcOpeningStandardCase',
+    'IfcAnnotation',
+    'IfcGrid',
+    'IfcGridAxis',
+    'IfcVirtualElement',
+}
+
+
 def _floor_name_keys(entry: dict) -> set[str]:
     """Lowercase {name} ∪ {aliases} for a canonical floor entry."""
     keys: set[str] = set()
@@ -738,6 +753,7 @@ def compute_storey_verification(model) -> dict:
     analysis = getattr(model, 'analysis', None)
     storey_rows: list[dict] = []
     total_products = 0
+    non_physical_count = 0
     if analysis is not None:
         total_products = int(analysis.total_products or 0)
         for s in analysis.storeys.all().order_by('-elevation', 'name'):
@@ -746,12 +762,21 @@ def compute_storey_verification(model) -> dict:
                 'elevation': float(s.elevation) if s.elevation is not None else None,
                 'element_count': int(s.element_count or 0),
             })
+        # Subtract products that are legitimately not in storey containment
+        # (openings, annotations, grids, virtual elements). Without this, the
+        # orphan metric inflates by ~hundreds on a typical model.
+        non_physical_count = sum(
+            int(t.instance_count or 0)
+            for t in analysis.types.all()
+            if (t.element_class or '') in _NON_PHYSICAL_IFC_CLASSES
+        )
 
     sum_in_storeys = sum(r['element_count'] for r in storey_rows)
-    # Elements outside the spatial hierarchy (project/site/building/storey/zone).
-    # Negative deltas (storey sum exceeding total_products — shouldn't happen
-    # but be defensive against analysis drift) clamp to zero.
-    orphan_count = max(0, total_products - sum_in_storeys)
+    # "Physical" products = all IfcProducts minus the structurally non-physical
+    # subset above. The orphan delta is then a real signal — physical products
+    # that should be in a storey but aren't.
+    physical_total = max(0, total_products - non_physical_count)
+    orphan_count = max(0, physical_total - sum_in_storeys)
 
     scope = getattr(model, 'scope', None)
     canonical = list(scope.canonical_floors or []) if scope is not None else []
@@ -765,6 +790,8 @@ def compute_storey_verification(model) -> dict:
             'tolerance_m': tolerance_m,
             'orphan_count': orphan_count,
             'total_products': total_products,
+            'physical_total': physical_total,
+            'non_physical_count': non_physical_count,
             'model_storeys': [
                 {**row, 'status': None, 'canonical_code': None,
                  'canonical_name': None, 'elevation_delta_m': None}
@@ -855,6 +882,8 @@ def compute_storey_verification(model) -> dict:
         'tolerance_m': tolerance_m,
         'orphan_count': orphan_count,
         'total_products': total_products,
+        'physical_total': physical_total,
+        'non_physical_count': non_physical_count,
         'model_storeys': annotated,
         'missing_canonical': missing_canonical,
     }
@@ -868,6 +897,8 @@ def _empty_verification_payload() -> dict:
         'tolerance_m': 0.0,
         'orphan_count': 0,
         'total_products': 0,
+        'physical_total': 0,
+        'non_physical_count': 0,
         'model_storeys': [],
         'missing_canonical': [],
     }

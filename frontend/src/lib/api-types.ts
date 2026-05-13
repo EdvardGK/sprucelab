@@ -308,10 +308,14 @@ export interface ModelStoreyVerification {
   matched_count: number;
   canonical_count: number;
   tolerance_m: number;
-  /** IFC products that aren't contained in any spatial element (project/site/building/storey/zone). */
+  /** Physical IFC products outside the spatial hierarchy (storey/zone containment). */
   orphan_count: number;
   /** Total IFC products from ModelAnalysis (excludes spatial elements). */
   total_products: number;
+  /** total_products minus non-physical classes (openings, annotations, grids). */
+  physical_total: number;
+  /** Count of non-physical product instances subtracted from total_products. */
+  non_physical_count: number;
   model_storeys: VerifiedModelStorey[];
   missing_canonical: MissingCanonicalFloor[];
 }
