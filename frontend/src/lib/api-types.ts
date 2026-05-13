@@ -288,6 +288,8 @@ export interface AnalysisTypeRecord {
 export type StoreyVerificationStatus = 'matched' | 'rename' | 'deviating' | null;
 
 export interface VerifiedModelStorey {
+  /** IfcBuildingStorey.GlobalId — canonical bridge to fragments-v3 viewer entities. Null on legacy analyses pre-dating the field. */
+  guid: string | null;
   name: string;
   elevation: number | null;
   element_count: number;

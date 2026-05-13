@@ -199,11 +199,19 @@ class ModelAnalysis(models.Model):
 
 
 class AnalysisStorey(models.Model):
-    """Storey with elevation and aggregate element count."""
+    """Storey with elevation and aggregate element count.
+
+    `guid` is the IfcBuildingStorey.GlobalId — the canonical identifier
+    that bridges fragments-v3 viewer entities to the backend analysis.
+    Names can vary across authoring tools / exports; GUID does not.
+    Nullable because legacy analyses pre-date the field; backfill happens
+    on next analyze or from storey_list claim payloads.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     analysis = models.ForeignKey(
         'ModelAnalysis', on_delete=models.CASCADE, related_name='storeys'
     )
+    guid = models.CharField(max_length=22, null=True, blank=True, db_index=True)
     name = models.CharField(max_length=255)
     elevation = models.FloatField(null=True, blank=True)
     height = models.FloatField(null=True, blank=True)

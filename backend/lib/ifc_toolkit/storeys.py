@@ -35,6 +35,7 @@ def extract_storeys(ifc: ifcopenshell.file | str | Path) -> list[dict[str, Any]]
 
     for storey in ifc.by_type("IfcBuildingStorey"):
         name = storey.Name or "Unnamed"
+        guid = storey.GlobalId
         elevation = (storey.Elevation or 0.0) * scale
 
         # Prefer ObjectPlacement Z-coordinate when available and non-zero
@@ -48,7 +49,7 @@ def extract_storeys(ifc: ifcopenshell.file | str | Path) -> list[dict[str, Any]]
             except Exception:
                 pass
 
-        storeys.append({"name": name, "elevation": round(elevation, 3)})
+        storeys.append({"guid": guid, "name": name, "elevation": round(elevation, 3)})
 
     storeys.sort(key=lambda s: s["elevation"])
 

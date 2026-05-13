@@ -275,7 +275,12 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     count: number;
     v3Refs?: Array<{ modelId: string; localIds: number[] }>;
   }>>(new Map());
-  const [storeyInfo, setStoreyInfo] = useState<Map<string, { map: FragmentIdMap; count: number }>>(new Map());
+  // storeyInfo: keyed by storey name (from ThatOpen's spatial classifier).
+  // `guid` is the IfcBuildingStorey.GlobalId when resolvable from properties —
+  // it's the canonical bridge between fragments-v3 entities and the backend
+  // AnalysisStorey rows. The floor filter prefers GUID matching, falling back
+  // to case-insensitive name matching for legacy fragments without properties.
+  const [storeyInfo, setStoreyInfo] = useState<Map<string, { map: FragmentIdMap; count: number; guid?: string }>>(new Map());
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
   const cullerRef = useRef<OBC.MeshCullerRenderer | null>(null);
@@ -1619,20 +1624,34 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 const cls = components.get(OBC.Classifier);
                 return cls.bySpatialStructure(group);
               })
-              .then(() => {
+              .then(async () => {
                 const cls = components.get(OBC.Classifier);
                 const spatialStructures = cls.list.spatialStructures || {};
-                const newStoreyMap = new Map<string, { map: FragmentIdMap; count: number }>();
+                const newStoreyMap = new Map<string, { map: FragmentIdMap; count: number; guid?: string }>();
                 for (const [storeyName, storeyData] of Object.entries(spatialStructures)) {
                   let count = 0;
                   for (const ids of Object.values(storeyData.map)) count += ids.size;
-                  if (count > 0) {
-                    newStoreyMap.set(storeyName, { map: storeyData.map, count });
+                  if (count === 0) continue;
+                  // Resolve IfcBuildingStorey.GlobalId via properties — express
+                  // ID lives on storeyData.id, IFC GUID lives on the property.
+                  let guid: string | undefined;
+                  try {
+                    if (storeyData.id != null && typeof group.getProperties === 'function') {
+                      const props = await group.getProperties(storeyData.id);
+                      const rawGuid = (props as { GlobalId?: string | { value?: string } } | undefined)?.GlobalId;
+                      guid = typeof rawGuid === 'string'
+                        ? rawGuid
+                        : (rawGuid && typeof rawGuid === 'object' && 'value' in rawGuid ? rawGuid.value : undefined);
+                    }
+                  } catch (err) {
+                    if (import.meta.env.DEV) console.debug('[Viewer] Storey GUID lookup failed for', storeyName, err);
                   }
+                  newStoreyMap.set(storeyName, { map: storeyData.map, count, guid });
                 }
                 if (newStoreyMap.size > 0) {
                   setStoreyInfo(newStoreyMap);
-                  if (import.meta.env.DEV) console.log('[Viewer] Storey classification:', newStoreyMap.size, 'storeys');
+                  if (import.meta.env.DEV) console.log('[Viewer] Storey classification:', newStoreyMap.size, 'storeys',
+                    Array.from(newStoreyMap.entries()).map(([n, d]) => ({ name: n, guid: d.guid, count: d.count })));
                 }
               })
               .catch(err => console.warn('[Viewer] Spatial structure classification failed:', err));
@@ -2102,15 +2121,30 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           hider.set(true);
         } else {
           hider.set(false);
-          const aliasNames = floorAliases?.[floorCodeFilter];
-          const targetNames = aliasNames && aliasNames.length > 0
-            ? aliasNames
-            : [floorCodeFilter];
-          // Match case-insensitively to absorb minor name-casing differences.
-          const targetSet = new Set(targetNames.map((n) => n.toLowerCase()));
-          for (const [storeyName, data] of storeyInfo) {
-            if (targetSet.has(storeyName.toLowerCase())) {
+          // First pass: GUID match. AnalysisStorey.guid is the canonical
+          // bridge; when fragments expose IfcBuildingStorey.GlobalId via
+          // properties, this is the robust path that survives name drift.
+          let guidMatched = false;
+          for (const [, data] of storeyInfo) {
+            if (data.guid && data.guid === floorCodeFilter) {
               hider.set(true, data.map);
+              guidMatched = true;
+            }
+          }
+
+          if (!guidMatched) {
+            // Fallback: name match through floorAliases or directly. Used
+            // when fragments-v3 didn't surface storey GUIDs (no properties
+            // sidecar) or when the click handler passed a name instead.
+            const aliasNames = floorAliases?.[floorCodeFilter];
+            const targetNames = aliasNames && aliasNames.length > 0
+              ? aliasNames
+              : [floorCodeFilter];
+            const targetSet = new Set(targetNames.map((n) => n.toLowerCase()));
+            for (const [storeyName, data] of storeyInfo) {
+              if (targetSet.has(storeyName.toLowerCase())) {
+                hider.set(true, data.map);
+              }
             }
           }
         }

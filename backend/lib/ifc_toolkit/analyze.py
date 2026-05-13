@@ -1075,6 +1075,7 @@ def type_analysis(path: str | Path) -> dict[str, Any]:
     storey_records = []
     for s in storeys:
         storey_records.append({
+            "guid": s.get("guid"),
             "name": s["name"],
             "elevation": s["elevation"],
             "height": s.get("height"),

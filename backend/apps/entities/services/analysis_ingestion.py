@@ -63,6 +63,7 @@ def ingest_type_analysis(model_id: str, data: dict[str, Any]) -> ModelAnalysis:
     for s in data.get("storeys", []):
         obj = AnalysisStorey(
             analysis=analysis,
+            guid=s.get("guid"),
             name=s["name"],
             elevation=s.get("elevation"),
             height=s.get("height"),

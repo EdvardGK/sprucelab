@@ -83,7 +83,7 @@ def _set_canonical(scope, floors):
 
 
 def _seed_analysis(model, storeys, total_products=None):
-    """storeys = [{name, elevation, element_count}, ...]"""
+    """storeys = [{name, elevation, element_count, guid?}, ...]"""
     sum_in_storeys = sum(s.get("element_count", 0) for s in storeys)
     analysis = ModelAnalysis.objects.create(
         model=model,
@@ -94,6 +94,7 @@ def _seed_analysis(model, storeys, total_products=None):
     for s in storeys:
         AnalysisStorey.objects.create(
             analysis=analysis,
+            guid=s.get("guid"),
             name=s["name"],
             elevation=s.get("elevation"),
             element_count=s.get("element_count", 0),
@@ -271,6 +272,17 @@ def test_endpoint_404_for_unknown_model():
     import uuid
     response = APIClient().get(f"/api/models/{uuid.uuid4()}/storey-verification/")
     assert response.status_code == 404
+
+
+def test_payload_exposes_storey_guid(model, scope):
+    """GUID is the canonical bridge between fragments and analysis."""
+    _set_canonical(scope, [{"name": "01", "elevation_m": 0.0}])
+    _seed_analysis(model, [
+        {"guid": "3kF7aQ7000000000000abc", "name": "Plan 01", "elevation": 0.0, "element_count": 50},
+    ])
+
+    payload = compute_storey_verification(model)
+    assert payload["model_storeys"][0]["guid"] == "3kF7aQ7000000000000abc"
 
 
 # ---------------------------------------------------------------------------

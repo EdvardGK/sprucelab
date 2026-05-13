@@ -26,10 +26,10 @@ export interface VerifiedStoreyChartProps {
   storeys: AnalysisStorey[];
   /** Verification payload from /api/models/{id}/storey-verification/. */
   verification: ModelStoreyVerification | null | undefined;
-  /** Active storey for cross-filter highlight. */
+  /** Active storey for cross-filter highlight. Matches against guid when available, else name. */
   activeStorey?: string | null;
-  /** Click handler for cross-filter; omit to render non-interactive. */
-  onBarClick?: (storeyName: string | null) => void;
+  /** Click handler for cross-filter; receives storey GUID when available, else name. Omit to render non-interactive. */
+  onBarClick?: (storeyKey: string | null) => void;
 }
 
 const STATUS_COLOR_CLASS: Record<NonNullable<StoreyVerificationStatus>, string> = {
@@ -57,6 +57,7 @@ export function VerifiedStoreyChart({
   const rows: VerifiedModelStorey[] = verification?.model_storeys?.length
     ? verification.model_storeys
     : storeys.map((s) => ({
+        guid: null,
         name: s.name,
         elevation: s.elevation,
         element_count: s.element_count,
@@ -226,7 +227,7 @@ interface ModelStoreyRowProps {
   row: VerifiedModelStorey;
   maxCount: number;
   activeStorey?: string | null;
-  onBarClick?: (storeyName: string | null) => void;
+  onBarClick?: (storeyKey: string | null) => void;
   statusLabelKey: string | null;
   t: (key: string) => string;
 }
@@ -239,7 +240,11 @@ function ModelStoreyRow({
   statusLabelKey,
   t,
 }: ModelStoreyRowProps) {
-  const isActive = activeStorey === row.name;
+  // Prefer GUID as the cross-filter key — robust against name divergence
+  // between fragments-v3 metadata and the deep analysis. Fall back to name
+  // for legacy analyses that pre-date AnalysisStorey.guid.
+  const filterKey = row.guid ?? row.name;
+  const isActive = activeStorey === filterKey;
 
   // Status edge color (left bar). Falls back to subtle grey when no canonical.
   const edgeClass = row.status
@@ -292,7 +297,7 @@ function ModelStoreyRow({
     <DrillTarget
       ariaLabel={`Filter by storey ${row.name}`}
       active={isActive}
-      onActivate={() => onBarClick(isActive ? null : row.name)}
+      onActivate={() => onBarClick(isActive ? null : filterKey)}
       className="rounded"
     >
       {inner}

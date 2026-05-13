@@ -758,6 +758,7 @@ def compute_storey_verification(model) -> dict:
         total_products = int(analysis.total_products or 0)
         for s in analysis.storeys.all().order_by('-elevation', 'name'):
             storey_rows.append({
+                'guid': s.guid,
                 'name': s.name,
                 'elevation': float(s.elevation) if s.elevation is not None else None,
                 'element_count': int(s.element_count or 0),
