@@ -116,7 +116,7 @@
 
   /* ── KPI strip ───────────────────────────────────────────────────── */
   .kpi-strip {
-    display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px;
   }
   .tile {
     background: var(--card);
@@ -195,7 +195,7 @@
 
   <div class="frame-label">Model dash — header · KPI strip · (context lives in Metadata tab)</div>
   <p class="frame-caption">
-    <strong>Header</strong>: who this model is (name, discipline, role, status). <strong>KPI strip</strong>: 6 type-and-quality dimensions worth scanning every visit (Types, Classification, Material binding, Reuse, Proxy+Userdef, Orphan). <strong>Context</strong> — schema, authoring tool, CRS, basepoint, units, file metadata — already lives in the <em>Metadata</em> tab; not duplicated here. Element count is volume, not quality — lives in the Elements card below.
+    <strong>Header</strong>: who this model is (name, discipline, role, status). <strong>KPI strip</strong>: 7 type-and-quality dimensions worth scanning every visit. Type-level coverage first (Types · Classified · With material), then element-level data integrity (Untyped · Reuse · Proxy+Userdef · Orphan). <strong>Context</strong> — schema, authoring tool, CRS, basepoint, units, file metadata — already lives in the <em>Metadata</em> tab; not duplicated here. Element count is volume, not quality — lives in the Elements card below.
   </p>
 
   <!-- ── Header ──────────────────────────────────────────────────── -->
@@ -265,7 +265,7 @@
       </div>
     </div>
 
-    <!-- 3. Material binding -->
+    <!-- 3. Material binding (type-level) -->
     <div class="tile tone-warning">
       <div class="tile-head">
         <span class="tile-label">With material</span>
@@ -280,6 +280,24 @@
           <div class="fill" style="width:68%;background:var(--tone-warning)"></div>
         </div>
         <div class="progress-label">LayerSet / ProfileSet / ConstituentSet</div>
+      </div>
+    </div>
+
+    <!-- 4. Untyped — element-level data integrity -->
+    <div class="tile tone-warning">
+      <div class="tile-head">
+        <span class="tile-label">Untyped</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <div class="tile-value">2.6<span class="tile-value-suffix">%</span></div>
+        <div class="tile-subdata">32 / 1 247 instances · no IfcTypeObject</div>
+      </div>
+      <div class="tile-viz">
+        <div class="progress">
+          <div class="fill" style="width:2.6%;background:var(--tone-warning);min-width:3px"></div>
+        </div>
+        <div class="progress-label">Instance-level: no type definition</div>
       </div>
     </div>
 
@@ -358,9 +376,9 @@
         <div class="tile-subdata">EIR rule not set</div>
       </div>
       <div class="tile">
-        <div class="tile-head"><span class="tile-label">With material</span></div>
+        <div class="tile-head"><span class="tile-label">Untyped</span></div>
         <div class="tile-value em-dash">—</div>
-        <div class="tile-subdata">Material extraction queue</div>
+        <div class="tile-subdata">Type extraction pending</div>
       </div>
       <div class="tile">
         <div class="tile-head"><span class="tile-label">Reuse ratio</span></div>
@@ -404,11 +422,12 @@
 
   <!-- ── Legend ───────────────────────────────────────────────── -->
   <div class="legend">
-    <h3>Data source key — KPI strip only</h3>
+    <h3>Data source key — 7-tile KPI strip</h3>
     <ul>
       <li><span class="key">Types</span> <code>analysis.total_types</code> + <code>orphan_types</code> (rename → unused)</li>
       <li><span class="key">Classified</span> <code>typemapping_count / total_types</code> against EIR-declared classification</li>
       <li><span class="key">With material</span> <code>types_with_material / total_types</code> (new aggregation)</li>
+      <li><span class="key">Untyped</span> <code>untyped_instances / total_products</code> (today, in computeKpiStats)</li>
       <li><span class="key">Reuse</span> <code>Σ mapped_item_count / Σ representations</code></li>
       <li><span class="key">Proxy + Userdef</span> <code>proxy_count + userdefined_count</code> (new aggregation)</li>
       <li><span class="key">Orphan</span> <code>total_products − Σ storey.element_count</code> (shipped)</li>
