@@ -1967,7 +1967,7 @@
       "updatedRelative": "Updated {{relative}}",
       "viewerError": "Viewer unavailable",
       "viewerProcessing": "Awaiting extraction",
-      "viewerQueued": "Loads when in view",
+      "viewerQueued": "No preview",
       "openIn3d": "Open in 3D",
       "noClasses": "No class data yet",
       "processingUploading": "Uploading…",

@@ -1967,7 +1967,7 @@
       "updatedRelative": "Oppdatert {{relative}}",
       "viewerError": "Viewer utilgjengelig",
       "viewerProcessing": "Venter på ekstrahering",
-      "viewerQueued": "Lastes når synlig",
+      "viewerQueued": "Ingen forhåndsvisning",
       "openIn3d": "Åpne i 3D",
       "noClasses": "Ingen klassedata ennå",
       "processingUploading": "Laster opp…",
