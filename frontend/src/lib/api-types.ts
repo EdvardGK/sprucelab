@@ -32,6 +32,13 @@ export interface Model {
   fragments_url: string | null;
   fragments_size_mb: number | null;
   fragments_generated_at: string | null;
+  /**
+   * Static preview image generated during fragments build (server-side).
+   * Null until the backend thumbnail job ships; frontend falls back to a
+   * placeholder icon. Cards render this as a plain <img>, never as a live
+   * WebGL viewer — the gallery is aggregation, not interaction.
+   */
+  thumbnail_url?: string | null;
   status: 'uploading' | 'processing' | 'ready' | 'error';
   parsing_status: 'pending' | 'parsing' | 'parsed' | 'failed';
   geometry_status: 'pending' | 'extracting' | 'completed' | 'partial' | 'skipped' | 'failed';

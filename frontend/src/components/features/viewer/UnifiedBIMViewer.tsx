@@ -153,6 +153,14 @@ interface UnifiedBIMViewerProps {
   showModelInfo?: boolean;          // Default: false (minimal by default)
   showControls?: boolean;           // Default: false (minimal by default)
   showFilterHUD?: boolean;          // Default: false (use external panel instead)
+  /**
+   * When true, replace the modal "Loading N models…" overlay with a tiny
+   * inline spinner in the corner. Use for mini viewers embedded inside cards
+   * (Models gallery, type tiles) where a full-card backdrop-blur modal is
+   * visually heavy and GPU-expensive when multiple cards mount in parallel.
+   * Default: false.
+   */
+  compactLoading?: boolean;
 
   // Callbacks
   onSelectionChange?: (element: ElementProperties | null) => void;
@@ -225,6 +233,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   showModelInfo = false,    // Minimal by default
   showControls = false,     // Minimal by default
   showFilterHUD = false,    // Use external panel instead
+  compactLoading = false,
   onSelectionChange,
   onModelLoaded,
   onError,
@@ -2505,7 +2514,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       )}
 
       {/* Loading Overlay */}
-      {isLoading && (
+      {isLoading && !compactLoading && (
         <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-20">
           <Card className="p-6 bg-gray-800 border-gray-700">
             <div className="flex flex-col items-center gap-4">
@@ -2532,6 +2541,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               </div>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Compact loading indicator — tiny corner spinner for mini viewers
+          (model cards, type tiles). No backdrop-blur, no modal Card; just
+          a 12-pixel pulse so the user knows tiles are streaming in. */}
+      {isLoading && compactLoading && (
+        <div className="absolute bottom-1.5 right-1.5 z-20 pointer-events-none">
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/70" />
         </div>
       )}
 

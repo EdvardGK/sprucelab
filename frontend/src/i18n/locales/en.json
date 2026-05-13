@@ -1968,6 +1968,7 @@
       "viewerError": "Viewer unavailable",
       "viewerProcessing": "Awaiting extraction",
       "viewerQueued": "Loads when in view",
+      "openIn3d": "Open in 3D",
       "noClasses": "No class data yet",
       "processingUploading": "Uploading…",
       "processingProcessing": "Extracting…",

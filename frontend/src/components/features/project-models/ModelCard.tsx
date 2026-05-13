@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, memo } from 'react';
+import { useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -22,19 +22,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
-import { useLazyViewerMount } from '@/hooks/useLazyViewerMount';
 import { useModelTypes } from '@/hooks/use-warehouse';
 import { cn } from '@/lib/utils';
 import type { Model } from '@/lib/api-types';
-
-// Lazy-load the heavy UnifiedBIMViewer once per card that actually scrolls
-// into view + claims a concurrency slot. Reusing the page-level bundle is
-// fine — React/Vite dedupe the import.
-const UnifiedBIMViewer = lazy(() =>
-  import('@/components/features/viewer/UnifiedBIMViewer').then((m) => ({
-    default: m.UnifiedBIMViewer,
-  }))
-);
 
 interface ModelCardProps {
   projectId: string;
@@ -63,7 +53,6 @@ function ModelCardImpl({
   reprocessing,
 }: ModelCardProps) {
   const { t } = useTranslation();
-  const { ref, shouldMount } = useLazyViewerMount({ rootMargin: '200px' });
 
   const isReady = model.status === 'ready';
   const isError = model.status === 'error';
@@ -76,7 +65,6 @@ function ModelCardImpl({
       className="block group focus:outline-none"
     >
       <div
-        ref={ref}
         className={cn(
           'relative bg-card border border-border rounded-md overflow-hidden',
           'h-[clamp(220px,28vh,260px)]',
@@ -86,36 +74,53 @@ function ModelCardImpl({
           'focus-within:ring-2 focus-within:ring-primary/40'
         )}
       >
-        {/* Left — mini viewer.
-            The 180px column was previously filled top-to-bottom by the
-            viewer, producing a portrait canvas that stretched the model
-            (camera fits-to-canvas-aspect). We now center a square viewport
-            inside the column so the model renders with its natural aspect,
-            and pass `transparentBackground` so the card's `bg-card` shows
-            through — the model reads as floating, not panel-in-panel. */}
+        {/* Left — thumbnail (or placeholder).
+            Static image, NOT a live WebGL viewer: gallery is aggregation,
+            not interaction. The live viewer mount per card stacked WebGL
+            contexts, ran 6× backdrop-blur loading modals in parallel,
+            and raced the v3 fragments worker against unmount — all of
+            which evaporates with a plain <img>. Backend will populate
+            `thumbnail_url` during fragments generation; until then,
+            the placeholder is graceful.
+
+            Hover reveals an "Open in 3D" affordance (Speckle pattern) so
+            the image reads as "preview → click to interact" rather than
+            "static asset." The whole card already links to the workspace,
+            so the overlay is just a visual cue, not a separate target. */}
         <div className="relative grid place-items-center overflow-hidden">
-          <div className="aspect-square w-[clamp(140px,12vw,180px)]">
-            {isReady && shouldMount ? (
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-                  </div>
-                }
-              >
-                <UnifiedBIMViewer
-                  modelId={model.id}
-                  showPropertiesPanel={false}
-                  showModelInfo={false}
-                  showControls={false}
-                  showFilterHUD={false}
-                  autoFitToView
-                  transparentBackground
-                  className=""
-                />
-              </Suspense>
+          <div className="relative aspect-square w-[clamp(140px,12vw,180px)]">
+            {isReady && model.thumbnail_url ? (
+              <img
+                src={model.thumbnail_url}
+                alt={model.name}
+                className="h-full w-full object-contain"
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+              />
             ) : (
               <ViewerPlaceholder status={model.status} />
+            )}
+            {isReady && (
+              <div
+                className={cn(
+                  'absolute inset-0 flex items-center justify-center',
+                  'bg-background/60 backdrop-blur-[2px]',
+                  'opacity-0 group-hover:opacity-100 transition-opacity duration-150',
+                  'pointer-events-none'
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5',
+                    'rounded-full border border-border bg-card px-2.5 py-1',
+                    'text-[0.65rem] font-medium text-foreground shadow-sm'
+                  )}
+                >
+                  <BoxIcon className="h-3 w-3" />
+                  {t('projectModels.card.openIn3d')}
+                </span>
+              </div>
             )}
           </div>
         </div>
