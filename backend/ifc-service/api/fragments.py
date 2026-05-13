@@ -95,6 +95,7 @@ class FragmentResult(BaseModel):
     size_mb: Optional[float] = None
     element_count: Optional[int] = None
     fragments_format_version: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -255,12 +256,47 @@ async def _generate_fragments(model_id: str, ifc_url: str) -> FragmentResult:
                 format_version = data.get('fragments_format_version', 'v2')
                 break
 
+        # 4. Generate thumbnail (best-effort — failure must NOT abort fragments)
+        thumbnail_url: Optional[str] = None
+        try:
+            print("  Generating thumbnail...")
+            import asyncio as _asyncio
+            from services.thumbnail_service import generate_thumbnail_png
+
+            png_bytes = await _asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: generate_thumbnail_png(ifc_path),
+            )
+            thumbnail_storage_key = f"models/{model_id}/thumbnail.png"
+            thumbnail_url = await _upload_bytes_to_supabase(
+                storage_key=thumbnail_storage_key,
+                data=png_bytes,
+                content_type="image/png",
+            )
+            print(f"  Thumbnail uploaded: {thumbnail_url}")
+            logger.info(
+                "thumbnail_uploaded model_id=%s url=%s size_bytes=%d",
+                model_id,
+                thumbnail_url,
+                len(png_bytes),
+            )
+        except Exception as thumb_exc:
+            import traceback as _tb
+            logger.error(
+                "thumbnail_failed model_id=%s error=%s\n%s",
+                model_id,
+                thumb_exc,
+                _tb.format_exc(),
+            )
+            print(f"  Warning: thumbnail generation failed (fragments still OK): {thumb_exc}")
+
         return FragmentResult(
             model_id=model_id,
             fragments_url=fragments_url,
             size_mb=round(frag_size_mb, 2),
             element_count=element_count,
             fragments_format_version=format_version,
+            thumbnail_url=thumbnail_url,
         )
 
     except Exception as e:
@@ -283,36 +319,55 @@ async def _upload_to_supabase(model_id: str, file_path: str) -> str:
 
     Returns the public URL of the uploaded file.
     """
-    # Read file
-    with open(file_path, "rb") as f:
-        file_data = f.read()
+    storage_key = f"models/{model_id}/model.frag"
+    return await _upload_bytes_to_supabase(
+        storage_key=storage_key,
+        data=open(file_path, "rb").read(),
+        content_type="application/octet-stream",
+    )
 
+
+async def _upload_bytes_to_supabase(
+    storage_key: str,
+    data: bytes,
+    content_type: str = "application/octet-stream",
+) -> str:
+    """
+    Upload arbitrary bytes to Supabase Storage under *storage_key*.
+
+    Args:
+        storage_key: Path inside the bucket, e.g. ``models/<id>/thumbnail.png``.
+        data:         Raw bytes to upload.
+        content_type: MIME type (default ``application/octet-stream``).
+
+    Returns:
+        Public URL of the uploaded object.
+    """
     # Supabase Storage URL
     # Format: https://{project}.supabase.co/storage/v1/object/{bucket}/{path}
     supabase_url = os.getenv("SUPABASE_URL", "https://rtrgoqpsdmhhcmgietle.supabase.co")
     supabase_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY", "")
 
     bucket = "ifc-files"
-    storage_path = f"models/{model_id}/model.frag"
 
-    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{storage_path}"
+    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{storage_key}"
 
     async with httpx.AsyncClient() as client:
-        # Try to upload (upsert)
+        # Upsert so re-generation overwrites the previous thumbnail
         response = await client.post(
             upload_url,
-            content=file_data,
+            content=data,
             headers={
                 "Authorization": f"Bearer {supabase_key}",
-                "Content-Type": "application/octet-stream",
-                "x-upsert": "true"
+                "Content-Type": content_type,
+                "x-upsert": "true",
             },
-            timeout=120.0
+            timeout=120.0,
         )
 
         if response.status_code not in (200, 201):
             raise Exception(f"Supabase upload failed: {response.status_code} - {response.text}")
 
     # Return public URL
-    public_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{storage_path}"
+    public_url = f"{supabase_url}/storage/v1/object/public/{bucket}/{storage_key}"
     return public_url

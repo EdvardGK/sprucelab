@@ -1573,6 +1573,7 @@ class ModelViewSet(viewsets.ModelViewSet):
         size_mb = request.data.get('size_mb')
         element_count = request.data.get('element_count')
         format_version = request.data.get('fragments_format_version', 'v2')
+        thumbnail_url = request.data.get('thumbnail_url')
         error = request.data.get('error')
 
         if error:
@@ -1587,12 +1588,17 @@ class ModelViewSet(viewsets.ModelViewSet):
             model.fragments_generated_at = timezone.now()
             model.fragments_format_version = format_version
             model.fragments_error = None
-            model.save(update_fields=[
+            update_fields = [
                 'fragments_status', 'fragments_url',
                 'fragments_size_mb', 'fragments_generated_at',
                 'fragments_format_version', 'fragments_error',
-            ])
-            print(f"Fragments ready for {model.name} ({format_version}): {fragments_url}")
+            ]
+            if thumbnail_url:
+                model.thumbnail_url = thumbnail_url
+                update_fields.append('thumbnail_url')
+            model.save(update_fields=update_fields)
+            thumb_note = f" thumbnail={thumbnail_url}" if thumbnail_url else " (no thumbnail)"
+            print(f"Fragments ready for {model.name} ({format_version}): {fragments_url}{thumb_note}")
 
         return Response({'status': 'ok'})
 
