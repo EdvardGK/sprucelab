@@ -35,15 +35,21 @@ interface ModelCardProps {
 }
 
 /**
- * Tactical model card — content-only for now. Backend snapshot pipeline
- * (matplotlib-rendered PNG at Model.thumbnail_url) is shipped server-side
- * but intentionally NOT rendered here yet — we found the thumbnail was
- * marginalizing the data. Re-introduce when the snapshot aesthetic is
- * worth the real estate; the field + i18n keys are already in place.
+ * Tactical model card — top-banner thumbnail + full-width content below.
  *
- * Click anywhere on the card navigates to the model workspace; the kebab
- * menu and any internal links stop propagation so they don't trigger that
- * navigation. Modelers-own-data rule: gaps render as amber em-dash.
+ * Layout principle (after iteration): the data column gets the FULL card
+ * width — narrow side columns squeezed the name + KPIs. The thumbnail
+ * earns a horizontal strip at the top instead (~80-100px), so the image
+ * is visible but doesn't fight the data for horizontal real estate.
+ *
+ * When `Model.thumbnail_url` is null (older models, before the backend
+ * snapshot pipeline ran on them), the banner stays at the same height
+ * but shows a quiet placeholder — uniform card sizing keeps the grid
+ * tidy. Hover over the banner reveals an "Open in 3D" affordance.
+ *
+ * Click anywhere on the card navigates to the model workspace; the
+ * kebab menu stops propagation. Modelers-own-data: missing values
+ * render as amber em-dash.
  */
 function ModelCardImpl({
   projectId,
@@ -66,14 +72,55 @@ function ModelCardImpl({
     >
       <div
         className={cn(
-          'relative bg-card border border-border rounded-md overflow-hidden',
-          'h-[clamp(140px,18vh,170px)]',
+          'relative flex flex-col bg-card border border-border rounded-md overflow-hidden',
+          'h-[clamp(220px,26vh,260px)]',
           'transition-all duration-200',
           'hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md',
           'focus-within:ring-2 focus-within:ring-primary/40'
         )}
       >
-        <div className="flex flex-col h-full p-[clamp(0.625rem,1vw,0.875rem)] gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
+        {/* Banner — top strip with the snapshot. Full card width so the
+            image doesn't compete with the data column for horizontal
+            real estate. Hover reveals the Open-in-3D affordance. */}
+        <div className="relative shrink-0 h-[clamp(82px,10vh,108px)] overflow-hidden border-b border-border bg-muted/30">
+          {isReady && model.thumbnail_url ? (
+            <img
+              src={model.thumbnail_url}
+              alt={model.name}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground/50">
+              <BoxIcon className="h-6 w-6" />
+            </div>
+          )}
+          {isReady && (
+            <div
+              className={cn(
+                'absolute inset-0 flex items-center justify-center',
+                'bg-background/55 backdrop-blur-[2px]',
+                'opacity-0 group-hover:opacity-100 transition-opacity duration-150',
+                'pointer-events-none'
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5',
+                  'rounded-full border border-border bg-card px-2.5 py-1',
+                  'text-[0.65rem] font-medium text-foreground shadow-sm'
+                )}
+              >
+                <BoxIcon className="h-3 w-3" />
+                {t('projectModels.card.openIn3d')}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col flex-1 min-h-0 p-[clamp(0.625rem,1vw,0.875rem)] gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
           {/* Header — name + version + status + updated */}
           <div className="flex items-start justify-between gap-[clamp(0.375rem,0.6vw,0.625rem)] min-w-0">
             <div className="min-w-0 flex-1">

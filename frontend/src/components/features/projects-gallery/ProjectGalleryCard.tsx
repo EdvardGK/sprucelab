@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Layers, Package } from 'lucide-react';
+import { Box as BoxIcon, Layers, Package } from 'lucide-react';
 
 import { Sparkline, type SparkSegment } from '@/components/features/warehouse-v2/Sparkline';
 import { cn } from '@/lib/utils';
@@ -56,12 +56,11 @@ interface ProjectGalleryCardProps {
 }
 
 /**
- * Single project tile rendered in the gallery grid. Content-only for now:
- * name + last-activity + description + KPI strip + IFC discipline
- * sparkbar. The thumbnail/cover-image pattern is parked — narrow side
- * columns marginalize the actual data. Project.thumbnail_url remains in
- * the type contract for when we re-introduce a content-first thumbnail
- * treatment (full-width banner? large square card? TBD).
+ * Single project tile — top-banner cover image + full-width content
+ * below. The banner is a horizontal strip (~70-90px) so the cover image
+ * shows up without squeezing the data column. When `thumbnail_url` is
+ * null, the banner still renders at the same height with a quiet
+ * placeholder so the grid stays uniform.
  */
 export function ProjectGalleryCard({ project, models }: ProjectGalleryCardProps) {
   const { t } = useTranslation();
@@ -97,12 +96,30 @@ export function ProjectGalleryCard({ project, models }: ProjectGalleryCardProps)
     <Link
       to={`/projects/${project.id}`}
       className={cn(
-        'group block h-[180px] rounded-lg border border-border bg-card',
-        'p-[clamp(0.625rem,1vw,0.875rem)] flex flex-col gap-[clamp(0.25rem,0.5vh,0.5rem)]',
+        'group flex flex-col h-[clamp(220px,26vh,260px)] rounded-lg border border-border bg-card overflow-hidden',
         'transition-colors duration-150 hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30'
       )}
     >
-      <div className="flex flex-col h-full gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
+      {/* Banner — cover image strip, full card width. Quiet placeholder
+          when no thumbnail so the grid stays uniform. */}
+      <div className="relative shrink-0 h-[clamp(74px,9vh,96px)] overflow-hidden border-b border-border bg-muted/30">
+        {project.thumbnail_url ? (
+          <img
+            src={project.thumbnail_url}
+            alt={project.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground/50">
+            <BoxIcon className="h-6 w-6" />
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col flex-1 min-h-0 p-[clamp(0.625rem,1vw,0.875rem)] gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
         <div className="flex items-start justify-between gap-2 min-w-0">
           <div className="min-w-0 flex-1">
             <h3 className="text-[clamp(0.85rem,1.1vw,1rem)] font-semibold text-text-primary truncate">
