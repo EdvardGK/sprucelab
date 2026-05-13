@@ -1840,61 +1840,56 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               type StoreyEntry = { name: string; guid: string; localIds: number[] };
               const storeys: StoreyEntry[] = [];
 
-              // v3 fragments uses UPPERCASE category names ("IFCBUILDINGSTOREY"),
-              // not pascalcase. Match by normalized form so we survive
-              // either flavor.
-              const isStorey = (cat: string | null) =>
+              // v3 fragments structures the tree with **category-grouping
+              // containers** (one node per IFC class with category set, no
+              // localId), whose children are the actual instances (localId
+              // set, category=null). We match the IFCBUILDINGSTOREY container,
+              // then iterate its direct children as the real storey instances.
+              const isStoreyContainer = (cat: string | null) =>
                 typeof cat === 'string' && cat.toUpperCase() === 'IFCBUILDINGSTOREY';
 
               const collectDescendantIds = (node: typeof tree): number[] => {
                 const ids: number[] = [];
-                if (node.localId != null && !isStorey(node.category)) {
-                  ids.push(node.localId);
-                }
+                if (node.localId != null) ids.push(node.localId);
                 for (const child of node.children ?? []) {
                   ids.push(...collectDescendantIds(child));
                 }
                 return ids;
               };
 
-              const walk = async (node: typeof tree): Promise<void> => {
-                if (isStorey(node.category)) {
-                  const descendantIds = collectDescendantIds(node);
-                  console.log('[Viewer] v3 walk hit storey: ' + JSON.stringify({
-                    localId: node.localId,
-                    descendantCount: descendantIds.length,
-                    sampleDescendants: descendantIds.slice(0, 5),
-                    directChildren: node.children?.length ?? 0,
-                  }));
-                  if (node.localId == null) {
-                    // Container with no own localId but children should still get filtered.
-                    // Continue walk so we don't lose them; just skip the storey-entry push.
-                  } else if (descendantIds.length === 0) {
-                    console.warn('[Viewer] v3 storey has no descendants — skipping push');
-                  } else {
-                    try {
-                      const [guidOrNull] = await v3Model.getGuidsByLocalIds([node.localId]);
-                      const guid = typeof guidOrNull === 'string' ? guidOrNull : '';
-                      const [data] = await v3Model.getItemsData(
-                        [node.localId],
-                        { attributes: ['Name'], attributesDefault: false }
-                      );
-                      const nameAttr = data?.Name as { value?: string } | string | undefined;
-                      const name = typeof nameAttr === 'string'
-                        ? nameAttr
-                        : (nameAttr && typeof nameAttr === 'object' && 'value' in nameAttr ? (nameAttr.value ?? '') : '')
-                            || guid
-                            || `storey-${node.localId}`;
-                      console.log('[Viewer] v3 storey resolved: ' + JSON.stringify({ localId: node.localId, guid, name }));
-                      if (guid) {
-                        storeys.push({ name, guid, localIds: descendantIds });
-                      } else {
-                        console.warn('[Viewer] v3 storey GUID empty — skipping push');
-                      }
-                    } catch (err) {
-                      console.warn('[Viewer] v3 storey lookup failed:', node.localId, err);
-                    }
+              const processStoreyInstance = async (storeyNode: typeof tree): Promise<void> => {
+                if (storeyNode.localId == null) return;
+                const descendantIds = collectDescendantIds(storeyNode)
+                  .filter((id) => id !== storeyNode.localId);
+                if (descendantIds.length === 0) return;
+                try {
+                  const [guidOrNull] = await v3Model.getGuidsByLocalIds([storeyNode.localId]);
+                  const guid = typeof guidOrNull === 'string' ? guidOrNull : '';
+                  const [data] = await v3Model.getItemsData(
+                    [storeyNode.localId],
+                    { attributes: ['Name'], attributesDefault: false }
+                  );
+                  const nameAttr = data?.Name as { value?: string } | string | undefined;
+                  const name = typeof nameAttr === 'string'
+                    ? nameAttr
+                    : (nameAttr && typeof nameAttr === 'object' && 'value' in nameAttr ? (nameAttr.value ?? '') : '')
+                        || guid
+                        || `storey-${storeyNode.localId}`;
+                  if (guid) {
+                    storeys.push({ name, guid, localIds: descendantIds });
                   }
+                } catch (err) {
+                  console.warn('[Viewer] v3 storey lookup failed:', storeyNode.localId, err);
+                }
+              };
+
+              const walk = async (node: typeof tree): Promise<void> => {
+                if (isStoreyContainer(node.category)) {
+                  // Each direct child is a storey instance.
+                  for (const storeyNode of node.children ?? []) {
+                    await processStoreyInstance(storeyNode);
+                  }
+                  return;
                 }
                 for (const child of node.children ?? []) {
                   await walk(child);
