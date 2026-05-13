@@ -79,6 +79,7 @@ export function MaterialSpherePreview({
     renderer.domElement.style.display = 'block';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
+    renderer.domElement.style.background = 'transparent';
 
     // Three-light rig — key + fill + rim, plus a soft hemisphere for
     // ambient bounce. Matches what every DCC tool defaults to for a
@@ -214,7 +215,7 @@ export function MaterialSpherePreview({
         ref.current = node;
       }}
       className={cn(
-        'relative aspect-square w-[clamp(140px,18vw,220px)] mx-auto',
+        'relative aspect-square w-[clamp(140px,18vw,220px)] mx-auto overflow-hidden rounded-full',
         className,
       )}
       aria-label={t('materialBrowser.sphere.aria', { name: material.name })}

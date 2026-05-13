@@ -201,8 +201,8 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
       </div>
 
       {/* Two-column body: table (left, breathes) + detail (right) */}
-      <div className="grid flex-1 min-h-[clamp(360px,55vh,640px)] gap-[clamp(0.5rem,1vw,0.875rem)] grid-cols-1 lg:grid-cols-[1fr_clamp(320px,28vw,460px)]">
-        <div className="flex flex-col min-h-0 rounded-md border bg-background overflow-hidden">
+      <div className="grid gap-[clamp(0.5rem,1vw,0.875rem)] grid-cols-1 lg:grid-cols-[1fr_clamp(320px,28vw,460px)]">
+        <div className="flex flex-col max-h-[clamp(360px,55vh,640px)] rounded-md border bg-background overflow-hidden">
           {filteredMaterials.length === 0 ? (
             <EmptyResults onClearFilters={clearFilters} />
           ) : (
@@ -214,8 +214,8 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
           )}
         </div>
 
-        <div className="flex flex-col min-h-0 rounded-md border bg-muted/10 overflow-hidden">
-          <ScrollArea className="flex-1">
+        <div className="flex flex-col max-h-[clamp(360px,55vh,640px)] rounded-md border bg-muted/10 overflow-hidden">
+          <ScrollArea className="h-full">
             {selectedMaterial ? (
               <MaterialDetailTabs
                 material={selectedMaterial}
