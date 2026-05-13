@@ -1858,27 +1858,42 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               };
 
               const walk = async (node: typeof tree): Promise<void> => {
-                if (isStorey(node.category) && node.localId != null) {
+                if (isStorey(node.category)) {
                   const descendantIds = collectDescendantIds(node);
-                  if (descendantIds.length === 0) return;
-                  try {
-                    const [guidOrNull] = await v3Model.getGuidsByLocalIds([node.localId]);
-                    const guid = typeof guidOrNull === 'string' ? guidOrNull : '';
-                    const [data] = await v3Model.getItemsData(
-                      [node.localId],
-                      { attributes: ['Name'], attributesDefault: false }
-                    );
-                    const nameAttr = data?.Name as { value?: string } | string | undefined;
-                    const name = typeof nameAttr === 'string'
-                      ? nameAttr
-                      : (nameAttr && typeof nameAttr === 'object' && 'value' in nameAttr ? (nameAttr.value ?? '') : '')
-                          || guid
-                          || `storey-${node.localId}`;
-                    if (guid) {
-                      storeys.push({ name, guid, localIds: descendantIds });
+                  console.log('[Viewer] v3 walk hit storey: ' + JSON.stringify({
+                    localId: node.localId,
+                    descendantCount: descendantIds.length,
+                    sampleDescendants: descendantIds.slice(0, 5),
+                    directChildren: node.children?.length ?? 0,
+                  }));
+                  if (node.localId == null) {
+                    // Container with no own localId but children should still get filtered.
+                    // Continue walk so we don't lose them; just skip the storey-entry push.
+                  } else if (descendantIds.length === 0) {
+                    console.warn('[Viewer] v3 storey has no descendants — skipping push');
+                  } else {
+                    try {
+                      const [guidOrNull] = await v3Model.getGuidsByLocalIds([node.localId]);
+                      const guid = typeof guidOrNull === 'string' ? guidOrNull : '';
+                      const [data] = await v3Model.getItemsData(
+                        [node.localId],
+                        { attributes: ['Name'], attributesDefault: false }
+                      );
+                      const nameAttr = data?.Name as { value?: string } | string | undefined;
+                      const name = typeof nameAttr === 'string'
+                        ? nameAttr
+                        : (nameAttr && typeof nameAttr === 'object' && 'value' in nameAttr ? (nameAttr.value ?? '') : '')
+                            || guid
+                            || `storey-${node.localId}`;
+                      console.log('[Viewer] v3 storey resolved: ' + JSON.stringify({ localId: node.localId, guid, name }));
+                      if (guid) {
+                        storeys.push({ name, guid, localIds: descendantIds });
+                      } else {
+                        console.warn('[Viewer] v3 storey GUID empty — skipping push');
+                      }
+                    } catch (err) {
+                      console.warn('[Viewer] v3 storey lookup failed:', node.localId, err);
                     }
-                  } catch (err) {
-                    console.warn('[Viewer] v3 storey lookup failed:', node.localId, err);
                   }
                 }
                 for (const child of node.children ?? []) {
