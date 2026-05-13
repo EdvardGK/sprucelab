@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react';
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -23,7 +23,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
-import { useModelTypes } from '@/hooks/use-warehouse';
 import { cn } from '@/lib/utils';
 import type { Model } from '@/lib/api-types';
 
@@ -68,8 +67,8 @@ function ModelCardImpl({
       <div
         className={cn(
           'relative bg-card border border-border rounded-md overflow-hidden',
-          'h-[clamp(220px,28vh,260px)]',
-          'grid grid-cols-[180px_1fr]',
+          'h-[clamp(170px,22vh,200px)]',
+          'grid grid-cols-[clamp(96px,10vw,120px)_1fr]',
           'transition-all duration-200',
           'hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md',
           'focus-within:ring-2 focus-within:ring-primary/40'
@@ -88,8 +87,8 @@ function ModelCardImpl({
             the image reads as "preview → click to interact" rather than
             "static asset." The whole card already links to the workspace,
             so the overlay is just a visual cue, not a separate target. */}
-        <div className="relative grid place-items-center overflow-hidden">
-          <div className="relative aspect-square w-[clamp(140px,12vw,180px)]">
+        <div className="relative grid place-items-center overflow-hidden border-r border-border bg-muted/30">
+          <div className="relative aspect-square w-[clamp(80px,8vw,108px)]">
             {isReady && model.thumbnail_url ? (
               <img
                 src={model.thumbnail_url}
@@ -154,7 +153,7 @@ function ModelCardImpl({
             </div>
           </div>
 
-          {/* Mini KPI strip */}
+          {/* KPI strip — the data IS the card. */}
           <CardKpiStrip
             elements={isReady ? model.element_count : null}
             storeys={isReady ? model.storey_count : null}
@@ -162,16 +161,16 @@ function ModelCardImpl({
             materials={isReady ? model.material_count : null}
           />
 
-          {/* Top-3 IFC classes (or error message) */}
-          <div className="flex-1 min-h-0 mt-[clamp(0.125rem,0.3vh,0.25rem)]">
-            {isError ? (
-              <ErrorMessage error={model.processing_error} />
-            ) : isReady ? (
-              <TopClassesMiniList modelId={model.id} />
-            ) : (
-              <ProcessingHint status={model.status} />
-            )}
-          </div>
+          {/* Status messaging slot — only when there's something to say. */}
+          {(isError || !isReady) && (
+            <div className="mt-auto min-h-0">
+              {isError ? (
+                <ErrorMessage error={model.processing_error} />
+              ) : (
+                <ProcessingHint status={model.status} />
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Link>
@@ -275,75 +274,6 @@ function CardKpi({
         {value === null ? '—' : value === 0 ? '—' : animated.toLocaleString()}
       </span>
     </div>
-  );
-}
-
-function TopClassesMiniList({ modelId }: { modelId: string }) {
-  const { t } = useTranslation();
-  const { data: types, isLoading } = useModelTypes(modelId);
-
-  // Aggregate instances per ifc_type (top 3). Skips zero-count types.
-  const top = useMemo(() => {
-    if (!types || types.length === 0) return [];
-    const byClass = new Map<string, number>();
-    for (const tp of types) {
-      const cls = tp.ifc_type || 'Unknown';
-      byClass.set(cls, (byClass.get(cls) ?? 0) + (tp.instance_count || 0));
-    }
-    const entries = [...byClass.entries()]
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3);
-    const max = entries[0]?.[1] ?? 0;
-    return entries.map(([cls, value]) => ({ cls, value, max }));
-  }, [types]);
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-1">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="h-[14px] rounded-sm bg-gradient-to-r from-muted/30 via-muted/50 to-muted/30 bg-[length:200%_100%] animate-[shimmer_1.5s_ease-in-out_infinite]"
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (top.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-[clamp(0.55rem,0.7vw,0.7rem)] text-muted-foreground/70">
-        {t('projectModels.card.noClasses')}
-      </div>
-    );
-  }
-
-  return (
-    <ul className="flex flex-col gap-[clamp(0.125rem,0.3vh,0.25rem)]">
-      {top.map(({ cls, value, max }) => {
-        const widthPct = max > 0 ? (value / max) * 100 : 0;
-        const label = cls.replace(/^Ifc/, '');
-        return (
-          <li key={cls} className="flex flex-col">
-            <div className="flex items-baseline justify-between gap-1 text-[clamp(0.55rem,0.7vw,0.7rem)]">
-              <span className="truncate font-medium" title={cls}>
-                {label}
-              </span>
-              <span className="tabular-nums text-muted-foreground shrink-0">
-                {value.toLocaleString()}
-              </span>
-            </div>
-            <div className="h-[6px] w-full rounded-full bg-muted/60 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-[hsl(158_70%_28%)] transition-[width] duration-700 ease-out"
-                style={{ width: `${widthPct}%` }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 
