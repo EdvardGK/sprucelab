@@ -2,62 +2,186 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Sprucelab — Wireframe kit</title>
-<link rel="stylesheet" href="_light.css">
+<title>Sprucelab — Wireframe Navigator</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background: #f5f5f4;
+    color: #1c1c1c;
+    font-size: 13px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 44px 1fr;
+  }
+
+  header {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 14px;
+    background: #ffffff;
+    border-bottom: 1px solid #d4d4d4;
+  }
+  header .logo { font-weight: 700; letter-spacing: 0.05em; }
+  header .crumbs { color: #8a8a8a; font-size: 12px; }
+  header .crumbs #current-name { color: #1c1c1c; font-weight: 500; margin-left: 4px; }
+  header .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  header a.open-tab {
+    text-decoration: none;
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px solid #d4d4d4;
+    border-radius: 6px;
+    color: #525252;
+  }
+  header a.open-tab:hover { border-color: #157954; color: #157954; }
+
+  aside.nav {
+    background: #ffffff;
+    border-right: 1px solid #d4d4d4;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  .group {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8a8a8a;
+    padding: 10px 14px 4px;
+  }
+  aside.nav a {
+    display: block;
+    padding: 5px 14px;
+    color: #525252;
+    text-decoration: none;
+    font-size: 12px;
+    border-left: 2px solid transparent;
+  }
+  aside.nav a:hover { background: rgba(0,0,0,0.03); color: #1c1c1c; }
+  aside.nav a.active {
+    background: rgba(21, 121, 84, 0.08);
+    border-left-color: #157954;
+    color: #1c1c1c;
+    font-weight: 500;
+  }
+  aside.nav a .route {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    color: #a3a3a3;
+    display: block;
+  }
+
+  main {
+    overflow: hidden;
+    background: #eeeeed;
+  }
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #f5f5f4;
+  }
+
+  kbd {
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    padding: 1px 5px;
+    border: 1px solid #d4d4d4;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: #fafafa;
+    color: #525252;
+  }
+</style>
 </head>
 <body>
-<div class="page-frame">
-  <div class="page-head">
-    <span class="route">docs/wireframes/</span>
-    <span class="title">Light wireframe kit</span>
-    <span class="note">Structural only · mock viewers · no live data</span>
-  </div>
+  <header>
+    <span class="logo">sprucelab</span>
+    <span class="crumbs">wireframes ·<span id="current-name">welcome</span></span>
+    <span class="right">
+      <span style="font-size:11px;color:#8a8a8a">←→ navigate · <kbd>/</kbd> focus search</span>
+      <a class="open-tab" id="open-tab" href="welcome.html" target="_blank">open in new tab ↗</a>
+    </span>
+  </header>
 
-  <div class="block" style="margin-bottom:16px">
-    <div class="block-label">Purpose</div>
-    <div style="font-size:12px; color:var(--ink-soft); margin-top:4px">
-      One wireframe per page, light-and-fast. Iterate layout without WebGL/data-fetch overhead.
-      Viewers are hatched mock blocks. All wireframes share <code>_light.css</code>.
-    </div>
-  </div>
+  <aside class="nav" id="nav">
+    <div class="group">Top-level</div>
+    <a data-page="welcome.html"><strong>Welcome</strong><span class="route">/</span></a>
+    <a data-page="my-page.html"><strong>My Page</strong><span class="route">/my-page</span></a>
+    <a data-page="projects-gallery.html"><strong>Projects Gallery</strong><span class="route">/projects</span></a>
+    <a data-page="admin.html"><strong>Admin</strong><span class="route">/admin</span></a>
+    <a data-page="webhooks.html"><strong>Webhooks</strong><span class="route">/settings/webhooks</span></a>
+    <a data-page="webhook-deliveries.html"><strong>Webhook Deliveries</strong><span class="route">…/deliveries</span></a>
+    <a data-page="embed.html"><strong>Embed Surface</strong><span class="route">/embed/:dashboard</span></a>
+    <a data-page="type-library-global.html"><strong>Type Library (global)</strong><span class="route">/type-library</span></a>
 
-  <div style="margin-top:12px; margin-bottom:6px; font-family:ui-monospace,monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-mute)">Top-level</div>
-  <div class="wf-index">
-    <a href="welcome.html"><div class="code">/</div><div class="name">Welcome</div><div class="desc">Landing / marketing</div></a>
-    <a href="my-page.html"><div class="code">/my-page</div><div class="name">My Page</div><div class="desc">User home dashboard</div></a>
-    <a href="projects-gallery.html"><div class="code">/projects</div><div class="name">Projects Gallery</div><div class="desc">All projects, table+cards modes</div></a>
-    <a href="admin.html"><div class="code">/admin</div><div class="name">Admin</div><div class="desc">Org-level dashboard</div></a>
-    <a href="webhooks.html"><div class="code">/settings/webhooks</div><div class="name">Webhooks</div><div class="desc">Subscriptions list</div></a>
-    <a href="webhook-deliveries.html"><div class="code">/settings/webhooks/deliveries</div><div class="name">Webhook Deliveries</div><div class="desc">Delivery log</div></a>
-    <a href="embed.html"><div class="code">/embed/:dashboard</div><div class="name">Embed Surface</div><div class="desc">External embeddable dashboards</div></a>
-    <a href="type-library-global.html"><div class="code">/type-library</div><div class="name">Type Library (global)</div><div class="desc">Cross-project canonical types</div></a>
-  </div>
+    <div class="group">Project shell — /projects/:id/</div>
+    <a data-page="project-dashboard.html"><strong>Project Dashboard</strong><span class="route">dashboard</span></a>
+    <a data-page="project-models.html"><strong>Models Gallery</strong><span class="route">models</span></a>
+    <a data-page="model-workspace.html"><strong>Model Workspace</strong><span class="route">models/:modelId</span></a>
+    <a data-page="model-kpi-dion.html"><strong>Model KPI — Dion lens</strong><span class="route">(proposal)</span></a>
+    <a data-page="project-floors.html"><strong>Project Floors</strong><span class="route">floors</span></a>
+    <a data-page="project-my-page.html"><strong>Project My Page</strong><span class="route">my-page</span></a>
+    <a data-page="viewer-groups.html"><strong>Viewer Groups</strong><span class="route">viewer-groups</span></a>
+    <a data-page="federated-viewer.html"><strong>Federated Viewer</strong><span class="route">viewer/:groupId</span></a>
+    <a data-page="project-documents.html"><strong>Documents</strong><span class="route">documents</span></a>
+    <a data-page="project-claims.html"><strong>Claims</strong><span class="route">claims</span></a>
+    <a data-page="project-drawings.html"><strong>Drawings</strong><span class="route">drawings</span></a>
+    <a data-page="project-types.html"><strong>Types Page</strong><span class="route">types</span></a>
+    <a data-page="project-type-library.html"><strong>Project Type Library</strong><span class="route">type-library</span></a>
+    <a data-page="project-material-library.html"><strong>Materials</strong><span class="route">material-library</span></a>
+    <a data-page="project-field.html"><strong>Field Compliance</strong><span class="route">field</span></a>
+    <a data-page="project-eir.html"><strong>EIR Rule Builder</strong><span class="route">eir</span></a>
+    <a data-page="project-workbench.html"><strong>BIM Workbench</strong><span class="route">workbench</span></a>
+  </aside>
 
-  <div style="margin-top:16px; margin-bottom:6px; font-family:ui-monospace,monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-mute)">Project shell — /projects/:id/</div>
-  <div class="wf-index">
-    <a href="project-dashboard.html"><div class="code">dashboard</div><div class="name">Project Dashboard</div><div class="desc">Overview, KPIs, recent activity</div></a>
-    <a href="project-models.html"><div class="code">models</div><div class="name">Models Gallery</div><div class="desc">Per-project model cards</div></a>
-    <a href="model-workspace.html"><div class="code">models/:modelId</div><div class="name">Model Workspace</div><div class="desc">Single-model dash + viewer (mock)</div></a>
-    <a href="model-kpi-dion.html"><div class="code">models/:modelId (KPI proposal)</div><div class="name">Model KPI — Dion lens</div><div class="desc">Schema/Georef/Reuse/Proxy/Orphan</div></a>
-    <a href="project-floors.html"><div class="code">floors</div><div class="name">Project Floors</div><div class="desc">Canonical floors + per-model diff</div></a>
-    <a href="project-my-page.html"><div class="code">my-page</div><div class="name">Project My Page</div><div class="desc">My role + my issues in this project</div></a>
-    <a href="viewer-groups.html"><div class="code">viewer-groups</div><div class="name">Viewer Groups</div><div class="desc">Saved federated model sets</div></a>
-    <a href="federated-viewer.html"><div class="code">viewer/:groupId</div><div class="name">Federated Viewer</div><div class="desc">Multi-model dash + viewer (mock)</div></a>
-    <a href="project-documents.html"><div class="code">documents</div><div class="name">Documents</div><div class="desc">Files in — PDFs, drawings, Office</div></a>
-    <a href="project-claims.html"><div class="code">claims</div><div class="name">Claims</div><div class="desc">Extracted assertions / inbox</div></a>
-    <a href="project-drawings.html"><div class="code">drawings</div><div class="name">Drawings</div><div class="desc">DWG/DXF/PDF sheets</div></a>
-    <a href="project-types.html"><div class="code">types</div><div class="name">Types Page</div><div class="desc">Type browser + cross-filter</div></a>
-    <a href="project-type-library.html"><div class="code">type-library</div><div class="name">Project Type Library</div><div class="desc">Project-scoped classification</div></a>
-    <a href="project-material-library.html"><div class="code">material-library</div><div class="name">Materials Dashboard</div><div class="desc">QTO + LCA + EPD</div></a>
-    <a href="project-field.html"><div class="code">field</div><div class="name">Field Compliance</div><div class="desc">On-site checklists</div></a>
-    <a href="project-eir.html"><div class="code">eir</div><div class="name">EIR Rule Builder</div><div class="desc">Palette + workspace</div></a>
-    <a href="project-workbench.html"><div class="code">workbench</div><div class="name">BIM Workbench</div><div class="desc">Scripting + automation</div></a>
-  </div>
+  <main>
+    <iframe id="frame" src="welcome.html" title="Wireframe preview"></iframe>
+  </main>
 
-  <div style="margin-top:24px; font-size:11px; color:var(--ink-mute)">
-    To iterate: open a file directly in browser, edit HTML, refresh. No build step.
-    Real components live under <code>frontend/src/</code>; these are stand-ins for layout review only.
-  </div>
-</div>
+  <script>
+    const links = Array.from(document.querySelectorAll('aside.nav a[data-page]'));
+    const frame = document.getElementById('frame');
+    const currentName = document.getElementById('current-name');
+    const openTab = document.getElementById('open-tab');
+
+    function activate(page, pushState = true) {
+      const link = links.find(l => l.dataset.page === page);
+      if (!link) return;
+      links.forEach(l => l.classList.toggle('active', l === link));
+      frame.src = page;
+      currentName.textContent = link.querySelector('strong').textContent;
+      openTab.href = page;
+      if (pushState) history.replaceState(null, '', '#' + page);
+      link.scrollIntoView({ block: 'nearest' });
+    }
+
+    links.forEach(link => {
+      link.href = '#' + link.dataset.page;
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        activate(link.dataset.page);
+      });
+    });
+
+    // Initial route from hash
+    const initial = location.hash.slice(1) || 'welcome.html';
+    activate(initial, false);
+
+    // Keyboard navigation: ← / → to flip through pages
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      const i = links.findIndex(l => l.classList.contains('active'));
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        activate(links[Math.min(links.length - 1, i + 1)].dataset.page);
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        activate(links[Math.max(0, i - 1)].dataset.page);
+      }
+    });
+  </script>
 </body>
 </html>
