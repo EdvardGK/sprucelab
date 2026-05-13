@@ -32,7 +32,6 @@
     --tone-warning-soft: rgba(217, 119, 6, 0.12);
     --tone-danger: #dc2626;
     --tone-danger-soft: rgba(220, 38, 38, 0.12);
-    --tone-info: #475569;
 
     --shadow-sm: 0 1px 3px rgba(33, 38, 58, 0.06);
     --shadow-md: 0 8px 24px rgba(33, 38, 58, 0.08);
@@ -47,291 +46,146 @@
     line-height: 1.4;
   }
 
-  .frame {
-    max-width: 1440px;
-    margin: 0 auto;
-  }
+  .frame { max-width: 1440px; margin: 0 auto; }
 
   .frame-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-tertiary);
-    margin-bottom: 8px;
-    font-weight: 600;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-tertiary); margin-bottom: 8px; font-weight: 600;
   }
-
   .frame-caption {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 24px;
-    max-width: 720px;
+    font-size: 13px; color: var(--text-secondary);
+    margin-bottom: 24px; max-width: 720px;
   }
 
-  /* ── Header bar (above KPI strip) ─────────────────────────────────── */
+  /* ── Header ──────────────────────────────────────────────────────── */
   .header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 18px;
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 18px; background: var(--card);
+    border: 1px solid var(--border-light); border-radius: 12px;
+    box-shadow: var(--shadow-sm); margin-bottom: 8px;
+  }
+  .header .back { color: var(--text-tertiary); font-size: 12px; }
+  .header .model-name { font-size: 16px; font-weight: 600; }
+  .pill-cluster { display: flex; gap: 6px; margin-left: 4px; }
+  .pill {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 999px;
+    letter-spacing: 0.03em; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .pill-discipline { background: rgba(33,38,58,0.06); color: var(--text-primary); border: 1px solid var(--border-light); }
+  .pill-role-main { background: var(--tone-good-soft); color: var(--tone-good); border: 1px solid rgba(21,121,84,0.3); }
+  .status-badge {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500; color: var(--tone-good);
+    background: var(--tone-good-soft); padding: 4px 12px; border-radius: 999px;
+  }
+  .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--tone-good); }
+
+  /* ── Model context strip ─────────────────────────────────────────── */
+  .context-strip {
+    display: flex; align-items: stretch;
     background: var(--card);
     border: 1px solid var(--border-light);
-    border-radius: 12px;
-    box-shadow: var(--shadow-sm);
+    border-radius: 10px;
+    padding: 8px 4px;
     margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
   }
+  .ctx {
+    padding: 4px 18px;
+    display: flex; flex-direction: column;
+    border-right: 1px dashed var(--border-light);
+    min-width: 0;
+  }
+  .ctx:last-child { border-right: 0; }
+  .ctx-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-tertiary); font-weight: 600;
+  }
+  .ctx-value {
+    font-size: 13px; font-weight: 600; color: var(--text-primary);
+    font-variant-numeric: tabular-nums; margin-top: 2px;
+    white-space: nowrap;
+  }
+  .ctx-sub {
+    font-size: 11px; color: var(--text-tertiary); margin-top: 1px;
+  }
+  .ctx-good .ctx-value { color: var(--tone-good); }
+  .ctx-warning .ctx-value { color: var(--tone-warning); }
 
-  .header .back {
-    color: var(--text-tertiary);
-    font-size: 12px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-  }
-  .header .back:hover { background: rgba(0,0,0,0.04); }
-
-  .header .model-name {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .pill-cluster {
-    display: flex;
-    gap: 6px;
-    margin-left: 4px;
-  }
-
-  .pill {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 999px;
-    letter-spacing: 0.03em;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .pill-discipline {
-    background: rgba(33, 38, 58, 0.06);
-    color: var(--text-primary);
-    border: 1px solid var(--border-light);
-  }
-
-  .pill-role-main {
-    background: var(--tone-good-soft);
-    color: var(--tone-good);
-    border: 1px solid rgba(21, 121, 84, 0.3);
-  }
-
-  .pill-role-special {
-    background: rgba(100, 116, 139, 0.12);
-    color: var(--text-secondary);
-    border: 1px solid var(--border);
-  }
-
-  .pill-role-deprecated {
-    background: rgba(220, 38, 38, 0.08);
-    color: var(--tone-danger);
-    border: 1px solid rgba(220, 38, 38, 0.3);
-    text-decoration: line-through;
-  }
-
-  .status-badge {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--tone-good);
-    background: var(--tone-good-soft);
-    padding: 4px 12px;
-    border-radius: 999px;
-  }
-  .status-badge::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--tone-good);
-  }
-
-  /* ── KPI strip ────────────────────────────────────────────────────── */
+  /* ── KPI strip ───────────────────────────────────────────────────── */
   .kpi-strip {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 12px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
   }
-
   .tile {
     background: var(--card);
     border: 1px solid var(--border-light);
     border-radius: 12px;
     padding: 14px 14px 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 138px;
-    position: relative;
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 138px; position: relative;
     box-shadow: var(--shadow-sm);
     transition: transform 200ms ease, box-shadow 200ms ease;
   }
   .tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .tile.tone-good { box-shadow: inset 0 0 0 1px rgba(21,121,84,0.28), var(--shadow-sm); }
+  .tile.tone-warning { box-shadow: inset 0 0 0 1px rgba(217,119,6,0.32), var(--shadow-sm); }
+  .tile.tone-danger { box-shadow: inset 0 0 0 1px rgba(220,38,38,0.36), var(--shadow-sm); }
 
-  .tile.tone-good { box-shadow: inset 0 0 0 1px rgba(21, 121, 84, 0.28), var(--shadow-sm); }
-  .tile.tone-warning { box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.32), var(--shadow-sm); }
-  .tile.tone-danger { box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.36), var(--shadow-sm); }
-
-  .tile-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: var(--text-tertiary);
-  }
-
+  .tile-head { display: flex; justify-content: space-between; align-items: center; color: var(--text-tertiary); }
   .tile-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 600;
-    color: var(--text-tertiary);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600; color: var(--text-tertiary);
   }
-
-  .tile-icon {
-    width: 16px;
-    height: 16px;
-    color: var(--text-tertiary);
-  }
+  .tile-icon { width: 16px; height: 16px; color: var(--text-tertiary); }
   .tile.tone-good .tile-icon { color: var(--tone-good); }
   .tile.tone-warning .tile-icon { color: var(--tone-warning); }
   .tile.tone-danger .tile-icon { color: var(--tone-danger); }
 
   .tile-value {
-    font-size: 28px;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: -0.01em;
-    color: var(--text-primary);
+    font-size: 28px; font-weight: 600; line-height: 1;
+    letter-spacing: -0.01em; color: var(--text-primary);
     font-variant-numeric: tabular-nums;
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
+    display: flex; align-items: baseline; gap: 4px;
   }
-
   .tile.tone-good .tile-value { color: var(--tone-good); }
   .tile.tone-warning .tile-value { color: var(--tone-warning); }
   .tile.tone-danger .tile-value { color: var(--tone-danger); }
-
-  .tile-value-suffix {
-    font-size: 14px;
-    font-weight: 500;
-  }
-
+  .tile-value-suffix { font-size: 14px; font-weight: 500; }
   .tile-subdata {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    font-variant-numeric: tabular-nums;
-    margin-top: 4px;
+    font-size: 11px; color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums; margin-top: 4px;
   }
+  .tile-viz { margin-top: 10px; height: 18px; }
 
-  .tile-viz {
-    margin-top: 10px;
-    height: 18px;
-  }
+  .sparkline { display: flex; align-items: flex-end; gap: 2px; height: 18px; width: 100%; }
+  .sparkline .bar { flex: 1; border-radius: 1px; background: var(--forest); min-height: 2px; }
 
-  /* Schema tile: two-line label (IFC4 / RV) ───────────────────────── */
-  .schema-stack {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.05;
-  }
-  .schema-stack .schema-major {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .schema-stack .schema-mvd {
-    font-size: 13px;
-    color: var(--text-tertiary);
-    font-weight: 500;
-    margin-top: 2px;
-  }
+  .progress { height: 6px; width: 100%; background: rgba(33,38,58,0.08); border-radius: 999px; overflow: hidden; }
+  .progress .fill { height: 100%; border-radius: 999px; }
+  .progress-label { font-size: 10px; color: var(--text-tertiary); margin-top: 4px; font-variant-numeric: tabular-nums; }
 
-  /* Sparkline bars (stacked) ────────────────────────────────────────── */
-  .sparkline {
-    display: flex;
-    align-items: flex-end;
-    gap: 2px;
-    height: 18px;
-    width: 100%;
-  }
-  .sparkline .bar {
-    flex: 1;
-    border-radius: 1px;
-    background: var(--forest);
-    min-height: 2px;
-  }
+  .em-dash { color: var(--tone-warning); font-weight: 500; opacity: 0.85; }
 
-  /* Progress bar ───────────────────────────────────────────────────── */
-  .progress {
-    height: 6px;
-    width: 100%;
-    background: rgba(33, 38, 58, 0.08);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .progress .fill {
-    height: 100%;
-    border-radius: 999px;
-  }
-  .progress-label {
-    font-size: 10px;
-    color: var(--text-tertiary);
-    margin-top: 4px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Em-dash fallback ───────────────────────────────────────────────── */
-  .em-dash {
-    color: var(--tone-warning);
-    font-weight: 500;
-    opacity: 0.85;
-  }
-
-  /* ── Today/before contrast row ────────────────────────────────────── */
-  .contrast-section {
-    margin-top: 56px;
-  }
-
+  .contrast-section { margin-top: 56px; }
   .contrast-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: 14px; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;
   }
 
   .legend {
-    margin-top: 32px;
-    background: var(--card);
-    border: 1px solid var(--border-light);
-    border-radius: 12px;
-    padding: 16px 20px;
-    font-size: 12px;
-    color: var(--text-secondary);
+    margin-top: 32px; background: var(--card);
+    border: 1px solid var(--border-light); border-radius: 12px;
+    padding: 16px 20px; font-size: 12px; color: var(--text-secondary);
     box-shadow: var(--shadow-sm);
   }
   .legend h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); font-weight: 600; margin-bottom: 8px; }
   .legend ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 32px; }
   .legend li { display: flex; gap: 8px; align-items: baseline; }
   .legend .key {
-    color: var(--text-primary);
-    font-weight: 500;
-    min-width: 130px;
-    display: inline-block;
+    color: var(--text-primary); font-weight: 500;
+    min-width: 150px; display: inline-block;
   }
 </style>
 </head>
@@ -339,12 +193,12 @@
 
 <div class="frame">
 
-  <div class="frame-label">Model dash — KPI cluster (Dion lens)</div>
+  <div class="frame-label">Model dash — header · KPI strip · (context lives in Metadata tab)</div>
   <p class="frame-caption">
-    Six tiles, Dion Moult-prioritized: schema/MVD, georeferencing, elements (with untyped subdata), reuse ratio, proxy+USERDEFINED code-smells, true orphans (outside spatial hierarchy). Discipline + role move out of the strip into the header pill cluster.
+    <strong>Header</strong>: who this model is (name, discipline, role, status). <strong>KPI strip</strong>: 6 type-and-quality dimensions worth scanning every visit (Types, Classification, Material binding, Reuse, Proxy+Userdef, Orphan). <strong>Context</strong> — schema, authoring tool, CRS, basepoint, units, file metadata — already lives in the <em>Metadata</em> tab; not duplicated here. Element count is volume, not quality — lives in the Elements card below.
   </p>
 
-  <!-- ── Model header ──────────────────────────────────────────────── -->
+  <!-- ── Header ──────────────────────────────────────────────────── -->
   <div class="header">
     <span class="back">← Models</span>
     <span class="model-name">Architecture.ifc</span>
@@ -355,55 +209,77 @@
     <span class="status-badge">Ready</span>
   </div>
 
-  <!-- ── KPI strip ─────────────────────────────────────────────────── -->
+  <!-- Tabs row reminder: Overview · QTO · Statistics · Validation · Metadata (context) · Scripts · History -->
+  <div style="display:flex;gap:2px;border-bottom:1px solid var(--border-light);margin-bottom:12px">
+    <span style="padding:6px 12px;font-size:12px;border-bottom:2px solid var(--tone-good);font-weight:500">Overview</span>
+    <span style="padding:6px 12px;font-size:12px;color:var(--text-tertiary)">QTO</span>
+    <span style="padding:6px 12px;font-size:12px;color:var(--text-tertiary)">Statistics</span>
+    <span style="padding:6px 12px;font-size:12px;color:var(--text-tertiary)">Validation</span>
+    <span style="padding:6px 12px;font-size:12px;color:var(--text-tertiary)" title="Schema · CRS · Authoring tool · Basepoint · Units · File">Metadata ←&nbsp;<span style="color:var(--tone-good);font-weight:600">context lives here</span></span>
+    <span style="padding:6px 12px;font-size:12px;color:var(--text-tertiary)">Scripts</span>
+    <span style="padding:6px 12px;font-size:12px;color:var(--text-tertiary)">History</span>
+  </div>
+
+  <!-- ── KPI strip ─────────────────────────────────────────────── -->
   <div class="kpi-strip">
 
-    <!-- 1. Schema + MVD -->
+    <!-- 1. Types -->
     <div class="tile">
       <div class="tile-head">
-        <span class="tile-label">Schema</span>
-        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-      </div>
-      <div class="schema-stack">
-        <span class="schema-major">IFC4</span>
-        <span class="schema-mvd">Reference View</span>
-      </div>
-      <div class="tile-subdata">Revit 2024.2</div>
-    </div>
-
-    <!-- 2. Georef -->
-    <div class="tile tone-good">
-      <div class="tile-head">
-        <span class="tile-label">Georef</span>
-        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
-      </div>
-      <div class="tile-value">EPSG:25833</div>
-      <div class="tile-subdata">+ MapConversion · ETRS89 / UTM 33N</div>
-    </div>
-
-    <!-- 3. Elements -->
-    <div class="tile tone-warning">
-      <div class="tile-head">
-        <span class="tile-label">Elements</span>
-        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="tile-label">Types</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
       </div>
       <div>
-        <div class="tile-value">1 247</div>
-        <div class="tile-subdata">32 untyped · 2.6 %</div>
+        <div class="tile-value">240</div>
+        <div class="tile-subdata">228 used · 12 unused</div>
       </div>
       <div class="tile-viz">
         <div class="sparkline">
-          <div class="bar" style="height:6px"></div>
+          <div class="bar" style="height:14px"></div>
           <div class="bar" style="height:10px;background:#C7CEE8"></div>
-          <div class="bar" style="height:13px"></div>
-          <div class="bar" style="height:17px;background:#D0D34D"></div>
-          <div class="bar" style="height:18px"></div>
-          <div class="bar" style="height:14px;background:#C7CEE8"></div>
-          <div class="bar" style="height:10px"></div>
-          <div class="bar" style="height:7px"></div>
-          <div class="bar" style="height:5px;background:#D0D34D"></div>
+          <div class="bar" style="height:16px"></div>
+          <div class="bar" style="height:11px;background:#D0D34D"></div>
+          <div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:6px;background:#C7CEE8"></div>
+          <div class="bar" style="height:4px"></div>
           <div class="bar" style="height:3px"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- 2. Classification coverage -->
+    <div class="tile tone-warning">
+      <div class="tile-head">
+        <span class="tile-label">Classified</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <div>
+        <div class="tile-value">71<span class="tile-value-suffix">%</span></div>
+        <div class="tile-subdata">170 / 240 with NS3451</div>
+      </div>
+      <div class="tile-viz">
+        <div class="progress">
+          <div class="fill" style="width:71%;background:var(--tone-warning)"></div>
+        </div>
+        <div class="progress-label">EIR requires: NS3451 on all types</div>
+      </div>
+    </div>
+
+    <!-- 3. Material binding -->
+    <div class="tile tone-warning">
+      <div class="tile-head">
+        <span class="tile-label">With material</span>
+        <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      </div>
+      <div>
+        <div class="tile-value">68<span class="tile-value-suffix">%</span></div>
+        <div class="tile-subdata">163 / 240 typed with IfcMaterial*</div>
+      </div>
+      <div class="tile-viz">
+        <div class="progress">
+          <div class="fill" style="width:68%;background:var(--tone-warning)"></div>
+        </div>
+        <div class="progress-label">LayerSet / ProfileSet / ConstituentSet</div>
       </div>
     </div>
 
@@ -459,7 +335,7 @@
       </div>
       <div>
         <div class="tile-value">18</div>
-        <div class="tile-subdata">1.4 % of products outside spatial tree</div>
+        <div class="tile-subdata">1.4 % outside spatial tree</div>
       </div>
       <div class="tile-viz">
         <div class="progress">
@@ -471,61 +347,41 @@
 
   </div>
 
-  <!-- ── Em-dash fallback example ──────────────────────────────────── -->
+  <!-- ── Fallback example ─────────────────────────────────────── -->
   <div class="contrast-section">
-    <div class="contrast-title">Fallback — model missing CRS declaration</div>
-    <p class="frame-caption">When a tile's underlying data is absent, render an amber em-dash with a soft tone. Never an "ERROR" pill — modelers-own-data, the gap is filterable info, not a failure.</p>
+    <div class="contrast-title">Fallback — when data is absent</div>
+    <p class="frame-caption">Em-dash with amber tone. Modelers-own-data: the gap is filterable info, never an "ERROR" pill.</p>
     <div class="kpi-strip">
-      <div class="tile tone-warning">
-        <div class="tile-head">
-          <span class="tile-label">Georef</span>
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
-        </div>
+      <div class="tile">
+        <div class="tile-head"><span class="tile-label">Classified</span></div>
         <div class="tile-value em-dash">—</div>
-        <div class="tile-subdata">No IfcProjectedCRS · No MapConversion</div>
+        <div class="tile-subdata">EIR rule not set</div>
       </div>
       <div class="tile">
-        <div class="tile-head">
-          <span class="tile-label">Reuse ratio</span>
-        </div>
+        <div class="tile-head"><span class="tile-label">With material</span></div>
         <div class="tile-value em-dash">—</div>
-        <div class="tile-subdata">Analysis hasn't surfaced reuse data</div>
+        <div class="tile-subdata">Material extraction queue</div>
       </div>
       <div class="tile">
-        <div class="tile-head">
-          <span class="tile-label">Proxy + Userdef</span>
-        </div>
+        <div class="tile-head"><span class="tile-label">Reuse ratio</span></div>
         <div class="tile-value em-dash">—</div>
-        <div class="tile-subdata">PredefinedType not extracted</div>
+        <div class="tile-subdata">Aggregation pending</div>
       </div>
     </div>
   </div>
 
-  <!-- ── Today (for contrast) ──────────────────────────────────────── -->
+  <!-- ── Today contrast ───────────────────────────────────────── -->
   <div class="contrast-section">
-    <div class="contrast-title">Today — for contrast</div>
-    <p class="frame-caption">Current strip: 4 counts + 2 percent tiles, two of them mislabeled ("Orphan" = empty types; "Untyped" duplicates Elements). No schema, no georef, no reuse, no code-smell visibility. Storeys repeats the card below.</p>
+    <div class="contrast-title">Today — for contrast (Overview tab)</div>
+    <p class="frame-caption">Current strip: 4 raw counts + 2 percent tiles. <strong>Elements</strong>, <strong>Storeys</strong>, <strong>Systems</strong>, <strong>Types</strong> are volume figures. <strong>Untyped</strong> is element-level (belongs as Elements subdata). <strong>Orphan</strong> is mislabeled (means "empty types" = unused types). And the bottom-left <strong>ModelInfoCard</strong> (Schema / Units / Coords) duplicates the Metadata tab — that's the dupe you flagged.</p>
     <div class="kpi-strip">
       <div class="tile">
         <div class="tile-head"><span class="tile-label">Elements</span></div>
         <div class="tile-value">1 247</div>
-        <div class="tile-viz">
-          <div class="sparkline">
-            <div class="bar" style="height:6px"></div>
-            <div class="bar" style="height:10px;background:#C7CEE8"></div>
-            <div class="bar" style="height:13px"></div>
-            <div class="bar" style="height:17px;background:#D0D34D"></div>
-            <div class="bar" style="height:18px"></div>
-            <div class="bar" style="height:14px;background:#C7CEE8"></div>
-            <div class="bar" style="height:10px"></div>
-            <div class="bar" style="height:7px"></div>
-          </div>
-        </div>
       </div>
       <div class="tile">
         <div class="tile-head"><span class="tile-label">Storeys</span></div>
         <div class="tile-value">5</div>
-        <div class="tile-subdata" style="opacity:0">·</div>
       </div>
       <div class="tile">
         <div class="tile-head"><span class="tile-label">Systems</span></div>
@@ -538,29 +394,29 @@
       <div class="tile tone-warning">
         <div class="tile-head"><span class="tile-label">Untyped</span></div>
         <div class="tile-value">2.6<span class="tile-value-suffix">%</span></div>
-        <div class="tile-subdata">32 instances</div>
       </div>
       <div class="tile tone-warning">
         <div class="tile-head"><span class="tile-label">Orphan <span style="color:#dc2626">(mislabeled)</span></span></div>
         <div class="tile-value">5.0<span class="tile-value-suffix">%</span></div>
-        <div class="tile-subdata">12 types</div>
       </div>
     </div>
   </div>
 
-  <!-- ── Legend / data-source key ──────────────────────────────────── -->
+  <!-- ── Legend ───────────────────────────────────────────────── -->
   <div class="legend">
-    <h3>Data source key</h3>
+    <h3>Data source key — KPI strip only</h3>
     <ul>
-      <li><span class="key">Schema + MVD</span> <code>analysis.ifc_schema</code> + <code>mvd_name</code> (new extraction)</li>
-      <li><span class="key">Georef</span> <code>crs_declared</code> + <code>crs_epsg</code> + <code>crs_has_mapconversion</code> (new extraction)</li>
-      <li><span class="key">Elements</span> <code>analysis.total_products</code> + <code>untyped_instances</code> (today)</li>
-      <li><span class="key">Reuse ratio</span> <code>Σ mapped_item_count / Σ representations</code> (aggregate today's per-type)</li>
-      <li><span class="key">Proxy + Userdef</span> <code>proxy_count</code> + <code>userdefined_count</code> (new aggregation)</li>
-      <li><span class="key">Orphan</span> <code>total_products − Σ storey.element_count</code> (today, computed in storey-verification)</li>
-      <li><span class="key">Discipline pill</span> <code>Model.discipline</code> (today, auto-inferred from filename)</li>
-      <li><span class="key">Role pill</span> <code>Model.scope_role</code> (new tri-state field) — interim: <code>is_primary_for_discipline</code> proxy</li>
+      <li><span class="key">Types</span> <code>analysis.total_types</code> + <code>orphan_types</code> (rename → unused)</li>
+      <li><span class="key">Classified</span> <code>typemapping_count / total_types</code> against EIR-declared classification</li>
+      <li><span class="key">With material</span> <code>types_with_material / total_types</code> (new aggregation)</li>
+      <li><span class="key">Reuse</span> <code>Σ mapped_item_count / Σ representations</code></li>
+      <li><span class="key">Proxy + Userdef</span> <code>proxy_count + userdefined_count</code> (new aggregation)</li>
+      <li><span class="key">Orphan</span> <code>total_products − Σ storey.element_count</code> (shipped)</li>
     </ul>
+    <p style="margin-top:10px;color:var(--text-tertiary);font-size:11px">
+      Context fields (Schema, MVD, Authoring tool, CRS, Basepoint, Units, File) are owned by the <strong>Metadata</strong> tab.
+      The current <code>ModelInfoCard</code> at the bottom of Overview duplicates those — drop it as part of this PR so Overview is KPI-strip + Storeys + Elements + Quality + Geometry, no context echo.
+    </p>
   </div>
 
 </div>
