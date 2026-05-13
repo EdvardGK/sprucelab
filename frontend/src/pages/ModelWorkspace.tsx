@@ -533,7 +533,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <StoreyChart storeys={analysis.storeys} activeStorey={viewerStoreyFilter} onBarClick={filterByStorey} />
               </CardContent>
             </Card>
-            <Card className="overflow-hidden card-accent-forest min-h-[clamp(280px,32vh,420px)] flex-1">
+            <Card className="overflow-hidden card-accent-forest min-h-[clamp(360px,44vh,540px)] flex-1">
               <CardContent className="p-3 h-full flex flex-col">
                 <CardHeader
                   title="Elements"
@@ -626,12 +626,12 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           </div>
 
           {/* Row 2: Model info + Quality (left) | Geometry bar (right).
-              Row min-height grows on 27" so the bottom doesn't shrink to
-              card-content-only. */}
-          <div className="col-span-2 min-h-[clamp(220px,28vh,360px)]">
-            <ModelInfoCard analysis={analysis} />
+              min-h is intentionally modest — cards earn their height
+              from content, not from a clamp floor. */}
+          <div className="col-span-2">
+            <ModelInfoCard analysis={analysis} stats={stats} />
           </div>
-          <div className="col-span-2 min-h-[clamp(220px,28vh,360px)]">
+          <div className="col-span-2">
             <QualityCard
               analysis={analysis}
               stats={stats}
@@ -640,7 +640,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               onViewData={() => setDrillSource({ type: 'quality' })}
             />
           </div>
-          <div className="col-span-2 min-h-[clamp(220px,28vh,360px)]">
+          <div className="col-span-2">
             <Card className="overflow-hidden card-accent-forest h-full">
               <CardContent className="p-3 flex flex-col h-full">
                 <CardHeader
@@ -662,8 +662,9 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                     }
                   }}
                 />
-                <div className="flex-1 flex flex-col justify-center">
+                <div className="flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)]">
                   <GeometryBar types={analysis.types} onSegmentClick={filterByGeometry} />
+                  <GeometryClassTable types={analysis.types} onSegmentClick={filterByGeometry} />
                 </div>
               </CardContent>
             </Card>
@@ -785,30 +786,77 @@ function QualityCard({
   onClick?: () => void;
   onViewData?: () => void;
 }) {
+  // Count distinct types affected per check — gives a type-level view alongside
+  // the instance-level counts. Uses the raw analysis.types array directly.
+  const typesWithProxy = analysis.types.filter((t) => t.is_proxy).length;
+  const typesWithExtUnset = analysis.types.filter((t) => t.is_external_unset > 0).length;
+  const typesWithLbUnset = analysis.types.filter((t) => t.loadbearing_unset > 0).length;
+  const typesWithFrUnset = analysis.types.filter((t) => t.fire_rating_unset > 0).length;
+
   const checks = [
-    { label: 'Duplicate GUIDs', value: analysis.duplicate_guid_count, ok: analysis.duplicate_guid_count === 0 },
-    { label: 'Proxy-typed', value: stats.proxyCount, ok: stats.proxyCount === 0 },
-    { label: 'IsExternal unset', value: stats.missingIsExternal, ok: stats.missingIsExternal === 0 },
-    { label: 'LoadBearing unset', value: stats.missingLoadBearing, ok: stats.missingLoadBearing === 0 },
-    { label: 'FireRating unset', value: stats.missingFireRating, ok: stats.missingFireRating === 0 },
+    { label: 'Duplicate GUIDs', instances: analysis.duplicate_guid_count, types: null as number | null, ok: analysis.duplicate_guid_count === 0 },
+    { label: 'Proxy-typed', instances: stats.proxyCount, types: typesWithProxy, ok: stats.proxyCount === 0 },
+    { label: 'IsExternal unset', instances: stats.missingIsExternal, types: typesWithExtUnset, ok: stats.missingIsExternal === 0 },
+    { label: 'LoadBearing unset', instances: stats.missingLoadBearing, types: typesWithLbUnset, ok: stats.missingLoadBearing === 0 },
+    { label: 'FireRating unset', instances: stats.missingFireRating, types: typesWithFrUnset, ok: stats.missingFireRating === 0 },
   ];
+
+  const totalIssueTypes = new Set(
+    analysis.types
+      .filter((t) =>
+        t.is_proxy ||
+        t.is_external_unset > 0 ||
+        t.loadbearing_unset > 0 ||
+        t.fire_rating_unset > 0
+      )
+      .map((t) => t.type_class)
+  ).size;
+  const totalChecks = checks.length;
+  const passedChecks = checks.filter((c) => c.ok).length;
 
   // Body click cross-filters the page (PowerBI pattern); the Table2
   // icon in the header is the secondary "view raw issues table" escape.
   const body = (
-    <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col">
+    <CardContent className="p-[clamp(0.5rem,1vw,0.75rem)] flex-1 min-h-0 flex flex-col gap-[clamp(0.3rem,0.5vw,0.4rem)]">
       <CardHeader title="Quality" onExpand={onExpand} onViewData={onViewData} />
+
+      {/* Pass/fail summary badge row */}
+      <div className="flex items-center gap-2">
+        <span className={`text-[clamp(0.55rem,0.8vw,0.7rem)] font-semibold px-2 py-0.5 rounded-full ${
+          passedChecks === totalChecks
+            ? 'bg-forest/15 text-forest'
+            : passedChecks === 0
+            ? 'bg-red-500/15 text-red-400'
+            : 'bg-amber-500/15 text-amber-500'
+        }`}>
+          {passedChecks}/{totalChecks} checks pass
+        </span>
+        {totalIssueTypes > 0 && (
+          <span className="text-[clamp(0.5rem,0.7vw,0.6rem)] text-text-tertiary">
+            {totalIssueTypes} type{totalIssueTypes !== 1 ? 's' : ''} affected
+          </span>
+        )}
+      </div>
+
       <div className="space-y-[clamp(0.2rem,0.4vw,0.3rem)] flex-1">
         {checks.map((c) => (
-          <div key={c.label} className="flex items-center justify-between text-[clamp(0.55rem,1vw,0.7rem)]">
-            <span className="text-text-secondary">{c.label}</span>
-            <span className={`font-semibold tabular-nums px-[clamp(0.3rem,0.6vw,0.5rem)] py-px rounded text-[clamp(0.5rem,0.9vw,0.65rem)] ${
-              c.ok
-                ? 'bg-forest/15 text-forest'
-                : 'bg-red-500/15 text-red-400'
-            }`}>
-              {c.value === 0 ? 'OK' : c.value.toLocaleString()}
-            </span>
+          <div key={c.label} className="flex items-center justify-between gap-2 text-[clamp(0.55rem,1vw,0.7rem)]">
+            <span className="text-text-secondary truncate">{c.label}</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Types badge — shown when we have per-type data and there's an issue */}
+              {c.types !== null && !c.ok && (
+                <span className="text-[clamp(0.45rem,0.65vw,0.6rem)] text-text-tertiary tabular-nums">
+                  {c.types} {c.types === 1 ? 'type' : 'types'}
+                </span>
+              )}
+              <span className={`font-semibold tabular-nums px-[clamp(0.3rem,0.6vw,0.5rem)] py-px rounded text-[clamp(0.5rem,0.9vw,0.65rem)] ${
+                c.ok
+                  ? 'bg-forest/15 text-forest'
+                  : 'bg-red-500/15 text-red-400'
+              }`}>
+                {c.instances === 0 ? 'OK' : c.instances.toLocaleString()}
+              </span>
+            </div>
           </div>
         ))}
       </div>
@@ -1057,9 +1105,63 @@ function GeometryBar({ types, onSegmentClick }: { types: AnalysisTypeRecord[]; o
   );
 }
 
+// ─── Geometry Class Breakdown Table ──────────────────────────────────────────
+// Secondary content below the stacked bar: shows per-representation instance
+// counts so the user sees the exact numbers without expanding the overlay.
+
+function GeometryClassTable({
+  types,
+  onSegmentClick,
+}: {
+  types: AnalysisTypeRecord[];
+  onSegmentClick?: (representation: string) => void;
+}) {
+  const data = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of types) {
+      if (!t.primary_representation || t.instance_count === 0) continue;
+      counts[t.primary_representation] = (counts[t.primary_representation] || 0) + t.instance_count;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [types]);
+
+  if (!data.length) return null;
+
+  const total = data.reduce((s, [, v]) => s + v, 0);
+
+  return (
+    <div className="flex flex-col gap-[clamp(0.1rem,0.25vw,0.2rem)]">
+      {data.map(([label, count]) => {
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        const row = (
+          <div className="flex items-center justify-between gap-2 text-[clamp(0.5rem,0.7vw,0.6rem)]">
+            <span className="text-text-secondary truncate">{label}</span>
+            <span className="tabular-nums text-text-primary font-medium shrink-0">
+              {count.toLocaleString()} <span className="text-text-tertiary font-normal">({pct}%)</span>
+            </span>
+          </div>
+        );
+        if (onSegmentClick) {
+          return (
+            <DrillTarget
+              key={label}
+              ariaLabel={`Filter by ${label}`}
+              onActivate={() => onSegmentClick(label)}
+              className="rounded"
+            >
+              {row}
+            </DrillTarget>
+          );
+        }
+        return <div key={label}>{row}</div>;
+      })}
+    </div>
+  );
+}
+
 // ─── Model Info Card (combined Context / Units / Coordinates) ────────────────
 
-function ModelInfoCard({ analysis }: { analysis: ModelAnalysis }) {
+function ModelInfoCard({ analysis, stats }: { analysis: ModelAnalysis; stats: AnalysisStats }) {
   const unitRows: [string, string][] = analysis.units && typeof analysis.units === 'object'
     ? Object.entries(analysis.units as Record<string, unknown>).map(([k, v]) => {
         if (v && typeof v === 'object' && 'symbol' in (v as Record<string, unknown>)) {
@@ -1091,9 +1193,17 @@ function ModelInfoCard({ analysis }: { analysis: ModelAnalysis }) {
     { title: 'Coords', rows: coordRows.length ? coordRows : [['—', 'N/A']] as [string, string][] },
   ];
 
+  // Top 3 IFC classes by instance count — surfaces the dominant disciplines
+  // without requiring a separate card. Data comes from stats.classCounts which
+  // is already derived from analysis.types.
+  const topClasses = Object.entries(stats.classCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  const maxClassCount = topClasses[0]?.[1] ?? 0;
+
   return (
-    <Card className="card-accent-lavender">
-      <CardContent className="px-3 py-2">
+    <Card className="card-accent-lavender h-full">
+      <CardContent className="px-3 py-2 flex flex-col gap-2">
         <div className="grid grid-cols-3 gap-x-3">
           {sections.map((s) => (
             <div key={s.title}>
@@ -1106,6 +1216,57 @@ function ModelInfoCard({ analysis }: { analysis: ModelAnalysis }) {
               ))}
             </div>
           ))}
+        </div>
+
+        {/* Top classes mini list — surfaces dominant disciplines */}
+        {topClasses.length > 0 && (
+          <div className="border-t border-border pt-1.5">
+            <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wide mb-1">Top classes</h4>
+            <div className="flex flex-col gap-[clamp(0.15rem,0.3vw,0.25rem)]">
+              {topClasses.map(([cls, count]) => {
+                const label = cls.replace(/^Ifc/, '');
+                const pct = maxClassCount > 0 ? (count / maxClassCount) * 100 : 0;
+                return (
+                  <div key={cls} className="flex flex-col">
+                    <div className="flex items-baseline justify-between gap-1 text-[clamp(0.5rem,0.75vw,0.65rem)]">
+                      <span className="truncate text-text-secondary" title={cls}>{label}</span>
+                      <span className="tabular-nums text-text-primary font-medium shrink-0">{count.toLocaleString()}</span>
+                    </div>
+                    <div className="h-[4px] w-full rounded-full bg-muted/50 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[hsl(260_60%_55%/0.6)] transition-[width] duration-700 ease-out"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Type health summary */}
+        <div className="border-t border-border pt-1.5 flex gap-3 text-[clamp(0.5rem,0.75vw,0.65rem)]">
+          <div className="flex flex-col">
+            <span className="text-text-tertiary uppercase tracking-wide">Types</span>
+            <span className="font-semibold tabular-nums text-text-primary">{analysis.total_types.toLocaleString()}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-text-tertiary uppercase tracking-wide">Untyped</span>
+            <span className={`font-semibold tabular-nums ${stats.untypedCount > 0 ? 'text-amber-500' : 'text-text-primary'}`}>
+              {stats.untypedCount > 0 ? stats.untypedCount.toLocaleString() : 'None'}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-text-tertiary uppercase tracking-wide">Empty</span>
+            <span className={`font-semibold tabular-nums ${stats.emptyTypes > 0 ? 'text-amber-500' : 'text-text-primary'}`}>
+              {stats.emptyTypes > 0 ? stats.emptyTypes.toLocaleString() : 'None'}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-text-tertiary uppercase tracking-wide">Inst/type</span>
+            <span className="font-semibold tabular-nums text-text-primary">{stats.typeRatio.toLocaleString()}</span>
+          </div>
         </div>
       </CardContent>
     </Card>
