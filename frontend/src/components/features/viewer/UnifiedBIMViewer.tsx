@@ -1840,9 +1840,15 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               type StoreyEntry = { name: string; guid: string; localIds: number[] };
               const storeys: StoreyEntry[] = [];
 
+              // v3 fragments uses UPPERCASE category names ("IFCBUILDINGSTOREY"),
+              // not pascalcase. Match by normalized form so we survive
+              // either flavor.
+              const isStorey = (cat: string | null) =>
+                typeof cat === 'string' && cat.toUpperCase() === 'IFCBUILDINGSTOREY';
+
               const collectDescendantIds = (node: typeof tree): number[] => {
                 const ids: number[] = [];
-                if (node.localId != null && node.category !== 'IfcBuildingStorey') {
+                if (node.localId != null && !isStorey(node.category)) {
                   ids.push(node.localId);
                 }
                 for (const child of node.children ?? []) {
@@ -1852,7 +1858,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               };
 
               const walk = async (node: typeof tree): Promise<void> => {
-                if (node.category === 'IfcBuildingStorey' && node.localId != null) {
+                if (isStorey(node.category) && node.localId != null) {
                   const descendantIds = collectDescendantIds(node);
                   if (descendantIds.length === 0) return;
                   try {
