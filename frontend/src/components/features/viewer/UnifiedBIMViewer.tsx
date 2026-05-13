@@ -1527,7 +1527,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           modelId: string,
           loadMethod: 'fragments-v2' | 'ifc',
         ): LoadedModel => {
-          worldRef.current!.scene!.three.add(group);
+          const sceneThree = worldRef.current?.scene?.three;
+          if (!sceneThree) {
+            try { (group as unknown as { dispose?: () => void }).dispose?.(); } catch { /* noop */ }
+            throw new Error(
+              'Viewer world unmounted before fragments finalized; aborting model attach',
+            );
+          }
+          sceneThree.add(group);
 
           // Note: Phase A originally set matrixAutoUpdate=false on fragment meshes
           // to skip per-frame matrix recompute. That change broke the
@@ -1870,9 +1877,21 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               try {
                 if (effectiveVersion === 'v3') {
                   const v3 = ensureV3();
+                  // Capture camera now (sync) so the await below can't race
+                  // against a mid-load unmount or world re-init. Matches the
+                  // defensive pattern in finalizeV3Model — when the load
+                  // setup outlives the world, throw a friendly error that
+                  // the per-model catch below converts into a labelled
+                  // failure for this model only.
+                  const cameraThree = worldRef.current?.camera?.three;
+                  if (!cameraThree) {
+                    throw new Error(
+                      'Viewer world unmounted before v3 fragments load began',
+                    );
+                  }
                   const v3Model = await v3.load(arrayBuffer, {
                     modelId,
-                    camera: worldRef.current!.camera!.three as THREE.PerspectiveCamera | THREE.OrthographicCamera,
+                    camera: cameraThree as THREE.PerspectiveCamera | THREE.OrthographicCamera,
                   });
                   return finalizeV3Model(v3Model, modelData, modelId);
                 }
