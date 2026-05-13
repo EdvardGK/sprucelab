@@ -1996,6 +1996,11 @@
       "monthsAgo_other": "{{count}} md siden"
     }
   },
+  "density": {
+    "toggleLabel": "Korttetthet",
+    "big": "Store kort",
+    "small": "Kompakte kort"
+  },
   "projectsGallery": {
     "title": "Prosjekter",
     "subtitle": "Velg et prosjekt å åpne",

@@ -32,6 +32,11 @@ interface ModelCardProps {
   onDelete: (id: string, name: string) => void;
   onReprocess: (id: string) => void;
   reprocessing: boolean;
+  /**
+   * 'big' = banner + content. 'small' = banner hidden, compact card.
+   * Default 'big' so existing call sites keep their look.
+   */
+  density?: 'big' | 'small';
 }
 
 /**
@@ -57,11 +62,13 @@ function ModelCardImpl({
   onDelete,
   onReprocess,
   reprocessing,
+  density = 'big',
 }: ModelCardProps) {
   const { t } = useTranslation();
 
   const isReady = model.status === 'ready';
   const isError = model.status === 'error';
+  const showBanner = density === 'big';
 
   const relUpdated = useRelativeTime(model.updated_at || model.created_at);
 
@@ -73,7 +80,7 @@ function ModelCardImpl({
       <div
         className={cn(
           'relative flex flex-col bg-card border border-border rounded-md overflow-hidden',
-          'h-[clamp(220px,26vh,260px)]',
+          showBanner ? 'h-[clamp(220px,26vh,260px)]' : 'h-[clamp(140px,18vh,170px)]',
           'transition-all duration-200',
           'hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-md',
           'focus-within:ring-2 focus-within:ring-primary/40'
@@ -82,6 +89,7 @@ function ModelCardImpl({
         {/* Banner — top strip with the snapshot. Full card width so the
             image doesn't compete with the data column for horizontal
             real estate. Hover reveals the Open-in-3D affordance. */}
+        {showBanner && (
         <div className="relative shrink-0 h-[clamp(82px,10vh,108px)] overflow-hidden border-b border-border bg-muted/30">
           {isReady && model.thumbnail_url ? (
             <img
@@ -119,6 +127,7 @@ function ModelCardImpl({
             </div>
           )}
         </div>
+        )}
 
         <div className="flex flex-col flex-1 min-h-0 p-[clamp(0.625rem,1vw,0.875rem)] gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
           {/* Header — name + version + status + updated */}

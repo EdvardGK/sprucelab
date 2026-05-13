@@ -14,6 +14,8 @@ import { useProject } from '@/hooks/use-projects';
 import { useModels, modelKeys } from '@/hooks/use-models';
 import { useProjectModelsKpis } from '@/hooks/useProjectModelsKpis';
 import { ModelCard, ModelsKpiRow } from '@/components/features/project-models';
+import { CardDensityToggle } from '@/components/ui/CardDensityToggle';
+import { useCardDensity } from '@/hooks/useCardDensity';
 import type { Model } from '@/lib/api-types';
 import apiClient from '@/lib/api-client';
 
@@ -37,6 +39,7 @@ export default function ProjectModels() {
   const [modelToDelete, setModelToDelete] = useState<{ id: string; name: string } | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [reprocessingModelId, setReprocessingModelId] = useState<string | null>(null);
+  const [density, setDensity] = useCardDensity();
 
   const {
     data: project,
@@ -121,11 +124,14 @@ export default function ProjectModels() {
 
   // --- Page ---
 
-  const uploadButton = (
-    <Button onClick={() => setUploadDialogOpen(true)} size="sm">
-      <Upload className="mr-2 h-4 w-4" />
-      {t('projectModels.upload')}
-    </Button>
+  const headerControls = (
+    <div className="flex items-center gap-[clamp(0.375rem,0.75vw,0.625rem)]">
+      <CardDensityToggle density={density} onChange={setDensity} />
+      <Button onClick={() => setUploadDialogOpen(true)} size="sm">
+        <Upload className="mr-2 h-4 w-4" />
+        {t('projectModels.upload')}
+      </Button>
+    </div>
   );
 
   return (
@@ -133,7 +139,7 @@ export default function ProjectModels() {
       <PageShell
         title={project.name}
         subtitle={project.description || t('projectModels.title')}
-        headerRight={uploadButton}
+        headerRight={headerControls}
       >
         {/* Project-level KPI row */}
         <ModelsKpiRow kpis={kpis} />
@@ -168,6 +174,7 @@ export default function ProjectModels() {
                   onDelete={(mid, name) => setModelToDelete({ id: mid, name })}
                   onReprocess={handleReprocess}
                   reprocessing={reprocessingModelId === model.id}
+                  density={density}
                 />
               </li>
             ))}

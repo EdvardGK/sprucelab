@@ -53,6 +53,10 @@ interface ProjectGalleryCardProps {
   project: Project;
   /** Latest-version models for this project. */
   models: Model[];
+  /**
+   * 'big' = banner + content (default). 'small' = banner hidden.
+   */
+  density?: 'big' | 'small';
 }
 
 /**
@@ -62,8 +66,9 @@ interface ProjectGalleryCardProps {
  * null, the banner still renders at the same height with a quiet
  * placeholder so the grid stays uniform.
  */
-export function ProjectGalleryCard({ project, models }: ProjectGalleryCardProps) {
+export function ProjectGalleryCard({ project, models, density = 'big' }: ProjectGalleryCardProps) {
   const { t } = useTranslation();
+  const showBanner = density === 'big';
 
   const distribution = useMemo(() => buildProjectDistribution(models, 8), [models]);
   const segments: SparkSegment[] = useMemo(
@@ -96,12 +101,14 @@ export function ProjectGalleryCard({ project, models }: ProjectGalleryCardProps)
     <Link
       to={`/projects/${project.id}`}
       className={cn(
-        'group flex flex-col h-[clamp(220px,26vh,260px)] rounded-lg border border-border bg-card overflow-hidden',
+        'group flex flex-col rounded-lg border border-border bg-card overflow-hidden',
+        showBanner ? 'h-[clamp(220px,26vh,260px)]' : 'h-[180px]',
         'transition-colors duration-150 hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30'
       )}
     >
       {/* Banner — cover image strip, full card width. Quiet placeholder
           when no thumbnail so the grid stays uniform. */}
+      {showBanner && (
       <div className="relative shrink-0 h-[clamp(74px,9vh,96px)] overflow-hidden border-b border-border bg-muted/30">
         {project.thumbnail_url ? (
           <img
@@ -118,6 +125,7 @@ export function ProjectGalleryCard({ project, models }: ProjectGalleryCardProps)
           </div>
         )}
       </div>
+      )}
 
       <div className="flex flex-col flex-1 min-h-0 p-[clamp(0.625rem,1vw,0.875rem)] gap-[clamp(0.25rem,0.5vh,0.5rem)] min-w-0">
         <div className="flex items-start justify-between gap-2 min-w-0">

@@ -1996,6 +1996,11 @@
       "monthsAgo_other": "{{count}} mo ago"
     }
   },
+  "density": {
+    "toggleLabel": "Card density",
+    "big": "Big cards",
+    "small": "Compact cards"
+  },
   "projectsGallery": {
     "title": "Projects",
     "subtitle": "Pick a project to open",

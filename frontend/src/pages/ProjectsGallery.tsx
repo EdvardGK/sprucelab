@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { PageShell } from '@/components/Layout';
+import { CardDensityToggle } from '@/components/ui/CardDensityToggle';
+import { useCardDensity } from '@/hooks/useCardDensity';
 import {
   ProjectsGalleryKpis,
   ProjectGalleryCard,
@@ -34,6 +36,7 @@ export default function ProjectsGallery() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('lastActivity');
   const [filterKey, setFilterKey] = useState<FilterKey>('active');
+  const [density, setDensity] = useCardDensity();
 
   const { data: projects, isLoading, error } = useProjects();
   const { data: models } = useModels();
@@ -85,11 +88,14 @@ export default function ProjectsGallery() {
     );
   }
 
-  const newProjectButton = (
-    <Button onClick={() => setCreateDialogOpen(true)} size="sm">
-      <Plus className="mr-1.5 h-4 w-4" />
-      {t('projectsGallery.newProject')}
-    </Button>
+  const headerControls = (
+    <div className="flex items-center gap-[clamp(0.375rem,0.75vw,0.625rem)]">
+      <CardDensityToggle density={density} onChange={setDensity} />
+      <Button onClick={() => setCreateDialogOpen(true)} size="sm">
+        <Plus className="mr-1.5 h-4 w-4" />
+        {t('projectsGallery.newProject')}
+      </Button>
+    </div>
   );
 
   return (
@@ -97,7 +103,7 @@ export default function ProjectsGallery() {
       <PageShell
         title={t('projectsGallery.title')}
         subtitle={t('projectsGallery.subtitle')}
-        headerRight={newProjectButton}
+        headerRight={headerControls}
       >
         {/* KPI row */}
         <ProjectsGalleryKpis kpis={kpis} />
@@ -160,6 +166,7 @@ export default function ProjectsGallery() {
                 key={project.id}
                 project={project}
                 models={modelsForProject(models, project.id)}
+                density={density}
               />
             ))}
           </div>
