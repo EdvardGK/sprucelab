@@ -1783,6 +1783,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           // sees v3 classes alongside any v2 model's classes.
           v3Model.getCategories()
             .then(async (categories) => {
+              console.log('[Viewer] v3 categories for', modelId, '=', categories);
               const entries = await Promise.all(
                 categories.map(async (cat) => {
                   const items = await v3Model.getItemsOfCategory(cat);
@@ -1882,7 +1883,17 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               await walk(tree);
 
               if (storeys.length === 0) {
-                console.warn('[Viewer] v3 spatial structure had no IfcBuildingStorey nodes');
+                // Capture the actual tree shape — categories, depth, leaf vs container counts.
+                const stats = { byCategory: {} as Record<string, number>, maxDepth: 0, totalNodes: 0 };
+                const probe = (node: typeof tree, depth: number) => {
+                  stats.totalNodes++;
+                  stats.maxDepth = Math.max(stats.maxDepth, depth);
+                  const cat = node.category ?? '(null)';
+                  stats.byCategory[cat] = (stats.byCategory[cat] || 0) + 1;
+                  for (const child of node.children ?? []) probe(child, depth + 1);
+                };
+                probe(tree, 0);
+                console.warn('[Viewer] v3 spatial structure had no IfcBuildingStorey nodes; tree shape:', stats);
                 return;
               }
 
