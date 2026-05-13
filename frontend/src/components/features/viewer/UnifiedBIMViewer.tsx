@@ -275,12 +275,17 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     count: number;
     v3Refs?: Array<{ modelId: string; localIds: number[] }>;
   }>>(new Map());
-  // storeyInfo: keyed by storey name (from ThatOpen's spatial classifier).
-  // `guid` is the IfcBuildingStorey.GlobalId when resolvable from properties —
-  // it's the canonical bridge between fragments-v3 entities and the backend
-  // AnalysisStorey rows. The floor filter prefers GUID matching, falling back
-  // to case-insensitive name matching for legacy fragments without properties.
-  const [storeyInfo, setStoreyInfo] = useState<Map<string, { map: FragmentIdMap; count: number; guid?: string }>>(new Map());
+  // storeyInfo: keyed by storey name. `guid` is IfcBuildingStorey.GlobalId,
+  // the canonical bridge to backend AnalysisStorey rows. `map` is v2's
+  // FragmentIdMap (populated by ThatOpen Classifier on the v2 path);
+  // `v3Refs` carries per-model localIds for v3-loaded models. The floor
+  // filter applies whichever side is populated.
+  const [storeyInfo, setStoreyInfo] = useState<Map<string, {
+    map: FragmentIdMap;
+    count: number;
+    guid?: string;
+    v3Refs?: Array<{ modelId: string; localIds: number[] }>;
+  }>>(new Map());
   const [internalTypeVisibility, setInternalTypeVisibility] = useState<Record<string, boolean>>({});
   const hiderRef = useRef<OBC.Hider | null>(null);
   const cullerRef = useRef<OBC.MeshCullerRenderer | null>(null);
@@ -1823,6 +1828,92 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
             })
             .catch((err) => console.warn('[Viewer] v3 category extraction failed:', err));
 
+          // Storey extraction (v3 path) — populates storeyInfo so the floor
+          // filter can drive the viewer. Walks the spatial structure tree
+          // from fragments-v3 itself (no properties sidecar needed), groups
+          // descendant localIds under each IfcBuildingStorey, and resolves
+          // GUID + Name via getItemsData. Fire-and-forget; per-storey
+          // failures don't block the whole map.
+          v3Model.getSpatialStructure()
+            .then(async (tree) => {
+              type StoreyEntry = { name: string; guid: string; localIds: number[] };
+              const storeys: StoreyEntry[] = [];
+
+              const collectDescendantIds = (node: typeof tree): number[] => {
+                const ids: number[] = [];
+                if (node.localId != null && node.category !== 'IfcBuildingStorey') {
+                  ids.push(node.localId);
+                }
+                for (const child of node.children ?? []) {
+                  ids.push(...collectDescendantIds(child));
+                }
+                return ids;
+              };
+
+              const walk = async (node: typeof tree): Promise<void> => {
+                if (node.category === 'IfcBuildingStorey' && node.localId != null) {
+                  const descendantIds = collectDescendantIds(node);
+                  if (descendantIds.length === 0) return;
+                  try {
+                    const [guidOrNull] = await v3Model.getGuidsByLocalIds([node.localId]);
+                    const guid = typeof guidOrNull === 'string' ? guidOrNull : '';
+                    const [data] = await v3Model.getItemsData(
+                      [node.localId],
+                      { attributes: ['Name'], attributesDefault: false }
+                    );
+                    const nameAttr = data?.Name as { value?: string } | string | undefined;
+                    const name = typeof nameAttr === 'string'
+                      ? nameAttr
+                      : (nameAttr && typeof nameAttr === 'object' && 'value' in nameAttr ? (nameAttr.value ?? '') : '')
+                          || guid
+                          || `storey-${node.localId}`;
+                    if (guid) {
+                      storeys.push({ name, guid, localIds: descendantIds });
+                    }
+                  } catch (err) {
+                    if (import.meta.env.DEV) console.debug('[Viewer] v3 storey lookup failed:', node.localId, err);
+                  }
+                }
+                for (const child of node.children ?? []) {
+                  await walk(child);
+                }
+              };
+
+              await walk(tree);
+
+              if (storeys.length === 0) {
+                if (import.meta.env.DEV) console.debug('[Viewer] v3 spatial structure had no IfcBuildingStorey nodes');
+                return;
+              }
+
+              setStoreyInfo((prev) => {
+                const next = new Map(prev);
+                for (const s of storeys) {
+                  const newRef = { modelId: v3Model.modelId, localIds: s.localIds };
+                  const existing = next.get(s.name);
+                  if (existing) {
+                    next.set(s.name, {
+                      map: existing.map,
+                      count: existing.count + s.localIds.length,
+                      guid: existing.guid ?? s.guid,
+                      v3Refs: [...(existing.v3Refs ?? []), newRef],
+                    });
+                  } else {
+                    next.set(s.name, {
+                      map: {} as FragmentIdMap,
+                      count: s.localIds.length,
+                      guid: s.guid,
+                      v3Refs: [newRef],
+                    });
+                  }
+                }
+                if (import.meta.env.DEV) console.log('[Viewer] v3 storey classification:', storeys.length, 'storeys',
+                  storeys.map(s => ({ name: s.name, guid: s.guid, count: s.localIds.length })));
+                return next;
+              });
+            })
+            .catch((err) => console.warn('[Viewer] v3 storey extraction failed:', err));
+
           loadedModelsRef.current.push(loadedModel);
           setLoadingProgress(prev => ({ ...prev, [modelId]: false }));
           // Provisional onModelLoaded with zero count — re-fired with the
@@ -2100,49 +2191,119 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const v2HighlightWarnedRef = useRef(false);
 
   // Apply floor filter — show only elements on the selected floor.
-  // When floorCodeFilter is null/undefined, show all (reset). When the value
-  // resolves through `floorAliases`, show the union of all matched storey
-  // names; otherwise treat the value as a literal storey name.
+  // Handles BOTH v2 (FragmentIdMap via hider.set) and v3 (per-model localIds
+  // via v3Model.setVisible). When floorCodeFilter is null, restore full
+  // visibility on both sides. When set, GUID-match first (canonical bridge
+  // to backend AnalysisStorey), name-match as fallback.
   useEffect(() => {
-    if (!hiderRef.current || storeyInfo.size === 0) return;
-    // GUID isolation takes priority — skip floor filter while active.
+    if (storeyInfo.size === 0) return;
     if (isolation && isolation.guids.length > 0) return;
 
     const prev = prevStoreyFilterRef.current;
-    // Skip if nothing changed
     if (floorCodeFilter === prev) return;
 
     const rafId = requestAnimationFrame(() => {
       const hider = hiderRef.current;
-      if (!hider) return;
+      const hasV3 = !!v3FragmentsRef.current;
+
+      // Pick which storeyInfo entries this filter activates.
+      const targetEntries: Array<{
+        map: FragmentIdMap;
+        count: number;
+        guid?: string;
+        v3Refs?: Array<{ modelId: string; localIds: number[] }>;
+      }> = [];
+
+      if (floorCodeFilter != null) {
+        // GUID match first.
+        for (const [, data] of storeyInfo) {
+          if (data.guid && data.guid === floorCodeFilter) {
+            targetEntries.push(data);
+          }
+        }
+        if (targetEntries.length === 0) {
+          // Name fallback (aliases or literal).
+          const aliasNames = floorAliases?.[floorCodeFilter];
+          const targetNames = aliasNames && aliasNames.length > 0
+            ? aliasNames
+            : [floorCodeFilter];
+          const targetSet = new Set(targetNames.map((n) => n.toLowerCase()));
+          for (const [storeyName, data] of storeyInfo) {
+            if (targetSet.has(storeyName.toLowerCase())) {
+              targetEntries.push(data);
+            }
+          }
+        }
+      }
 
       try {
         if (floorCodeFilter == null) {
-          hider.set(true);
-        } else {
-          hider.set(false);
-          // First pass: GUID match. AnalysisStorey.guid is the canonical
-          // bridge; when fragments expose IfcBuildingStorey.GlobalId via
-          // properties, this is the robust path that survives name drift.
-          let guidMatched = false;
-          for (const [, data] of storeyInfo) {
-            if (data.guid && data.guid === floorCodeFilter) {
-              hider.set(true, data.map);
-              guidMatched = true;
+          // Reset — show all on both paths.
+          if (hider) hider.set(true);
+          if (hasV3) {
+            const v3Ops: Promise<unknown>[] = [];
+            for (const lm of loadedModelsRef.current) {
+              if (lm.formatVersion === 'v3' && lm.v3Model) {
+                // Gather all localIds for this v3 model from every storey
+                // entry, then show them. Avoids hidden state carrying over
+                // when a previous floor filter shrank visibility.
+                const allIds: number[] = [];
+                for (const [, data] of storeyInfo) {
+                  for (const ref of data.v3Refs ?? []) {
+                    if (ref.modelId === lm.fragmentModelId) {
+                      allIds.push(...ref.localIds);
+                    }
+                  }
+                }
+                if (allIds.length > 0) {
+                  v3Ops.push(lm.v3Model.setVisible(allIds, true).catch(() => {}));
+                }
+              }
+            }
+            if (v3Ops.length > 0) {
+              Promise.all(v3Ops).then(() => v3FragmentsRef.current?.update().catch(() => {}));
             }
           }
-
-          if (!guidMatched) {
-            // Fallback: name match through floorAliases or directly. Used
-            // when fragments-v3 didn't surface storey GUIDs (no properties
-            // sidecar) or when the click handler passed a name instead.
-            const aliasNames = floorAliases?.[floorCodeFilter];
-            const targetNames = aliasNames && aliasNames.length > 0
-              ? aliasNames
-              : [floorCodeFilter];
-            const targetSet = new Set(targetNames.map((n) => n.toLowerCase()));
-            for (const [storeyName, data] of storeyInfo) {
-              if (targetSet.has(storeyName.toLowerCase())) {
+        } else {
+          // Hide everything, then show only the target entries.
+          if (hider) hider.set(false);
+          if (hasV3) {
+            // Hide ALL v3 elements first (across every loaded v3 model).
+            const hideOps: Promise<unknown>[] = [];
+            for (const lm of loadedModelsRef.current) {
+              if (lm.formatVersion === 'v3' && lm.v3Model) {
+                const allIds: number[] = [];
+                for (const [, data] of storeyInfo) {
+                  for (const ref of data.v3Refs ?? []) {
+                    if (ref.modelId === lm.fragmentModelId) {
+                      allIds.push(...ref.localIds);
+                    }
+                  }
+                }
+                if (allIds.length > 0) {
+                  hideOps.push(lm.v3Model.setVisible(allIds, false).catch(() => {}));
+                }
+              }
+            }
+            Promise.all(hideOps).then(() => {
+              // Then show the target entries.
+              const showOps: Promise<unknown>[] = [];
+              for (const data of targetEntries) {
+                for (const ref of data.v3Refs ?? []) {
+                  const lm = loadedModelsRef.current.find(
+                    (m) => m.fragmentModelId === ref.modelId,
+                  );
+                  if (lm?.v3Model) {
+                    showOps.push(lm.v3Model.setVisible(ref.localIds, true).catch(() => {}));
+                  }
+                }
+              }
+              Promise.all(showOps).then(() => v3FragmentsRef.current?.update().catch(() => {}));
+            });
+          }
+          if (hider) {
+            for (const data of targetEntries) {
+              if (data.map && Object.keys(data.map).length > 0) {
                 hider.set(true, data.map);
               }
             }
@@ -2150,7 +2311,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         }
       } catch (err) {
         console.error('[Viewer] Floor filter failed:', err);
-        hider.set(true);
+        if (hider) hider.set(true);
       }
 
       prevStoreyFilterRef.current = floorCodeFilter;
