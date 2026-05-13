@@ -681,3 +681,193 @@ def check_storey_deviation(model, *, claim=_UNSET) -> list[VerificationIssue]:
         ))
 
     return issues
+
+
+def compute_storey_verification(model) -> dict:
+    """
+    Per-storey verification status against scope canonical floors.
+
+    Returns a structured payload built for UI rendering — same match rules
+    as ``check_storey_deviation`` and ``claim_promotion._reconcile_floors``,
+    but keyed per storey rather than as free-text issues.
+
+    Source of model storeys: ``model.analysis.storeys`` (AnalysisStorey rows
+    from the deep analysis run). The AnalysisStorey rows carry per-storey
+    ``element_count``, which the UI uses to draw IFC-products-per-storey
+    bars. When no analysis exists yet, ``model_storeys`` is empty.
+
+    Match rules per AnalysisStorey row:
+      1. proposed name or canonical alias match (case-insensitive) → ``matched``
+      2. elevation within ``scope.storey_merge_tolerance_m``, names differ → ``rename``
+      3. otherwise → ``deviating``
+
+    Plus a reverse pass: every canonical floor with no match is returned in
+    ``missing_canonical``.
+
+    When ``scope.canonical_floors`` is empty or scope is unset, returns
+    ``has_canonical=False`` with the storey list still populated (status=None
+    per storey) so the UI renders bars without verification annotation.
+
+    Returns:
+        {
+          'has_canonical': bool,
+          'matched_count': int,         # canonical floors matched by some storey
+          'canonical_count': int,
+          'tolerance_m': float,
+          'model_storeys': [
+            {
+              'name': str,
+              'elevation': float|None,
+              'element_count': int,
+              'status': 'matched'|'rename'|'deviating'|None,
+              'canonical_code': str|None,
+              'canonical_name': str|None,
+              'elevation_delta_m': float|None,
+            },
+            ...
+          ],
+          'missing_canonical': [
+            {'code': str|None, 'name': str|None, 'elevation_m': float|None},
+            ...
+          ],
+        }
+    """
+    if model is None:
+        return _empty_verification_payload()
+
+    analysis = getattr(model, 'analysis', None)
+    storey_rows: list[dict] = []
+    total_products = 0
+    if analysis is not None:
+        total_products = int(analysis.total_products or 0)
+        for s in analysis.storeys.all().order_by('-elevation', 'name'):
+            storey_rows.append({
+                'name': s.name,
+                'elevation': float(s.elevation) if s.elevation is not None else None,
+                'element_count': int(s.element_count or 0),
+            })
+
+    sum_in_storeys = sum(r['element_count'] for r in storey_rows)
+    # Elements outside the spatial hierarchy (project/site/building/storey/zone).
+    # Negative deltas (storey sum exceeding total_products — shouldn't happen
+    # but be defensive against analysis drift) clamp to zero.
+    orphan_count = max(0, total_products - sum_in_storeys)
+
+    scope = getattr(model, 'scope', None)
+    canonical = list(scope.canonical_floors or []) if scope is not None else []
+    tolerance_m = float(scope.storey_merge_tolerance_m or 0.0) if scope is not None else 0.0
+
+    if not canonical:
+        return {
+            'has_canonical': False,
+            'matched_count': 0,
+            'canonical_count': 0,
+            'tolerance_m': tolerance_m,
+            'orphan_count': orphan_count,
+            'total_products': total_products,
+            'model_storeys': [
+                {**row, 'status': None, 'canonical_code': None,
+                 'canonical_name': None, 'elevation_delta_m': None}
+                for row in storey_rows
+            ],
+            'missing_canonical': [],
+        }
+
+    matched_canonical_idxs: set[int] = set()
+    annotated: list[dict] = []
+
+    for row in storey_rows:
+        name = row['name'] or ''
+        name_key = name.strip().lower()
+        elev = row['elevation']
+
+        status: str | None = None
+        canonical_code: str | None = None
+        canonical_name: str | None = None
+        elev_delta: float | None = None
+
+        # Rule 1: name/alias match
+        name_match_idx = next(
+            (i for i, c in enumerate(canonical) if name_key and name_key in _floor_name_keys(c)),
+            None,
+        )
+        if name_match_idx is not None:
+            c = canonical[name_match_idx]
+            matched_canonical_idxs.add(name_match_idx)
+            status = 'matched'
+            canonical_code = c.get('code')
+            canonical_name = c.get('name')
+            c_elev = c.get('elevation_m')
+            if elev is not None and c_elev is not None:
+                elev_delta = float(elev) - float(c_elev)
+        else:
+            # Rule 2: elevation within tolerance, names differ → rename
+            elev_match_idx: int | None = None
+            if elev is not None:
+                for i, c in enumerate(canonical):
+                    if i in matched_canonical_idxs:
+                        continue
+                    c_elev = c.get('elevation_m')
+                    if c_elev is None:
+                        continue
+                    if abs(float(c_elev) - float(elev)) <= tolerance_m:
+                        elev_match_idx = i
+                        break
+            if elev_match_idx is not None:
+                c = canonical[elev_match_idx]
+                matched_canonical_idxs.add(elev_match_idx)
+                status = 'rename'
+                canonical_code = c.get('code')
+                canonical_name = c.get('name')
+                c_elev = c.get('elevation_m')
+                if c_elev is not None:
+                    elev_delta = float(elev) - float(c_elev)
+            else:
+                # Rule 3: no match → deviating
+                status = 'deviating'
+
+        annotated.append({
+            **row,
+            'status': status,
+            'canonical_code': canonical_code,
+            'canonical_name': canonical_name,
+            'elevation_delta_m': elev_delta,
+        })
+
+    missing_canonical = [
+        {
+            'code': canonical[i].get('code'),
+            'name': canonical[i].get('name'),
+            'elevation_m': (
+                float(canonical[i].get('elevation_m'))
+                if canonical[i].get('elevation_m') is not None
+                else None
+            ),
+        }
+        for i in range(len(canonical))
+        if i not in matched_canonical_idxs
+    ]
+
+    return {
+        'has_canonical': True,
+        'matched_count': len(matched_canonical_idxs),
+        'canonical_count': len(canonical),
+        'tolerance_m': tolerance_m,
+        'orphan_count': orphan_count,
+        'total_products': total_products,
+        'model_storeys': annotated,
+        'missing_canonical': missing_canonical,
+    }
+
+
+def _empty_verification_payload() -> dict:
+    return {
+        'has_canonical': False,
+        'matched_count': 0,
+        'canonical_count': 0,
+        'tolerance_m': 0.0,
+        'orphan_count': 0,
+        'total_products': 0,
+        'model_storeys': [],
+        'missing_canonical': [],
+    }

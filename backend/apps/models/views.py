@@ -1127,6 +1127,26 @@ class ModelViewSet(viewsets.ModelViewSet):
         serializer = IFCValidationReportSerializer(validation_report)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'], url_path='storey-verification')
+    def storey_verification(self, request, pk=None):
+        """Per-storey verification status against the scope's canonical floors.
+
+        GET /api/models/{id}/storey-verification/
+
+        Returns structured per-storey + per-canonical match status so the
+        Model page can render IFC-products-per-storey bars annotated with
+        canonical-floor verification (matched / rename / deviating) plus
+        ghost rows for canonical floors not present in this model.
+
+        Match rules mirror ``verification_engine.check_storey_deviation``
+        and ``claim_promotion._reconcile_floors``.
+        """
+        from apps.entities.services.verification_engine import compute_storey_verification
+
+        model = self.get_object()
+        payload = compute_storey_verification(model)
+        return Response(payload)
+
     @action(detail=True, methods=['post'])
     def publish(self, request, pk=None):
         """

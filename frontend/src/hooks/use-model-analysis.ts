@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
-import type { ModelAnalysis, PaginatedResponse } from '@/lib/api-types';
+import type {
+  ModelAnalysis,
+  ModelStoreyVerification,
+  PaginatedResponse,
+} from '@/lib/api-types';
 
 export const analysisKeys = {
   all: ['model-analysis'] as const,
@@ -25,6 +29,25 @@ export function useModelAnalysis(modelId: string) {
       // null = fetched but no analysis yet; undefined = hasn't fetched yet
       return data === null ? 5000 : false;
     },
+  });
+}
+
+export const storeyVerificationKeys = {
+  all: ['model-storey-verification'] as const,
+  detail: (modelId: string) => [...storeyVerificationKeys.all, modelId] as const,
+};
+
+export function useModelStoreyVerification(modelId: string) {
+  return useQuery({
+    queryKey: storeyVerificationKeys.detail(modelId),
+    queryFn: async () => {
+      const response = await apiClient.get<ModelStoreyVerification>(
+        `/models/${modelId}/storey-verification/`
+      );
+      return response.data;
+    },
+    enabled: !!modelId,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

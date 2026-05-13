@@ -1904,6 +1904,16 @@
       "percentOfInstancesShort": "{{n}} forekomster",
       "percentOfTypesShort": "{{n}} typer"
     },
+    "storeys": {
+      "empty": "Ingen etasjer",
+      "matchedRing": "{{matched}} av {{total}} etasjer matcher kanoniske etasjer",
+      "statusMatched": "Matcher kanonisk etasje",
+      "statusRename": "Høyde matcher; navn avviker fra kanonisk",
+      "statusDeviating": "Matcher ingen kanonisk etasje",
+      "missingCanonical": "Kanonisk etasje mangler i denne modellen",
+      "orphanLabel": "Ikke tilknyttet etasje",
+      "orphanTooltip": "IFC-produkter utenfor det romlige hierarkiet (prosjekt/site/bygg/etasje/sone)"
+    },
     "rail": {
       "emptyHint": "Velg en type i tre-kartet for å se detaljene her.",
       "close": "Lukk detaljer",

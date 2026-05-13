@@ -1904,6 +1904,16 @@
       "percentOfInstancesShort": "{{n}} instances",
       "percentOfTypesShort": "{{n}} types"
     },
+    "storeys": {
+      "empty": "No storeys",
+      "matchedRing": "{{matched}} of {{total}} storeys match canonical floors",
+      "statusMatched": "Matches canonical floor",
+      "statusRename": "Elevation matches; name differs from canonical",
+      "statusDeviating": "Does not match any canonical floor",
+      "missingCanonical": "Canonical floor missing from this model",
+      "orphanLabel": "Not attached to storey",
+      "orphanTooltip": "IFC products outside the spatial hierarchy (project/site/building/storey/zone)"
+    },
     "rail": {
       "emptyHint": "Pick a type from the treemap to see its details here.",
       "close": "Close details",

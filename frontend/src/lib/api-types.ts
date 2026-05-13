@@ -284,6 +284,37 @@ export interface AnalysisTypeRecord {
   storey_distribution: AnalysisTypeStoreyDist[];
 }
 
+export type StoreyVerificationStatus = 'matched' | 'rename' | 'deviating' | null;
+
+export interface VerifiedModelStorey {
+  name: string;
+  elevation: number | null;
+  element_count: number;
+  status: StoreyVerificationStatus;
+  canonical_code: string | null;
+  canonical_name: string | null;
+  elevation_delta_m: number | null;
+}
+
+export interface MissingCanonicalFloor {
+  code: string | null;
+  name: string | null;
+  elevation_m: number | null;
+}
+
+export interface ModelStoreyVerification {
+  has_canonical: boolean;
+  matched_count: number;
+  canonical_count: number;
+  tolerance_m: number;
+  /** IFC products that aren't contained in any spatial element (project/site/building/storey/zone). */
+  orphan_count: number;
+  /** Total IFC products from ModelAnalysis (excludes spatial elements). */
+  total_products: number;
+  model_storeys: VerifiedModelStorey[];
+  missing_canonical: MissingCanonicalFloor[];
+}
+
 export interface ModelAnalysis {
   id: string;
   model: string;

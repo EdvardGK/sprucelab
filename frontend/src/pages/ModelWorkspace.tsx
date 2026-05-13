@@ -3,7 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3, Table2 } from 'lucide-react';
 import { useModel } from '@/hooks/use-models';
-import { useModelAnalysis, useRunAnalysis } from '@/hooks/use-model-analysis';
+import {
+  useModelAnalysis,
+  useModelStoreyVerification,
+  useRunAnalysis,
+} from '@/hooks/use-model-analysis';
 import { Button } from '@/components/ui/button';
 import { ModelStatusBadge } from '@/components/ModelStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +17,7 @@ import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer'
 import { ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPanel';
 import { AppLayout } from '@/components/Layout/AppLayout';
-import type { Model, ModelAnalysis, AnalysisTypeRecord, AnalysisStorey } from '@/lib/api-types';
+import type { Model, ModelAnalysis, AnalysisTypeRecord } from '@/lib/api-types';
 import { treemapLayout } from '@/lib/treemap';
 import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
 import { DrillTarget } from '@/components/filters/DrillTarget';
@@ -21,6 +25,7 @@ import { useProjectFilter, useProjectFilterActions } from '@/contexts/ProjectFil
 import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
 import { AnalysisDetailsRail } from '@/components/features/model-workspace/AnalysisDetailsRail';
 import { AnalysisKpiCluster } from '@/components/features/model-workspace/AnalysisKpiCluster';
+import { VerifiedStoreyChart } from '@/components/features/model-workspace/VerifiedStoreyChart';
 import { ComingSoonTile } from '@/components/features/model-workspace/ComingSoonTile';
 import { StatisticsTab } from '@/components/features/model-workspace/StatisticsTab';
 
@@ -381,6 +386,7 @@ function buildDrillTabs(source: DrillSource, analysis: ModelAnalysis, stats: Ana
 
 function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model: Model }) {
   const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
+  const { data: storeyVerification } = useModelStoreyVerification(model.id);
   const [overlay, setOverlay] = useState<OverlayType>(null);
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
   const [viewerMode, setViewerMode] = useState<'3d' | 'footprint'>('3d');
@@ -530,7 +536,12 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                   onExpand={() => setOverlay('storeys')}
                   onViewData={() => setDrillSource({ type: 'storeys' })}
                 />
-                <StoreyChart storeys={analysis.storeys} activeStorey={viewerStoreyFilter} onBarClick={filterByStorey} />
+                <VerifiedStoreyChart
+                  storeys={analysis.storeys}
+                  verification={storeyVerification}
+                  activeStorey={viewerStoreyFilter}
+                  onBarClick={filterByStorey}
+                />
               </CardContent>
             </Card>
             <Card className="overflow-hidden card-accent-forest min-h-[clamp(360px,44vh,540px)] flex-1">
@@ -677,7 +688,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         <QualityOverlayContent analysis={analysis} stats={stats} />
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'storeys'} onClose={() => setOverlay(null)} title={`Storeys (${analysis.total_storeys})`}>
-        <StoreyChart storeys={analysis.storeys} />
+        <VerifiedStoreyChart storeys={analysis.storeys} verification={storeyVerification} />
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'elements'} onClose={() => setOverlay(null)} title="Element Distribution">
         <div className="relative h-[400px]">
@@ -884,56 +895,6 @@ function QualityCard({
     <Card className="h-full flex flex-col card-accent-lime">
       {body}
     </Card>
-  );
-}
-
-// ─── Storey Chart ───────────────────────────────────────────────────────────
-
-function StoreyChart({ storeys, onBarClick, activeStorey }: { storeys: AnalysisStorey[]; onBarClick?: (storeyName: string | null) => void; activeStorey?: string | null }) {
-  if (!storeys.length) return <div className="text-text-tertiary text-xs">No storeys</div>;
-
-  const sorted = [...storeys].sort((a, b) => (b.elevation ?? 0) - (a.elevation ?? 0));
-  const maxCount = Math.max(...sorted.map(s => s.element_count), 1);
-
-  return (
-    <div className="space-y-[clamp(0.1rem,0.3vw,0.2rem)]">
-      {sorted.map((s) => {
-        const isActive = activeStorey === s.name;
-        const row = (
-          <div className="grid items-center gap-[clamp(0.3rem,0.6vw,0.5rem)] text-[clamp(0.5rem,0.9vw,0.65rem)]"
-               style={{ gridTemplateColumns: 'minmax(0, 5rem) auto 1fr auto' }}>
-            <span className="text-text-secondary truncate" title={s.name}>{s.name}</span>
-            <span className="text-text-tertiary tabular-nums w-[3.5em] text-right">
-              {s.elevation != null ? `${s.elevation.toFixed(1)}m` : '—'}
-            </span>
-            <div className="h-[clamp(0.7rem,1.2vw,1rem)] bg-white/5 rounded overflow-hidden">
-              <div
-                className="h-full rounded bg-gradient-to-r from-navy to-forest transition-all"
-                style={{ width: `${(s.element_count / maxCount) * 100}%` }}
-              />
-            </div>
-            <span className="text-text-primary tabular-nums font-medium w-[3em] text-right">
-              {s.element_count}
-            </span>
-          </div>
-        );
-        if (!onBarClick) {
-          return <div key={s.name}>{row}</div>;
-        }
-        return (
-          <DrillTarget
-            key={s.name}
-            ariaLabel={`Filter by storey ${s.name}`}
-            active={isActive}
-            // Toggle: clicking the active row clears the floor filter.
-            onActivate={() => onBarClick(isActive ? null : s.name)}
-            className="rounded"
-          >
-            {row}
-          </DrillTarget>
-        );
-      })}
-    </div>
   );
 }
 
