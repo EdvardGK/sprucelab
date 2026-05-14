@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sprucelab — Color system (lime → forest → navy triangle, orange signal)</title>
+  <link rel="stylesheet" href="./_light.css" />
+  <style>
+    /* Local styles for this wireframe only. */
+    .stack { display: flex; flex-direction: column; gap: 24px; }
+    .section { background: var(--surface); border: 1px solid var(--line); padding: 16px; }
+    .section h2 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .section .lede { font-size: 11px; color: var(--ink-soft); margin-bottom: 12px; max-width: 720px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .label-row { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-mute); margin-top: 4px; font-family: ui-monospace, monospace; }
+
+    /* Continuous triangle gradient strip. Three vertices: lime → forest → navy. */
+    .gradient-strip {
+      height: 48px;
+      background: linear-gradient(
+        to right,
+        oklch(0.85 0.20 130) 0%,
+        oklch(0.45 0.13 155) 50%,
+        oklch(0.22 0.05 260) 100%
+      );
+      border: 1px solid var(--line);
+      position: relative;
+    }
+    .gradient-strip .vertex-mark {
+      position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--ink);
+    }
+    .gradient-strip .vertex-mark::after {
+      content: attr(data-label);
+      position: absolute; top: -16px; left: 4px; font-size: 10px;
+      color: var(--ink); white-space: nowrap; font-family: ui-monospace, monospace;
+    }
+
+    /* Discrete swatch row */
+    .swatch-row { display: flex; gap: 4px; height: 80px; }
+    .swatch {
+      flex: 1; display: flex; flex-direction: column;
+      justify-content: flex-end; padding: 6px 8px;
+      font-size: 9px; color: rgba(255,255,255,0.85);
+      font-family: ui-monospace, monospace;
+      border-radius: 2px;
+      transition: transform 120ms ease;
+    }
+    .swatch:hover { transform: translateY(-2px); }
+    .swatch .name { font-weight: 600; font-size: 10px; }
+    .swatch .t-val { opacity: 0.7; margin-top: 2px; }
+    .swatch.dark-text { color: rgba(0,0,0,0.75); }
+
+    /* Treemap mockup — flex-grow approximation of squarified treemap */
+    .treemap {
+      display: flex; height: 280px; width: 100%;
+      border: 1px solid var(--line); gap: 1px; background: var(--line);
+    }
+    .treemap > .col { display: flex; flex-direction: column; gap: 1px; }
+    .treemap-cell {
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 8px 10px; font-size: 11px; color: rgba(255,255,255,0.92);
+      font-weight: 500; cursor: pointer; transition: outline 80ms ease;
+      outline: 0px solid transparent;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+    .treemap-cell.dark-text { color: rgba(0,0,0,0.78); }
+    .treemap-cell .count { font-size: 9px; opacity: 0.7; font-family: ui-monospace, monospace; margin-top: 2px; }
+    .treemap-cell.selected {
+      outline: 3px solid oklch(0.78 0.18 50);
+      outline-offset: -3px;
+      z-index: 2;
+    }
+
+    /* Signal orange demonstration */
+    .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; font-size: 11px; border-radius: 12px;
+      border: 1px solid var(--line); background: white; color: var(--ink-soft);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .chip.active {
+      border-color: oklch(0.78 0.18 50);
+      box-shadow: 0 0 0 2px oklch(0.78 0.18 50 / 0.18);
+      color: oklch(0.42 0.18 50);
+      font-weight: 600;
+    }
+    .chip.active.lead::before {
+      content: '◆'; color: oklch(0.78 0.18 50); margin-right: 2px;
+    }
+
+    /* KPI tile preview */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .kpi-tile {
+      background: white; border: 1px solid var(--line); padding: 12px;
+    }
+    .kpi-tile .label { font-size: 9px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi-tile .value { font-size: 24px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .kpi-tile.selected {
+      outline: 2px solid oklch(0.78 0.18 50);
+      outline-offset: -2px;
+    }
+    .kpi-tile.selected .label { color: oklch(0.42 0.18 50); }
+
+    /* Comparison strip for current vs proposed */
+    .compare-strip { display: flex; height: 36px; gap: 1px; }
+    .compare-strip > div { flex: 1; display: flex; align-items: flex-end; padding: 4px 6px; font-size: 9px; color: rgba(255,255,255,0.85); font-family: ui-monospace, monospace; }
+    .compare-strip .dark-text { color: rgba(0,0,0,0.78); }
+
+    /* Discipline anchor labels under the gradient */
+    .discipline-labels { display: grid; grid-template-columns: 1.5fr 2fr 1.5fr 1fr; font-size: 10px; color: var(--ink-soft); margin-top: 6px; font-family: ui-monospace, monospace; }
+    .discipline-labels span { padding: 4px 0; border-top: 1px dashed var(--line); }
+    .discipline-labels span:nth-child(1) { color: oklch(0.55 0.20 130); font-weight: 600; }
+    .discipline-labels span:nth-child(2) { color: oklch(0.40 0.13 155); font-weight: 600; }
+    .discipline-labels span:nth-child(3) { color: oklch(0.30 0.10 200); font-weight: 600; }
+    .discipline-labels span:nth-child(4) { color: oklch(0.22 0.05 260); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-frame">
+    <div class="page-head">
+      <span class="route">docs/wireframes/color-system.html</span>
+      <span class="title">Color system — triangle gradient + signal orange</span>
+      <span class="note">Iterable mockup. Not bound to live code yet.</span>
+    </div>
+
+    <div class="stack">
+
+      <!-- 1. Triangle gradient itself -->
+      <div class="section">
+        <h2>1 · Triangle gradient (lime → forest → navy)</h2>
+        <p class="lede">
+          Polyline through OKLCH color space, three vertices. Doubles the perceptual range of a single-segment gradient.
+          The hue rotation at the forest vertex (155° → 260°) acts as the discipline cliff —
+          classes on either side don't perceptually blur together.
+        </p>
+        <div class="gradient-strip">
+          <div class="vertex-mark" style="left: 0%" data-label="V0  oklch(0.85 0.20 130) — lime"></div>
+          <div class="vertex-mark" style="left: 50%" data-label="V1  oklch(0.45 0.13 155) — forest"></div>
+          <div class="vertex-mark" style="left: 100%; transform: translateX(-2px)" data-label="V2  oklch(0.22 0.05 260) — navy"></div>
+        </div>
+        <div class="discipline-labels">
+          <span>Structure · 0.75 – 1.00</span>
+          <span>Architecture · 0.45 – 0.75</span>
+          <span>MEP · 0.20 – 0.45</span>
+          <span>Proxy / unknown · 0 – 0.20</span>
+        </div>
+      </div>
+
+      <!-- 2. Class-stable swatches at canonical t positions -->
+      <div class="section">
+        <h2>2 · Canonical class positions</h2>
+        <p class="lede">
+          Each IFC class has a fixed position <code>t ∈ [0,1]</code> on the polyline.
+          Same class → same color in every project, every reload. Position encodes discipline.
+        </p>
+
+        <div style="font-size:11px; color: var(--ink-soft); margin-bottom: 6px;">Structure (lime end)</div>
+        <div class="swatch-row" style="margin-bottom: 14px;">
+          <div class="swatch" style="background: oklch(0.85 0.20 130)">
+            <div class="name dark-text">IfcWallType</div>
+            <div class="t-val dark-text">t = 1.00</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.78 0.19 137)">
+            <div class="name dark-text">IfcSlabType</div>
+            <div class="t-val dark-text">t = 0.92</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.72 0.18 142)">
+            <div class="name dark-text">IfcColumnType</div>
+            <div class="t-val dark-text">t = 0.85</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.65 0.17 147)">
+            <div class="name">IfcBeamType</div>
+            <div class="t-val">t = 0.78</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.61 0.16 150)">
+            <div class="name">IfcFootingType</div>
+            <div class="t-val">t = 0.74</div>
+          </div>
+        </div>
+
+        <div style="font-size:11px; color: var(--ink-soft); margin-bottom: 6px;">Architecture (forest mid)</div>
+        <div class="swatch-row" style="margin-bottom: 14px;">
+          <div class="swatch" style="background: oklch(0.55 0.14 153)">
+            <div class="name">IfcDoorStyle</div>
+            <div class="t-val">t = 0.66</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.52 0.14 154)">
+            <div class="name">IfcWindowStyle</div>
+            <div class="t-val">t = 0.62</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.48 0.13 155)">
+            <div class="name">IfcCoveringType</div>
+            <div class="t-val">t = 0.56</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.46 0.13 155)">
+            <div class="name">IfcStairType</div>
+            <div class="t-val">t = 0.52</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.44 0.12 158)">
+            <div class="name">IfcRoofType</div>
+            <div class="t-val">t = 0.50</div>
+          </div>
+        </div>
+
+        <div style="font-size:11px; color: var(--ink-soft); margin-bottom: 6px;">MEP (forest → navy)</div>
+        <div class="swatch-row" style="margin-bottom: 14px;">
+          <div class="swatch" style="background: oklch(0.38 0.11 180)">
+            <div class="name">IfcPipeSegmentType</div>
+            <div class="t-val">t = 0.42</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.34 0.10 200)">
+            <div class="name">IfcDuctSegmentType</div>
+            <div class="t-val">t = 0.38</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.30 0.08 220)">
+            <div class="name">IfcCableSegmentType</div>
+            <div class="t-val">t = 0.32</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.28 0.07 235)">
+            <div class="name">IfcAirTerminalType</div>
+            <div class="t-val">t = 0.28</div>
+          </div>
+        </div>
+
+        <div style="font-size:11px; color: var(--ink-soft); margin-bottom: 6px;">Proxy / unknown (navy tail)</div>
+        <div class="swatch-row">
+          <div class="swatch" style="background: oklch(0.25 0.06 250)">
+            <div class="name">IfcBuildingElementProxyType</div>
+            <div class="t-val">t = 0.12</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.22 0.05 260)">
+            <div class="name">IfcAnnotation</div>
+            <div class="t-val">t = 0.05</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.72 0.01 250)">
+            <div class="name dark-text">— Tail (n > nₘₐₓ)</div>
+            <div class="t-val dark-text">grey</div>
+          </div>
+          <div class="swatch" style="background: oklch(0.72 0.01 250)">
+            <div class="name dark-text">— Tail (n > nₘₐₓ)</div>
+            <div class="t-val dark-text">grey</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Treemap mockup — small, comfortable case -->
+      <div class="section">
+        <h2>3 · Treemap — typical case (6 classes)</h2>
+        <p class="lede">
+          LBK_ARK_H5 og H7 model: 297 types across 6 IFC classes. Each cell uses the class-stable color from §2.
+          Dominance still drives <em>area</em> (instance count); position on the gradient is now <em>identity</em>.
+          Click "Slab" below for the orange signal demo.
+        </p>
+        <div class="treemap">
+          <div class="col" style="flex: 198">
+            <div class="treemap-cell" style="background: oklch(0.85 0.20 130); flex: 1">
+              <span class="dark-text" style="font-weight: 600; font-size: 13px;">Wall</span>
+              <span class="count dark-text">198</span>
+            </div>
+          </div>
+          <div class="col" style="flex: 161">
+            <div class="treemap-cell" style="background: oklch(0.72 0.18 142); flex: 1">
+              <span class="dark-text" style="font-weight: 600; font-size: 13px;">Column</span>
+              <span class="count dark-text">161</span>
+            </div>
+          </div>
+          <div class="col" style="flex: 210">
+            <div class="treemap-cell selected" style="background: oklch(0.78 0.19 137); flex: 20" data-state="selected">
+              <span class="dark-text" style="font-weight: 600; font-size: 13px;">Slab — selected</span>
+              <span class="count dark-text">20</span>
+            </div>
+            <div class="treemap-cell" style="background: oklch(0.52 0.14 154); flex: 103">
+              <span style="font-weight: 600; font-size: 13px;">WindowStyle</span>
+              <span class="count">103</span>
+            </div>
+            <div class="treemap-cell" style="background: oklch(0.25 0.06 250); flex: 107">
+              <span style="font-weight: 600; font-size: 13px;">OpeningElement</span>
+              <span class="count">107</span>
+            </div>
+            <div class="treemap-cell" style="background: oklch(0.55 0.14 153); flex: 2">
+              <span style="font-weight: 600; font-size: 10px;">DoorStyle</span>
+              <span class="count">2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Treemap stress test — 22 classes, tail compresses to grey -->
+      <div class="section">
+        <h2>4 · Treemap — stress test (22 classes, tail compresses)</h2>
+        <p class="lede">
+          n_max ≈ 16 distinguishable classes (min ΔE ≈ 0.04 across polyline length 0.65).
+          Past that, ranked-by-dominance tail compresses to a muted grey-blue.
+          Hover or click any cell — the orange outline never collides with the gradient's bounding box.
+        </p>
+        <div class="treemap">
+          <div class="col" style="flex: 198"><div class="treemap-cell" style="background: oklch(0.85 0.20 130); flex: 1"><span class="dark-text" style="font-weight:600">Wall</span><span class="count dark-text">198</span></div></div>
+          <div class="col" style="flex: 161"><div class="treemap-cell" style="background: oklch(0.72 0.18 142); flex: 1"><span class="dark-text" style="font-weight:600">Column</span><span class="count dark-text">161</span></div></div>
+          <div class="col" style="flex: 107"><div class="treemap-cell" style="background: oklch(0.25 0.06 250); flex: 1"><span style="font-weight:600">Opening</span><span class="count">107</span></div></div>
+          <div class="col" style="flex: 103"><div class="treemap-cell" style="background: oklch(0.52 0.14 154); flex: 1"><span style="font-weight:600">Window</span><span class="count">103</span></div></div>
+          <div class="col" style="flex: 88"><div class="treemap-cell" style="background: oklch(0.65 0.17 147); flex: 1"><span style="font-weight:600">Beam</span><span class="count">88</span></div></div>
+          <div class="col" style="flex: 71">
+            <div class="treemap-cell" style="background: oklch(0.55 0.14 153); flex: 26"><span style="font-weight:600">Door</span><span class="count">26</span></div>
+            <div class="treemap-cell" style="background: oklch(0.38 0.11 180); flex: 24"><span style="font-weight:600">Pipe</span><span class="count">24</span></div>
+            <div class="treemap-cell" style="background: oklch(0.34 0.10 200); flex: 21"><span style="font-weight:600">Duct</span><span class="count">21</span></div>
+          </div>
+          <div class="col" style="flex: 56">
+            <div class="treemap-cell" style="background: oklch(0.48 0.13 155); flex: 20"><span style="font-weight:600; font-size: 11px;">Covering</span><span class="count">20</span></div>
+            <div class="treemap-cell" style="background: oklch(0.61 0.16 150); flex: 18"><span style="font-weight:600; font-size: 11px;">Footing</span><span class="count">18</span></div>
+            <div class="treemap-cell" style="background: oklch(0.46 0.13 155); flex: 18"><span style="font-weight:600; font-size: 11px;">Stair</span><span class="count">18</span></div>
+          </div>
+          <div class="col" style="flex: 38">
+            <div class="treemap-cell" style="background: oklch(0.44 0.12 158); flex: 14"><span style="font-weight:600; font-size: 10px;">Roof</span><span class="count">14</span></div>
+            <div class="treemap-cell" style="background: oklch(0.30 0.08 220); flex: 12"><span style="font-weight:600; font-size: 10px;">Cable</span><span class="count">12</span></div>
+            <div class="treemap-cell" style="background: oklch(0.28 0.07 235); flex: 12"><span style="font-weight:600; font-size: 10px;">AirTerm</span><span class="count">12</span></div>
+          </div>
+          <div class="col" style="flex: 28">
+            <div class="treemap-cell" style="background: oklch(0.55 0.13 148); flex: 11"><span style="font-weight:600; font-size: 10px;">Curtain</span><span class="count">11</span></div>
+            <div class="treemap-cell" style="background: oklch(0.42 0.12 168); flex: 9"><span style="font-weight:600; font-size: 10px;">Railing</span><span class="count">9</span></div>
+            <div class="treemap-cell" style="background: oklch(0.36 0.10 195); flex: 8"><span style="font-weight:600; font-size: 10px;">Sanit.</span><span class="count">8</span></div>
+          </div>
+          <div class="col" style="flex: 18">
+            <div class="treemap-cell" style="background: oklch(0.72 0.01 250); flex: 6"><span class="dark-text" style="font-weight:600; font-size: 10px;">Furn.</span><span class="count dark-text">6</span></div>
+            <div class="treemap-cell" style="background: oklch(0.72 0.01 250); flex: 5"><span class="dark-text" style="font-weight:600; font-size: 10px;">Equip.</span><span class="count dark-text">5</span></div>
+            <div class="treemap-cell" style="background: oklch(0.72 0.01 250); flex: 4"><span class="dark-text" style="font-weight:600; font-size: 10px;">Flow</span><span class="count dark-text">4</span></div>
+            <div class="treemap-cell" style="background: oklch(0.72 0.01 250); flex: 3"><span class="dark-text" style="font-weight:600; font-size: 10px;">Vent.</span><span class="count dark-text">3</span></div>
+          </div>
+        </div>
+        <p style="font-size: 10px; color: var(--ink-mute); margin-top: 8px; font-family: ui-monospace, monospace;">
+          Cells 17–22 collapse to neutral oklch(0.72 0.01 250). Still individually clickable; hatch overlay (not shown) flags "Other" status.
+        </p>
+      </div>
+
+      <!-- 5. Signal orange in cross-filter chips, KPIs, viewer outline -->
+      <div class="section">
+        <h2>5 · Signal orange · cross-filter active states</h2>
+        <p class="lede">
+          One CSS variable <code>--signal: oklch(0.78 0.18 50)</code>. Always means "this is what you picked".
+          Lead filter (first key activated) carries the ◆ origin glyph. Secondary active filters share the orange outline but no glyph.
+        </p>
+        <div class="chip-row" style="margin-bottom: 16px;">
+          <span class="chip">All disciplines</span>
+          <span class="chip active lead">Class · IfcWallType</span>
+          <span class="chip active">Floor · Plan 04 — 1. Etasje</span>
+          <span class="chip active">Type · Maling 200</span>
+          <span class="chip">+ Add filter</span>
+        </div>
+        <p style="font-size: 11px; color: var(--ink-soft); margin-bottom: 8px;">
+          ◆ marks the lead. Plan 04 and Maling 200 were chosen <em>within</em> the WallType scope. Clearing the lead promotes the next chip.
+        </p>
+
+        <div class="kpi-row" style="margin-top: 16px;">
+          <div class="kpi-tile">
+            <div class="label">Total types</div>
+            <div class="value">297</div>
+          </div>
+          <div class="kpi-tile selected">
+            <div class="label">In scope</div>
+            <div class="value">10</div>
+          </div>
+          <div class="kpi-tile">
+            <div class="label">Instances</div>
+            <div class="value">198</div>
+          </div>
+          <div class="kpi-tile">
+            <div class="label">Missing class.</div>
+            <div class="value">10</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Comparison: current 12-color palette vs proposed -->
+      <div class="section">
+        <h2>6 · Before / after</h2>
+        <p class="lede">
+          Same 12 IFC classes, rendered with current <code>CLASS_PALETTE</code> (rank-randomised brand colors) vs proposed gradient.
+        </p>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 4px;">Current — 12-color palette, rank order, no semantic ordering</div>
+        <div class="compare-strip" style="margin-bottom: 14px;">
+          <div style="background: #157954">Wall</div>
+          <div style="background: #C7CEE8" class="dark-text">Column</div>
+          <div style="background: #D0D34D" class="dark-text">Slab</div>
+          <div style="background: #21263A">Window</div>
+          <div style="background: #2dd4a0" class="dark-text">Beam</div>
+          <div style="background: #fb923c" class="dark-text">Door</div>
+          <div style="background: #f87171" class="dark-text">Pipe</div>
+          <div style="background: #818cf8">Duct</div>
+          <div style="background: #38bdf8" class="dark-text">Covering</div>
+          <div style="background: #a78bfa">Stair</div>
+          <div style="background: #34d399" class="dark-text">Roof</div>
+          <div style="background: #fbbf24" class="dark-text">Cable</div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 4px;">Proposed — triangle gradient, discipline-anchored, class-stable</div>
+        <div class="compare-strip">
+          <div style="background: oklch(0.85 0.20 130)" class="dark-text">Wall</div>
+          <div style="background: oklch(0.72 0.18 142)" class="dark-text">Column</div>
+          <div style="background: oklch(0.78 0.19 137)" class="dark-text">Slab</div>
+          <div style="background: oklch(0.52 0.14 154)">Window</div>
+          <div style="background: oklch(0.65 0.17 147)">Beam</div>
+          <div style="background: oklch(0.55 0.14 153)">Door</div>
+          <div style="background: oklch(0.38 0.11 180)">Pipe</div>
+          <div style="background: oklch(0.34 0.10 200)">Duct</div>
+          <div style="background: oklch(0.48 0.13 155)">Covering</div>
+          <div style="background: oklch(0.46 0.13 155)">Stair</div>
+          <div style="background: oklch(0.44 0.12 158)">Roof</div>
+          <div style="background: oklch(0.30 0.08 220)">Cable</div>
+        </div>
+
+        <p style="font-size: 10px; color: var(--ink-mute); margin-top: 10px; font-family: ui-monospace, monospace; max-width: 720px;">
+          Reading bottom strip left-to-right traces the IFC discipline hierarchy: structure → architecture → MEP.
+          The reader's eye learns the gradient = the schema. Top strip carries no such information; it's a vocabulary the reader has to memorize per project.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
