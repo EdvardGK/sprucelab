@@ -12,6 +12,11 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Activity,
+  Cpu,
+  Webhook,
+  Server,
+  GitCommit,
 } from 'lucide-react';
 import { AppLayout } from '@/components/Layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +29,35 @@ import apiClient from '@/lib/api-client';
 interface DayCount {
   date: string;
   count: number;
+}
+
+interface FormatRow {
+  format: string;
+  count: number;
+  failed: number;
+  success_rate: number | null;
+  avg_seconds: number;
+  p95_seconds: number;
+}
+
+interface FailureRow {
+  id: string;
+  kind: 'extraction' | 'pipeline';
+  format?: string | null;
+  filename?: string | null;
+  pipeline?: string | null;
+  started_at: string | null;
+  error_message: string;
+}
+
+interface OutboundFailure {
+  id: string;
+  event_type: string;
+  target_url: string;
+  status: string;
+  response_status_code: number | null;
+  last_attempt_at: string | null;
+  error: string;
 }
 
 interface AdminStats {
@@ -51,6 +85,33 @@ interface AdminStats {
     mapping_rate: number;
   };
   users_list: UserRow[];
+  processing: {
+    extraction: {
+      by_format: FormatRow[];
+      last_24h: Record<string, number>;
+      recent_failures: FailureRow[];
+    };
+    pipelines: {
+      last_24h: Record<string, number>;
+      avg_duration_ms: number | null;
+      recent_failures: FailureRow[];
+    };
+  };
+  system: {
+    database_ok: boolean;
+    celery: { queue_depth: number | null; active_workers: number | null; broker_ok: boolean };
+    last_extraction_completed_at: string | null;
+    last_pipeline_completed_at: string | null;
+    process_started_at: string;
+    git_sha: string;
+    hostname: string;
+  };
+  outbound: {
+    subscriptions: { total: number; active: number };
+    last_24h: Record<string, number>;
+    success_rate_24h: number | null;
+    recent_failures: OutboundFailure[];
+  };
 }
 
 interface UserRow {
@@ -82,6 +143,49 @@ function formatDate(iso: string): string {
     month: '2-digit',
     day: '2-digit',
   });
+}
+
+function formatSeconds(s: number | null | undefined): string {
+  if (s == null) return '—';
+  if (s < 1) return `${(s * 1000).toFixed(0)} ms`;
+  if (s < 60) return `${s.toFixed(1)} s`;
+  const m = Math.floor(s / 60);
+  const rem = Math.round(s % 60);
+  return `${m}m ${rem}s`;
+}
+
+function formatMs(ms: number | null | undefined): string {
+  if (ms == null) return '—';
+  return formatSeconds(ms / 1000);
+}
+
+function formatPercent(frac: number | null | undefined): string {
+  if (frac == null) return '—';
+  return `${(frac * 100).toFixed(1)}%`;
+}
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const seconds = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const m = Math.floor(seconds / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m ago`;
+  const days = Math.floor(h / 24);
+  return `${days}d ${h % 24}h ago`;
+}
+
+// Traffic-light color for a success-rate fraction (0–1). Mirrors the
+// thresholds in lib/discipline-tokens.ts so future MetricCard adoption stays
+// consistent.
+function rateColor(frac: number | null): string {
+  if (frac == null) return 'text-text-secondary';
+  if (frac >= 0.95) return 'text-green-600';
+  if (frac >= 0.8) return 'text-yellow-600';
+  return 'text-red-600';
 }
 
 // ---------------------------------------------------------------------------
@@ -217,8 +321,22 @@ export default function AdminDashboard() {
     );
   }
 
-  const { users, projects, models, types, users_list } = data;
+  const { users, projects, models, types, users_list, processing, system, outbound } = data;
   const sortedUsers = sortUsers(users_list, sortKey, sortDir);
+
+  // 24-hour extraction success rate — derived once, used in both the
+  // Processing KPI strip and the System panel's traffic-light tints.
+  const ext24 = processing.extraction.last_24h;
+  const ext24Total = (ext24.completed ?? 0) + (ext24.failed ?? 0);
+  const ext24SuccessRate = ext24Total ? (ext24.completed ?? 0) / ext24Total : null;
+
+  // Interleave extraction + pipeline failures by started_at, newest first.
+  const allFailures: FailureRow[] = [
+    ...processing.extraction.recent_failures,
+    ...processing.pipelines.recent_failures,
+  ]
+    .sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? ''))
+    .slice(0, 10);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -327,6 +445,249 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
+        {/* Processing strip — 24h success rate, avg pipeline, queue, workers */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-[clamp(0.5rem,1.5vw,1rem)]">
+          <KpiCard
+            icon={Activity}
+            label={t('admin.processing.successRate24h')}
+            value={formatPercent(ext24SuccessRate)}
+            color={rateColor(ext24SuccessRate)}
+          />
+          <KpiCard
+            icon={Clock}
+            label={t('admin.processing.avgPipeline')}
+            value={formatMs(processing.pipelines.avg_duration_ms)}
+          />
+          <KpiCard
+            icon={Cpu}
+            label={t('admin.processing.queueDepth')}
+            value={system.celery.queue_depth ?? '—'}
+            color={
+              system.celery.queue_depth != null && system.celery.queue_depth > 50
+                ? 'text-yellow-600'
+                : undefined
+            }
+          />
+          <KpiCard
+            icon={Server}
+            label={t('admin.processing.activeWorkers')}
+            value={system.celery.active_workers ?? '—'}
+            color={
+              system.celery.active_workers != null && system.celery.active_workers > 0
+                ? 'text-green-600'
+                : 'text-red-600'
+            }
+          />
+        </div>
+
+        {/* Processing by format + failures feed — side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(0.5rem,1.5vw,1rem)]">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[clamp(0.75rem,1.5vw,0.875rem)]">
+                {t('admin.processing.title')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              {processing.extraction.by_format.length === 0 ? (
+                <p className="text-text-secondary text-[clamp(0.625rem,1.2vw,0.75rem)] py-4">
+                  {t('admin.processing.noRuns')}
+                </p>
+              ) : (
+                <table className="w-full text-[clamp(0.625rem,1.2vw,0.75rem)]">
+                  <thead>
+                    <tr className="border-b text-left text-text-secondary">
+                      <th className="py-2 px-2 font-medium">{t('admin.processing.tableFormat')}</th>
+                      <th className="py-2 px-2 font-medium text-right">{t('admin.processing.tableCount')}</th>
+                      <th className="py-2 px-2 font-medium text-right">{t('admin.processing.tableSuccess')}</th>
+                      <th className="py-2 px-2 font-medium text-right">{t('admin.processing.tableAvg')}</th>
+                      <th className="py-2 px-2 font-medium text-right">{t('admin.processing.tableP95')}</th>
+                      <th className="py-2 px-2 font-medium text-right">{t('admin.processing.tableFailed')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {processing.extraction.by_format.map((row) => (
+                      <tr key={row.format} className="border-b border-border-subtle">
+                        <td className="py-1.5 px-2 font-mono uppercase">{row.format}</td>
+                        <td className="py-1.5 px-2 text-right tabular-nums">{row.count}</td>
+                        <td className={`py-1.5 px-2 text-right tabular-nums ${rateColor(row.success_rate)}`}>
+                          {formatPercent(row.success_rate)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right tabular-nums">
+                          {formatSeconds(row.avg_seconds)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right tabular-nums">
+                          {formatSeconds(row.p95_seconds)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right tabular-nums text-red-600">
+                          {row.failed || ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[clamp(0.75rem,1.5vw,0.875rem)]">
+                {t('admin.failures.title')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {allFailures.length === 0 ? (
+                <p className="text-green-700 text-[clamp(0.625rem,1.2vw,0.75rem)] py-4">
+                  {t('admin.failures.empty')}
+                </p>
+              ) : (
+                <ul className="divide-y divide-border-subtle">
+                  {allFailures.map((f) => (
+                    <li key={f.id} className="py-2 first:pt-0 last:pb-0">
+                      <div className="flex items-center justify-between gap-3 text-[clamp(0.625rem,1.2vw,0.75rem)]">
+                        <span className="inline-flex items-center gap-1 font-medium">
+                          <AlertTriangle className="h-3 w-3 text-red-600" />
+                          {f.kind === 'extraction'
+                            ? t('admin.failures.kindExtraction')
+                            : t('admin.failures.kindPipeline')}
+                          {f.format ? <span className="font-mono uppercase ml-1">{f.format}</span> : null}
+                        </span>
+                        <span className="text-text-secondary tabular-nums">
+                          {formatRelative(f.started_at)}
+                        </span>
+                      </div>
+                      <div className="text-text-secondary text-[clamp(0.5rem,1vw,0.625rem)] mt-0.5 truncate">
+                        {f.filename || f.pipeline || ''}
+                      </div>
+                      <div className="text-red-700 text-[clamp(0.5rem,1vw,0.625rem)] mt-0.5 line-clamp-2">
+                        {f.error_message || '(no error message)'}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Outbound webhooks */}
+        <Card>
+          <CardHeader className="pb-2 flex flex-row items-center gap-2">
+            <Webhook className="h-[clamp(0.875rem,1.5vw,1rem)] w-[clamp(0.875rem,1.5vw,1rem)] text-text-secondary" />
+            <CardTitle className="text-[clamp(0.75rem,1.5vw,0.875rem)]">
+              {t('admin.outbound.title')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-[clamp(0.625rem,1.2vw,0.75rem)]">
+              <span>
+                <span className="text-text-secondary">{t('admin.outbound.activeSubs')}: </span>
+                <span className="font-medium tabular-nums">
+                  {outbound.subscriptions.active}
+                </span>
+                <span className="text-text-secondary">
+                  {' '}/ {outbound.subscriptions.total}
+                </span>
+              </span>
+              <span>
+                <span className="text-text-secondary">{t('admin.outbound.success24h')}: </span>
+                <span className={`font-medium tabular-nums ${rateColor(outbound.success_rate_24h)}`}>
+                  {formatPercent(outbound.success_rate_24h)}
+                </span>
+              </span>
+              <span className="text-green-600">
+                ✓ {outbound.last_24h.success ?? 0}
+              </span>
+              <span className="text-red-600">
+                ✗ {outbound.last_24h.failed ?? 0}
+              </span>
+              <span className="text-yellow-600">
+                ↻ {outbound.last_24h.retrying ?? 0}
+              </span>
+            </div>
+            {outbound.recent_failures.length > 0 && (
+              <div className="border-t border-border-subtle pt-2">
+                <p className="text-text-secondary text-[clamp(0.5rem,1vw,0.625rem)] uppercase tracking-wider mb-1">
+                  {t('admin.outbound.recentFailures')}
+                </p>
+                <ul className="divide-y divide-border-subtle">
+                  {outbound.recent_failures.map((d) => (
+                    <li key={d.id} className="py-1.5 text-[clamp(0.625rem,1.2vw,0.75rem)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-mono truncate">{d.event_type}</span>
+                        <span className="text-text-secondary tabular-nums">
+                          {formatRelative(d.last_attempt_at)}
+                        </span>
+                      </div>
+                      <div className="text-text-secondary text-[clamp(0.5rem,1vw,0.625rem)] truncate">
+                        → {d.target_url}{' '}
+                        {d.response_status_code ? (
+                          <span className="text-red-600 ml-1">[{d.response_status_code}]</span>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* System status footer */}
+        <Card>
+          <CardHeader className="pb-2 flex flex-row items-center gap-2">
+            <Server className="h-[clamp(0.875rem,1.5vw,1rem)] w-[clamp(0.875rem,1.5vw,1rem)] text-text-secondary" />
+            <CardTitle className="text-[clamp(0.75rem,1.5vw,0.875rem)]">
+              {t('admin.system.title')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-[clamp(0.625rem,1.2vw,0.75rem)]">
+              <SystemStat
+                label={t('admin.system.database')}
+                value={system.database_ok ? t('admin.system.ok') : t('admin.system.down')}
+                tone={system.database_ok ? 'good' : 'bad'}
+              />
+              <SystemStat
+                label={t('admin.system.broker')}
+                value={system.celery.broker_ok ? t('admin.system.ok') : t('admin.system.down')}
+                tone={system.celery.broker_ok ? 'good' : 'bad'}
+              />
+              <SystemStat
+                label={t('admin.system.workers')}
+                value={String(system.celery.active_workers ?? '—')}
+                tone={
+                  system.celery.active_workers != null && system.celery.active_workers > 0
+                    ? 'good'
+                    : 'bad'
+                }
+              />
+              <SystemStat
+                label={t('admin.system.queue')}
+                value={String(system.celery.queue_depth ?? '—')}
+              />
+              <SystemStat
+                label={t('admin.system.uptime')}
+                value={formatRelative(system.process_started_at).replace(' ago', '')}
+              />
+              <SystemStat
+                label={t('admin.system.lastExtraction')}
+                value={formatRelative(system.last_extraction_completed_at)}
+              />
+              <SystemStat
+                label={t('admin.system.lastPipeline')}
+                value={formatRelative(system.last_pipeline_completed_at)}
+              />
+              <SystemStat
+                label={t('admin.system.gitSha')}
+                value={system.git_sha.slice(0, 7)}
+                icon={GitCommit}
+              />
+            </dl>
+          </CardContent>
+        </Card>
+
         {/* User management table */}
         <Card>
           <CardHeader className="pb-2">
@@ -433,5 +794,39 @@ function KpiCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SystemStat — dt/dd pair for the System panel
+// ---------------------------------------------------------------------------
+
+function SystemStat({
+  label,
+  value,
+  tone,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  tone?: 'good' | 'bad';
+  icon?: React.ComponentType<{ className?: string }>;
+}) {
+  const toneClass =
+    tone === 'good'
+      ? 'text-green-600'
+      : tone === 'bad'
+        ? 'text-red-600'
+        : 'text-text-primary';
+  return (
+    <div className="flex flex-col">
+      <dt className="text-text-secondary text-[clamp(0.5rem,1vw,0.625rem)] uppercase tracking-wider">
+        {label}
+      </dt>
+      <dd className={`font-medium tabular-nums flex items-center gap-1 ${toneClass}`}>
+        {Icon ? <Icon className="h-3 w-3" /> : null}
+        {value}
+      </dd>
+    </div>
   );
 }

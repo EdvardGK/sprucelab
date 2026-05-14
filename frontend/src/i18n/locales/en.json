@@ -1262,7 +1262,59 @@
     "actions": "Actions",
     "approve": "Approve",
     "reject": "Reject",
-    "noUsers": "No users found"
+    "noUsers": "No users found",
+    "processing": {
+      "title": "Processing performance",
+      "byFormatHeader": "By format (completed runs)",
+      "successRate24h": "Extraction success (24h)",
+      "avgPipeline": "Avg pipeline duration",
+      "queueDepth": "Queue depth",
+      "activeWorkers": "Workers online",
+      "tableFormat": "Format",
+      "tableCount": "Runs",
+      "tableSuccess": "Success",
+      "tableAvg": "Avg",
+      "tableP95": "p95",
+      "tableFailed": "Failed",
+      "noRuns": "No completed extractions yet",
+      "extractionLabel": "Extractions",
+      "pipelineLabel": "Pipelines",
+      "completed": "completed",
+      "failed": "failed",
+      "running": "running"
+    },
+    "failures": {
+      "title": "Recent failures",
+      "empty": "No failures in the recent window — good sign.",
+      "kindExtraction": "Extraction",
+      "kindPipeline": "Pipeline"
+    },
+    "outbound": {
+      "title": "Outbound webhooks",
+      "activeSubs": "Active subscriptions",
+      "totalSubs": "Total subscriptions",
+      "success24h": "Success rate (24h)",
+      "noActivity": "No webhook deliveries in the last 24h",
+      "recentFailures": "Recent failed deliveries"
+    },
+    "system": {
+      "title": "System status",
+      "database": "Database",
+      "broker": "Redis broker",
+      "workers": "Celery workers",
+      "queue": "Queue depth",
+      "gitSha": "Build",
+      "uptime": "Process uptime",
+      "lastExtraction": "Last extraction",
+      "lastPipeline": "Last pipeline",
+      "hostname": "Host",
+      "ok": "OK",
+      "down": "Down",
+      "unknown": "—"
+    },
+    "labels": {
+      "viewAnalytics": "Open Plausible →"
+    }
   },
   "claims": {
     "title": "Claim Inbox",

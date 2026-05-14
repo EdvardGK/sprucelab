@@ -446,6 +446,11 @@ WEBHOOK_RESPONSE_BODY_TRUNCATE_BYTES = int(os.getenv('WEBHOOK_RESPONSE_BODY_TRUN
 WEBHOOK_MAX_DELIVERY_RETRIES = int(os.getenv('WEBHOOK_MAX_DELIVERY_RETRIES', '3'))
 
 
+# Build identifier surfaced in the admin System panel. Railway exposes this
+# as `RAILWAY_GIT_COMMIT_SHA`; locally falls through to 'dev'.
+GIT_SHA = os.getenv('GIT_SHA') or os.getenv('RAILWAY_GIT_COMMIT_SHA') or 'dev'
+
+
 # File Upload Settings
 MAX_UPLOAD_SIZE = 1024 * 1024 * 1024  # 1GB max file size
 DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE

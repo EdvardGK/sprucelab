@@ -1262,7 +1262,59 @@
     "actions": "Handlinger",
     "approve": "Godkjenn",
     "reject": "Avvis",
-    "noUsers": "Ingen brukere funnet"
+    "noUsers": "Ingen brukere funnet",
+    "processing": {
+      "title": "Prosesseringsytelse",
+      "byFormatHeader": "Per format (fullførte kjøringer)",
+      "successRate24h": "Ekstraksjonssuksess (24t)",
+      "avgPipeline": "Snitt pipeline-varighet",
+      "queueDepth": "Kødybde",
+      "activeWorkers": "Workers tilkoblet",
+      "tableFormat": "Format",
+      "tableCount": "Kjøringer",
+      "tableSuccess": "Suksess",
+      "tableAvg": "Snitt",
+      "tableP95": "p95",
+      "tableFailed": "Feilet",
+      "noRuns": "Ingen fullførte ekstraksjoner enda",
+      "extractionLabel": "Ekstraksjoner",
+      "pipelineLabel": "Pipelines",
+      "completed": "fullført",
+      "failed": "feilet",
+      "running": "kjører"
+    },
+    "failures": {
+      "title": "Nylige feil",
+      "empty": "Ingen feil i nylig tidsvindu — bra tegn.",
+      "kindExtraction": "Ekstraksjon",
+      "kindPipeline": "Pipeline"
+    },
+    "outbound": {
+      "title": "Utgående webhooks",
+      "activeSubs": "Aktive abonnement",
+      "totalSubs": "Totale abonnement",
+      "success24h": "Suksessrate (24t)",
+      "noActivity": "Ingen webhook-leveringer siste 24t",
+      "recentFailures": "Nylige feilede leveringer"
+    },
+    "system": {
+      "title": "Systemstatus",
+      "database": "Database",
+      "broker": "Redis-broker",
+      "workers": "Celery-workers",
+      "queue": "Kødybde",
+      "gitSha": "Bygg",
+      "uptime": "Prosessoppetid",
+      "lastExtraction": "Siste ekstraksjon",
+      "lastPipeline": "Siste pipeline",
+      "hostname": "Vert",
+      "ok": "OK",
+      "down": "Nede",
+      "unknown": "—"
+    },
+    "labels": {
+      "viewAnalytics": "Åpne Plausible →"
+    }
   },
   "claims": {
     "title": "Kravinnboks",
