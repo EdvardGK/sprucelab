@@ -19,6 +19,16 @@ Both PRs verified live on www.sprucelab.io via chrome-devtools — URL round-tri
 
 - `frontend/src/components/features/warehouse-v2/TypeBrowserV2.tsx` (same file, follow-up) — `[ifcClassFilter, setIfcClassFilter]` replaced with read-side `filterCtx.ifc_class?.[0] ?? 'all'` + a `setIfcClassFilter` adapter callback that preserves both the direct-string and functional-update call sites (e.g., `setIfcClassFilter((curr) => curr === cls ? 'all' : cls)` keeps working). All other call sites untouched.
 
+### Commit `f861dd0` — Worklog
+
+- `docs/worklog/2026-05-13-23-10_Layer-2-GUID-bridge-ifc-class-URL-persist.md` — this file.
+
+### Memory captured
+
+- `~/.claude/projects/-home-edkjo-workspace-sidehustles-sprucelab/memory/type-guid-synth-hash-fallback.md` — extractor at `backend/ifc-service/services/ifc_parser.py:398` generates `synth_<md5[:18]>` from `(ifc_class, object_type)` whenever no `IfcTypeObject` exists, so `IFCType.type_guid` is almost never null in modern extractions. Synthetic hashes are stable across re-extraction and round-trip safely through the Layer 2 URL filter. `data-extraction-vs-fragments-runtime-mismatch.md` predates this and frames null `type_guid` as common; the new memory cross-links and reframes it as the legacy edge.
+- `MEMORY.md` index updated — one new entry for the synth-hash invariant.
+- `next-steps.md` rewritten with top-of-`main` (`f861dd0`) + the four next-most-impactful pickups.
+
 ## Technical Details
 
 **Layer 2 design philosophy.** Same as Layer 1: the canonical IFC identifier (GlobalId for storeys / type objects) is the user-visible state; internal Django IDs become derived state where still needed for downstream component props (`InlineViewer typeId={selectedType.id}` continues to receive Django UUID, but `selectedType` itself is now resolved from `type_guid`). This keeps the existing component tree intact while making the cross-filter key URL-shareable and cross-model-stable.
