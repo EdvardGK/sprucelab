@@ -98,3 +98,33 @@ Issue #12 came in mid-session from another Claude web session driving the live `
 - The `--signal` orange (`oklch(0.78 0.18 50)`) was deliberately picked to live outside the gradient's bounding box in OKLCH so a treemap cell can NEVER look like a signal. Same math reasoning applies to all six status families — they share L bands but use hues outside the data range.
 - Tester-findings plan doc explicitly notes that Wave 3 (cross-filter scope) and the colour-system PR 3 (lead-filter `order: string[]`) compose — when the user activates a filter on `/models` it should carry to `/types` with a "from Models" origin chip rather than silently leaking.
 - Frontend-first + coordinator-rounds-must-include-frontend memories continued to apply — every PR this session moved a pixel on the live app, even the design-tokens unification (Types and Model dashes now read identically). The closest exception was the wireframe commits but those WERE the design conversation, not invisible plumbing.
+
+---
+
+## Addendum (2026-05-14 11:48) — post-/worklog work
+
+User flagged two further Model-dashboard issues immediately after the initial worklog landed: cross-filter feels like a full reload, and filters should reset when changing the model. Shipped the reset fix; pinned investigation of the reload for the next session.
+
+### Additional changes
+
+- **`7728952` Reset cross-filter dimensions on model navigation.** `ModelWorkspace.tsx` now calls `clearDimensions()` when the URL `modelId` param changes. `prevModelIdRef` (matching the Layer 2 mount-skip pattern) ensures a URL-hydrated `?d=...` survives the first mount — only model-to-model navigation triggers the wipe. Rationale: class names, storey GUIDs and type GUIDs are model-specific; carrying them across models produces "0 / N" empty views with no obvious cause.
+
+### Two newly identified P0 issues (deferred)
+
+- **Viewer remounts on filter change.** User's console paste showed `[Viewer] Fragments load failed ... Viewer world unmounted before v3 fragments load began` triggered by a treemap click. Inspection of `pages/ModelWorkspace.tsx` found no obvious `key={...}` upstream of `<UnifiedBIMViewer>` that depends on filter state, and the init `useEffect` has `[]` deps so it shouldn't tear down on prop changes. Root cause not pinpointed yet — needs a live chrome-devtools React-profiler reproduction. The most likely candidates: (a) something in `viewerState.components` flipping reference, (b) the `modelIds.join(',')` dep in the load-models effect picking up a transient empty-array re-render, (c) a hidden parent unmount via Suspense or error-boundary on first filter dispatch.
+
+- **Treemap click doesn't recompute the dashboard.** `computeAnalysisStats` at `pages/ModelWorkspace.tsx:776` iterates `analysis.types` without consulting `filter.ifc_class`. Result: clicking a treemap tile changes the viewer (via `typeVisibility`) but KPIs, Quality card, Storeys chart, Top-N and the detail rail all stay on unfiltered totals. The Types-page total-vs-filtered split pattern from `warehouse-v2/TypeBrowserV2.tsx:130-140` is the obvious model — compute `totalStats` and `filteredStats`, render filtered values in the foreground with the total animating in the background via `useCountUp` (per memory `feedback-count-up-and-cross-filter-recompute-is-the-signature.md`). This is a structural change touching all the Model-dash visualizations and was correctly held back from end-of-session push.
+
+### Other observations from this round
+
+- **Locize promo log confirmed live.** User pasted the i18next console banner ("🌐 i18next is made possible by our own product, Locize..."). Wave 1 of the tester-sweep plan needs to address this — simplest fix is `i18n.services.logger.options.prefix = ''` after init, or a noop logger registered before init.
+
+- **Filter-reset scope choice.** Initial implementation clears ALL dimensions on model change (full `clearDimensions()`). Rationale was the user's literal "Filters need to reset when changing the model". Some dimensions (`discipline`, `verification`, future `mmi`) are arguably cross-model-safe and could persist; pinned as an open question pending feedback. Keep all-clear as the default behaviour for now.
+
+### Final commits this session (additional)
+
+- `26ea5ca` initial worklog file
+- `7728952` filter-reset-on-modelId fix
+- This addendum + next-steps update (queued for the next push)
+
+Top of `main`: `7728952`. Twelve commits total this session.
