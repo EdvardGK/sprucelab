@@ -370,9 +370,339 @@
         </div>
       </div>
 
-      <!-- 6. Comparison: current 12-color palette vs proposed -->
+      <!-- 6. Subdivision pattern — predictable sampling of the gradient -->
       <div class="section">
-        <h2>6 · Before / after</h2>
+        <h2>6 · Subdivision pattern · van der Corput / bit-reversal (base 2)</h2>
+        <p class="lede">
+          Treemaps and multi-item charts don't need canonical positions; they need <em>predictable</em>
+          subdivision of the gradient so adjacent classes never collide. Bit-reversal sequence gives
+          maximal-separation samples for any N — each new sample falls in the biggest empty interval.
+        </p>
+
+        <p style="font-size: 11px; color: var(--ink-soft); margin-bottom: 4px; font-family: ui-monospace, monospace;">
+          slot 0 → t=0 · slot 1 → 0.5 · slot 2 → 0.25 · slot 3 → 0.75 · slot 4 → 0.125 · slot 5 → 0.625 · slot 6 → 0.375 · slot 7 → 0.875 · slot 8 → 0.0625 · …
+        </p>
+
+        <div style="margin: 14px 0 6px; font-size: 11px; color: var(--ink-soft);">N = 2 classes — endpoints</div>
+        <div class="compare-strip" style="margin-bottom: 10px;">
+          <div style="background: oklch(0.85 0.20 130)" class="dark-text">slot 0 · t=0.000</div>
+          <div style="background: oklch(0.45 0.13 155)">slot 1 · t=0.500</div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 4px;">N = 4 classes — quarters</div>
+        <div class="compare-strip" style="margin-bottom: 10px;">
+          <div style="background: oklch(0.85 0.20 130)" class="dark-text">0.000</div>
+          <div style="background: oklch(0.45 0.13 155)">0.500</div>
+          <div style="background: oklch(0.65 0.17 145)" class="dark-text">0.250</div>
+          <div style="background: oklch(0.33 0.10 200)">0.750</div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 4px;">N = 8 classes — eighths</div>
+        <div class="compare-strip" style="margin-bottom: 10px;">
+          <div style="background: oklch(0.85 0.20 130)" class="dark-text">0.000</div>
+          <div style="background: oklch(0.45 0.13 155)">0.500</div>
+          <div style="background: oklch(0.65 0.17 145)" class="dark-text">0.250</div>
+          <div style="background: oklch(0.33 0.10 200)">0.750</div>
+          <div style="background: oklch(0.75 0.19 137)" class="dark-text">0.125</div>
+          <div style="background: oklch(0.39 0.12 180)">0.625</div>
+          <div style="background: oklch(0.55 0.15 150)">0.375</div>
+          <div style="background: oklch(0.27 0.07 235)">0.875</div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 4px;">N = 16 classes — sixteenths</div>
+        <div class="compare-strip" style="margin-bottom: 10px;">
+          <div style="background: oklch(0.85 0.20 130)" class="dark-text">0</div>
+          <div style="background: oklch(0.45 0.13 155)">.500</div>
+          <div style="background: oklch(0.65 0.17 145)" class="dark-text">.250</div>
+          <div style="background: oklch(0.33 0.10 200)">.750</div>
+          <div style="background: oklch(0.75 0.19 137)" class="dark-text">.125</div>
+          <div style="background: oklch(0.39 0.12 180)">.625</div>
+          <div style="background: oklch(0.55 0.15 150)">.375</div>
+          <div style="background: oklch(0.27 0.07 235)">.875</div>
+          <div style="background: oklch(0.80 0.20 133)" class="dark-text">.0625</div>
+          <div style="background: oklch(0.42 0.12 168)">.5625</div>
+          <div style="background: oklch(0.70 0.18 141)" class="dark-text">.1875</div>
+          <div style="background: oklch(0.30 0.09 215)">.8125</div>
+          <div style="background: oklch(0.60 0.16 148)">.3125</div>
+          <div style="background: oklch(0.36 0.11 190)">.6875</div>
+          <div style="background: oklch(0.50 0.14 152)">.4375</div>
+          <div style="background: oklch(0.25 0.06 250)">.9375</div>
+        </div>
+
+        <p style="font-size: 10px; color: var(--ink-mute); margin-top: 8px; font-family: ui-monospace, monospace; max-width: 720px;">
+          The sequence is purely deterministic — slot N always gets the same t. Adding/removing classes never reshuffles existing assignments;
+          new ones fall into the gaps. Compare to even subdivision t = i/(N-1) which reshuffles every position when N changes.
+        </p>
+      </div>
+
+      <!-- 7. Two-stage model — generate vs assign -->
+      <div class="section">
+        <h2>7 · Generator vs assignment · two-stage model</h2>
+        <p class="lede">
+          The gradient curve and subdivision pattern are <em>fixed mathematics</em>. Which class gets which slot is
+          a separate decision — canonical table for the main UI, stable hash for the long tail.
+        </p>
+
+        <div class="grid-2">
+          <div style="border: 1px solid var(--line); padding: 12px; background: var(--bg);">
+            <div style="font-size: 11px; font-weight: 600; color: var(--ink); margin-bottom: 6px;">Stage 1 · Generator (fixed)</div>
+            <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 10px;">
+              Triangle gradient + bit-reversal sequence. Same code emits the same set of 32 colors every time.
+            </div>
+            <pre style="font-family: ui-monospace, monospace; font-size: 10px; background: white; padding: 8px; border: 1px solid var(--line); overflow-x: auto; line-height: 1.5;">function paletteSlot(i) {
+  const t = bitReverse(i);     // deterministic
+  return sampleTriangle(t);    // OKLCH sample
+}
+
+// SLOTS = [paletteSlot(0), paletteSlot(1), ...]</pre>
+          </div>
+
+          <div style="border: 1px solid var(--line); padding: 12px; background: var(--bg);">
+            <div style="font-size: 11px; font-weight: 600; color: var(--ink); margin-bottom: 6px;">Stage 2 · Assignment (per surface)</div>
+            <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 10px;">
+              Main UI uses the canonical table from §2. Treemaps and multi-item charts use a stable hash on the class name.
+            </div>
+            <pre style="font-family: ui-monospace, monospace; font-size: 10px; background: white; padding: 8px; border: 1px solid var(--line); overflow-x: auto; line-height: 1.5;">// Canonical (main UI, chips, KPIs)
+classColor(c) = SLOTS[CANONICAL_IDX[c]]
+              ?? SLOTS[hash(c) % 32]
+
+// Chart-only (treemap, sparkline stack)
+chartColor(c) = SLOTS[hash(c) % 32]</pre>
+          </div>
+        </div>
+
+        <p style="font-size: 11px; color: var(--ink-soft); margin-top: 14px;">
+          Why this works for treemaps: the assignment is "random" relative to discipline (a wall and a duct can land on adjacent slots)
+          but the <em>colors themselves</em> are well-distributed across the gradient. No two slots are within
+          ΔE_min of each other until N exceeds the gradient's capacity. Below that ceiling, every slice of the treemap reads as a distinct shade.
+        </p>
+      </div>
+
+      <!-- 8. Treemap re-rendered with bit-reversal subdivision -->
+      <div class="section">
+        <h2>8 · Treemap stress test · 22 classes, bit-reversal subdivision</h2>
+        <p class="lede">
+          Same 22-class stress data as §4, but colored via stage 2's chart-only path
+          (bit-reversal slot indexed by class-name hash). Class names below each cell so you can read the assignment;
+          notice how adjacent treemap cells are always far apart on the gradient.
+        </p>
+        <div class="treemap">
+          <div class="col" style="flex: 198"><div class="treemap-cell" style="background: oklch(0.85 0.20 130); flex: 1"><span class="dark-text" style="font-weight:600">Wall</span><span class="count dark-text">slot 0 · 198</span></div></div>
+          <div class="col" style="flex: 161"><div class="treemap-cell" style="background: oklch(0.33 0.10 200); flex: 1"><span style="font-weight:600">Column</span><span class="count">slot 3 · 161</span></div></div>
+          <div class="col" style="flex: 107"><div class="treemap-cell" style="background: oklch(0.65 0.17 145); flex: 1"><span class="dark-text" style="font-weight:600">Opening</span><span class="count dark-text">slot 2 · 107</span></div></div>
+          <div class="col" style="flex: 103"><div class="treemap-cell" style="background: oklch(0.39 0.12 180); flex: 1"><span style="font-weight:600">Window</span><span class="count">slot 5 · 103</span></div></div>
+          <div class="col" style="flex: 88"><div class="treemap-cell" style="background: oklch(0.75 0.19 137); flex: 1"><span class="dark-text" style="font-weight:600">Beam</span><span class="count dark-text">slot 4 · 88</span></div></div>
+          <div class="col" style="flex: 71">
+            <div class="treemap-cell" style="background: oklch(0.27 0.07 235); flex: 26"><span style="font-weight:600">Door</span><span class="count">slot 7 · 26</span></div>
+            <div class="treemap-cell" style="background: oklch(0.55 0.15 150); flex: 24"><span style="font-weight:600">Pipe</span><span class="count">slot 6 · 24</span></div>
+            <div class="treemap-cell" style="background: oklch(0.45 0.13 155); flex: 21"><span style="font-weight:600">Duct</span><span class="count">slot 1 · 21</span></div>
+          </div>
+          <div class="col" style="flex: 56">
+            <div class="treemap-cell" style="background: oklch(0.30 0.09 215); flex: 20"><span style="font-weight:600; font-size: 11px;">Covering</span><span class="count">slot 11 · 20</span></div>
+            <div class="treemap-cell" style="background: oklch(0.80 0.20 133); flex: 18"><span class="dark-text" style="font-weight:600; font-size: 11px;">Footing</span><span class="count dark-text">slot 8 · 18</span></div>
+            <div class="treemap-cell" style="background: oklch(0.42 0.12 168); flex: 18"><span style="font-weight:600; font-size: 11px;">Stair</span><span class="count">slot 9 · 18</span></div>
+          </div>
+          <div class="col" style="flex: 38">
+            <div class="treemap-cell" style="background: oklch(0.70 0.18 141); flex: 14"><span class="dark-text" style="font-weight:600; font-size: 10px;">Roof</span><span class="count dark-text">slot 10 · 14</span></div>
+            <div class="treemap-cell" style="background: oklch(0.36 0.11 190); flex: 12"><span style="font-weight:600; font-size: 10px;">Cable</span><span class="count">slot 13 · 12</span></div>
+            <div class="treemap-cell" style="background: oklch(0.60 0.16 148); flex: 12"><span style="font-weight:600; font-size: 10px;">AirTerm</span><span class="count">slot 12 · 12</span></div>
+          </div>
+          <div class="col" style="flex: 28">
+            <div class="treemap-cell" style="background: oklch(0.50 0.14 152); flex: 11"><span style="font-weight:600; font-size: 10px;">Curtain</span><span class="count">slot 14 · 11</span></div>
+            <div class="treemap-cell" style="background: oklch(0.25 0.06 250); flex: 9"><span style="font-weight:600; font-size: 10px;">Railing</span><span class="count">slot 15 · 9</span></div>
+            <div class="treemap-cell" style="background: oklch(0.83 0.20 131); flex: 8"><span class="dark-text" style="font-weight:600; font-size: 10px;">Sanit.</span><span class="count dark-text">slot 16 · 8</span></div>
+          </div>
+          <div class="col" style="flex: 18">
+            <div class="treemap-cell" style="background: oklch(0.41 0.12 170); flex: 6"><span style="font-weight:600; font-size: 10px;">Furn.</span><span class="count">slot 17 · 6</span></div>
+            <div class="treemap-cell" style="background: oklch(0.67 0.17 144); flex: 5"><span class="dark-text" style="font-weight:600; font-size: 10px;">Equip.</span><span class="count dark-text">slot 18 · 5</span></div>
+            <div class="treemap-cell" style="background: oklch(0.31 0.09 210); flex: 4"><span style="font-weight:600; font-size: 10px;">Flow</span><span class="count">slot 19 · 4</span></div>
+            <div class="treemap-cell" style="background: oklch(0.58 0.15 149); flex: 3"><span style="font-weight:600; font-size: 10px;">Vent.</span><span class="count">slot 20 · 3</span></div>
+          </div>
+        </div>
+        <p style="font-size: 10px; color: var(--ink-mute); margin-top: 8px; font-family: ui-monospace, monospace;">
+          Adjacent cells never share a perceptual neighborhood — bit-reversal guarantees max separation at every prefix.
+          The eye reads structure (slot index = order in the binary tree) even though no class is anchored to a specific shade.
+        </p>
+      </div>
+
+      <!-- 9. Traffic light + callout system -->
+      <div class="section">
+        <h2>9 · Status colors · traffic lights, callouts, contrast budget</h2>
+        <p class="lede">
+          Status colors live <em>outside</em> the data gradient's bounding box so they can never be confused with a class swatch.
+          Five families, each at three intensities (solid · tinted · text). All five share the same L target band
+          (L=0.58–0.78 for solid, L=0.94–0.96 for tinted) so the system reads as a single tonal family.
+        </p>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 6px;">Five semantic families</div>
+        <div class="grid-3" style="margin-bottom: 16px;">
+          <div>
+            <div style="background: oklch(0.62 0.17 145); height: 64px; padding: 8px; color: white; font-family: ui-monospace, monospace; font-size: 10px;">
+              <div style="font-weight: 600; font-size: 11px;">success</div>
+              <div>oklch(0.62 0.17 145)</div>
+              <div style="opacity: 0.85; margin-top: 2px;">hue · green</div>
+            </div>
+            <div style="background: oklch(0.95 0.04 145); border-left: 3px solid oklch(0.62 0.17 145); padding: 8px 12px; font-size: 11px;">
+              <div style="color: oklch(0.40 0.17 145); font-weight: 600;">✓ Verified</div>
+              <div style="color: oklch(0.40 0.17 145); opacity: 0.85; margin-top: 2px;">All 13 EIR requirements fulfilled.</div>
+            </div>
+          </div>
+          <div>
+            <div style="background: oklch(0.78 0.16 85); height: 64px; padding: 8px; color: oklch(0.30 0.16 85); font-family: ui-monospace, monospace; font-size: 10px;">
+              <div style="font-weight: 600; font-size: 11px;">warning</div>
+              <div>oklch(0.78 0.16 85)</div>
+              <div style="opacity: 0.85; margin-top: 2px;">hue · amber</div>
+            </div>
+            <div style="background: oklch(0.96 0.04 85); border-left: 3px solid oklch(0.78 0.16 85); padding: 8px 12px; font-size: 11px;">
+              <div style="color: oklch(0.40 0.16 85); font-weight: 600;">! Attention</div>
+              <div style="color: oklch(0.40 0.16 85); opacity: 0.85; margin-top: 2px;">3 of 13 requirements still missing.</div>
+            </div>
+          </div>
+          <div>
+            <div style="background: oklch(0.58 0.22 25); height: 64px; padding: 8px; color: white; font-family: ui-monospace, monospace; font-size: 10px;">
+              <div style="font-weight: 600; font-size: 11px;">danger</div>
+              <div>oklch(0.58 0.22 25)</div>
+              <div style="opacity: 0.85; margin-top: 2px;">hue · red</div>
+            </div>
+            <div style="background: oklch(0.94 0.05 25); border-left: 3px solid oklch(0.58 0.22 25); padding: 8px 12px; font-size: 11px;">
+              <div style="color: oklch(0.40 0.18 25); font-weight: 600;">✕ Failed</div>
+              <div style="color: oklch(0.40 0.18 25); opacity: 0.85; margin-top: 2px;">Verification engine returned 7 hard errors.</div>
+            </div>
+          </div>
+          <div>
+            <div style="background: oklch(0.62 0.16 240); height: 64px; padding: 8px; color: white; font-family: ui-monospace, monospace; font-size: 10px;">
+              <div style="font-weight: 600; font-size: 11px;">info</div>
+              <div>oklch(0.62 0.16 240)</div>
+              <div style="opacity: 0.85; margin-top: 2px;">hue · blue</div>
+            </div>
+            <div style="background: oklch(0.95 0.04 240); border-left: 3px solid oklch(0.62 0.16 240); padding: 8px 12px; font-size: 11px;">
+              <div style="color: oklch(0.40 0.16 240); font-weight: 600;">ℹ Info</div>
+              <div style="color: oklch(0.40 0.16 240); opacity: 0.85; margin-top: 2px;">Last analysis ran 2 hours ago.</div>
+            </div>
+          </div>
+          <div>
+            <div style="background: oklch(0.78 0.18 50); height: 64px; padding: 8px; color: oklch(0.30 0.18 50); font-family: ui-monospace, monospace; font-size: 10px;">
+              <div style="font-weight: 600; font-size: 11px;">signal</div>
+              <div>oklch(0.78 0.18 50)</div>
+              <div style="opacity: 0.85; margin-top: 2px;">hue · orange · selection</div>
+            </div>
+            <div style="background: oklch(0.96 0.05 50); border-left: 3px solid oklch(0.78 0.18 50); padding: 8px 12px; font-size: 11px;">
+              <div style="color: oklch(0.42 0.18 50); font-weight: 600;">◆ Selected</div>
+              <div style="color: oklch(0.42 0.18 50); opacity: 0.85; margin-top: 2px;">Currently filtering by IfcWallType.</div>
+            </div>
+          </div>
+          <div>
+            <div style="background: oklch(0.55 0.01 250); height: 64px; padding: 8px; color: white; font-family: ui-monospace, monospace; font-size: 10px;">
+              <div style="font-weight: 600; font-size: 11px;">neutral</div>
+              <div>oklch(0.55 0.01 250)</div>
+              <div style="opacity: 0.85; margin-top: 2px;">hue · grey · indeterminate</div>
+            </div>
+            <div style="background: oklch(0.96 0.01 250); border-left: 3px solid oklch(0.55 0.01 250); padding: 8px 12px; font-size: 11px;">
+              <div style="color: oklch(0.40 0.02 250); font-weight: 600;">— Not analysed</div>
+              <div style="color: oklch(0.40 0.02 250); opacity: 0.85; margin-top: 2px;">Model never processed. Run extraction.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 6px;">Compact status dots (table rows, list items)</div>
+        <table style="font-size: 11px; width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--line); text-align: left;">
+              <th style="padding: 6px; width: 24px;"></th>
+              <th style="padding: 6px;">Type</th>
+              <th style="padding: 6px;">Status</th>
+              <th style="padding: 6px;">NS3451</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--line);">
+              <td style="padding: 6px;"><span style="display:inline-block; width: 8px; height: 8px; border-radius: 50%; background: oklch(0.62 0.17 145);"></span></td>
+              <td style="padding: 6px;">Yttervegg 250</td>
+              <td style="padding: 6px; color: oklch(0.40 0.17 145);">Verified</td>
+              <td style="padding: 6px; font-family: ui-monospace, monospace;">222.1</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--line);">
+              <td style="padding: 6px;"><span style="display:inline-block; width: 8px; height: 8px; border-radius: 50%; background: oklch(0.78 0.16 85);"></span></td>
+              <td style="padding: 6px;">Maling 200</td>
+              <td style="padding: 6px; color: oklch(0.40 0.16 85);">Needs review</td>
+              <td style="padding: 6px; font-family: ui-monospace, monospace;">—</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--line);">
+              <td style="padding: 6px;"><span style="display:inline-block; width: 8px; height: 8px; border-radius: 50%; background: oklch(0.58 0.22 25);"></span></td>
+              <td style="padding: 6px;">Yttervegg 50</td>
+              <td style="padding: 6px; color: oklch(0.40 0.18 25);">Failed</td>
+              <td style="padding: 6px; font-family: ui-monospace, monospace;">—</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--line);">
+              <td style="padding: 6px;"><span style="display:inline-block; width: 8px; height: 8px; border-radius: 50%; background: oklch(0.55 0.01 250);"></span></td>
+              <td style="padding: 6px;">Betong 1</td>
+              <td style="padding: 6px; color: oklch(0.40 0.02 250);">Not analysed</td>
+              <td style="padding: 6px; font-family: ui-monospace, monospace;">—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-bottom: 6px;">Best-practice notes (cross-referenced)</div>
+        <ul style="font-size: 11px; color: var(--ink-soft); list-style: none; padding: 0;">
+          <li style="padding: 6px 0; border-top: 1px dashed var(--line); display: flex; gap: 12px;">
+            <span style="font-family: ui-monospace, monospace; font-size: 10px; color: var(--ink-mute); width: 80px;">WCAG 2.2</span>
+            <span><strong>4.5:1 minimum</strong> for status text on tinted backgrounds (normal body text); 3:1 for ≥18pt or icon-only.
+            All five families clear 4.5:1 against their tinted-background pair by design (L=0.40 fg on L=0.94–0.96 bg).</span>
+          </li>
+          <li style="padding: 6px 0; border-top: 1px dashed var(--line); display: flex; gap: 12px;">
+            <span style="font-family: ui-monospace, monospace; font-size: 10px; color: var(--ink-mute); width: 80px;">NN/g</span>
+            <span><strong>Never color alone</strong> — every status pairs with a glyph (✓ ! ✕ ℹ ◆ —) so red/green colorblind users (~5% of male users) still read the same message.</span>
+          </li>
+          <li style="padding: 6px 0; border-top: 1px dashed var(--line); display: flex; gap: 12px;">
+            <span style="font-family: ui-monospace, monospace; font-size: 10px; color: var(--ink-mute); width: 80px;">Material 3</span>
+            <span><strong>Tonal pairing</strong> — solid (L≈0.58–0.78) + tinted background (L≈0.94–0.96) + text (L≈0.40). Same hue family at three L stops produces the callout's "container" pattern without bespoke art per status.</span>
+          </li>
+          <li style="padding: 6px 0; border-top: 1px dashed var(--line); display: flex; gap: 12px;">
+            <span style="font-family: ui-monospace, monospace; font-size: 10px; color: var(--ink-mute); width: 80px;">Apple HIG</span>
+            <span><strong>Reserve red</strong> for destructive / hard-fail only. Don't use it for "incomplete" or "warning" — that's amber's job. We follow this: <code>danger</code> = verification hard-fail, <code>warning</code> = missing classification / soft gap, <code>neutral</code> = not yet analysed.</span>
+          </li>
+          <li style="padding: 6px 0; border-top: 1px dashed var(--line); display: flex; gap: 12px;">
+            <span style="font-family: ui-monospace, monospace; font-size: 10px; color: var(--ink-mute); width: 80px;">Tableau</span>
+            <span><strong>Sequential vs categorical separation</strong> — the data gradient (lime → forest → navy) is sequential; the status palette is categorical. They live in different sub-spaces of OKLCH so the eye reads them differently. Gradient cells in a treemap never "look like" a status pill.</span>
+          </li>
+          <li style="padding: 6px 0; border-top: 1px dashed var(--line); display: flex; gap: 12px;">
+            <span style="font-family: ui-monospace, monospace; font-size: 10px; color: var(--ink-mute); width: 80px;">Hue spacing</span>
+            <span>danger 25° · signal 50° · warning 85° · success 145° · info 240°. Smallest gap (signal ↔ warning) is 35°; differentiated additionally by chroma (signal saturated 0.18 / warning 0.16) and L (both ~0.78 — distinguished by hue alone here, OK because the glyph carries the meaning).</span>
+          </li>
+          <li style="padding: 6px 0; border-top: 1px dashed var(--line); display: flex; gap: 12px;">
+            <span style="font-family: ui-monospace, monospace; font-size: 10px; color: var(--ink-mute); width: 80px;">Traffic-light</span>
+            <span>Threshold ladder for percent KPIs: <strong>green</strong> ≥ green_threshold, <strong>amber</strong> ≥ amber_threshold, <strong>red</strong> below. Per-KPI thresholds live in ProjectConfig — the color is a render decision, not a meaning decision.</span>
+          </li>
+        </ul>
+
+        <div style="font-size: 11px; color: var(--ink-soft); margin-top: 16px; margin-bottom: 6px;">Threshold ladder · KPI example</div>
+        <div class="kpi-row">
+          <div class="kpi-tile" style="border-top: 3px solid oklch(0.62 0.17 145);">
+            <div class="label">Classified</div>
+            <div class="value" style="color: oklch(0.40 0.17 145);">94%</div>
+            <div style="font-size: 9px; color: oklch(0.40 0.17 145); margin-top: 2px;">≥ 90% · pass</div>
+          </div>
+          <div class="kpi-tile" style="border-top: 3px solid oklch(0.78 0.16 85);">
+            <div class="label">Materials mapped</div>
+            <div class="value" style="color: oklch(0.40 0.16 85);">62%</div>
+            <div style="font-size: 9px; color: oklch(0.40 0.16 85); margin-top: 2px;">50–80% · attention</div>
+          </div>
+          <div class="kpi-tile" style="border-top: 3px solid oklch(0.58 0.22 25);">
+            <div class="label">Orphan ratio</div>
+            <div class="value" style="color: oklch(0.40 0.18 25);">22%</div>
+            <div style="font-size: 9px; color: oklch(0.40 0.18 25); margin-top: 2px;">&gt; 20% · fail</div>
+          </div>
+          <div class="kpi-tile" style="border-top: 3px solid oklch(0.55 0.01 250);">
+            <div class="label">EIR fulfilment</div>
+            <div class="value" style="color: oklch(0.40 0.02 250);">—</div>
+            <div style="font-size: 9px; color: oklch(0.40 0.02 250); margin-top: 2px;">no requirements set</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Comparison: current 12-color palette vs proposed -->
+      <div class="section">
+        <h2>10 · Before / after</h2>
         <p class="lede">
           Same 12 IFC classes, rendered with current <code>CLASS_PALETTE</code> (rank-randomised brand colors) vs proposed gradient.
         </p>
