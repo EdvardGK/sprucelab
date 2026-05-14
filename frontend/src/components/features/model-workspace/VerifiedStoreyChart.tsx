@@ -269,10 +269,12 @@ function ModelStoreyRow({
   statusLabelKey,
   t,
 }: ModelStoreyRowProps) {
-  // Prefer GUID as the cross-filter key — robust against name divergence
-  // between fragments-v3 metadata and the deep analysis. Fall back to name
-  // for legacy analyses that pre-date AnalysisStorey.guid.
-  const filterKey = row.guid ?? row.name;
+  // Filter on name, not GUID. The downstream consumers (filterAnalysisTypes
+  // on storey_distribution[].storey, viewerStoreyFilter→IFC storey name)
+  // both compare against the storey name; passing GUID broke matching and
+  // collapsed every bar to zero on click. Names can collide in theory but
+  // not within a single model.
+  const filterKey = row.name;
   const isActive = activeStorey === filterKey;
   const animatedCount = useCountUp(row.element_count);
 

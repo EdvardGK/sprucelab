@@ -53,6 +53,7 @@ export default function ModelWorkspace() {
   // (different IFC schema, different storey GUIDs, etc.); leaving them
   // active produces "0 / 297" empty views with no obvious cause. Skip the
   // first run so a URL-hydrated `?d=...` survives initial load.
+  const filter = useProjectFilter();
   const { clearDimensions } = useProjectFilterActions();
   const prevModelIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -61,6 +62,20 @@ export default function ModelWorkspace() {
     }
     prevModelIdRef.current = modelId;
   }, [modelId, clearDimensions]);
+
+  // Active filter dimensions. Lives at the page level so the chip + Clear
+  // bar can sit in the tabs subheader instead of popping above the KPI
+  // cluster and pushing content down on every state change.
+  const activeFilterCount =
+    (filter.ifc_class?.length ?? 0) +
+    (filter.excluded_ifc_class?.length ?? 0) +
+    (filter.floor_code?.length ?? 0) +
+    (filter.type_guid?.length ?? 0) +
+    (filter.discipline?.length ?? 0) +
+    (filter.verification?.length ?? 0) +
+    (filter.materials?.length ?? 0) +
+    (filter.systems?.length ?? 0) +
+    (filter.ns3451?.length ?? 0);
 
   const tabs: { id: TabId; label: string }[] = [
     { id: 'overview', label: t('modelDash.tabs.overview') },
@@ -141,26 +156,47 @@ export default function ModelWorkspace() {
           </div>
         </header>
 
-        {/* Tabs Navigation */}
+        {/* Tabs Navigation. Active-filter chip row lives in the same flex
+            row, right-aligned, so it never pushes content down when a
+            filter becomes active. */}
         <div className="border-b border-border bg-background-elevated flex-shrink-0">
-          <nav className="flex px-6 space-x-1 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`
-                  px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap
-                  border-b-2 -mb-px
-                  ${activeTab === tab.id
-                    ? 'text-text-primary border-primary'
-                    : 'text-text-secondary border-transparent hover:text-text-primary hover:border-border'
-                  }
-                `}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+          <div className="flex items-stretch justify-between px-6 gap-4">
+            <nav className="flex space-x-1 overflow-x-auto">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
+                    px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap
+                    border-b-2 -mb-px
+                    ${activeTab === tab.id
+                      ? 'text-text-primary border-primary'
+                      : 'text-text-secondary border-transparent hover:text-text-primary hover:border-border'
+                    }
+                  `}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+            {activeFilterCount > 0 && (
+              <div className="flex items-center gap-2 py-1.5 min-w-0">
+                <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-signal-text whitespace-nowrap">
+                  {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'}
+                </span>
+                <FilterChips className="flex items-center gap-[3px] flex-nowrap overflow-x-auto" />
+                <button
+                  type="button"
+                  onClick={() => clearDimensions()}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-signal px-2.5 py-1 text-[0.7rem] font-semibold text-white shadow-sm transition hover:brightness-110 active:brightness-95 whitespace-nowrap"
+                  aria-label="Clear all active filters"
+                >
+                  <X className="h-3 w-3" />
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tab Content — page scrolls naturally; no inner overflow shell. */}
@@ -438,37 +474,11 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   // fed derived `floorCodeFilter`/`typeVisibility` props matching the
   // FederatedViewer wiring (PR 1.2). Click handlers on charts/tiles
   // dispatch through `useProjectFilterActions` so the viewer reacts
-  // identically to actions taken anywhere else in the app.
+  // identically to actions taken anywhere else in the app. The "N
+  // filters / Clear" chip row is rendered by the outer ModelWorkspace
+  // in the tabs subheader so it doesn't push content down.
   const filter = useProjectFilter();
-  const { setFloorCode, setIfcClass, clearDimensions } = useProjectFilterActions();
-
-  // Count of every active cross-filter dimension. Drives the Clear bar
-  // visibility and its "N filters" label. Includes every dimension the
-  // shared store carries so the Clear button truly clears everything
-  // (not just the three the dashboard surfaces directly).
-  const activeFilterCount = useMemo(() => {
-    let n = 0;
-    n += filter.ifc_class?.length ?? 0;
-    n += filter.excluded_ifc_class?.length ?? 0;
-    n += filter.floor_code?.length ?? 0;
-    n += filter.type_guid?.length ?? 0;
-    n += filter.discipline?.length ?? 0;
-    n += filter.verification?.length ?? 0;
-    n += filter.materials?.length ?? 0;
-    n += filter.systems?.length ?? 0;
-    n += filter.ns3451?.length ?? 0;
-    return n;
-  }, [
-    filter.ifc_class,
-    filter.excluded_ifc_class,
-    filter.floor_code,
-    filter.type_guid,
-    filter.discipline,
-    filter.verification,
-    filter.materials,
-    filter.systems,
-    filter.ns3451,
-  ]);
+  const { setFloorCode, setIfcClass } = useProjectFilterActions();
 
   // Cross-filter recompute (PowerBI signature). The dashboard tiles must
   // animate when the user clicks a treemap tile / storey bar / quality
@@ -495,12 +505,16 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   const viewerStoreyFilter = filter.floor_code?.[0] ?? null;
 
   // Derive type-visibility from inclusion + exclusion facets. The
-  // shared store uses raw `Ifc`-prefixed class names (e.g. `IfcWall`).
-  // Pull from `totalStats` so the universe stays the same across filter
-  // changes — otherwise an active inclusion would shrink the set and
+  // shared store uses raw `Ifc`-prefixed class names (e.g. `IfcWall`)
+  // and so does the backend's `element_class` field — so the
+  // classCounts keys are already prefixed. Don't prepend a second
+  // `Ifc` (that produced `IfcIfcWall` keys which never matched the
+  // viewer's typeInfo, silently dropping the type filter). Pull from
+  // `totalStats` so the universe stays the same across filter changes
+  // — otherwise an active inclusion would shrink the set and
   // mis-derive exclusion overlap.
   const allIfcClasses = useMemo(
-    () => Object.keys(totalStats.classCounts).map((c) => 'Ifc' + c),
+    () => Object.keys(totalStats.classCounts),
     [totalStats.classCounts],
   );
   const viewerTypeVisibility = useMemo(() => {
@@ -580,13 +594,18 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   // Always derived from the unfiltered universe so colors stay stable across
   // cross-filter changes; otherwise the slot ordering shifts when a class
   // drops out of the filtered subset and the legend stops matching the bar.
+  //
+  // Index both the prefixed form (matches viewer typeInfo + the filter
+  // store) AND the stripped form (matches Treemap tile labels which run
+  // `.replace('Ifc', '')`). Backend's `element_class` is already prefixed,
+  // so map[cls] is "IfcWall" and the strip variant is "Wall".
   const classColorMap = useMemo(() => {
     const sorted = Object.entries(totalStats.classCounts).sort((a, b) => b[1] - a[1]);
     const map: Record<string, string> = {};
     sorted.forEach(([cls, _], i) => {
       const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
-      map[cls] = color;           // "Wall" (treemap key, Ifc prefix stripped)
-      map['Ifc' + cls] = color;   // "IfcWall" (viewer typeInfo key)
+      map[cls] = color;                              // "IfcWall" (prefixed)
+      map[cls.replace(/^Ifc/, '')] = color;          // "Wall" (treemap label key)
     });
     return map;
   }, [totalStats.classCounts]);
@@ -611,29 +630,6 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   return (
     <>
       <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full flex flex-col gap-[clamp(0.4rem,0.8vw,0.75rem)]">
-        {/* Active-filter bar. Appears only when at least one cross-filter
-            dimension is set; surfaces the active chips inline and the big
-            Clear action on the right. Sits above the KPI cluster so it's
-            unmissable when filters are masking the dashboard. */}
-        {activeFilterCount > 0 && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-signal/40 bg-signal/10 px-[clamp(0.6rem,1.2vw,1rem)] py-[clamp(0.45rem,0.9vw,0.65rem)] shadow-sm">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <span className="text-[clamp(0.625rem,1vw,0.75rem)] font-semibold uppercase tracking-wider text-signal-text whitespace-nowrap">
-                {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'} active
-              </span>
-              <FilterChips className="flex items-center gap-[3px] flex-wrap" />
-            </div>
-            <button
-              type="button"
-              onClick={() => clearDimensions()}
-              className="inline-flex items-center gap-2 rounded-md bg-signal px-[clamp(0.75rem,1.5vw,1rem)] py-[clamp(0.4rem,0.8vw,0.55rem)] text-[clamp(0.7rem,1.1vw,0.85rem)] font-semibold text-white shadow-sm transition hover:brightness-110 active:brightness-95 whitespace-nowrap"
-              aria-label="Clear all active filters"
-            >
-              <X className="h-[clamp(0.85rem,1.4vw,1rem)] w-[clamp(0.85rem,1.4vw,1rem)]" />
-              Clear all filters
-            </button>
-          </div>
-        )}
         {/* Row 0 — KPI cluster (Dion-lens rework). 7 type-and-quality tiles:
             Types · Classified · With material · Untyped · Reuse · Proxy+Userdef ·
             Orphan. Element count is volume (lives in Elements card below);
@@ -674,6 +670,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <div className="flex-1 relative">
                   <Treemap
                     types={filteredTypes}
+                    classColorMap={classColorMap}
                     activeIfcClass={
                       filter.ifc_class && filter.ifc_class.length === 1
                         ? filter.ifc_class[0].replace(/^Ifc/, '')
@@ -811,7 +808,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'elements'} onClose={() => setOverlay(null)} title="Element Distribution">
         <div className="relative h-[400px]">
-          <Treemap types={filteredTypes} />
+          <Treemap types={filteredTypes} classColorMap={classColorMap} />
         </div>
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'geometry'} onClose={() => setOverlay(null)} title="Geometry">
@@ -1092,7 +1089,7 @@ const TREEMAP_COLORS = tokens.dataPalette.slots;
 
 // treemapLayout imported from @/lib/treemap
 
-function Treemap({ types, onTileClick, activeIfcClass }: { types: AnalysisTypeRecord[]; onTileClick?: (ifcClass: string) => void; activeIfcClass?: string | null }) {
+function Treemap({ types, onTileClick, activeIfcClass, classColorMap }: { types: AnalysisTypeRecord[]; onTileClick?: (ifcClass: string) => void; activeIfcClass?: string | null; classColorMap?: Record<string, string> }) {
   const items = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const t of types) {
@@ -1116,7 +1113,12 @@ function Treemap({ types, onTileClick, activeIfcClass }: { types: AnalysisTypeRe
         {rects.map((r, i) => {
           const pctX = (r.x / W) * 100, pctY = (r.y / H) * 100;
           const pctW = (r.w / W) * 100, pctH = (r.h / H) * 100;
-          const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
+          // Color must be stable across filter changes — derive from the
+          // project-wide classColorMap (built from totalStats) so a tile
+          // keeps its identity when the user clicks it and the filtered
+          // universe shrinks to just that class. Fall back to slot order
+          // if the map isn't provided (drill overlay etc).
+          const color = classColorMap?.[r.label] ?? TREEMAP_COLORS[i % TREEMAP_COLORS.length];
           const showLabel = pctW > 8 && pctH > 8;
           const isActive = activeIfcClass === r.label;
           const interactive = !!onTileClick;
