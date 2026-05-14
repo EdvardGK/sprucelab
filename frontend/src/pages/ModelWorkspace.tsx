@@ -23,6 +23,7 @@ import { tokens } from '@/lib/design-tokens';
 import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
 import { DrillTarget } from '@/components/filters/DrillTarget';
 import { useProjectFilter, useProjectFilterActions } from '@/contexts/ProjectFilterProvider';
+import { FilterChips } from '@/components/filters/FilterChips';
 import type { FilterContext } from '@/lib/embed/types';
 import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
 import { AnalysisDetailsRail } from '@/components/features/model-workspace/AnalysisDetailsRail';
@@ -439,7 +440,35 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   // dispatch through `useProjectFilterActions` so the viewer reacts
   // identically to actions taken anywhere else in the app.
   const filter = useProjectFilter();
-  const { setFloorCode, setIfcClass } = useProjectFilterActions();
+  const { setFloorCode, setIfcClass, clearDimensions } = useProjectFilterActions();
+
+  // Count of every active cross-filter dimension. Drives the Clear bar
+  // visibility and its "N filters" label. Includes every dimension the
+  // shared store carries so the Clear button truly clears everything
+  // (not just the three the dashboard surfaces directly).
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    n += filter.ifc_class?.length ?? 0;
+    n += filter.excluded_ifc_class?.length ?? 0;
+    n += filter.floor_code?.length ?? 0;
+    n += filter.type_guid?.length ?? 0;
+    n += filter.discipline?.length ?? 0;
+    n += filter.verification?.length ?? 0;
+    n += filter.materials?.length ?? 0;
+    n += filter.systems?.length ?? 0;
+    n += filter.ns3451?.length ?? 0;
+    return n;
+  }, [
+    filter.ifc_class,
+    filter.excluded_ifc_class,
+    filter.floor_code,
+    filter.type_guid,
+    filter.discipline,
+    filter.verification,
+    filter.materials,
+    filter.systems,
+    filter.ns3451,
+  ]);
 
   // Cross-filter recompute (PowerBI signature). The dashboard tiles must
   // animate when the user clicks a treemap tile / storey bar / quality
@@ -452,14 +481,6 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   const filteredTypes = useMemo(
     () => filterAnalysisTypes(analysis.types, filter),
     [analysis.types, filter.ifc_class, filter.excluded_ifc_class, filter.floor_code, filter.type_guid]
-  );
-  // For the Elements treemap: applies every facet EXCEPT ifc_class so the
-  // user can still see (and click) sibling tiles when an ifc_class filter
-  // is active. Standard cross-filter pattern — the filter source stays
-  // representative; everything else collapses to the filtered subset.
-  const treemapTypes = useMemo(
-    () => filterAnalysisTypes(analysis.types, { ...filter, ifc_class: undefined, excluded_ifc_class: undefined }),
-    [analysis.types, filter.floor_code, filter.type_guid]
   );
   const totalStats = useMemo(() => computeAnalysisStats(analysis.types), [analysis.types]);
   const filteredStats = useMemo(() => computeAnalysisStats(filteredTypes), [filteredTypes]);
@@ -495,15 +516,30 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   const drillConfig = useMemo(() => buildDrillTabs(drillSource, analysis, stats), [drillSource, analysis, stats]);
 
   // Cross-filter handlers — primary click on charts/tiles. PowerBI
-  // pattern: page reflects the click; modal escape lives behind the
+  // pattern: page reflects the click; clicking the same tile a second
+  // time toggles the dimension off; modal escape lives behind the
   // Table2 icon (`onViewData`).
   const filterByStorey = (storeyName: string | null) => {
-    setFloorCode(storeyName ? [storeyName] : undefined);
+    if (!storeyName) {
+      setFloorCode(undefined);
+      return;
+    }
+    const active = filter.floor_code;
+    const isOnly = active?.length === 1 && active[0] === storeyName;
+    setFloorCode(isOnly ? undefined : [storeyName]);
   };
   const filterByIfcClass = (cls: string) => {
     // Tile labels arrive without the `Ifc` prefix; the store uses the
     // prefixed form to match the viewer's `typeVisibility` keys.
-    setIfcClass(['Ifc' + cls]);
+    const prefixed = 'Ifc' + cls;
+    const active = filter.ifc_class;
+    const isOnly = active?.length === 1 && active[0] === prefixed;
+    if (isOnly) {
+      setIfcClass(undefined);
+      setSelectedTypeIfcClass(null);
+      return;
+    }
+    setIfcClass([prefixed]);
     // Track C lift: clicking a treemap tile also targets the details
     // rail at the most-frequent type in that class. Stored without the
     // `Ifc` prefix to match the treemap's label key.
@@ -575,6 +611,29 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   return (
     <>
       <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full flex flex-col gap-[clamp(0.4rem,0.8vw,0.75rem)]">
+        {/* Active-filter bar. Appears only when at least one cross-filter
+            dimension is set; surfaces the active chips inline and the big
+            Clear action on the right. Sits above the KPI cluster so it's
+            unmissable when filters are masking the dashboard. */}
+        {activeFilterCount > 0 && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-signal/40 bg-signal/10 px-[clamp(0.6rem,1.2vw,1rem)] py-[clamp(0.45rem,0.9vw,0.65rem)] shadow-sm">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span className="text-[clamp(0.625rem,1vw,0.75rem)] font-semibold uppercase tracking-wider text-signal-text whitespace-nowrap">
+                {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'} active
+              </span>
+              <FilterChips className="flex items-center gap-[3px] flex-wrap" />
+            </div>
+            <button
+              type="button"
+              onClick={() => clearDimensions()}
+              className="inline-flex items-center gap-2 rounded-md bg-signal px-[clamp(0.75rem,1.5vw,1rem)] py-[clamp(0.4rem,0.8vw,0.55rem)] text-[clamp(0.7rem,1.1vw,0.85rem)] font-semibold text-white shadow-sm transition hover:brightness-110 active:brightness-95 whitespace-nowrap"
+              aria-label="Clear all active filters"
+            >
+              <X className="h-[clamp(0.85rem,1.4vw,1rem)] w-[clamp(0.85rem,1.4vw,1rem)]" />
+              Clear all filters
+            </button>
+          </div>
+        )}
         {/* Row 0 — KPI cluster (Dion-lens rework). 7 type-and-quality tiles:
             Types · Classified · With material · Untyped · Reuse · Proxy+Userdef ·
             Orphan. Element count is volume (lives in Elements card below);
@@ -614,7 +673,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 />
                 <div className="flex-1 relative">
                   <Treemap
-                    types={treemapTypes}
+                    types={filteredTypes}
                     activeIfcClass={
                       filter.ifc_class && filter.ifc_class.length === 1
                         ? filter.ifc_class[0].replace(/^Ifc/, '')
@@ -752,10 +811,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'elements'} onClose={() => setOverlay(null)} title="Element Distribution">
         <div className="relative h-[400px]">
-          {/* Elements overlay uses `treemapTypes` (everything except the
-              ifc_class facet) so the user can still see sibling classes
-              when a treemap-tile filter is active. */}
-          <Treemap types={treemapTypes} />
+          <Treemap types={filteredTypes} />
         </div>
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'geometry'} onClose={() => setOverlay(null)} title="Geometry">
