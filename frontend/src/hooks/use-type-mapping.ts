@@ -88,12 +88,22 @@ export function useModelTypes(modelId: string, options: UseModelTypesOptions = {
       const params = new URLSearchParams();
       params.append('model', modelId);
       if (ifc_type) params.append('ifc_type', ifc_type);
+      // Mapping workflow needs all types in one shot AND the nested mapping
+      // object (definition_layers, properties). Backend default is now
+      // paginated (100/page) + thin serializer; expand=mapping opts back into
+      // the heavy serializer, and page_size=10000 collapses pagination so this
+      // hook keeps returning a flat array. See backend/apps/entities/views/types.py.
+      params.append('page_size', '10000');
+      params.append('expand', 'mapping');
 
-      // Types endpoint returns unpaginated array (pagination disabled for mapping workflow)
-      const response = await apiClient.get<IFCType[]>(
+      const response = await apiClient.get<PaginatedResponse<IFCType> | IFCType[]>(
         `/types/types/?${params}`
       );
-      return response.data || [];
+      // Tolerate both shapes for safety (older mocks/tests may still hand back
+      // a raw array). DRF paginated payloads expose `results`.
+      const data = response.data;
+      if (Array.isArray(data)) return data;
+      return data?.results ?? [];
     },
     enabled: !!modelId && enabled,
   });

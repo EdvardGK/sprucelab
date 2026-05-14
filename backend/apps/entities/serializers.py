@@ -241,6 +241,42 @@ class IFCTypeWithMappingSerializer(serializers.ModelSerializer):
         return obj.instance_count
 
 
+class IFCTypeListSerializer(serializers.ModelSerializer):
+    """Lightweight list serializer — used for the paginated list view.
+
+    Drops the nested ``mapping`` object (with its ``definition_layers``) and
+    the per-type ``properties`` JSON blob to keep payloads thin. Callers that
+    need the full nested mapping / layers / properties either:
+
+    - hit ``/api/types/types/{id}/`` (retrieve action returns the heavy
+      ``IFCTypeWithMappingSerializer``), or
+    - pass ``?expand=mapping`` on the list endpoint to opt into the heavy
+      serializer for the legacy mapping workflow.
+    """
+
+    mapping_status = serializers.CharField(
+        source='mapping.mapping_status', read_only=True, default=None,
+    )
+    ns3451_code = serializers.CharField(
+        source='mapping.ns3451_code', read_only=True, default=None,
+    )
+    verification_status = serializers.CharField(
+        source='mapping.verification_status', read_only=True, default=None,
+    )
+    representative_unit = serializers.CharField(
+        source='mapping.representative_unit', read_only=True, default=None,
+    )
+
+    class Meta:
+        model = IFCType
+        fields = [
+            'id', 'model', 'type_guid', 'type_name', 'ifc_type',
+            'entity_ifc_type', 'instance_count',
+            'mapping_status', 'ns3451_code', 'verification_status',
+            'representative_unit',
+        ]
+
+
 class MaterialMappingSerializer(serializers.ModelSerializer):
     """Serializer for material mappings."""
 

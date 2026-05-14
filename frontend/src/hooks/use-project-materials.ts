@@ -1,6 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import apiClient from '@/lib/api-client';
+import type { PaginatedResponse } from '@/lib/api-types';
 import { useModels } from './use-models';
 import {
   warehouseKeys,
@@ -421,11 +422,20 @@ export function useProjectMaterials(projectId: string | undefined): {
       queryFn: async () => {
         const params = new URLSearchParams();
         params.append('model', model.id);
-        const response = await apiClient.get<IFCType[]>(`/types/types/?${params}`);
+        // Project-materials aggregates definition_layers across every type, so
+        // we need both the nested mapping object (?expand=mapping) and every
+        // row in a single response (?page_size=10000). See use-type-mapping.ts.
+        params.append('page_size', '10000');
+        params.append('expand', 'mapping');
+        const response = await apiClient.get<PaginatedResponse<IFCType> | IFCType[]>(
+          `/types/types/?${params}`,
+        );
+        const data = response.data;
+        const types = Array.isArray(data) ? data : data?.results ?? [];
         return {
           modelId: model.id,
           modelName: model.name,
-          types: response.data || [],
+          types,
         };
       },
       staleTime: 30 * 1000,

@@ -9,6 +9,7 @@ from io import BytesIO
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from django.http import HttpResponse
 from django.db.models import Count, Prefetch
@@ -17,11 +18,32 @@ from ..models import (
     IFCType, TypeMapping, TypeDefinitionLayer, PropertySet,
 )
 from ..serializers import (
-    IFCTypeWithMappingSerializer, TypeMappingSerializer, TypeDefinitionLayerSerializer,
+    IFCTypeWithMappingSerializer, IFCTypeListSerializer,
+    TypeMappingSerializer, TypeDefinitionLayerSerializer,
 )
 from ..services.excel_export import export_types_to_excel
 from ..services.excel_import import import_types_from_excel
 from ..services.reduzer_export import export_types_to_reduzer
+
+
+class IFCTypesPagination(PageNumberPagination):
+    """Pagination for the types list endpoint.
+
+    Default page size 100 (per CLAUDE.md "Paginate large lists"). Callers
+    that genuinely need the full set (mapping workflow, project-level
+    material aggregation) pass ``?page_size=10000``.
+    """
+    page_size = 100
+    page_size_query_param = 'page_size'
+    max_page_size = 10000
+
+
+def _wants_expanded_mapping(request) -> bool:
+    """True when ``?expand=mapping`` (or ``?expand=mapping,...``) is set."""
+    raw = (request.query_params.get('expand') or '').strip()
+    if not raw:
+        return False
+    return 'mapping' in {part.strip() for part in raw.split(',') if part.strip()}
 
 
 class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -32,23 +54,35 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
     GET /api/types/{id}/ - Get single type with mapping
     GET /api/types/?model={id}&ifc_type=IfcWallType - Filter by IFC class
 
-    Returns instance_count (how many entities use this type) and
-    mapping object (NS3451 code, status, etc.)
+    Returns instance_count and a thin set of mapping fields by default.
 
-    Note: Pagination disabled - types are small and mapping workflow needs all of them.
-    Typical models have 50-500 types; even 1000+ types is fine to return at once.
+    Serializer/queryset shape:
+    - List action paginates (100/page default, configurable via ``?page_size=``)
+      and serializes with ``IFCTypeListSerializer`` (no nested mapping object,
+      no properties blob).
+    - Detail action (``GET /api/types/types/{id}/``) returns the full
+      ``IFCTypeWithMappingSerializer`` payload (mapping + definition_layers
+      + properties).
+    - Mapping workflow callers that need the full set on list pass
+      ``?page_size=10000&expand=mapping`` — that opts back into the heavy
+      serializer (and the heavy prefetch) for a single response.
+
+    The historical ``pagination_class = None`` was the root cause of a 7 MB
+    ``?limit=50`` payload measured on prod (limit was silently ignored and
+    every row inlined mapping + layers).
     """
-    queryset = IFCType.objects.select_related(
-        'mapping', 'mapping__ns3451'
-    ).prefetch_related(
-        Prefetch('mapping__definition_layers', queryset=TypeDefinitionLayer.objects.order_by('layer_order'))
-    ).all()
-    serializer_class = IFCTypeWithMappingSerializer
-    pagination_class = None  # Return all types - needed for mapping workflow
+    serializer_class = IFCTypeWithMappingSerializer  # retrieve / fallback default
+    pagination_class = IFCTypesPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['model', 'ifc_type']
     search_fields = ['type_name', 'ifc_type']
     ordering = ['ifc_type', 'type_name']
+
+    def get_serializer_class(self):
+        """Thin serializer for list (unless ?expand=mapping); heavy for retrieve."""
+        if self.action == 'list' and not _wants_expanded_mapping(self.request):
+            return IFCTypeListSerializer
+        return IFCTypeWithMappingSerializer
 
     def get_queryset(self):
         """
@@ -56,8 +90,23 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
 
         Use ?include_unused=true to show all types including unused ones.
         This reduces noise from template types that have no instances in the model.
+
+        Heavy prefetches (mapping__definition_layers) are only applied when
+        they will actually be serialized — detail retrieve, or list with
+        ?expand=mapping. The default paginated list skips them.
         """
-        qs = super().get_queryset()
+        qs = IFCType.objects.select_related('mapping', 'mapping__ns3451')
+
+        is_list = self.action == 'list'
+        expanded = is_list and _wants_expanded_mapping(self.request)
+        if not is_list or expanded:
+            # retrieve + expanded list need the full nested layers
+            qs = qs.prefetch_related(
+                Prefetch(
+                    'mapping__definition_layers',
+                    queryset=TypeDefinitionLayer.objects.order_by('layer_order'),
+                )
+            )
 
         include_unused = self.request.query_params.get('include_unused', 'false').lower() == 'true'
         if not include_unused:
