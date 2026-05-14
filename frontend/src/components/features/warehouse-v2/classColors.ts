@@ -1,24 +1,23 @@
 /**
- * Shared IFC-class color vocabulary. Used by the treemap, the KPI
- * sparklines, the table row stripes, and any future color-by-class
- * surface. Sort the classes by instance count first so the dominant
- * class always renders in the brand-forest green and the rest
- * cascade through the Mindful Palettes No. 160 + ramp.
+ * Shared IFC-class color vocabulary for treemaps, KPI sparklines, table
+ * row stripes, and any color-by-class surface.
+ *
+ * Backed by the gradient generator at `lib/colorMath.ts` — palette slots
+ * are deterministic samples of a lime → forest → navy polyline in
+ * OKLCH, subdivided via the van der Corput / bit-reversal sequence.
+ * See `docs/wireframes/color-system.html` for the visual model.
+ *
+ * Assignment: classes are ranked by total instance count (dominant first;
+ * ties broken alphabetically), then mapped to slots 0..N. Dominant
+ * classes land on low slot numbers, which the bit-reversal places at
+ * maximum perceptual separation — important for treemap readability
+ * where the largest cells are read first.
  */
-export const CLASS_PALETTE = [
-  '#157954', '#C7CEE8', '#D0D34D', '#21263A', '#2dd4a0',
-  '#fb923c', '#f87171', '#818cf8', '#38bdf8', '#a78bfa',
-  '#34d399', '#fbbf24',
-];
 
-/**
- * Build a stable ifcClass→color map from a list of types. Classes are
- * ranked by total instance count, descending; ties broken by alpha.
- * Use the same map across treemap + sparklines + table to keep the
- * color vocabulary cohesive.
- */
+import { paletteSlot } from '@/lib/colorMath';
+
 export function buildClassColorMap(
-  types: Array<{ ifc_type: string; instance_count: number }>
+  types: Array<{ ifc_type: string; instance_count: number }>,
 ): Map<string, string> {
   const counts: Record<string, number> = {};
   for (const t of types) {
@@ -30,7 +29,7 @@ export function buildClassColorMap(
   });
   const map = new Map<string, string>();
   ranked.forEach(([ifcClass], i) => {
-    map.set(ifcClass, CLASS_PALETTE[i % CLASS_PALETTE.length]);
+    map.set(ifcClass, paletteSlot(i));
   });
   return map;
 }
