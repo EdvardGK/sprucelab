@@ -282,3 +282,7 @@ backend/supabase/
 
 # Stray install logs
 sunshine-install-log.txt
+
+# Claude Code agent worktrees (transient git worktrees from subagent runs)
+.claude/worktrees/
+
