@@ -761,6 +761,11 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         - healthy (green): >= 80
         - warning (yellow): >= 50
         - critical (red): < 50
+
+        Performance: per type-queryset, all counts collapse into two aggregate
+        queries (one for the material-layer Exists annotation, one for the
+        remaining conditional counts). Was ~11 queries before, regardless of
+        scope size.
         """
         from django.db.models import Count, Q, Exists, OuterRef
         from apps.models.models import Model
@@ -774,12 +779,87 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        def calculate_health_score(types_qs):
-            """Calculate health score for a queryset of types."""
-            total = types_qs.count()
+        def compute_metrics(types_qs):
+            """
+            Collapse all health-score + status-count counts into a single
+            aggregate() call (plus one Exists-annotation pre-pass for the
+            material layer check). Returns the same key set the old
+            calculate_health_score + get_status_counts pair produced, so the
+            outer response shape is preserved exactly.
+            """
+            has_material_layer = TypeDefinitionLayer.objects.filter(
+                type_mapping=OuterRef('mapping'),
+                quantity_per_unit__gt=0,
+            )
+
+            agg = types_qs.annotate(
+                has_layers=Exists(has_material_layer)
+            ).aggregate(
+                total=Count('id'),
+                with_ns3451=Count(
+                    'id',
+                    filter=Q(mapping__ns3451_code__isnull=False)
+                    & ~Q(mapping__ns3451_code=''),
+                ),
+                with_unit=Count(
+                    'id',
+                    filter=Q(mapping__representative_unit__isnull=False)
+                    & ~Q(mapping__representative_unit=''),
+                ),
+                with_materials=Count(
+                    'id',
+                    filter=Q(mapping__isnull=False) & Q(has_layers=True),
+                ),
+                verified_ok=Count(
+                    'id',
+                    filter=Q(mapping__verification_status__in=['auto', 'verified'])
+                    & ~Q(mapping__verification_status='flagged'),
+                ),
+                verification_failed=Count(
+                    'id',
+                    filter=Q(mapping__verification_status='flagged'),
+                ),
+                verification_pending=Count(
+                    'id',
+                    filter=Q(mapping__verification_status='pending')
+                    | Q(mapping__isnull=True),
+                ),
+                mapped=Count(
+                    'id',
+                    filter=Q(mapping__mapping_status='mapped'),
+                ),
+                pending=Count(
+                    'id',
+                    filter=Q(mapping__mapping_status='pending')
+                    | Q(mapping__isnull=True),
+                ),
+                ignored=Count(
+                    'id',
+                    filter=Q(mapping__mapping_status='ignored'),
+                ),
+                review=Count(
+                    'id',
+                    filter=Q(mapping__mapping_status='review'),
+                ),
+                followup=Count(
+                    'id',
+                    filter=Q(mapping__mapping_status='followup'),
+                ),
+            )
+
+            total = agg['total']
             if total == 0:
+                # Match the OLD merged shape exactly: spread of the old
+                # calculate_health_score + get_status_counts empty returns.
+                # Health-block emitted 'total' (not 'total_types') and the
+                # '_score' keys (not '_percent'); the spread of counts then
+                # added 'total' (re-asserted as 0), mapped/pending/etc., and
+                # progress_percent. We include 'total_types' too because the
+                # per-model loop reads it to decide whether to skip a model
+                # — that read used to be guarded by a separate .count() call.
                 return {
                     'total': 0,
+                    'total_types': 0,
                     'health_score': 0,
                     'status': 'critical',
                     'classification_score': 0,
@@ -790,59 +870,31 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                     'verification_warning': 0,
                     'verification_failed': 0,
                     'verification_pending': 0,
+                    'mapped': 0,
+                    'pending': 0,
+                    'ignored': 0,
+                    'review': 0,
+                    'followup': 0,
+                    'progress_percent': 0,
                 }
 
-            # Classification score (30%): types with NS3451 code
-            with_ns3451 = types_qs.filter(
-                mapping__ns3451_code__isnull=False
-            ).exclude(mapping__ns3451_code='').count()
-            classification_score = (with_ns3451 / total) * 100
+            classification_score = (agg['with_ns3451'] / total) * 100
+            unit_score = (agg['with_unit'] / total) * 100
+            material_score = (agg['with_materials'] / total) * 100
 
-            # Unit score (15%): types with representative_unit
-            with_unit = types_qs.filter(
-                mapping__representative_unit__isnull=False
-            ).exclude(mapping__representative_unit='').count()
-            unit_score = (with_unit / total) * 100
-
-            # Material score (25%): types with at least 1 material layer with quantity > 0
-            has_material_layer = TypeDefinitionLayer.objects.filter(
-                type_mapping=OuterRef('mapping'),
-                quantity_per_unit__gt=0
+            checked = total - agg['verification_pending']
+            verification_score = (
+                (agg['verified_ok'] / checked * 100) if checked > 0 else 0
             )
-            with_materials = types_qs.filter(
-                mapping__isnull=False
-            ).annotate(
-                has_layers=Exists(has_material_layer)
-            ).filter(has_layers=True).count()
-            material_score = (with_materials / total) * 100
 
-            # Verification score (30%): types with no verification errors
-            # verification_status: pending, auto (engine-checked), verified (human), flagged (errors)
-            verified_ok = types_qs.filter(
-                mapping__verification_status__in=['auto', 'verified']
-            ).exclude(
-                mapping__verification_status='flagged'
-            ).count()
-            verification_failed = types_qs.filter(
-                mapping__verification_status='flagged'
-            ).count()
-            verification_pending = types_qs.filter(
-                Q(mapping__verification_status='pending') | Q(mapping__isnull=True)
-            ).count()
-            # For score: only count non-pending types (verified types / checked types)
-            checked = total - verification_pending
-            verification_score = (verified_ok / checked * 100) if checked > 0 else 0
-
-            # Composite health score
             health_score = round(
-                classification_score * 0.30 +
-                unit_score * 0.15 +
-                material_score * 0.25 +
-                verification_score * 0.30,
-                1
+                classification_score * 0.30
+                + unit_score * 0.15
+                + material_score * 0.25
+                + verification_score * 0.30,
+                1,
             )
 
-            # Status threshold
             if health_score >= 80:
                 health_status = 'healthy'
             elif health_score >= 50:
@@ -851,6 +903,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 health_status = 'critical'
 
             return {
+                # health-score block (was calculate_health_score)
                 'total_types': total,
                 'health_score': health_score,
                 'status': health_status,
@@ -858,31 +911,20 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'unit_percent': round(unit_score, 1),
                 'material_percent': round(material_score, 1),
                 'verification_percent': round(verification_score, 1),
-                'verification_passed': verified_ok,
+                'verification_passed': agg['verified_ok'],
                 'verification_warning': 0,  # counted via issues, not status
-                'verification_failed': verification_failed,
-                'verification_pending': verification_pending,
-            }
-
-        def get_status_counts(types_qs):
-            """Get mapping status counts."""
-            total = types_qs.count()
-            mapped = types_qs.filter(mapping__mapping_status='mapped').count()
-            pending = types_qs.filter(
-                Q(mapping__mapping_status='pending') | Q(mapping__isnull=True)
-            ).count()
-            ignored = types_qs.filter(mapping__mapping_status='ignored').count()
-            review = types_qs.filter(mapping__mapping_status='review').count()
-            followup = types_qs.filter(mapping__mapping_status='followup').count()
-
-            return {
+                'verification_failed': agg['verification_failed'],
+                'verification_pending': agg['verification_pending'],
+                # mapping-status block (was get_status_counts)
                 'total': total,
-                'mapped': mapped,
-                'pending': pending,
-                'ignored': ignored,
-                'review': review,
-                'followup': followup,
-                'progress_percent': round((mapped / total * 100) if total > 0 else 0, 1),
+                'mapped': agg['mapped'],
+                'pending': agg['pending'],
+                'ignored': agg['ignored'],
+                'review': agg['review'],
+                'followup': agg['followup'],
+                'progress_percent': round(
+                    (agg['mapped'] / total * 100) if total > 0 else 0, 1
+                ),
             }
 
         # Single model mode
@@ -893,15 +935,13 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             if not model:
                 return Response({'error': 'Model not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            health = calculate_health_score(types_qs)
-            counts = get_status_counts(types_qs)
+            metrics = compute_metrics(types_qs)
 
             return Response({
                 'mode': 'model',
                 'model_id': model_id,
                 'model_name': model.name,
-                **health,
-                **counts,
+                **metrics,
             })
 
         # Project mode - aggregate across all models
@@ -914,18 +954,15 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             model__project_id=project_id,
             instance_count__gt=0
         )
-        project_health = calculate_health_score(all_types)
-        project_counts = get_status_counts(all_types)
+        project_metrics = compute_metrics(all_types)
 
         # Per-model breakdown
         model_breakdown = []
         for model in models:
             model_types = IFCType.objects.filter(model=model, instance_count__gt=0)
-            if model_types.count() == 0:
+            m_metrics = compute_metrics(model_types)
+            if m_metrics['total_types'] == 0:
                 continue  # Skip models with no types
-
-            m_health = calculate_health_score(model_types)
-            m_counts = get_status_counts(model_types)
 
             # Get discipline from model name or mapping
             discipline = None
@@ -940,14 +977,14 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'id': str(model.id),
                 'name': model.name,
                 'discipline': discipline,
-                'total_types': m_health['total_types'],
-                'mapped': m_counts['mapped'],
-                'pending': m_counts['pending'],
-                'ignored': m_counts['ignored'],
-                'review': m_counts['review'],
-                'followup': m_counts['followup'],
-                'health_score': m_health['health_score'],
-                'status': m_health['status'],
+                'total_types': m_metrics['total_types'],
+                'mapped': m_metrics['mapped'],
+                'pending': m_metrics['pending'],
+                'ignored': m_metrics['ignored'],
+                'review': m_metrics['review'],
+                'followup': m_metrics['followup'],
+                'health_score': m_metrics['health_score'],
+                'status': m_metrics['status'],
             })
 
         # Sort by health score (worst first for attention)
@@ -1041,10 +1078,7 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({
             'mode': 'project',
             'project_id': project_id,
-            'project_summary': {
-                **project_health,
-                **project_counts,
-            },
+            'project_summary': project_metrics,
             'models': model_breakdown,
             'by_discipline': by_discipline,
             'action_items': action_items,
