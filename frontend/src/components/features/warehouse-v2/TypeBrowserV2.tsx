@@ -7,6 +7,7 @@ import {
   useProjectFilter,
   useProjectFilterActions,
 } from '@/contexts/ProjectFilterProvider';
+import { FilteredEmptyBanner } from '@/components/filters/FilteredEmptyBanner';
 import { useModels } from '@/hooks/use-models';
 import { useModelTypes, type IFCType } from '@/hooks/use-warehouse';
 
@@ -246,6 +247,12 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         uniqueIfcClasses={uniqueIfcClasses}
         totalCount={types.length}
         filteredCount={filteredTypes.length}
+      />
+
+      <FilteredEmptyBanner
+        filteredCount={filteredTypes.length}
+        totalCount={types.length}
+        noun={t('typesV2.filteredEmpty.noun')}
       />
 
       {isLoading ? (

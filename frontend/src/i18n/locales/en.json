@@ -1770,9 +1770,19 @@
       "isActive": "Active immediately"
     }
   },
+  "filteredEmpty": {
+    "defaultNoun": "rows",
+    "message": "All {{total}} {{noun}} are hidden by your active filters.",
+    "hint": "{{filters}} filter{{count, plural, one {} other {s}}} active.",
+    "clear": "Clear filters",
+    "clearAria": "Clear all active filters"
+  },
   "typesV2": {
     "title": "Types",
     "subtitle": "What's in the model, and what's missing.",
+    "filteredEmpty": {
+      "noun": "types"
+    },
     "tryV1Link": "Switch to classic view",
     "loading": "Loading types...",
     "noModels": "Upload a model to start browsing types.",
@@ -2035,6 +2045,9 @@
     }
   },
   "modelDash": {
+    "filteredEmpty": {
+      "noun": "types"
+    },
     "tabs": {
       "overview": "Overview",
       "qto": "QTO",

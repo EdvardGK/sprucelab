@@ -22,8 +22,13 @@ import { treemapLayout } from '@/lib/treemap';
 import { tokens } from '@/lib/design-tokens';
 import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
 import { DrillTarget } from '@/components/filters/DrillTarget';
-import { useProjectFilter, useProjectFilterActions } from '@/contexts/ProjectFilterProvider';
+import {
+  useActiveFilterCount,
+  useProjectFilter,
+  useProjectFilterActions,
+} from '@/contexts/ProjectFilterProvider';
 import { FilterChips } from '@/components/filters/FilterChips';
+import { FilteredEmptyBanner } from '@/components/filters/FilteredEmptyBanner';
 import type { FilterContext } from '@/lib/embed/types';
 import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
 import { AnalysisDetailsRail } from '@/components/features/model-workspace/AnalysisDetailsRail';
@@ -53,7 +58,6 @@ export default function ModelWorkspace() {
   // (different IFC schema, different storey GUIDs, etc.); leaving them
   // active produces "0 / 297" empty views with no obvious cause. Skip the
   // first run so a URL-hydrated `?d=...` survives initial load.
-  const filter = useProjectFilter();
   const { clearDimensions } = useProjectFilterActions();
   const prevModelIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -66,16 +70,7 @@ export default function ModelWorkspace() {
   // Active filter dimensions. Lives at the page level so the chip + Clear
   // bar can sit in the tabs subheader instead of popping above the KPI
   // cluster and pushing content down on every state change.
-  const activeFilterCount =
-    (filter.ifc_class?.length ?? 0) +
-    (filter.excluded_ifc_class?.length ?? 0) +
-    (filter.floor_code?.length ?? 0) +
-    (filter.type_guid?.length ?? 0) +
-    (filter.discipline?.length ?? 0) +
-    (filter.verification?.length ?? 0) +
-    (filter.materials?.length ?? 0) +
-    (filter.systems?.length ?? 0) +
-    (filter.ns3451?.length ?? 0);
+  const activeFilterCount = useActiveFilterCount();
 
   const tabs: { id: TabId; label: string }[] = [
     { id: 'overview', label: t('modelDash.tabs.overview') },
@@ -455,6 +450,7 @@ function buildDrillTabs(source: DrillSource, analysis: ModelAnalysis, stats: Ana
 }
 
 function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model: Model }) {
+  const { t } = useTranslation();
   const { data: storeyVerification } = useModelStoreyVerification(model.id);
   const [overlay, setOverlay] = useState<OverlayType>(null);
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
@@ -630,6 +626,11 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   return (
     <>
       <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full flex flex-col gap-[clamp(0.4rem,0.8vw,0.75rem)]">
+        <FilteredEmptyBanner
+          filteredCount={filteredTypes.length}
+          totalCount={analysis.types.length}
+          noun={t('modelDash.filteredEmpty.noun')}
+        />
         {/* Row 0 — KPI cluster (Dion-lens rework). 7 type-and-quality tiles:
             Types · Classified · With material · Untyped · Reuse · Proxy+Userdef ·
             Orphan. Element count is volume (lives in Elements card below);

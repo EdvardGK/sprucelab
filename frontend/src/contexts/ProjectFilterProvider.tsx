@@ -161,6 +161,29 @@ export function useProjectFilter(): FilterContext {
   return ctx;
 }
 
+/**
+ * Count of active filter dimensions across the user-visible facets. Drives
+ * the chip-row "N filters · Clear" header AND the filtered-empty banner
+ * that warns the user when their filters hide every row (otherwise reads
+ * like a backend failure). `selected_*` and `hidden_models` are pure
+ * UI-selection state, not user-asserted filters, so they're excluded.
+ */
+export function useActiveFilterCount(): number {
+  const filter = useProjectFilter();
+  return (
+    (filter.ifc_class?.length ?? 0) +
+    (filter.excluded_ifc_class?.length ?? 0) +
+    (filter.floor_code?.length ?? 0) +
+    (filter.type_guid?.length ?? 0) +
+    (filter.discipline?.length ?? 0) +
+    (filter.verification?.length ?? 0) +
+    (filter.materials?.length ?? 0) +
+    (filter.systems?.length ?? 0) +
+    (filter.ns3451?.length ?? 0) +
+    (filter.mmi ? 1 : 0)
+  );
+}
+
 /** Get the dispatcher. Throws if used outside the provider. */
 export function useProjectFilterDispatch(): Dispatch<FilterAction> {
   const dispatch = useContext(FilterDispatchContext);

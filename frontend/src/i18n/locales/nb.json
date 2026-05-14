@@ -1770,9 +1770,19 @@
       "isActive": "Aktiv umiddelbart"
     }
   },
+  "filteredEmpty": {
+    "defaultNoun": "rader",
+    "message": "Alle {{total}} {{noun}} er skjult av aktive filtre.",
+    "hint": "{{filters}} aktivt filter{{count, plural, one {} other {e}}}.",
+    "clear": "Fjern filtre",
+    "clearAria": "Fjern alle aktive filtre"
+  },
   "typesV2": {
     "title": "Typer",
     "subtitle": "Hva som er i modellen, og hva som mangler.",
+    "filteredEmpty": {
+      "noun": "typer"
+    },
     "tryV1Link": "Bytt til klassisk visning",
     "loading": "Laster typer...",
     "noModels": "Last opp en modell for å begynne å utforske typer.",
@@ -2035,6 +2045,9 @@
     }
   },
   "modelDash": {
+    "filteredEmpty": {
+      "noun": "typer"
+    },
     "tabs": {
       "overview": "Oversikt",
       "qto": "Mengder",
