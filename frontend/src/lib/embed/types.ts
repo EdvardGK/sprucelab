@@ -107,6 +107,13 @@ export interface FilterContext {
   excluded_ifc_class?: string[];
   /** Canonical floor codes (matches Scope.canonical_floors[].code). */
   floor_code?: string[];
+  /**
+   * Canonical IFC GlobalId of the IfcTypeObject (or synthetic-hash for
+   * proxy/userdef). Mirrors `floor_code`'s role as a GUID-bridged
+   * cross-filter key. Single-select today; array shape leaves room for
+   * multi-select without a protocol bump.
+   */
+  type_guid?: string[];
   discipline?: string[];
   /** MMI score range; both bounds inclusive. */
   mmi?: NumericRange;
@@ -224,6 +231,7 @@ export function createFilterContext(seed: FilterContextSeed): FilterContext {
       ? { excluded_ifc_class: seed.excluded_ifc_class }
       : {}),
     ...(seed.floor_code !== undefined ? { floor_code: seed.floor_code } : {}),
+    ...(seed.type_guid !== undefined ? { type_guid: seed.type_guid } : {}),
     ...(seed.discipline !== undefined ? { discipline: seed.discipline } : {}),
     ...(seed.mmi !== undefined ? { mmi: seed.mmi } : {}),
     ...(seed.materials !== undefined ? { materials: seed.materials } : {}),

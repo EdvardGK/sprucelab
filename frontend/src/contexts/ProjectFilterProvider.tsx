@@ -38,6 +38,7 @@ type ArrayDimensionKey =
   | 'ifc_class'
   | 'excluded_ifc_class'
   | 'floor_code'
+  | 'type_guid'
   | 'discipline'
   | 'materials'
   | 'type_id'
@@ -199,6 +200,11 @@ export function useProjectFilterActions() {
       dispatch({ type: 'set_dimension', key: 'floor_code', value }),
     [dispatch],
   );
+  const setTypeGuid = useCallback(
+    (value: string[] | undefined) =>
+      dispatch({ type: 'set_dimension', key: 'type_guid', value }),
+    [dispatch],
+  );
   const setDiscipline = useCallback(
     (value: string[] | undefined) =>
       dispatch({ type: 'set_dimension', key: 'discipline', value }),
@@ -273,6 +279,7 @@ export function useProjectFilterActions() {
       setIfcClass,
       setExcludedIfcClass,
       setFloorCode,
+      setTypeGuid,
       setDiscipline,
       setMaterials,
       setTypeId,
@@ -294,6 +301,7 @@ export function useProjectFilterActions() {
       setIfcClass,
       setExcludedIfcClass,
       setFloorCode,
+      setTypeGuid,
       setDiscipline,
       setMaterials,
       setTypeId,

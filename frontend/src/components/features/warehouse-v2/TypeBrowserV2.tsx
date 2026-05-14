@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 
 import { DashboardGrid, PageShell, type DashboardLayoutDefinition } from '@/components/Layout';
+import {
+  useProjectFilter,
+  useProjectFilterActions,
+} from '@/contexts/ProjectFilterProvider';
 import { useModels } from '@/hooks/use-models';
 import { useModelTypes, type IFCType } from '@/hooks/use-warehouse';
 
@@ -33,7 +37,15 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const [modelId, setModelId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [ifcClassFilter, setIfcClassFilter] = useState<string>('all');
-  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  // Selection state: canonical `type_guid` lives in the project filter
+  // provider (URL-serialised, shareable, cross-filter-composable — mirrors
+  // Layer 1's floor_code). Null-guid types (rare; untyped/synthetic) fall
+  // back to a local id-keyed state so they remain selectable in-session
+  // but don't pollute the URL.
+  const filterCtx = useProjectFilter();
+  const { setTypeGuid } = useProjectFilterActions();
+  const activeTypeGuid = filterCtx.type_guid?.[0] ?? null;
+  const [localFallbackTypeId, setLocalFallbackTypeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!modelId && models.length > 0) {
@@ -41,9 +53,19 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     }
   }, [models, modelId]);
 
+  // Clear selection when filters change. Skip the initial mount run so a
+  // URL-hydrated `?d=...type_guid=...` survives the first render — the
+  // dependency tuple's initial values would otherwise wipe it before the
+  // user ever interacts.
+  const selectionResetMountedRef = useRef(false);
   useEffect(() => {
-    setSelectedTypeId(null);
-  }, [modelId, ifcClassFilter, searchQuery]);
+    if (!selectionResetMountedRef.current) {
+      selectionResetMountedRef.current = true;
+      return;
+    }
+    setTypeGuid(undefined);
+    setLocalFallbackTypeId(null);
+  }, [modelId, ifcClassFilter, searchQuery, setTypeGuid]);
 
   const {
     data: types = [],
@@ -145,10 +167,47 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     return Array.from(set).sort();
   }, [types]);
 
-  const selectedType = useMemo(
-    () => filteredTypes.find((tp) => tp.id === selectedTypeId) ?? null,
-    [filteredTypes, selectedTypeId]
+  const selectedType = useMemo(() => {
+    if (activeTypeGuid) {
+      return filteredTypes.find((tp) => tp.type_guid === activeTypeGuid) ?? null;
+    }
+    if (localFallbackTypeId) {
+      return filteredTypes.find((tp) => tp.id === localFallbackTypeId) ?? null;
+    }
+    return null;
+  }, [filteredTypes, activeTypeGuid, localFallbackTypeId]);
+  const selectedTypeId = selectedType?.id ?? null;
+
+  const handleSelectType = useCallback(
+    (typeId: string | null) => {
+      if (typeId === null) {
+        setTypeGuid(undefined);
+        setLocalFallbackTypeId(null);
+        return;
+      }
+      const candidate = filteredTypes.find((tp) => tp.id === typeId);
+      if (!candidate) return;
+      if (candidate.type_guid) {
+        setTypeGuid([candidate.type_guid]);
+        setLocalFallbackTypeId(null);
+      } else {
+        setTypeGuid(undefined);
+        setLocalFallbackTypeId(typeId);
+      }
+    },
+    [filteredTypes, setTypeGuid]
   );
+
+  const handleToggleType = useCallback(
+    (typeId: string) => {
+      handleSelectType(selectedTypeId === typeId ? null : typeId);
+    },
+    [handleSelectType, selectedTypeId]
+  );
+
+  const handleClearSelection = useCallback(() => {
+    handleSelectType(null);
+  }, [handleSelectType]);
 
   // Shared ifcClass → color map: build from the unfiltered types so
   // colors stay stable as the user filters. The treemap, KPI sparklines,
@@ -226,7 +285,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                       ? classColors.get(ifcClassFilter)
                       : undefined
                   }
-                  onClearSelection={() => setSelectedTypeId(null)}
+                  onClearSelection={handleClearSelection}
                 />
               </div>
             </div>
@@ -241,16 +300,14 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                   topN={10}
                   fillHeight
                   selectedTypeId={selectedTypeId}
-                  onTypeClick={(id) =>
-                    setSelectedTypeId((curr) => (curr === id ? null : id))
-                  }
+                  onTypeClick={handleToggleType}
                 />
               </div>
               <div id="table">
                 <TypeTableV2
                   types={filteredTypes}
                   selectedTypeId={selectedTypeId}
-                  onSelectType={setSelectedTypeId}
+                  onSelectType={handleSelectType}
                   onIfcClassClick={(cls) =>
                     setIfcClassFilter((curr) => (curr === cls ? 'all' : cls))
                   }

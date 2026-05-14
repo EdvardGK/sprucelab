@@ -56,6 +56,7 @@ function projectToPayload(state: FilterContext): EncodedFilters {
   if (state.excluded_ifc_class !== undefined)
     payload.excluded_ifc_class = state.excluded_ifc_class;
   if (state.floor_code !== undefined) payload.floor_code = state.floor_code;
+  if (state.type_guid !== undefined) payload.type_guid = state.type_guid;
   if (state.discipline !== undefined) payload.discipline = state.discipline;
   if (state.mmi !== undefined) payload.mmi = state.mmi;
   if (state.materials !== undefined) payload.materials = state.materials;
