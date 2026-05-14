@@ -37,7 +37,13 @@ const ProjectTypesPage = lazy(() => import('./pages/ProjectTypesPage'));
 const ProjectSettingsPage = lazy(() => import('./pages/ProjectSettingsPage'));
 const ProjectMaterialLibrary = lazy(() => import('./pages/ProjectMaterialLibrary'));
 const ProjectField = lazy(() => import('./pages/ProjectField'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminShell = lazy(() => import('./pages/admin/AdminShell'));
+const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
+const AdminProcessing = lazy(() => import('./pages/admin/AdminProcessing'));
+const AdminLogs = lazy(() => import('./pages/admin/AdminLogs'));
+const AdminWebhooks = lazy(() => import('./pages/admin/AdminWebhooks'));
+const AdminSystem = lazy(() => import('./pages/admin/AdminSystem'));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const ProcessingReports = lazy(() => import('./pages/dev/ProcessingReports'));
 const ProcessingReportDetail = lazy(() => import('./pages/dev/ProcessingReportDetail'));
 const GridDemo = lazy(() => import('./pages/dev/GridDemo'));
@@ -93,7 +99,18 @@ const router = createBrowserRouter([
     ],
   },
   { path: "/type-library", element: withSuspense(guard(<TypeLibraryPage />)) },
-  { path: "/admin", element: withSuspense(guard(<AdminDashboard />)) },
+  {
+    path: "/admin",
+    element: withSuspense(guard(<AdminShell />)),
+    children: [
+      { index: true, element: withSuspense(<AdminOverview />) },
+      { path: "processing", element: withSuspense(<AdminProcessing />) },
+      { path: "logs", element: withSuspense(<AdminLogs />) },
+      { path: "webhooks", element: withSuspense(<AdminWebhooks />) },
+      { path: "system", element: withSuspense(<AdminSystem />) },
+      { path: "users", element: withSuspense(<AdminUsers />) },
+    ],
+  },
   { path: "/settings/webhooks", element: withSuspense(guard(<WebhookSubscriptions />)) },
   { path: "/settings/webhooks/deliveries", element: withSuspense(guard(<WebhookDeliveries />)) },
   { path: "/dev/processing-reports", element: withSuspense(guard(<ProcessingReports />)) },

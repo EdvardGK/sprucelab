@@ -1316,7 +1316,24 @@
       "failures": "Failures across every processing path: ExtractionRun, PipelineRun, Model.parsing_status='failed', Model.fragments_status='failed'. The amber banner counts failures that never produced an ExtractionRun.",
       "outbound": "WebhookDelivery rows in the last 24h. Success rate excludes pending/retrying so you see the steady-state landing rate.",
       "system": "Live introspection (no stored history). Probes the database, Redis broker, and Celery worker pool at request time.",
-      "userManagement": "Approve or reject signup applications. Approved users get full app access."
+      "userManagement": "Approve or reject signup applications. Approved users get full app access.",
+      "failures24h": "Total failures across all processing paths in the last 24 hours. Silent backlog = models stuck in a failed state that never wrote an ExtractionRun.",
+      "typeMapping": "Share of IFCType rows that have a non-pending TypeMapping. Higher = more of the platform's types are classified.",
+      "slowestFormat": "Format with the longest p95 extraction time. Where speed gains would matter most.",
+      "logTotal": "All recent failure rows surfaced in this feed. Use the filter chips to narrow by kind.",
+      "logExtraction": "ExtractionRuns that reached the extractor and then errored.",
+      "logPipeline": "Pipeline runs that failed during step execution.",
+      "logParse": "Models whose Celery parse task crashed (Model.parsing_status='failed' or Model.status='error') — never produced an ExtractionRun.",
+      "logFragments": "Fragments-generation failures (Model.fragments_status='failed').",
+      "pipelineSuccess": "Share of pipeline runs that completed with status=success in the last 24 hours.",
+      "pipelineLast24h": "Breakdown of every pipeline run started in the last 24 hours by terminal status.",
+      "outboundActive": "Webhook subscriptions with is_active=true.",
+      "outbound24hSuccess": "WebhookDelivery rows with status=success in the last 24h.",
+      "outbound24hFailed": "WebhookDelivery rows with status=failed in the last 24h.",
+      "outboundFailures": "The ten most recent failed deliveries with target URL, response code if any, and error.",
+      "systemDb": "Live `SELECT 1` against the application database.",
+      "systemBroker": "Whether Redis (the Celery broker) is reachable from this Django process.",
+      "rejected": "Users with profile.approval_status='rejected'."
     },
     "outbound": {
       "title": "Outbound webhooks",
@@ -1343,7 +1360,59 @@
     },
     "labels": {
       "viewAnalytics": "Open Plausible →"
-    }
+    },
+    "nav": {
+      "overview": "Overview",
+      "processing": "Processing",
+      "logs": "Logs",
+      "webhooks": "Webhooks",
+      "system": "System",
+      "users": "Users",
+      "backToApp": "Back to app",
+      "backToAppTip": "Return to projects",
+      "scopeNote": "Control center — staff only"
+    },
+    "overview": {
+      "title": "Overview",
+      "subtitle": "Top KPIs across the platform — drill into a section for the full picture.",
+      "failures24h": "Failures (24h)",
+      "silentBacklog": "+ {{n}} silent in backlog",
+      "noBacklog": "No silent failures",
+      "queueSubline": "{{n}} workers online",
+      "lastExtraction": "last extraction",
+      "idle": "—",
+      "pendingNudge": "Awaiting your review",
+      "pendingClear": "Inbox empty",
+      "typeMapping": "Type mapping",
+      "outbound": "Outbound 24h",
+      "slowestFormat": "Slowest format",
+      "p95Sub": "p95: {{p95}}s",
+      "noRuns": "No completed runs"
+    },
+    "processingPage": {
+      "subtitle": "Per-format extraction stats, pipeline runs, and live queue health.",
+      "pipelineSuccess": "Pipeline success (24h)",
+      "pipelineLast24h": "Pipeline runs (24h)"
+    },
+    "logs": {
+      "subtitle": "Every processing failure across ExtractionRun, PipelineRun, Model.parsing, and Model.fragments.",
+      "totalRecent": "Recent failures",
+      "filter": {
+        "all": "All"
+      }
+    },
+    "webhooksPage": {
+      "subtitle": "Outbound subscription health and recent failed deliveries.",
+      "noFailures": "No failed deliveries in the recent window."
+    },
+    "systemPage": {
+      "subtitle": "Live introspection probes — every value computed at request time."
+    },
+    "usersPage": {
+      "subtitle": "Signup applications and approval queue.",
+      "rejected": "Rejected"
+    },
+    "tooltipsExt": {}
   },
   "claims": {
     "title": "Claim Inbox",

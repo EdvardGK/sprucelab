@@ -1316,7 +1316,24 @@
       "failures": "Feil på tvers av alle prosesseringsveier: ExtractionRun, PipelineRun, Model.parsing_status='failed', Model.fragments_status='failed'. Det gule banneret teller feil som aldri produserte en ExtractionRun.",
       "outbound": "WebhookDelivery-rader siste 24t. Suksessrate ekskluderer pending/retrying så du ser landingsraten i steady-state.",
       "system": "Sanntids-introspeksjon (ingen lagret historikk). Sjekker database, Redis-broker og Celery-workers ved hver request.",
-      "userManagement": "Godkjenn eller avslå registreringer. Godkjente brukere får full tilgang."
+      "userManagement": "Godkjenn eller avslå registreringer. Godkjente brukere får full tilgang.",
+      "failures24h": "Totale feil på tvers av alle prosesseringsveier siste 24 timer. Stille kø = modeller fast i feilet tilstand som aldri skrev en ExtractionRun.",
+      "typeMapping": "Andel IFCType-rader som har en TypeMapping ulik 'pending'. Høyere = mer av plattformens typer er klassifisert.",
+      "slowestFormat": "Format med lengst p95 ekstraksjonstid. Der hastighetsforbedringer betyr mest.",
+      "logTotal": "Alle nylige feilrader i denne strømmen. Bruk filterknappene for å snevre inn etter type.",
+      "logExtraction": "ExtractionRuns som startet ekstraksjon og deretter feilet.",
+      "logPipeline": "Pipeline-kjøringer som feilet under stegutførelse.",
+      "logParse": "Modeller hvor Celery parse-task krasjet (Model.parsing_status='failed' eller Model.status='error') — skrev aldri en ExtractionRun.",
+      "logFragments": "Fragments-generering som feilet (Model.fragments_status='failed').",
+      "pipelineSuccess": "Andel pipeline-kjøringer som fullførte med status=success siste 24 timer.",
+      "pipelineLast24h": "Oversikt over alle pipeline-kjøringer startet siste 24t, gruppert etter terminal status.",
+      "outboundActive": "Webhook-abonnement med is_active=true.",
+      "outbound24hSuccess": "WebhookDelivery-rader med status=success siste 24t.",
+      "outbound24hFailed": "WebhookDelivery-rader med status=failed siste 24t.",
+      "outboundFailures": "De ti siste feilede leveringene med URL, responskode (hvis noen) og feilmelding.",
+      "systemDb": "Sanntids `SELECT 1` mot applikasjonsdatabasen.",
+      "systemBroker": "Om Redis (Celery-broker) er tilgjengelig fra denne Django-prosessen.",
+      "rejected": "Brukere med profile.approval_status='rejected'."
     },
     "outbound": {
       "title": "Utgående webhooks",
@@ -1343,7 +1360,59 @@
     },
     "labels": {
       "viewAnalytics": "Åpne Plausible →"
-    }
+    },
+    "nav": {
+      "overview": "Oversikt",
+      "processing": "Prosessering",
+      "logs": "Logger",
+      "webhooks": "Webhooks",
+      "system": "System",
+      "users": "Brukere",
+      "backToApp": "Tilbake til appen",
+      "backToAppTip": "Tilbake til prosjekter",
+      "scopeNote": "Kontrollsenter — kun for staff"
+    },
+    "overview": {
+      "title": "Oversikt",
+      "subtitle": "Topp-KPI-er på tvers av plattformen — gå inn på en seksjon for hele bildet.",
+      "failures24h": "Feil (24t)",
+      "silentBacklog": "+ {{n}} stille i kø",
+      "noBacklog": "Ingen stille feil",
+      "queueSubline": "{{n}} workers tilkoblet",
+      "lastExtraction": "siste ekstraksjon",
+      "idle": "—",
+      "pendingNudge": "Venter på din godkjenning",
+      "pendingClear": "Innboks tom",
+      "typeMapping": "Typeklassifisering",
+      "outbound": "Utgående 24t",
+      "slowestFormat": "Tregeste format",
+      "p95Sub": "p95: {{p95}}s",
+      "noRuns": "Ingen fullførte kjøringer"
+    },
+    "processingPage": {
+      "subtitle": "Ekstraksjonsstatistikk per format, pipeline-kjøringer og sanntids kø-helse.",
+      "pipelineSuccess": "Pipeline-suksess (24t)",
+      "pipelineLast24h": "Pipeline-kjøringer (24t)"
+    },
+    "logs": {
+      "subtitle": "Alle prosesseringsfeil på tvers av ExtractionRun, PipelineRun, Model.parsing og Model.fragments.",
+      "totalRecent": "Nylige feil",
+      "filter": {
+        "all": "Alle"
+      }
+    },
+    "webhooksPage": {
+      "subtitle": "Helse for utgående abonnement og nylige feilede leveringer.",
+      "noFailures": "Ingen feilede leveringer i nylig tidsvindu."
+    },
+    "systemPage": {
+      "subtitle": "Sanntids-introspeksjon — alle verdier beregnes ved hver request."
+    },
+    "usersPage": {
+      "subtitle": "Registreringer og godkjenningskø.",
+      "rejected": "Avvist"
+    },
+    "tooltipsExt": {}
   },
   "claims": {
     "title": "Kravinnboks",
