@@ -1783,7 +1783,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           // sees v3 classes alongside any v2 model's classes.
           v3Model.getCategories()
             .then(async (categories) => {
-              console.log('[Viewer] v3 categories ' + modelId + ' = ' + JSON.stringify(categories));
+              if (import.meta.env.DEV) console.log('[Viewer] v3 categories ' + modelId + ' = ' + JSON.stringify(categories));
               const entries = await Promise.all(
                 categories.map(async (cat) => {
                   const items = await v3Model.getItemsOfCategory(cat);
@@ -1909,7 +1909,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                   for (const child of node.children ?? []) probe(child, depth + 1);
                 };
                 probe(tree, 0);
-                console.warn('[Viewer] v3 spatial structure had no IfcBuildingStorey nodes; tree shape: ' + JSON.stringify(stats));
+                if (import.meta.env.DEV) console.warn('[Viewer] v3 spatial structure had no IfcBuildingStorey nodes; tree shape: ' + JSON.stringify(stats));
                 return;
               }
 
@@ -1934,7 +1934,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                     });
                   }
                 }
-                console.log('[Viewer] v3 storey classification:', storeys.length, 'storeys',
+                if (import.meta.env.DEV) console.log('[Viewer] v3 storey classification:', storeys.length, 'storeys',
                   storeys.map(s => ({ name: s.name, guid: s.guid, count: s.localIds.length })));
                 return next;
               });
@@ -2223,14 +2223,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   // visibility on both sides. When set, GUID-match first (canonical bridge
   // to backend AnalysisStorey), name-match as fallback.
   useEffect(() => {
-    console.log('[Viewer] floor filter effect', {
-      floorCodeFilter,
-      storeyInfoSize: storeyInfo.size,
-      storeyKeys: Array.from(storeyInfo.keys()).slice(0, 5),
-      storeyGuids: Array.from(storeyInfo.values()).slice(0, 5).map(d => d.guid),
-      hasV3: !!v3FragmentsRef.current,
-      isolation: !!isolation?.guids?.length,
-    });
     if (storeyInfo.size === 0) return;
     if (isolation && isolation.guids.length > 0) return;
 
@@ -2240,7 +2232,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     const rafId = requestAnimationFrame(() => {
       const hider = hiderRef.current;
       const hasV3 = !!v3FragmentsRef.current;
-      console.log('[Viewer] floor filter applying', { floorCodeFilter, hasV3, hider: !!hider });
 
       // Pick which storeyInfo entries this filter activates.
       const targetEntries: Array<{
