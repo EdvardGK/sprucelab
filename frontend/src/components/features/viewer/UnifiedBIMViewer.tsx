@@ -112,6 +112,19 @@ export interface IsolationConfig {
 // Embed PR 5: default accent for highlight-mode isolation. Tailwind blue-500.
 const HIGHLIGHT_ACCENT_DEFAULT = '#3b82f6';
 
+// IFC categories that are authored as geometry but are NOT part of the
+// physical fabric — void/coordination artefacts. Hidden by default at
+// load to avoid "ghost glass squares" near windows/doors (IFC openings
+// are box volumes used to cut walls; rendering them visibly looks like
+// scattered glass panes). Mirrors the backend's physical/orphan
+// accounting (commit 9feafe3). Categories are matched UPPERCASE per
+// fragments-v3 (memory: fragments-v3-spatial-tree-shape).
+const NON_PHYSICAL_V3_CATEGORIES: ReadonlySet<string> = new Set([
+  'IFCOPENINGELEMENT',
+  'IFCOPENINGSTANDARDCASE',
+  'IFCVIRTUALELEMENT',
+]);
+
 // Imperative handle interface for parent components
 export interface UnifiedBIMViewerHandle {
   deleteSectionPlane: (planeId: string) => void;
@@ -1822,10 +1835,35 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               setTypeVisibility?.((prev) => {
                 const updated = { ...prev };
                 for (const { cat } of entries) {
-                  if (!(cat in updated)) updated[cat] = true;
+                  if (!(cat in updated)) {
+                    updated[cat] = !NON_PHYSICAL_V3_CATEGORIES.has(cat.toUpperCase());
+                  }
                 }
                 return updated;
               });
+
+              // Hide non-physical categories so the user doesn't see
+              // IfcOpeningElement boxes rendered as ghost glass panes
+              // inside walls/slabs. setVisible → fragments.update →
+              // inline render-nudge, mirroring the floor filter pattern.
+              const nonPhysicalIds: number[] = [];
+              for (const { cat, localIds } of entries) {
+                if (NON_PHYSICAL_V3_CATEGORIES.has(cat.toUpperCase())) {
+                  nonPhysicalIds.push(...localIds);
+                }
+              }
+              if (nonPhysicalIds.length > 0) {
+                try {
+                  await v3Model.setVisible(nonPhysicalIds, false);
+                  await v3FragmentsRef.current?.update();
+                  const w = worldRef.current;
+                  if (w?.renderer?.three && w.scene?.three && w.camera?.three) {
+                    w.renderer.three.render(w.scene.three, w.camera.three);
+                  }
+                } catch (err) {
+                  console.warn('[Viewer] v3 hide non-physical failed:', err);
+                }
+              }
             })
             .catch((err) => console.warn('[Viewer] v3 category extraction failed:', err));
 
