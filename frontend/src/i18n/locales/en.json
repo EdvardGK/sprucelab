@@ -1286,8 +1286,37 @@
     "failures": {
       "title": "Recent failures",
       "empty": "No failures in the recent window — good sign.",
+      "silentBanner": "{{total}} model(s) sitting in a failed state ({{parsing}} parse, {{fragments}} fragments). These never wrote an ExtractionRun — Celery crashed before it could.",
+      "kind": {
+        "extraction": "Extraction",
+        "pipeline": "Pipeline",
+        "model_parsing": "Parse",
+        "fragments": "Fragments"
+      },
       "kindExtraction": "Extraction",
       "kindPipeline": "Pipeline"
+    },
+    "in30d": "in 30d",
+    "tooltips": {
+      "page": "Live owner-side view of platform activity, processing, and system health. Auto-refreshes every 30s.",
+      "successRate24h": "Share of completed vs failed extractions in the last 24 hours. Below 95% turns amber, below 80% red.",
+      "avgPipeline": "Mean duration of pipeline runs that completed successfully. Slow pipelines are usually waiting on the broker or a downstream service.",
+      "queueDepth": "Number of pending tasks in the default Celery queue right now. Sustained values >50 mean workers can't keep up.",
+      "workers": "How many Celery workers Redis is reporting as connected and accepting jobs. Zero = nothing will process.",
+      "totalUsers": "All UserProfile rows, regardless of approval status.",
+      "approved": "Users with profile.approval_status='approved'. Progress bar shows share of total.",
+      "pending": "Pending signup applications waiting for your review.",
+      "projects": "Total Project rows. Subline shows projects created in the last 30 days.",
+      "models": "Total Model rows across all projects. Subline shows current ready/error counts.",
+      "storage": "Sum of Model.file_size across the whole platform.",
+      "signups30d": "Daily UserProfile creations over the last 30 days.",
+      "uploads30d": "Daily Model creations over the last 30 days (counts versions, not distinct files).",
+      "modelHealth": "Status breakdown using Model.status. Disciplines reflect Model.discipline. Type mapping rate covers TypeMapping rows across all models.",
+      "processingByFormat": "Per-file-format aggregates across all completed ExtractionRuns. p95 uses Postgres PERCENTILE_CONT.",
+      "failures": "Failures across every processing path: ExtractionRun, PipelineRun, Model.parsing_status='failed', Model.fragments_status='failed'. The amber banner counts failures that never produced an ExtractionRun.",
+      "outbound": "WebhookDelivery rows in the last 24h. Success rate excludes pending/retrying so you see the steady-state landing rate.",
+      "system": "Live introspection (no stored history). Probes the database, Redis broker, and Celery worker pool at request time.",
+      "userManagement": "Approve or reject signup applications. Approved users get full app access."
     },
     "outbound": {
       "title": "Outbound webhooks",

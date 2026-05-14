@@ -181,6 +181,48 @@ def _processing_stats():
         )
     ]
 
+    # ── Model-level failures ──────────────────────────────────────────────
+    # Celery upload/parse tasks set Model.parsing_status='failed' (and
+    # Model.status='error') directly, without writing an ExtractionRun.
+    # Fragments generation has its own status track. Both paths produce
+    # real, customer-visible failures that the ExtractionRun feed silently
+    # missed before this. Surface them as their own kind so the UI shows
+    # the user where the failure actually happened.
+    IFCModel = _get_model_model()
+    parse_failed = (
+        IFCModel.objects
+        .filter(Q(parsing_status='failed') | Q(status='error'))
+        .order_by('-created_at')[:10]
+    )
+    recent_model_failures = [
+        {
+            'id': str(m.id),
+            'kind': 'model_parsing',
+            'filename': m.original_filename or m.name,
+            'started_at': m.updated_at.isoformat() if getattr(m, 'updated_at', None) else m.created_at.isoformat(),
+            'error_message': (m.processing_error or '')[:500],
+        }
+        for m in parse_failed
+    ]
+    fragments_failed = (
+        IFCModel.objects.filter(fragments_status='failed')
+        .order_by('-fragments_generated_at', '-created_at')[:10]
+    )
+    recent_fragments_failures = [
+        {
+            'id': str(m.id),
+            'kind': 'fragments',
+            'filename': m.original_filename or m.name,
+            'started_at': (
+                m.fragments_generated_at.isoformat()
+                if m.fragments_generated_at
+                else m.created_at.isoformat()
+            ),
+            'error_message': (m.fragments_error or '')[:500],
+        }
+        for m in fragments_failed
+    ]
+
     # ── Pipeline runs ─────────────────────────────────────────────────────
     pipeline_24h_raw = dict(
         PipelineRun.objects.filter(created_at__gte=day_ago)
@@ -213,6 +255,15 @@ def _processing_stats():
         )
     ]
 
+    # Counts of model-level failures across the whole table — surfaces the
+    # "your stack has a backlog of broken uploads" picture even when nothing
+    # has recently *transitioned* to failed. Owner-side; not 24h.
+    model_failure_counts = {
+        'parsing_failed': IFCModel.objects.filter(parsing_status='failed').count(),
+        'fragments_failed': IFCModel.objects.filter(fragments_status='failed').count(),
+        'legacy_error': IFCModel.objects.filter(status='error').count(),
+    }
+
     return {
         'extraction': {
             'by_format': by_format,
@@ -223,6 +274,11 @@ def _processing_stats():
             'last_24h': pipeline_24h,
             'avg_duration_ms': round(pipeline_avg_ms, 2) if pipeline_avg_ms else None,
             'recent_failures': recent_pipeline_failures,
+        },
+        'models': {
+            'failure_counts': model_failure_counts,
+            'recent_parsing_failures': recent_model_failures,
+            'recent_fragments_failures': recent_fragments_failures,
         },
     }
 

@@ -1286,8 +1286,37 @@
     "failures": {
       "title": "Nylige feil",
       "empty": "Ingen feil i nylig tidsvindu — bra tegn.",
+      "silentBanner": "{{total}} modell(er) står i feilet tilstand ({{parsing}} parse, {{fragments}} fragments). Disse skrev aldri en ExtractionRun — Celery krasjet før det rakk å skje.",
+      "kind": {
+        "extraction": "Ekstraksjon",
+        "pipeline": "Pipeline",
+        "model_parsing": "Parsing",
+        "fragments": "Fragments"
+      },
       "kindExtraction": "Ekstraksjon",
       "kindPipeline": "Pipeline"
+    },
+    "in30d": "siste 30d",
+    "tooltips": {
+      "page": "Sanntidsvisning av plattformaktivitet, prosessering og systemhelse. Oppdateres automatisk hvert 30. sekund.",
+      "successRate24h": "Andel fullførte vs feilede ekstraksjoner siste 24 timer. Under 95% blir gul, under 80% rød.",
+      "avgPipeline": "Gjennomsnittlig varighet på vellykkede pipeline-kjøringer. Trege pipelines venter som regel på broker eller en nedstrøms tjeneste.",
+      "queueDepth": "Antall ventende oppgaver i Celery-køen akkurat nå. Vedvarende >50 betyr at workers ikke holder følge.",
+      "workers": "Antall Celery-workers Redis rapporterer som tilkoblet. Null = ingenting prosesseres.",
+      "totalUsers": "Alle UserProfile-rader, uavhengig av godkjenningsstatus.",
+      "approved": "Brukere med profile.approval_status='approved'. Progress-bar viser andel av totalen.",
+      "pending": "Ventende registreringer som venter på din godkjenning.",
+      "projects": "Totalt antall Project-rader. Underlinje viser prosjekter opprettet siste 30 dager.",
+      "models": "Totalt antall Model-rader på tvers av prosjekter. Underlinje viser nåværende klar/feil-tellinger.",
+      "storage": "Sum av Model.file_size for hele plattformen.",
+      "signups30d": "Daglige UserProfile-opprettelser siste 30 dager.",
+      "uploads30d": "Daglige Model-opprettelser siste 30 dager (teller versjoner, ikke unike filer).",
+      "modelHealth": "Statusoversikt via Model.status. Fag følger Model.discipline. Type-mapping-rate dekker TypeMapping-rader på tvers av alle modeller.",
+      "processingByFormat": "Aggregater per filformat over alle fullførte ExtractionRuns. p95 bruker Postgres PERCENTILE_CONT.",
+      "failures": "Feil på tvers av alle prosesseringsveier: ExtractionRun, PipelineRun, Model.parsing_status='failed', Model.fragments_status='failed'. Det gule banneret teller feil som aldri produserte en ExtractionRun.",
+      "outbound": "WebhookDelivery-rader siste 24t. Suksessrate ekskluderer pending/retrying så du ser landingsraten i steady-state.",
+      "system": "Sanntids-introspeksjon (ingen lagret historikk). Sjekker database, Redis-broker og Celery-workers ved hver request.",
+      "userManagement": "Godkjenn eller avslå registreringer. Godkjente brukere får full tilgang."
     },
     "outbound": {
       "title": "Utgående webhooks",
