@@ -2263,6 +2263,20 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         }
       }
 
+      // Force a render after visibility changes. v3Model.setVisible +
+      // fragments.update() mark the worker dirty but the OBC render loop
+      // sits idle until a camera event nudges it. Without this nudge the
+      // viewer keeps showing stale visibility until the user moves the
+      // mouse over the canvas.
+      const nudgeRender = () => {
+        try {
+          const world = worldRef.current;
+          if (world?.renderer?.three && world.scene?.three && world.camera?.three) {
+            world.renderer.three.render(world.scene.three, world.camera.three);
+          }
+        } catch { /* noop */ }
+      };
+
       try {
         if (floorCodeFilter == null) {
           // Reset — show all on both paths.
@@ -2288,8 +2302,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               }
             }
             if (v3Ops.length > 0) {
-              Promise.all(v3Ops).then(() => v3FragmentsRef.current?.update().catch(() => {}));
+              Promise.all(v3Ops)
+                .then(() => v3FragmentsRef.current?.update().catch(() => {}))
+                .then(() => nudgeRender());
+            } else {
+              nudgeRender();
             }
+          } else {
+            nudgeRender();
           }
         } else {
           // Hide everything, then show only the target entries.
@@ -2325,7 +2345,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                   }
                 }
               }
-              Promise.all(showOps).then(() => v3FragmentsRef.current?.update().catch(() => {}));
+              Promise.all(showOps)
+                .then(() => v3FragmentsRef.current?.update().catch(() => {}))
+                .then(() => nudgeRender());
             });
           }
           if (hider) {
@@ -2334,11 +2356,13 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 hider.set(true, data.map);
               }
             }
+            nudgeRender();
           }
         }
       } catch (err) {
         console.error('[Viewer] Floor filter failed:', err);
         if (hider) hider.set(true);
+        nudgeRender();
       }
 
       prevStoreyFilterRef.current = floorCodeFilter;
