@@ -14,7 +14,7 @@
  * where the largest cells are read first.
  */
 
-import { paletteSlot } from '@/lib/colorMath';
+import { tokens } from '@/lib/design-tokens';
 
 export function buildClassColorMap(
   types: Array<{ ifc_type: string; instance_count: number }>,
@@ -29,7 +29,7 @@ export function buildClassColorMap(
   });
   const map = new Map<string, string>();
   ranked.forEach(([ifcClass], i) => {
-    map.set(ifcClass, paletteSlot(i));
+    map.set(ifcClass, tokens.dataPalette.slot(i));
   });
   return map;
 }

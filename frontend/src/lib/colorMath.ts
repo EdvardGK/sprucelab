@@ -98,3 +98,15 @@ export function bitReverse(i: number): number {
 export function paletteSlot(slot: number): string {
   return oklchString(sampleTriangle(bitReverse(slot)));
 }
+
+/**
+ * Precomputed 12-slot palette. Same shape and length as the previous
+ * brand-hex CLASS_PALETTE / KPI_PALETTE / TREEMAP_COLORS arrays so
+ * every consumer can switch to it with a one-line import. The 12 entries
+ * cover the practical max of distinguishable IFC classes in a single
+ * treemap (per the gradient's perceptual budget in OKLCH).
+ */
+export const PALETTE_12: readonly string[] = Array.from(
+  { length: 12 },
+  (_, i) => paletteSlot(i),
+);

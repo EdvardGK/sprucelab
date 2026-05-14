@@ -15,13 +15,10 @@ import { DashboardTile } from '@/components/Layout';
 import { cn } from '@/lib/utils';
 import { Sparkline, type SparkSegment } from '@/components/features/warehouse-v2/Sparkline';
 import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
+import { tokens } from '@/lib/design-tokens';
 import type { ModelAnalysis, ModelStoreyVerification } from '@/lib/api-types';
 
-const KPI_PALETTE = [
-  '#157954', '#C7CEE8', '#D0D34D', '#21263A', '#2dd4a0',
-  '#fb923c', '#f87171', '#818cf8', '#38bdf8', '#a78bfa',
-  '#34d399', '#fbbf24',
-];
+const KPI_PALETTE = tokens.dataPalette.slots;
 
 export interface AnalysisKpiClusterProps {
   analysis: ModelAnalysis;

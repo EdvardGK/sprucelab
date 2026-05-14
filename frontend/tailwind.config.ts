@@ -32,11 +32,43 @@ export default {
   			},
   			// Surface color for hover states
   			surface: 'hsl(var(--secondary))',
-  			// Status colors
-  			success: tokens.color.success,
-  			warning: tokens.color.warning,
-  			error: tokens.color.error,
-  			info: tokens.color.info,
+  			// Status colors — OKLCH (see wireframe §9). Same solid color
+  			// at three intensities: solid · tinted bg · text-on-tinted.
+  			success: {
+  				DEFAULT: tokens.color.success,
+  				bg: tokens.color.successBg,
+  				text: tokens.color.successText,
+  			},
+  			warning: {
+  				DEFAULT: tokens.color.warning,
+  				bg: tokens.color.warningBg,
+  				text: tokens.color.warningText,
+  			},
+  			danger: {
+  				DEFAULT: tokens.color.danger,
+  				bg: tokens.color.dangerBg,
+  				text: tokens.color.dangerText,
+  			},
+  			error: {
+  				DEFAULT: tokens.color.error,
+  				bg: tokens.color.dangerBg,
+  				text: tokens.color.dangerText,
+  			},
+  			info: {
+  				DEFAULT: tokens.color.info,
+  				bg: tokens.color.infoBg,
+  				text: tokens.color.infoText,
+  			},
+  			signal: {
+  				DEFAULT: tokens.color.signal,
+  				bg: tokens.color.signalBg,
+  				text: tokens.color.signalText,
+  			},
+  			neutral: {
+  				DEFAULT: tokens.color.neutral,
+  				bg: tokens.color.neutralBg,
+  				text: tokens.color.neutralText,
+  			},
   			brand: tokens.color.brand,
   			card: {
   				DEFAULT: 'hsl(var(--card))',

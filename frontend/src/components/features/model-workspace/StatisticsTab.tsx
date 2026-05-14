@@ -5,12 +5,9 @@ import { Loader2 } from 'lucide-react';
 import { DashboardTile } from '@/components/Layout';
 import { useModelAnalysis } from '@/hooks/use-model-analysis';
 import { Sparkline, type SparkSegment } from '@/components/features/warehouse-v2/Sparkline';
+import { tokens } from '@/lib/design-tokens';
 
-const PALETTE = [
-  '#157954', '#C7CEE8', '#D0D34D', '#21263A', '#2dd4a0',
-  '#fb923c', '#f87171', '#818cf8', '#38bdf8', '#a78bfa',
-  '#34d399', '#fbbf24',
-];
+const PALETTE = tokens.dataPalette.slots;
 
 export interface StatisticsTabProps {
   modelId: string;

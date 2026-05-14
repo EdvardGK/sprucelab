@@ -19,6 +19,7 @@ import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPa
 import { AppLayout } from '@/components/Layout/AppLayout';
 import type { Model, ModelAnalysis, AnalysisTypeRecord } from '@/lib/api-types';
 import { treemapLayout } from '@/lib/treemap';
+import { tokens } from '@/lib/design-tokens';
 import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
 import { DrillTarget } from '@/components/filters/DrillTarget';
 import { useProjectFilter, useProjectFilterActions } from '@/contexts/ProjectFilterProvider';
@@ -908,11 +909,7 @@ function QualityCard({
 
 // ─── Treemap ────────────────────────────────────────────────────────────────
 
-const TREEMAP_COLORS = [
-  '#157954', '#C7CEE8', '#D0D34D', '#21263A', '#2dd4a0', // palette + green
-  '#fb923c', '#f87171', '#818cf8', '#38bdf8', '#a78bfa', // extended
-  '#34d399', '#fbbf24',
-];
+const TREEMAP_COLORS = tokens.dataPalette.slots;
 
 // treemapLayout imported from @/lib/treemap
 
