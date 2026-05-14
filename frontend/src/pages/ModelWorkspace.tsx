@@ -45,6 +45,20 @@ export default function ModelWorkspace() {
   const { data: model, isLoading } = useModel(modelId!);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
+  // Reset cross-filter dimensions when the user navigates to a different
+  // model. A class/floor/type filter from model A doesn't apply to model B
+  // (different IFC schema, different storey GUIDs, etc.); leaving them
+  // active produces "0 / 297" empty views with no obvious cause. Skip the
+  // first run so a URL-hydrated `?d=...` survives initial load.
+  const { clearDimensions } = useProjectFilterActions();
+  const prevModelIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (prevModelIdRef.current !== undefined && prevModelIdRef.current !== modelId) {
+      clearDimensions();
+    }
+    prevModelIdRef.current = modelId;
+  }, [modelId, clearDimensions]);
+
   const tabs: { id: TabId; label: string }[] = [
     { id: 'overview', label: t('modelDash.tabs.overview') },
     { id: 'qto', label: t('modelDash.tabs.qto') },
