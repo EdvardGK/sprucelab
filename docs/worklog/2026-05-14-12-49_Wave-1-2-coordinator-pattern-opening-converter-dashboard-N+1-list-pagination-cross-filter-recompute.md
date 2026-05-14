@@ -106,3 +106,37 @@ These are pinned for a dedicated viewer-quality session. Per `feedback-viewer-pe
 - Agent B violated the "never `rm` without approval" rule on `/tmp` scripts — flagged in the security warning. Per CLAUDE.md the rule applies broadly. Worth a brief reminder in agent briefs for next session.
 - Backend perf wins from this session are visible to every user (4-second dashboard-skeleton wait → likely <500 ms once deploy settles). Count as frontend-first work per `feedback-frontend-first-until-app-feels-real.md` even though the diffs are backend-side.
 - Track 1's converter change only affects newly-converted models. The 8 prod projects' existing `.frag` files still contain opening geometry. A one-shot reanalysis pass would land the improvement everywhere — pinned in next-steps.
+
+---
+
+## Addendum (2026-05-14 13:00) — Model-dash UX follow-up after live testing
+
+User immediately surfaced two cross-filter UX gaps after live testing of `4f74633`. Both shipped in `e07cd1d` as a single follow-up commit.
+
+### What changed (`e07cd1d` — `feat(model-dash): treemap self-filters + click-to-toggle + Clear filters bar`)
+
+- **Treemap self-filters.** Removed the `treemapTypes` adapter that the parallel session had introduced to keep sibling tiles visible by stripping `ifc_class` from the treemap's filter input. After live use the user pushed back: "the treemap doesnt filter." The Types-page pattern at `warehouse-v2/TypeBrowserV2.tsx` passes the fully-filtered set, and the user wanted parity. The treemap now reads `filteredTypes` and collapses to the active selection on click — the only way back to all-classes is Clear (added below).
+- **Click-to-toggle.** Both `filterByIfcClass` (treemap) and `filterByStorey` (storey chart) now check whether the dimension is already `[clickedKey]` and clear it instead of re-setting. Closes the user's "click the same tile to turn off doesn't work" report. Previously the only escape was the X on the FilterChips chip buried in the viewer canvas overlay.
+- **Active-filter bar.** New bar above the KPI cluster, visible only when `activeFilterCount > 0`. Layout: `N filters active` label · inline `<FilterChips />` · big right-aligned **Clear all filters** button (signal-orange, generous padding, oversized X icon). The Clear handler calls `clearDimensions()` from `useProjectFilterActions`, which wipes every dimension the shared store carries — not just the three the dashboard surfaces (ifc_class / floor_code / type_guid). The count derivation pulls from nine dimensions to keep the badge honest. Bar uses `border-signal/40 bg-signal/10` so it composes with the design-tokens iron rule (`feedback`-style `signal` family is the canonical "this is an active selection" vocabulary).
+
+### Note on the opening-element question
+
+User asked mid-commit: "is the opening element rendering turned off?" Answer noted to them inline: the converter fix is shipped, but existing prod `.frag` files were generated before `9ef1499` and still contain the opening geometry. Backfill via re-conversion across the 8 prod projects is still pinned in `next-steps.md` — not run this session.
+
+### Commit count
+
+Five code commits + one worklog + one worklog addendum:
+
+1. `9ef1499` Track 1 — opening exclusion at converter
+2. `15d0718` Track 4a — dashboard-metrics N+1 collapse
+3. `3167a68` Track 4b — Types list pagination + thin serializer
+4. `4f74633` Track 2 — Model-dash cross-filter recompute (parallel-session authored)
+5. `e07cd1d` Model-dash UX follow-up — treemap self-filter + toggle + Clear bar
+6. `a6a72a7` Worklog (this file)
+7. (this addendum + `next-steps.md` update pending the wrap-up commit)
+
+Top of `main`: `e07cd1d`.
+
+### Memory candidate
+
+Live-testing surfaced a small but recurring pattern worth capturing: when implementing cross-filter on a chart, default to "click-same-tile-toggles-off" — the user finds it intuitive enough that its absence reads as broken. The escape-via-X-on-chip path was technically present (FilterChips in the viewer overlay carries it) but discovery was zero because the dashboard surface didn't expose it. Worth a feedback memory if the pattern recurs on Types page or future surfaces.
