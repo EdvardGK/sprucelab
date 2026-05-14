@@ -16,12 +16,21 @@ import { cn } from '@/lib/utils';
 import { Sparkline, type SparkSegment } from '@/components/features/warehouse-v2/Sparkline';
 import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
 import { tokens } from '@/lib/design-tokens';
-import type { ModelAnalysis, ModelStoreyVerification } from '@/lib/api-types';
+import type { AnalysisTypeRecord, ModelAnalysis, ModelStoreyVerification } from '@/lib/api-types';
 
 const KPI_PALETTE = tokens.dataPalette.slots;
 
 export interface AnalysisKpiClusterProps {
   analysis: ModelAnalysis;
+  /**
+   * Cross-filtered slice from the project filter store. When omitted, the
+   * cluster falls back to `analysis.types` and behaves identically to the
+   * pre-cross-filter version. Drives every foreground scalar; the
+   * sparkline distributions still come from `analysis.types` so the macro
+   * vocabulary stays consistent on filter change (PowerBI signature —
+   * filtered scalars on top of total backdrop).
+   */
+  filteredTypes?: AnalysisTypeRecord[];
   /** Orphan count comes from the storey-verification endpoint (already wired). */
   storeyVerification?: ModelStoreyVerification | null;
   /** Class→color map matching the treemap (without `Ifc` prefix). */
@@ -62,15 +71,22 @@ function trafficLight(percent: number, thresholds: { warn: number; danger: numbe
 
 export function AnalysisKpiCluster({
   analysis,
+  filteredTypes,
   storeyVerification,
   classColorMap,
 }: AnalysisKpiClusterProps) {
   const { t } = useTranslation();
-  const stats = useMemo(() => computeKpiStats(analysis), [analysis]);
+  const effectiveTypes = filteredTypes ?? analysis.types;
+  // Foreground KPI scalars come from the cross-filtered subset.
+  const stats = useMemo(() => computeKpiStats(effectiveTypes), [effectiveTypes]);
+  // Sparkline distributions stay on the unfiltered project totals so the
+  // macro shape (relative class sizes) doesn't collapse when an active
+  // ifc_class filter would otherwise reduce the chart to one stripe.
+  const totalStats = useMemo(() => computeKpiStats(analysis.types), [analysis.types]);
 
   const typesSegments = useMemo(
-    () => toSegments(stats.typesByClass, classColorMap),
-    [stats.typesByClass, classColorMap]
+    () => toSegments(totalStats.typesByClass, classColorMap),
+    [totalStats.typesByClass, classColorMap]
   );
   const untypedSegments = useMemo(
     () => toSegments(stats.untypedByClass, classColorMap),
@@ -91,14 +107,17 @@ export function AnalysisKpiCluster({
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
-      {/* 1 — Types (count + unused subdata) */}
+      {/* 1 — Types (count + unused subdata). When filtered, `effectiveTypes`
+          shrinks; `analysis.total_types` would otherwise stay anchored on
+          the project-total and not reflect the click — the whole point of
+          this rework. */}
       <KpiTile
         id="kpi-types"
         icon={<Shapes className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
         label={t('modelDash.kpis.types')}
-        value={analysis.total_types}
+        value={effectiveTypes.length}
         subValue={t('modelDash.kpis.usedUnusedShort', {
-          used: (analysis.total_types - stats.unusedTypes).toLocaleString(),
+          used: (effectiveTypes.length - stats.unusedTypes).toLocaleString(),
           unused: stats.unusedTypes.toLocaleString(),
         })}
         spark={<Sparkline segments={typesSegments} variant="stacked" />}
@@ -344,7 +363,7 @@ interface KpiStats {
   untypedByClass: Record<string, number>;
 }
 
-function computeKpiStats(analysis: ModelAnalysis): KpiStats {
+function computeKpiStats(types: AnalysisTypeRecord[]): KpiStats {
   let totalInstances = 0;
   let untypedInstances = 0;
   let unusedTypes = 0;
@@ -354,7 +373,7 @@ function computeKpiStats(analysis: ModelAnalysis): KpiStats {
   const instancesByClass: Record<string, number> = {};
   const untypedByClass: Record<string, number> = {};
 
-  for (const t of analysis.types) {
+  for (const t of types) {
     totalInstances += t.instance_count;
     const cls = (t.element_class || t.type_class.replace(/Type$/, '')).replace(/^Ifc/, '');
     typesByClass[cls] = (typesByClass[cls] || 0) + 1;

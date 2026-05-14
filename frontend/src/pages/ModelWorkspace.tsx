@@ -23,12 +23,14 @@ import { tokens } from '@/lib/design-tokens';
 import { DrillModal, type DrillTab } from '@/components/features/drill/DrillModal';
 import { DrillTarget } from '@/components/filters/DrillTarget';
 import { useProjectFilter, useProjectFilterActions } from '@/contexts/ProjectFilterProvider';
+import type { FilterContext } from '@/lib/embed/types';
 import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
 import { AnalysisDetailsRail } from '@/components/features/model-workspace/AnalysisDetailsRail';
 import { AnalysisKpiCluster } from '@/components/features/model-workspace/AnalysisKpiCluster';
 import { VerifiedStoreyChart } from '@/components/features/model-workspace/VerifiedStoreyChart';
 import { ComingSoonTile } from '@/components/features/model-workspace/ComingSoonTile';
 import { StatisticsTab } from '@/components/features/model-workspace/StatisticsTab';
+import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
 
 // Tab definitions — see CLAUDE.md "modelers own data" + Track C lift brief.
 // Flattened: AnalysisDashboard is now the default Overview content (no
@@ -416,7 +418,6 @@ function buildDrillTabs(source: DrillSource, analysis: ModelAnalysis, stats: Ana
 }
 
 function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model: Model }) {
-  const stats = useMemo(() => computeAnalysisStats(analysis), [analysis]);
   const { data: storeyVerification } = useModelStoreyVerification(model.id);
   const [overlay, setOverlay] = useState<OverlayType>(null);
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>(null);
@@ -440,6 +441,33 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   const filter = useProjectFilter();
   const { setFloorCode, setIfcClass } = useProjectFilterActions();
 
+  // Cross-filter recompute (PowerBI signature). The dashboard tiles must
+  // animate when the user clicks a treemap tile / storey bar / quality
+  // chip — anywhere that mutates the shared filter store. We compute two
+  // stats objects: `totalStats` is the unfiltered project totals (drives
+  // sparkline distributions so the macro vocabulary stays consistent);
+  // `filteredStats` is the cross-filtered subset (drives the foreground
+  // scalars + KPI cluster + Quality + Geometry). Mirrors the Types-page
+  // pattern at warehouse-v2/TypeBrowserV2.tsx:152-175.
+  const filteredTypes = useMemo(
+    () => filterAnalysisTypes(analysis.types, filter),
+    [analysis.types, filter.ifc_class, filter.excluded_ifc_class, filter.floor_code, filter.type_guid]
+  );
+  // For the Elements treemap: applies every facet EXCEPT ifc_class so the
+  // user can still see (and click) sibling tiles when an ifc_class filter
+  // is active. Standard cross-filter pattern — the filter source stays
+  // representative; everything else collapses to the filtered subset.
+  const treemapTypes = useMemo(
+    () => filterAnalysisTypes(analysis.types, { ...filter, ifc_class: undefined, excluded_ifc_class: undefined }),
+    [analysis.types, filter.floor_code, filter.type_guid]
+  );
+  const totalStats = useMemo(() => computeAnalysisStats(analysis.types), [analysis.types]);
+  const filteredStats = useMemo(() => computeAnalysisStats(filteredTypes), [filteredTypes]);
+  // Stats used as the page's "live" object — filtered scalars/classCounts
+  // for the foreground, but the unfiltered classCounts feed the
+  // `classColorMap` so colors stay stable across filter changes.
+  const stats = filteredStats;
+
   // The viewer's `floorCodeFilter` is matched against discovered IFC
   // storey names directly; ModelWorkspace operates on a single model
   // so canonical-floor aliasing is unnecessary here.
@@ -447,9 +475,12 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
 
   // Derive type-visibility from inclusion + exclusion facets. The
   // shared store uses raw `Ifc`-prefixed class names (e.g. `IfcWall`).
+  // Pull from `totalStats` so the universe stays the same across filter
+  // changes — otherwise an active inclusion would shrink the set and
+  // mis-derive exclusion overlap.
   const allIfcClasses = useMemo(
-    () => Object.keys(stats.classCounts).map((c) => 'Ifc' + c),
-    [stats.classCounts],
+    () => Object.keys(totalStats.classCounts).map((c) => 'Ifc' + c),
+    [totalStats.classCounts],
   );
   const viewerTypeVisibility = useMemo(() => {
     const included = filter.ifc_class;
@@ -509,9 +540,12 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
     setDrillSource(null);
   };
 
-  // Build class → color map matching treemap ordering (sorted by instance count desc)
+  // Build class → color map matching treemap ordering (sorted by instance count desc).
+  // Always derived from the unfiltered universe so colors stay stable across
+  // cross-filter changes; otherwise the slot ordering shifts when a class
+  // drops out of the filtered subset and the legend stops matching the bar.
   const classColorMap = useMemo(() => {
-    const sorted = Object.entries(stats.classCounts).sort((a, b) => b[1] - a[1]);
+    const sorted = Object.entries(totalStats.classCounts).sort((a, b) => b[1] - a[1]);
     const map: Record<string, string> = {};
     sorted.forEach(([cls, _], i) => {
       const color = TREEMAP_COLORS[i % TREEMAP_COLORS.length];
@@ -519,7 +553,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
       map['Ifc' + cls] = color;   // "IfcWall" (viewer typeInfo key)
     });
     return map;
-  }, [stats.classCounts]);
+  }, [totalStats.classCounts]);
 
   // Track C lift: pick the most-instance-heavy type in the active class
   // as the details-rail target. Falls back to the first matching record.
@@ -547,6 +581,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             context (schema/CRS/authoring tool) lives in the Metadata tab. */}
         <AnalysisKpiCluster
           analysis={analysis}
+          filteredTypes={filteredTypes}
           storeyVerification={storeyVerification}
           classColorMap={classColorMap}
         />
@@ -564,6 +599,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <VerifiedStoreyChart
                   storeys={analysis.storeys}
                   verification={storeyVerification}
+                  filteredTypes={filteredTypes}
                   activeStorey={viewerStoreyFilter}
                   onBarClick={filterByStorey}
                 />
@@ -578,7 +614,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 />
                 <div className="flex-1 relative">
                   <Treemap
-                    types={analysis.types}
+                    types={treemapTypes}
                     activeIfcClass={
                       filter.ifc_class && filter.ifc_class.length === 1
                         ? filter.ifc_class[0].replace(/^Ifc/, '')
@@ -668,6 +704,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
           <div className="col-span-3">
             <QualityCard
               analysis={analysis}
+              types={filteredTypes}
               stats={stats}
               onExpand={() => setOverlay('quality')}
               onClick={filterByQuality}
@@ -697,8 +734,8 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                   }}
                 />
                 <div className="flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)]">
-                  <GeometryBar types={analysis.types} onSegmentClick={filterByGeometry} />
-                  <GeometryClassTable types={analysis.types} onSegmentClick={filterByGeometry} />
+                  <GeometryBar types={filteredTypes} onSegmentClick={filterByGeometry} />
+                  <GeometryClassTable types={filteredTypes} onSegmentClick={filterByGeometry} />
                 </div>
               </CardContent>
             </Card>
@@ -711,15 +748,18 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         <QualityOverlayContent analysis={analysis} stats={stats} />
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'storeys'} onClose={() => setOverlay(null)} title={`Storeys (${analysis.total_storeys})`}>
-        <VerifiedStoreyChart storeys={analysis.storeys} verification={storeyVerification} />
+        <VerifiedStoreyChart storeys={analysis.storeys} verification={storeyVerification} filteredTypes={filteredTypes} />
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'elements'} onClose={() => setOverlay(null)} title="Element Distribution">
         <div className="relative h-[400px]">
-          <Treemap types={analysis.types} />
+          {/* Elements overlay uses `treemapTypes` (everything except the
+              ifc_class facet) so the user can still see sibling classes
+              when a treemap-tile filter is active. */}
+          <Treemap types={treemapTypes} />
         </div>
       </DashboardOverlay>
       <DashboardOverlay open={overlay === 'geometry'} onClose={() => setOverlay(null)} title="Geometry">
-        <GeometryBar types={analysis.types} />
+        <GeometryBar types={filteredTypes} />
       </DashboardOverlay>
       {hasFile && (
         <DashboardOverlay open={overlay === 'viewer'} onClose={() => { setOverlay(null); setSelectedElement(null); }} title="3D Viewer" fullscreen>
@@ -773,13 +813,13 @@ interface AnalysisStats {
   repCounts: Record<string, number>;
 }
 
-function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
+function computeAnalysisStats(types: AnalysisTypeRecord[]): AnalysisStats {
   let totalInstances = 0, emptyTypes = 0, untypedCount = 0, proxyCount = 0;
   let missingIsExternal = 0, missingLoadBearing = 0, missingFireRating = 0;
   const classCounts: Record<string, number> = {};
   const repCounts: Record<string, number> = {};
 
-  for (const t of analysis.types) {
+  for (const t of types) {
     totalInstances += t.instance_count;
     if (t.is_empty) emptyTypes++;
     if (t.is_untyped) untypedCount += t.instance_count;
@@ -796,9 +836,50 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
     }
   }
 
-  const typeRatio = analysis.total_types > 0 ? Math.round(totalInstances / analysis.total_types) : 0;
+  const totalTypes = types.length;
+  const typeRatio = totalTypes > 0 ? Math.round(totalInstances / totalTypes) : 0;
 
   return { totalInstances, typeRatio, emptyTypes, untypedCount, proxyCount, missingIsExternal, missingLoadBearing, missingFireRating, classCounts, repCounts };
+}
+
+/**
+ * Intersect the analysis type rows against the project filter store.
+ * Empty/undefined dimension means "no filter for that axis". Mirrors
+ * `filterTypesV2` in the Type-page browser — same multi-dim AND semantics.
+ *
+ * NOTE: `type_guid` is NOT present on `AnalysisTypeRecord` (the analysis
+ * payload pre-dates the Layer-2 GUID bridge). When `filter.type_guid` is
+ * set we conservatively keep all rows so the user doesn't see "0 types"
+ * — viewer-side selection drives the focused view in that case.
+ */
+function filterAnalysisTypes(
+  types: AnalysisTypeRecord[],
+  filter: Pick<FilterContext, 'ifc_class' | 'excluded_ifc_class' | 'floor_code' | 'type_guid'>
+): AnalysisTypeRecord[] {
+  const includedClasses = filter.ifc_class;
+  const excludedClasses = filter.excluded_ifc_class;
+  const floorCodes = filter.floor_code;
+  const hasInclude = includedClasses && includedClasses.length > 0;
+  const hasExclude = excludedClasses && excludedClasses.length > 0;
+  const hasFloor = floorCodes && floorCodes.length > 0;
+  if (!hasInclude && !hasExclude && !hasFloor) return types;
+
+  return types.filter((t) => {
+    // Match against both forms the store uses — raw (e.g. "IfcWall") and
+    // the AnalysisTypeRecord shape (`element_class`/`type_class`).
+    const elementClass = t.element_class || t.type_class;
+    if (hasInclude && !includedClasses!.includes(elementClass)) return false;
+    if (hasExclude && excludedClasses!.includes(elementClass)) return false;
+    if (hasFloor) {
+      // Match by storey GUID OR storey name — `storey_distribution[].storey`
+      // carries the name; the filter store carries GUIDs when fragments-v3
+      // provides them, else names (see VerifiedStoreyChart filterKey).
+      const dist = t.storey_distribution ?? [];
+      const matches = dist.some((sd) => floorCodes!.includes(sd.storey));
+      if (!matches) return false;
+    }
+    return true;
+  });
 }
 
 // ─── KPI Card — removed Track C lift ─────────────────────────────────────
@@ -809,24 +890,31 @@ function computeAnalysisStats(analysis: ModelAnalysis): AnalysisStats {
 
 function QualityCard({
   analysis,
+  types,
   stats,
   onExpand,
   onClick,
   onViewData,
 }: {
   analysis: ModelAnalysis;
+  /** Cross-filtered slice. Drives every count rendered in this card. */
+  types: AnalysisTypeRecord[];
   stats: AnalysisStats;
   onExpand?: () => void;
   onClick?: () => void;
   onViewData?: () => void;
 }) {
   // Count distinct types affected per check — gives a type-level view alongside
-  // the instance-level counts. Uses the raw analysis.types array directly.
-  const typesWithProxy = analysis.types.filter((t) => t.is_proxy).length;
-  const typesWithExtUnset = analysis.types.filter((t) => t.is_external_unset > 0).length;
-  const typesWithLbUnset = analysis.types.filter((t) => t.loadbearing_unset > 0).length;
-  const typesWithFrUnset = analysis.types.filter((t) => t.fire_rating_unset > 0).length;
+  // the instance-level counts. Cross-filtered subset so the card animates
+  // when the user clicks any other tile.
+  const typesWithProxy = types.filter((t) => t.is_proxy).length;
+  const typesWithExtUnset = types.filter((t) => t.is_external_unset > 0).length;
+  const typesWithLbUnset = types.filter((t) => t.loadbearing_unset > 0).length;
+  const typesWithFrUnset = types.filter((t) => t.fire_rating_unset > 0).length;
 
+  // `duplicate_guid_count` is a model-level scalar (not per-type), so it
+  // stays on the unfiltered analysis. Every other count comes from `stats`
+  // which already reflects the cross-filtered subset.
   const checks = [
     { label: 'Duplicate GUIDs', instances: analysis.duplicate_guid_count, types: null as number | null, ok: analysis.duplicate_guid_count === 0 },
     { label: 'Proxy-typed', instances: stats.proxyCount, types: typesWithProxy, ok: stats.proxyCount === 0 },
@@ -836,7 +924,7 @@ function QualityCard({
   ];
 
   const totalIssueTypes = new Set(
-    analysis.types
+    types
       .filter((t) =>
         t.is_proxy ||
         t.is_external_unset > 0 ||
@@ -847,6 +935,7 @@ function QualityCard({
   ).size;
   const totalChecks = checks.length;
   const passedChecks = checks.filter((c) => c.ok).length;
+  const animatedIssueTypes = useCountUp(totalIssueTypes);
 
   // Body click cross-filters the page (PowerBI pattern); the Table2
   // icon in the header is the secondary "view raw issues table" escape.
@@ -866,32 +955,15 @@ function QualityCard({
           {passedChecks}/{totalChecks} checks pass
         </span>
         {totalIssueTypes > 0 && (
-          <span className="text-[clamp(0.5rem,0.7vw,0.6rem)] text-text-tertiary">
-            {totalIssueTypes} type{totalIssueTypes !== 1 ? 's' : ''} affected
+          <span className="text-[clamp(0.5rem,0.7vw,0.6rem)] text-text-tertiary tabular-nums">
+            {animatedIssueTypes.toLocaleString()} type{totalIssueTypes !== 1 ? 's' : ''} affected
           </span>
         )}
       </div>
 
       <div className="space-y-[clamp(0.2rem,0.4vw,0.3rem)] flex-1">
         {checks.map((c) => (
-          <div key={c.label} className="flex items-center justify-between gap-2 text-[clamp(0.55rem,1vw,0.7rem)]">
-            <span className="text-text-secondary truncate">{c.label}</span>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Types badge — shown when we have per-type data and there's an issue */}
-              {c.types !== null && !c.ok && (
-                <span className="text-[clamp(0.45rem,0.65vw,0.6rem)] text-text-tertiary tabular-nums">
-                  {c.types} {c.types === 1 ? 'type' : 'types'}
-                </span>
-              )}
-              <span className={`font-semibold tabular-nums px-[clamp(0.3rem,0.6vw,0.5rem)] py-px rounded text-[clamp(0.5rem,0.9vw,0.65rem)] ${
-                c.ok
-                  ? 'bg-forest/15 text-forest'
-                  : 'bg-red-500/15 text-red-400'
-              }`}>
-                {c.instances === 0 ? 'OK' : c.instances.toLocaleString()}
-              </span>
-            </div>
-          </div>
+          <QualityCheckRow key={c.label} check={c} />
         ))}
       </div>
       <div className="mt-auto pt-[clamp(0.3rem,0.5vw,0.4rem)] border-t border-border text-[clamp(0.5rem,0.8vw,0.6rem)] text-text-tertiary">
@@ -918,6 +990,43 @@ function QualityCard({
     <Card className="h-full flex flex-col card-accent-lime">
       {body}
     </Card>
+  );
+}
+
+// ─── Quality check row — animated per-check pill ───────────────────────────
+// Split into its own component so we can call `useCountUp` per row without
+// violating the rules of hooks (one hook per row inside a `.map` callback
+// would otherwise break on row-count changes — they don't here, but the
+// component split is the safer pattern and keeps each pill smoothly animating).
+
+interface QualityCheck {
+  label: string;
+  instances: number;
+  types: number | null;
+  ok: boolean;
+}
+
+function QualityCheckRow({ check }: { check: QualityCheck }) {
+  const animatedInstances = useCountUp(check.instances);
+  const animatedTypes = useCountUp(check.types ?? 0);
+  return (
+    <div className="flex items-center justify-between gap-2 text-[clamp(0.55rem,1vw,0.7rem)]">
+      <span className="text-text-secondary truncate">{check.label}</span>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {check.types !== null && !check.ok && (
+          <span className="text-[clamp(0.45rem,0.65vw,0.6rem)] text-text-tertiary tabular-nums">
+            {animatedTypes.toLocaleString()} {check.types === 1 ? 'type' : 'types'}
+          </span>
+        )}
+        <span className={`font-semibold tabular-nums px-[clamp(0.3rem,0.6vw,0.5rem)] py-px rounded text-[clamp(0.5rem,0.9vw,0.65rem)] ${
+          check.ok
+            ? 'bg-forest/15 text-forest'
+            : 'bg-red-500/15 text-red-400'
+        }`}>
+          {check.instances === 0 ? 'OK' : animatedInstances.toLocaleString()}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -1054,34 +1163,54 @@ function GeometryBar({ types, onSegmentClick }: { types: AnalysisTypeRecord[]; o
       </div>
       {/* Legend */}
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-[clamp(0.3rem,0.5vw,0.4rem)]">
-        {data.map(([label, value], i) => {
-          const swatch = (
-            <>
-              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: GEOM_COLORS[i % GEOM_COLORS.length] }} />
-              <span className="text-text-secondary">{label}</span>
-              <span className="text-text-primary font-semibold tabular-nums">{value.toLocaleString()}</span>
-            </>
-          );
-          if (!interactive) {
-            return (
-              <div key={label} className="flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)]">
-                {swatch}
-              </div>
-            );
-          }
-          return (
-            <DrillTarget
-              key={label}
-              ariaLabel={`Filter by ${label}`}
-              onActivate={() => onSegmentClick!(label)}
-              className="flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)] hover:text-text-primary rounded px-1 -mx-1"
-            >
-              {swatch}
-            </DrillTarget>
-          );
-        })}
+        {data.map(([label, value], i) => (
+          <GeometryBarLegendItem
+            key={label}
+            label={label}
+            value={value}
+            color={GEOM_COLORS[i % GEOM_COLORS.length]}
+            onClick={interactive ? () => onSegmentClick!(label) : undefined}
+          />
+        ))}
       </div>
     </div>
+  );
+}
+
+function GeometryBarLegendItem({
+  label,
+  value,
+  color,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  onClick?: () => void;
+}) {
+  const animated = useCountUp(value);
+  const swatch = (
+    <>
+      <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
+      <span className="text-text-secondary">{label}</span>
+      <span className="text-text-primary font-semibold tabular-nums">{animated.toLocaleString()}</span>
+    </>
+  );
+  if (!onClick) {
+    return (
+      <div className="flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)]">
+        {swatch}
+      </div>
+    );
+  }
+  return (
+    <DrillTarget
+      ariaLabel={`Filter by ${label}`}
+      onActivate={onClick}
+      className="flex items-center gap-1 text-[clamp(0.45rem,0.7vw,0.55rem)] hover:text-text-primary rounded px-1 -mx-1"
+    >
+      {swatch}
+    </DrillTarget>
   );
 }
 
@@ -1113,14 +1242,7 @@ function GeometryClassTable({
     <div className="flex flex-col gap-[clamp(0.1rem,0.25vw,0.2rem)]">
       {data.map(([label, count]) => {
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-        const row = (
-          <div className="flex items-center justify-between gap-2 text-[clamp(0.5rem,0.7vw,0.6rem)]">
-            <span className="text-text-secondary truncate">{label}</span>
-            <span className="tabular-nums text-text-primary font-medium shrink-0">
-              {count.toLocaleString()} <span className="text-text-tertiary font-normal">({pct}%)</span>
-            </span>
-          </div>
-        );
+        const row = <GeometryClassRow label={label} count={count} pct={pct} />;
         if (onSegmentClick) {
           return (
             <DrillTarget
@@ -1135,6 +1257,28 @@ function GeometryClassTable({
         }
         return <div key={label}>{row}</div>;
       })}
+    </div>
+  );
+}
+
+function GeometryClassRow({
+  label,
+  count,
+  pct,
+}: {
+  label: string;
+  count: number;
+  pct: number;
+}) {
+  const animatedCount = useCountUp(count);
+  const animatedPct = useCountUp(pct);
+  return (
+    <div className="flex items-center justify-between gap-2 text-[clamp(0.5rem,0.7vw,0.6rem)]">
+      <span className="text-text-secondary truncate">{label}</span>
+      <span className="tabular-nums text-text-primary font-medium shrink-0">
+        {animatedCount.toLocaleString()}{' '}
+        <span className="text-text-tertiary font-normal">({animatedPct}%)</span>
+      </span>
     </div>
   );
 }

@@ -3,8 +3,10 @@ import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { DrillTarget } from '@/components/filters/DrillTarget';
+import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
 import type {
   AnalysisStorey,
+  AnalysisTypeRecord,
   ModelStoreyVerification,
   StoreyVerificationStatus,
   VerifiedModelStorey,
@@ -26,6 +28,14 @@ export interface VerifiedStoreyChartProps {
   storeys: AnalysisStorey[];
   /** Verification payload from /api/models/{id}/storey-verification/. */
   verification: ModelStoreyVerification | null | undefined;
+  /**
+   * Cross-filtered subset of the analysis types. When provided, per-storey
+   * element_count is recomputed from `filteredTypes[].storey_distribution`
+   * so the bars contract on ifc_class / type_guid clicks (PowerBI signature).
+   * When omitted (or empty filter), bars stay on the verification/storey
+   * row totals.
+   */
+  filteredTypes?: AnalysisTypeRecord[];
   /** Active storey for cross-filter highlight. Matches against guid when available, else name. */
   activeStorey?: string | null;
   /** Click handler for cross-filter; receives storey GUID when available, else name. Omit to render non-interactive. */
@@ -47,6 +57,7 @@ const STATUS_LABEL_KEY: Record<NonNullable<StoreyVerificationStatus>, string> = 
 export function VerifiedStoreyChart({
   storeys,
   verification,
+  filteredTypes,
   activeStorey,
   onBarClick,
 }: VerifiedStoreyChartProps) {
@@ -54,7 +65,7 @@ export function VerifiedStoreyChart({
 
   // Source-of-truth: verification.model_storeys when available, else fall back
   // to the analysis storey rows. Both shapes carry name/elevation/element_count.
-  const rows: VerifiedModelStorey[] = verification?.model_storeys?.length
+  const baseRows: VerifiedModelStorey[] = verification?.model_storeys?.length
     ? verification.model_storeys
     : storeys.map((s) => ({
         guid: null,
@@ -66,6 +77,24 @@ export function VerifiedStoreyChart({
         canonical_name: null,
         elevation_delta_m: null,
       }));
+
+  // When a cross-filter is active, recompute per-storey element counts
+  // from the filtered subset's `storey_distribution`. The storey rows
+  // themselves stay — we only swap the bar magnitude so the user sees
+  // "Floor 02 has 47 walls" (filtered) instead of "Floor 02 has 312
+  // elements" (project-total) on an ifc_class:[IfcWall] click.
+  const rows: VerifiedModelStorey[] = filteredTypes
+    ? baseRows.map((r) => {
+        let count = 0;
+        for (const t of filteredTypes) {
+          const dist = t.storey_distribution ?? [];
+          for (const sd of dist) {
+            if (sd.storey === r.name) count += sd.instance_count;
+          }
+        }
+        return { ...r, element_count: count };
+      })
+    : baseRows;
 
   const missing: MissingCanonicalFloor[] = verification?.missing_canonical ?? [];
 
@@ -245,6 +274,7 @@ function ModelStoreyRow({
   // for legacy analyses that pre-date AnalysisStorey.guid.
   const filterKey = row.guid ?? row.name;
   const isActive = activeStorey === filterKey;
+  const animatedCount = useCountUp(row.element_count);
 
   // Status edge color (left bar). Falls back to subtle grey when no canonical.
   const edgeClass = row.status
@@ -285,7 +315,7 @@ function ModelStoreyRow({
         />
       </div>
       <span className="text-text-primary tabular-nums font-medium w-[3em] text-right">
-        {row.element_count.toLocaleString()}
+        {animatedCount.toLocaleString()}
       </span>
     </div>
   );
