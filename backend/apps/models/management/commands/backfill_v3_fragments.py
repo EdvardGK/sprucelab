@@ -6,10 +6,17 @@ the v3 load path works on at least one test model. Calls the same
 trigger_fragment_generation flow the upload pipeline uses, so retries +
 status tracking + Django callback all keep working.
 
+Also doubles as the re-conversion entrypoint after converter changes
+that alter the on-disk .frag binary (e.g. the opening-element exclusion
+landed in 9ef1499) — pass --all to re-run every model regardless of
+fragments_format_version.
+
 Usage:
-  python manage.py backfill_v3_fragments              # all v2 models
-  python manage.py backfill_v3_fragments --model UUID # one specific model
-  python manage.py backfill_v3_fragments --dry-run    # report what would run
+  python manage.py backfill_v3_fragments                  # v2 models only
+  python manage.py backfill_v3_fragments --all            # every model w/ IFC
+  python manage.py backfill_v3_fragments --project UUID   # one project
+  python manage.py backfill_v3_fragments --model UUID     # one specific model
+  python manage.py backfill_v3_fragments --dry-run        # report what would run
 """
 
 import time
@@ -19,9 +26,20 @@ from apps.models.services.fragments import trigger_fragment_generation
 
 
 class Command(BaseCommand):
-    help = "Re-run the IfcImporter converter on v2 fragments to upgrade them to v3."
+    help = "Re-run the IfcImporter converter on .frag files (default: v2 only; --all for every model)."
 
     def add_arguments(self, parser):
+        parser.add_argument(
+            '--all',
+            action='store_true',
+            help='Re-convert every model with an IFC file, not just v2 ones. Use after converter changes (e.g. opening exclusion).',
+        )
+        parser.add_argument(
+            '--project',
+            type=str,
+            default=None,
+            help='Restrict to a single project UUID',
+        )
         parser.add_argument(
             '--model',
             type=str,
@@ -41,15 +59,26 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **opts):
-        qs = Model.objects.filter(fragments_format_version='v2').exclude(file_url__isnull=True).exclude(file_url='')
+        qs = Model.objects.exclude(file_url__isnull=True).exclude(file_url='')
+        scope = 'all-formats' if opts['all'] else 'v2-only'
+        if not opts['all']:
+            qs = qs.filter(fragments_format_version='v2')
+        if opts['project']:
+            qs = qs.filter(project_id=opts['project'])
         if opts['model']:
             qs = qs.filter(id=opts['model'])
+        qs = qs.order_by('project_id', 'created_at')
         targets = list(qs)
-        self.stdout.write(self.style.NOTICE(f'Found {len(targets)} v2 model(s) to backfill.'))
+        self.stdout.write(self.style.NOTICE(
+            f'Found {len(targets)} model(s) to backfill (scope={scope}).'
+        ))
 
         if opts['dry_run']:
             for m in targets:
-                self.stdout.write(f'  - {m.id}  {m.name}  (status={m.fragments_status})')
+                self.stdout.write(
+                    f'  - {m.id}  {m.name}  '
+                    f'(fmt={m.fragments_format_version} status={m.fragments_status})'
+                )
             return
 
         triggered = 0
