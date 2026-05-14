@@ -36,14 +36,27 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
 
   const [modelId, setModelId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [ifcClassFilter, setIfcClassFilter] = useState<string>('all');
-  // Selection state: canonical `type_guid` lives in the project filter
-  // provider (URL-serialised, shareable, cross-filter-composable — mirrors
-  // Layer 1's floor_code). Null-guid types (rare; untyped/synthetic) fall
-  // back to a local id-keyed state so they remain selectable in-session
-  // but don't pollute the URL.
+  // Cross-filter state lives in the project filter provider so URL +
+  // cross-page state stay unified:
+  //   - `ifc_class` — single-select adapter over the provider's
+  //     multi-select array; Types-page UX treats `'all'` as the unset
+  //     sentinel.
+  //   - `type_guid` — canonical IFC GlobalId mirroring Layer 1's
+  //     floor_code (with synth-hash fallback for proxy/userdef types).
+  // A local id-keyed fallback handles the (currently unreachable) case
+  // of truly null `type_guid` so untyped types stay selectable without
+  // polluting the URL.
   const filterCtx = useProjectFilter();
-  const { setTypeGuid } = useProjectFilterActions();
+  const { setIfcClass, setTypeGuid } = useProjectFilterActions();
+  const ifcClassFilter = filterCtx.ifc_class?.[0] ?? 'all';
+  const setIfcClassFilter = useCallback(
+    (next: string | ((curr: string) => string)) => {
+      const value =
+        typeof next === 'function' ? (next as (c: string) => string)(ifcClassFilter) : next;
+      setIfcClass(value === 'all' ? undefined : [value]);
+    },
+    [ifcClassFilter, setIfcClass]
+  );
   const activeTypeGuid = filterCtx.type_guid?.[0] ?? null;
   const [localFallbackTypeId, setLocalFallbackTypeId] = useState<string | null>(null);
 
