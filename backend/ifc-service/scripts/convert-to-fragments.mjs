@@ -27,9 +27,32 @@
  */
 
 import * as FRAGS from '@thatopen/fragments';
+import {
+  IFCOPENINGELEMENT,
+  IFCOPENINGSTANDARDCASE,
+  IFCVIRTUALELEMENT,
+} from 'web-ifc';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+
+// Non-physical IFC classes excluded from fragments at conversion time.
+// IfcOpeningElement / IfcOpeningStandardCase are box volumes used to cut
+// voids in walls/slabs at window+door locations; IfcVirtualElement is a
+// synthetic placeholder. Rendering them produces "ghost glass panes"
+// scattered through the fabric. Mirrors the Python canonical list in
+// backend/apps/entities/services/verification_engine.py:534-541
+// (_NON_PHYSICAL_IFC_CLASSES) — kept in sync so backend orphan accounting
+// and the on-disk .frag binary agree on what counts as physical fabric.
+//
+// Wall cutouts are NOT affected: web-ifc applies IfcRelVoidsElement during
+// the host wall's own geometry pass, so removing the opening from the
+// import allow-list drops only the separate opening mesh, not the void.
+const NON_PHYSICAL_IFC_CLASS_CODES = [
+  IFCOPENINGELEMENT,
+  IFCOPENINGSTANDARDCASE,
+  IFCVIRTUALELEMENT,
+];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +74,13 @@ async function convertToFragments(inputPath, outputPath) {
     path: path.join(__dirname, 'node_modules', 'web-ifc') + '/',
     absolute: true,
   };
+
+  // Strip non-physical classes from the importer's allow-list BEFORE
+  // process() runs so their geometry never ships in the .frag binary.
+  // See NON_PHYSICAL_IFC_CLASS_CODES above for rationale + Python parity.
+  for (const code of NON_PHYSICAL_IFC_CLASS_CODES) {
+    importer.classes.elements.delete(code);
+  }
 
   console.log('   Loading IFC + serialising to v3 fragments...');
   const ifcBytes = fs.readFileSync(inputPath);
