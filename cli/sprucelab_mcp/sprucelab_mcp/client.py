@@ -12,7 +12,7 @@ import httpx
 
 
 def _default_api_url() -> str:
-    return os.environ.get("SPRUCELAB_API_URL", "https://api.sprucelab.io").rstrip("/")
+    return os.environ.get("SPRUCELAB_API_URL", "https://www.sprucelab.io").rstrip("/")
 
 
 def _default_token() -> str | None:

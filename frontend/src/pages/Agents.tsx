@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import './Marketing.css';
 
-const API_BASE = 'https://api.sprucelab.io';
+// Surfaces are served on the main domain via Vercel rewrites that proxy
+// `/api/*`, `/llms.txt`, and `/.well-known/agent-tools.json` to Railway.
+const API_BASE = 'https://www.sprucelab.io';
 
 export default function Agents() {
   return (
@@ -27,11 +29,11 @@ export default function Agents() {
               mutation. Cold-start in one curl. Run a verified extraction in
               under thirty seconds, with no human in the loop.
             </p>
-            <div className="mkt-sticker" aria-label="curl https://api.sprucelab.io/api/capabilities/">
+            <div className="mkt-sticker" aria-label="curl https://www.sprucelab.io/api/capabilities/">
               <span className="mkt-sticker-prompt">$</span>
               <div className="mkt-sticker-cmd">
                 <span className="mkt-cmd-verb">curl</span>{' '}
-                <span>https://api.sprucelab.io/api/capabilities/</span>
+                <span>https://www.sprucelab.io/api/capabilities/</span>
               </div>
             </div>
           </section>
@@ -45,9 +47,9 @@ export default function Agents() {
                 that support <code>dry_run=true</code>, webhook events, CLI
                 commands, and embed surfaces. Stable contract, additive only.
               </p>
-              <pre className="mkt-codeblock"><span className="mkt-code-verb">curl</span> {API_BASE}/api/capabilities/
-<span className="mkt-code-verb">curl</span> {API_BASE}/.well-known/agent-tools.json
-<span className="mkt-code-verb">curl</span> {API_BASE}/llms.txt</pre>
+              <pre className="mkt-codeblock"><span className="mkt-code-verb">curl</span> https://www.sprucelab.io/api/capabilities/
+<span className="mkt-code-verb">curl</span> https://www.sprucelab.io/.well-known/agent-tools.json
+<span className="mkt-code-verb">curl</span> https://www.sprucelab.io/llms.txt</pre>
             </article>
 
             <article className="mkt-card">
@@ -78,7 +80,7 @@ export default function Agents() {
                 pipelines. Scaffold a new agent project with one command.
               </p>
               <pre className="mkt-codeblock"><span className="mkt-code-verb">pip install</span> sprucelab-cli
-<span className="mkt-code-verb">spruce</span> auth register <span className="mkt-code-mute">--token</span> ... <span className="mkt-code-mute">--url</span> {API_BASE}
+<span className="mkt-code-verb">spruce</span> auth register <span className="mkt-code-mute">--token</span> ... <span className="mkt-code-mute">--url</span> https://www.sprucelab.io
 <span className="mkt-code-verb">spruce</span> capabilities
 <span className="mkt-code-verb">spruce</span> verify <span className="mkt-code-mute">--dry-run --model</span> &lt;uuid&gt;</pre>
             </article>

@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import './Marketing.css';
 
-const API_BASE = 'https://api.sprucelab.io';
+// Surfaces are served on the main domain via Vercel rewrites that proxy
+// `/api/*`, `/llms.txt`, and `/.well-known/agent-tools.json` to Railway.
+const API_BASE = 'https://www.sprucelab.io';
 
 type ParityRow = {
   file: string;

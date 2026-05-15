@@ -5,6 +5,9 @@
   "framework": "vite",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/:path*",                       "destination": "https://sprucelab-production.up.railway.app/api/:path*" },
+    { "source": "/llms.txt",                         "destination": "https://sprucelab-production.up.railway.app/llms.txt" },
+    { "source": "/.well-known/agent-tools.json",     "destination": "https://sprucelab-production.up.railway.app/.well-known/agent-tools.json" },
+    { "source": "/(.*)",                             "destination": "/index.html" }
   ]
 }

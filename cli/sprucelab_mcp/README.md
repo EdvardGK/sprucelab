@@ -15,7 +15,7 @@ Then in your MCP client config (Claude Desktop, Cursor, Continue, …):
     "sprucelab": {
       "command": "sprucelab-mcp",
       "env": {
-        "SPRUCELAB_API_URL": "https://api.sprucelab.io",
+        "SPRUCELAB_API_URL": "https://www.sprucelab.io",
         "SPRUCELAB_API_TOKEN": "your-token-here"
       }
     }
@@ -24,7 +24,7 @@ Then in your MCP client config (Claude Desktop, Cursor, Continue, …):
 ```
 
 The server is a thin wrapper over Sprucelab's public HTTP surface — the same
-one advertised at <https://api.sprucelab.io/api/capabilities/>. No surprises,
+one advertised at <https://www.sprucelab.io/api/capabilities/>. No surprises,
 no custom protocol. If a tool fails, the error is the literal API response.
 
 ## Auth
@@ -34,7 +34,7 @@ auth. Everything else needs a token. Either set `SPRUCELAB_API_TOKEN` in the
 MCP env block, or get one via:
 
 ```bash
-spruce auth register --token <YOUR_KEY> --url https://api.sprucelab.io
+spruce auth register --token <YOUR_KEY> --url https://www.sprucelab.io
 ```
 
 For experimentation, the public sandbox token (read-only) is published on

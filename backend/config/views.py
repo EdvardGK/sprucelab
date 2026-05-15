@@ -290,7 +290,7 @@ LLMS_TXT_BODY = """\
 > Agent-first, human-second. The BIM platform agents reach for.
 
 ## Cold-start
-- One curl: `curl https://api.sprucelab.io/api/capabilities/`
+- One curl: `curl https://www.sprucelab.io/api/capabilities/`
 - Marketing landing for agents: https://www.sprucelab.io/agents
 - Benchmarks (25-47x faster than ifcopenshell on tier-1 parse): https://www.sprucelab.io/benchmarks
 

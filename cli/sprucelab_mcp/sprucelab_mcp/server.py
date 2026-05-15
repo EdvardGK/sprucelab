@@ -15,7 +15,7 @@ Claude Desktop / Cursor::
         "sprucelab": {
           "command": "sprucelab-mcp",
           "env": {
-            "SPRUCELAB_API_URL": "https://api.sprucelab.io",
+            "SPRUCELAB_API_URL": "https://www.sprucelab.io",
             "SPRUCELAB_API_TOKEN": "..."
           }
         }
