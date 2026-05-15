@@ -123,10 +123,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Adds X-DB-Query-Count / Server-Timing headers on requests with ?profile=1.
-    # Gated to DEBUG by default; set PROFILE_QUERIES=True to enable in any env.
-    # Requires connection.queries to be populated, which Django only does when
-    # DEBUG is True (or connection.force_debug_cursor = True).
+    # Always emits Server-Timing: total;dur=X on every response (negligible
+    # cost). When ?profile=1 AND (DEBUG or PROFILE_QUERIES=True) the response
+    # also gets X-DB-Query-Count / X-DB-Query-Time-Ms — DB profiling needs
+    # connection.queries to be populated, which only happens under DEBUG.
     'apps.core.middleware.QueryCountProfilerMiddleware',
 ]
 

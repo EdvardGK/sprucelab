@@ -1,24 +1,22 @@
 """
-Dev-only profiling middleware.
+Request-timing + DB-profiling middleware.
 
-When DEBUG is on (or settings.PROFILE_QUERIES is True), responses to requests
-that include ``?profile=1`` get extra headers describing what the request did:
+Always emits a ``Server-Timing: total;dur=X`` header on every response
+(cost: one ``perf_counter`` delta per request). That alone is enough to
+read end-to-end server processing time from Chrome/Firefox devtools'
+Network → Timings panel and decompose the wire vs server portion of any
+endpoint's latency.
 
-  X-DB-Query-Count: 7
-  X-DB-Query-Time-Ms: 23.4
-  Server-Timing: db;dur=23.4
+Opt-in DB breakdown: when the request URL has ``?profile=1`` AND either
+``DEBUG`` is on or ``settings.PROFILE_QUERIES`` is True, additional
+``X-DB-Query-Count`` / ``X-DB-Query-Time-Ms`` / ``Server-Timing: db;…``
+fields are added. DB profiling requires ``connection.queries`` to be
+populated, which Django only does under ``DEBUG`` or when
+``connection.force_debug_cursor`` is set, so the opt-in gate exists for
+correctness, not safety.
 
-The Server-Timing header is read natively by Chrome/Firefox devtools (Network
-tab → Timings panel), so this gives an at-a-glance view of DB cost on any
-endpoint without standing up Silk or the debug toolbar.
-
-Cost when not profiling: zero work — the early-out check is a single attribute
-read on the request object.
-
-Production safe by default: middleware is registered in MIDDLEWARE but the
-profile gate is opt-in per-request via the query param, AND the whole feature
-is disabled when DEBUG is False unless settings.PROFILE_QUERIES is explicitly
-set. No timing data leaks to anonymous users in prod.
+No timing data leaks anything sensitive — Server-Timing is a public,
+spec'd response header consumed by browser devtools.
 """
 from __future__ import annotations
 
@@ -29,30 +27,35 @@ from django.db import connection
 
 
 class QueryCountProfilerMiddleware:
-    """Adds X-DB-Query-Count / X-DB-Query-Time-Ms headers when ?profile=1."""
+    """Emit Server-Timing on every response; DB breakdown when ?profile=1."""
 
     def __init__(self, get_response):
         self.get_response = get_response
-        self.enabled = bool(getattr(settings, 'PROFILE_QUERIES', settings.DEBUG))
+        self.db_profile_enabled = bool(
+            getattr(settings, 'PROFILE_QUERIES', settings.DEBUG)
+        )
 
     def __call__(self, request):
-        if not self.enabled or request.GET.get('profile') != '1':
-            return self.get_response(request)
+        want_db_profile = (
+            self.db_profile_enabled and request.GET.get('profile') == '1'
+        )
 
-        # Snapshot query log boundary so we don't double-count nested middleware.
-        queries_before = len(connection.queries)
+        queries_before = len(connection.queries) if want_db_profile else 0
         t0 = time.perf_counter()
         response = self.get_response(request)
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
-        new_queries = connection.queries[queries_before:]
-        db_time_ms = sum(float(q.get('time', 0.0)) for q in new_queries) * 1000.0
+        if want_db_profile:
+            new_queries = connection.queries[queries_before:]
+            db_time_ms = sum(float(q.get('time', 0.0)) for q in new_queries) * 1000.0
+            response['X-DB-Query-Count'] = str(len(new_queries))
+            response['X-DB-Query-Time-Ms'] = f'{db_time_ms:.2f}'
+            response['X-Total-Time-Ms'] = f'{elapsed_ms:.2f}'
+            response['Server-Timing'] = (
+                f'db;desc="DB queries";dur={db_time_ms:.2f}, '
+                f'total;desc="Total request";dur={elapsed_ms:.2f}'
+            )
+        else:
+            response['Server-Timing'] = f'total;dur={elapsed_ms:.2f}'
 
-        response['X-DB-Query-Count'] = str(len(new_queries))
-        response['X-DB-Query-Time-Ms'] = f'{db_time_ms:.2f}'
-        response['X-Total-Time-Ms'] = f'{elapsed_ms:.2f}'
-        response['Server-Timing'] = (
-            f'db;desc="DB queries";dur={db_time_ms:.2f}, '
-            f'total;desc="Total request";dur={elapsed_ms:.2f}'
-        )
         return response
