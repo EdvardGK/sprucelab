@@ -18,6 +18,12 @@ interface TypeViewerPaneV2Props {
   /** Color of the filtered class in the shared class-color map. */
   classColor?: string;
   onClearSelection: () => void;
+  /** Quick-action handlers passed through to TypeDataRail. */
+  onSave?: (type: IFCType) => void;
+  onFlag?: (type: IFCType) => void;
+  onIgnore?: (type: IFCType) => void;
+  onCopyGuid?: (type: IFCType) => void;
+  onSaveNotes?: (type: IFCType, notes: string) => void;
 }
 
 /**
@@ -40,6 +46,11 @@ export function TypeViewerPaneV2({
   filteredInstanceCount = 0,
   classColor,
   onClearSelection,
+  onSave,
+  onFlag,
+  onIgnore,
+  onCopyGuid,
+  onSaveNotes,
 }: TypeViewerPaneV2Props) {
   const { t } = useTranslation();
   const isClassFiltered = activeIfcClass !== 'all' && !selectedType;
@@ -132,13 +143,18 @@ export function TypeViewerPaneV2({
           )}
         </div>
 
-        <div className="w-[clamp(200px,14vw,300px)] shrink-0 border-l border-border/60 overflow-y-auto bg-muted/10">
+        <div className="w-[clamp(280px,22vw,420px)] shrink-0 border-l border-border/60 overflow-y-auto bg-muted/10">
           <TypeDataRail
             selectedType={selectedType}
             activeIfcClass={activeIfcClass}
             filteredTypeCount={filteredTypeCount}
             filteredInstanceCount={filteredInstanceCount}
             classColor={classColor}
+            onSave={onSave}
+            onFlag={onFlag}
+            onIgnore={onIgnore}
+            onCopyGuid={onCopyGuid}
+            onSaveNotes={onSaveNotes}
           />
         </div>
       </div>

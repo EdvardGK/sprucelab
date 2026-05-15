@@ -1883,7 +1883,38 @@
       "ifcClass": "IFC class",
       "types": "Types",
       "instances": "Instances",
-      "classHint": "Pick a single type in the table to drill in."
+      "classHint": "Pick a single type in the table to drill in.",
+      "status": {
+        "pending": "Pending",
+        "mapped": "Mapped",
+        "flagged": "Flagged",
+        "ignored": "Ignored",
+        "review": "Review"
+      },
+      "action": {
+        "save": "Mark mapped (A)",
+        "flag": "Flag for follow-up (F)",
+        "ignore": "Ignore (I)",
+        "copyGuid": "Copy GUID",
+        "copyGuidSynth": "Synthetic GUID — not stable, copy disabled",
+        "copyGuidSuccess": "GUID copied to clipboard"
+      },
+      "notes": {
+        "title": "Notes",
+        "placeholder": "Notes on this type (saved on blur)…",
+        "saved": "Notes saved",
+        "noMapping": "No mapping yet — press A to create one."
+      },
+      "shortcutHint": "A save · F flag · I ignore · ←→ navigate · Shift+F fullscreen"
+    },
+    "shortcuts": {
+      "saved": "Marked as mapped",
+      "flagged": "Flagged for follow-up",
+      "ignored": "Marked as ignored",
+      "fullscreen": "Fullscreen viewer (Esc to exit)",
+      "exitFullscreen": "Exited fullscreen",
+      "saveError": "Could not save",
+      "noSelection": "Select a type first"
     }
   },
   "settings": {

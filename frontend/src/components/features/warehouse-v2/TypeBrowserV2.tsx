@@ -10,6 +10,11 @@ import {
 import { FilteredEmptyBanner } from '@/components/filters/FilteredEmptyBanner';
 import { useModels } from '@/hooks/use-models';
 import { useModelTypes, type IFCType } from '@/hooks/use-warehouse';
+import {
+  useCreateTypeMapping,
+  useUpdateTypeMapping,
+} from '@/hooks/use-type-mapping';
+import { useToast } from '@/hooks/use-toast';
 
 import { TypeBrowserHeaderV2 } from './TypeBrowserHeaderV2';
 import { TypeBrowserFilterBarV2 } from './TypeBrowserFilterBarV2';
@@ -19,6 +24,8 @@ import { TypeTopBarList } from './TypeTopBarList';
 import { buildClassColorMap } from './classColors';
 import { TypeViewerPaneV2 } from './TypeViewerPaneV2';
 import { TypeTableV2 } from './TypeTableV2';
+
+type MappingStatusUpdate = 'mapped' | 'followup' | 'ignored';
 
 interface TypeBrowserV2Props {
   projectId: string;
@@ -230,7 +237,192 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
 
   const isLoading = modelsLoading || (!!modelId && typesLoading);
 
+  // --- Quick-action mutations + advance logic ----------------------------
+  const toast = useToast();
+  const updateMapping = useUpdateTypeMapping();
+  const createMapping = useCreateTypeMapping();
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const advanceToNext = useCallback(
+    (currentTypeId: string) => {
+      const idx = filteredTypes.findIndex((tp) => tp.id === currentTypeId);
+      if (idx < 0) return;
+      const next = filteredTypes[idx + 1];
+      if (next) handleSelectType(next.id);
+    },
+    [filteredTypes, handleSelectType]
+  );
+
+  const setMappingStatus = useCallback(
+    async (type: IFCType, status: MappingStatusUpdate, toastKey: string) => {
+      try {
+        if (type.mapping?.id) {
+          await updateMapping.mutateAsync({
+            mappingId: type.mapping.id,
+            mapping_status: status,
+          });
+        } else {
+          await createMapping.mutateAsync({
+            ifc_type: type.id,
+            mapping_status: status,
+          });
+        }
+        toast.toast({ title: t(toastKey) });
+        advanceToNext(type.id);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        toast.toast({
+          title: t('typesV2.shortcuts.saveError'),
+          description: message,
+          variant: 'destructive',
+        });
+      }
+    },
+    [updateMapping, createMapping, toast, t, advanceToNext]
+  );
+
+  const handleSaveType = useCallback(
+    (type: IFCType) => setMappingStatus(type, 'mapped', 'typesV2.shortcuts.saved'),
+    [setMappingStatus]
+  );
+  const handleFlagType = useCallback(
+    (type: IFCType) => setMappingStatus(type, 'followup', 'typesV2.shortcuts.flagged'),
+    [setMappingStatus]
+  );
+  const handleIgnoreType = useCallback(
+    (type: IFCType) => setMappingStatus(type, 'ignored', 'typesV2.shortcuts.ignored'),
+    [setMappingStatus]
+  );
+
+  const handleCopyGuid = useCallback(
+    (type: IFCType) => {
+      if (!type.type_guid || type.type_guid.startsWith('synth_')) return;
+      navigator.clipboard.writeText(type.type_guid).then(
+        () => toast.toast({ title: t('typesV2.rail.action.copyGuidSuccess') }),
+        () => {
+          /* clipboard denied — silently fail; rare in app context */
+        }
+      );
+    },
+    [toast, t]
+  );
+
+  const handleSaveNotes = useCallback(
+    async (type: IFCType, notes: string) => {
+      if (!type.mapping?.id) return;
+      try {
+        await updateMapping.mutateAsync({
+          mappingId: type.mapping.id,
+          notes,
+        });
+        toast.toast({ title: t('typesV2.rail.notes.saved') });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        toast.toast({
+          title: t('typesV2.shortcuts.saveError'),
+          description: message,
+          variant: 'destructive',
+        });
+      }
+    },
+    [updateMapping, toast, t]
+  );
+
+  // --- Keyboard handler --------------------------------------------------
+  // Lifts the input-guard pattern from use-type-navigation.ts:132-176.
+  // Window-scoped so keys fire regardless of which sub-component has
+  // focus (table row, viewer canvas, treemap segment, etc).
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          tag === 'SELECT' ||
+          target.isContentEditable
+        ) {
+          // Escape from a focused input is still allowed via the normal
+          // browser behaviour; we don't want to swallow typing.
+          return;
+        }
+      }
+
+      // Fullscreen toggle works without a selected type.
+      if ((e.shiftKey && (e.key === 'F' || e.key === 'f')) || e.key === 'F11') {
+        e.preventDefault();
+        setIsFullscreen((curr) => {
+          const next = !curr;
+          toast.toast({
+            title: next
+              ? t('typesV2.shortcuts.fullscreen')
+              : t('typesV2.shortcuts.exitFullscreen'),
+          });
+          return next;
+        });
+        return;
+      }
+
+      if (e.key === 'Escape' && isFullscreen) {
+        e.preventDefault();
+        setIsFullscreen(false);
+        return;
+      }
+
+      // Arrow navigation always works when there's a list to walk.
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (filteredTypes.length === 0) return;
+        e.preventDefault();
+        const currentIdx = selectedTypeId
+          ? filteredTypes.findIndex((tp) => tp.id === selectedTypeId)
+          : -1;
+        const direction = e.key === 'ArrowRight' ? 1 : -1;
+        const nextIdx =
+          currentIdx < 0
+            ? direction === 1
+              ? 0
+              : filteredTypes.length - 1
+            : Math.max(0, Math.min(filteredTypes.length - 1, currentIdx + direction));
+        const target = filteredTypes[nextIdx];
+        if (target) handleSelectType(target.id);
+        return;
+      }
+
+      // Action keys need a selected type.
+      const key = e.key.toLowerCase();
+      if (key !== 'a' && key !== 'f' && key !== 'i') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (!selectedType) {
+        e.preventDefault();
+        toast.toast({ title: t('typesV2.shortcuts.noSelection') });
+        return;
+      }
+
+      e.preventDefault();
+      if (key === 'a') handleSaveType(selectedType);
+      else if (key === 'f') handleFlagType(selectedType);
+      else if (key === 'i') handleIgnoreType(selectedType);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    filteredTypes,
+    selectedTypeId,
+    selectedType,
+    isFullscreen,
+    handleSelectType,
+    handleSaveType,
+    handleFlagType,
+    handleIgnoreType,
+    toast,
+    t,
+  ]);
+
   return (
+    <>
     <PageShell
       title={t('typesV2.title')}
       subtitle={t('typesV2.subtitle')}
@@ -306,6 +498,11 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                       : undefined
                   }
                   onClearSelection={handleClearSelection}
+                  onSave={handleSaveType}
+                  onFlag={handleFlagType}
+                  onIgnore={handleIgnoreType}
+                  onCopyGuid={handleCopyGuid}
+                  onSaveNotes={handleSaveNotes}
                 />
               </div>
             </div>
@@ -345,6 +542,34 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
         </>
       )}
     </PageShell>
+    {isFullscreen && modelId && (
+      <div
+        className="fixed inset-0 z-50 bg-background p-2 flex"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('typesV2.shortcuts.fullscreen')}
+      >
+        <TypeViewerPaneV2
+          modelId={modelId}
+          selectedType={selectedType}
+          activeIfcClass={ifcClassFilter}
+          filteredTypeCount={filteredTypes.length}
+          filteredInstanceCount={filteredStats.instances}
+          classColor={
+            ifcClassFilter !== 'all'
+              ? classColors.get(ifcClassFilter)
+              : undefined
+          }
+          onClearSelection={handleClearSelection}
+          onSave={handleSaveType}
+          onFlag={handleFlagType}
+          onIgnore={handleIgnoreType}
+          onCopyGuid={handleCopyGuid}
+          onSaveNotes={handleSaveNotes}
+        />
+      </div>
+    )}
+    </>
   );
 }
 
