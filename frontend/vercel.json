@@ -9,5 +9,31 @@
     { "source": "/llms.txt",                         "destination": "https://sprucelab-production.up.railway.app/llms.txt" },
     { "source": "/.well-known/agent-tools.json",     "destination": "https://sprucelab-production.up.railway.app/.well-known/agent-tools.json" },
     { "source": "/(.*)",                             "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" },
+        { "key": "CDN-Cache-Control", "value": "no-store" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/llms.txt",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" },
+        { "key": "CDN-Cache-Control", "value": "no-store" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/.well-known/agent-tools.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" },
+        { "key": "CDN-Cache-Control", "value": "no-store" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
+      ]
+    }
   ]
 }
