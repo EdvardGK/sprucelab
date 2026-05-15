@@ -1,15 +1,42 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Layers, X } from 'lucide-react';
+import {
+  Bookmark,
+  Copy,
+  EyeOff,
+  Flag,
+  Layers,
+  X,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { STATUS, type StatusKind } from '@/lib/design-tokens';
 import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
 import type { AnalysisTypeRecord } from '@/lib/api-types';
+import type { IFCType, TypeMapping } from '@/hooks/use-warehouse';
+
+type MappingStatus = TypeMapping['mapping_status'];
 
 export interface AnalysisDetailsRailProps {
   selectedType: AnalysisTypeRecord | null;
   classColor?: string;
   onClose?: () => void;
+  /**
+   * Matched IFCType for this analysis record — looked up by signature
+   * `(ifc_type === type_class, type_name)` in the parent. When present,
+   * the rail renders the mapping_status pill, quick-action buttons, and
+   * the notes editor. Null = no match found (raw analysis-only view).
+   */
+  ifcType?: IFCType | null;
+  onSave?: (type: IFCType) => void;
+  onFlag?: (type: IFCType) => void;
+  onIgnore?: (type: IFCType) => void;
+  onCopyGuid?: (type: IFCType) => void;
+  onSaveNotes?: (type: IFCType, notes: string) => void;
 }
 
 /**
@@ -26,6 +53,12 @@ export function AnalysisDetailsRail({
   selectedType,
   classColor,
   onClose,
+  ifcType,
+  onSave,
+  onFlag,
+  onIgnore,
+  onCopyGuid,
+  onSaveNotes,
 }: AnalysisDetailsRailProps) {
   const { t } = useTranslation();
 
@@ -45,18 +78,52 @@ export function AnalysisDetailsRail({
       type={selectedType}
       classColor={classColor}
       onClose={onClose}
+      ifcType={ifcType ?? null}
+      onSave={onSave}
+      onFlag={onFlag}
+      onIgnore={onIgnore}
+      onCopyGuid={onCopyGuid}
+      onSaveNotes={onSaveNotes}
     />
   );
+}
+
+function statusToToken(status: MappingStatus | undefined | null): StatusKind {
+  switch (status) {
+    case 'mapped':
+      return 'success';
+    case 'followup':
+      return 'warning';
+    case 'review':
+      return 'info';
+    case 'ignored':
+      return 'neutral';
+    case 'pending':
+    default:
+      return 'neutral';
+  }
 }
 
 function TypeDetailRail({
   type,
   classColor,
   onClose,
+  ifcType,
+  onSave,
+  onFlag,
+  onIgnore,
+  onCopyGuid,
+  onSaveNotes,
 }: {
   type: AnalysisTypeRecord;
   classColor?: string;
   onClose?: () => void;
+  ifcType: IFCType | null;
+  onSave?: (type: IFCType) => void;
+  onFlag?: (type: IFCType) => void;
+  onIgnore?: (type: IFCType) => void;
+  onCopyGuid?: (type: IFCType) => void;
+  onSaveNotes?: (type: IFCType, notes: string) => void;
 }) {
   const { t } = useTranslation();
   const instances = useCountUp(type.instance_count);
@@ -81,9 +148,21 @@ function TypeDetailRail({
   // NS3451 chip only if it's already populated in the property bag —
   // mapping lives on a different model (TypeMapping) which is not in the
   // analysis payload. Modelers-own-data: show em-dash when absent, never
-  // a "Mapped %" framing.
-  const ns3451 = readNs3451(type.properties);
+  // a "Mapped %" framing. Prefer the resolved IFCType's mapping when
+  // we have one (more authoritative than property-bag probe).
+  const mapping = ifcType?.mapping ?? null;
+  const ns3451 = mapping?.ns3451_code ?? readNs3451(type.properties);
   const predefined = type.predefined_type ?? null;
+  const mappingStatus = mapping?.mapping_status ?? null;
+  const statusToken = STATUS[statusToToken(mappingStatus)];
+  const statusLabel = !mappingStatus
+    ? null
+    : mappingStatus === 'followup'
+      ? t('modelDash.rail.status.flagged')
+      : t(`modelDash.rail.status.${mappingStatus}` as const);
+  const isSynthGuid =
+    !ifcType?.type_guid || ifcType.type_guid.startsWith('synth_');
+  const hasActions = !!ifcType && (onSave || onFlag || onIgnore || onCopyGuid);
 
   return (
     <div className="relative h-full p-[clamp(0.625rem,0.9vw,1rem)] flex flex-col gap-[clamp(0.625rem,1vh,1rem)] text-[clamp(0.65rem,0.8vw,0.85rem)] overflow-y-auto">
@@ -128,6 +207,63 @@ function TypeDetailRail({
         label={t('modelDash.rail.instances')}
         value={instances.toLocaleString()}
       />
+
+      {(statusLabel || hasActions) && (
+        <div className="flex flex-col gap-[clamp(0.375rem,0.6vh,0.625rem)]">
+          {statusLabel && (
+            <span
+              className="inline-flex items-center gap-1 self-start rounded-full px-2 py-0.5 text-[clamp(0.55rem,0.7vw,0.75rem)] font-medium border"
+              style={{
+                background: statusToken.bg,
+                color: statusToken.text,
+                borderColor: statusToken.solid,
+              }}
+              title={statusLabel}
+            >
+              <span aria-hidden="true">{statusToken.glyph}</span>
+              <span>{statusLabel}</span>
+            </span>
+          )}
+          {hasActions && ifcType && (
+            <div className="flex items-center gap-1">
+              {onSave && (
+                <RailIconButton
+                  icon={<Bookmark className="h-3.5 w-3.5" />}
+                  title={t('modelDash.rail.action.save')}
+                  onClick={() => onSave(ifcType)}
+                />
+              )}
+              {onFlag && (
+                <RailIconButton
+                  icon={<Flag className="h-3.5 w-3.5" />}
+                  title={t('modelDash.rail.action.flag')}
+                  onClick={() => onFlag(ifcType)}
+                />
+              )}
+              {onIgnore && (
+                <RailIconButton
+                  icon={<EyeOff className="h-3.5 w-3.5" />}
+                  title={t('modelDash.rail.action.ignore')}
+                  onClick={() => onIgnore(ifcType)}
+                />
+              )}
+              <div className="flex-1" />
+              {onCopyGuid && (
+                <RailIconButton
+                  icon={<Copy className="h-3.5 w-3.5" />}
+                  title={
+                    isSynthGuid
+                      ? t('modelDash.rail.action.copyGuidSynth')
+                      : t('modelDash.rail.action.copyGuid')
+                  }
+                  onClick={() => onCopyGuid(ifcType)}
+                  disabled={isSynthGuid}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <RailSection title={t('modelDash.rail.classification')}>
         <RailField label={t('modelDash.rail.ns3451')}>
@@ -215,7 +351,106 @@ function TypeDetailRail({
           </ul>
         </RailSection>
       )}
+
+      {ifcType && onSaveNotes && (
+        <NotesEditor ifcType={ifcType} onSaveNotes={onSaveNotes} />
+      )}
+
+      {hasActions && (
+        <div className="pt-1 text-[clamp(0.5rem,0.6vw,0.65rem)] text-text-tertiary/70 leading-[1.45] border-t border-border/40">
+          {t('modelDash.rail.shortcutHint')}
+        </div>
+      )}
     </div>
+  );
+}
+
+function NotesEditor({
+  ifcType,
+  onSaveNotes,
+}: {
+  ifcType: IFCType;
+  onSaveNotes: (type: IFCType, notes: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(ifcType.mapping?.notes ?? '');
+  useEffect(() => {
+    setValue(ifcType.mapping?.notes ?? '');
+  }, [ifcType.id, ifcType.mapping?.notes]);
+
+  const hasMapping = !!ifcType.mapping;
+  const handleBlur = () => {
+    if (!hasMapping) return;
+    const current = (ifcType.mapping?.notes ?? '').trim();
+    if (value.trim() === current) return;
+    onSaveNotes(ifcType, value);
+  };
+
+  return (
+    <section className="flex flex-col gap-[clamp(0.25rem,0.4vh,0.5rem)]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 text-[clamp(0.55rem,0.65vw,0.7rem)] uppercase tracking-wide font-semibold text-text-tertiary hover:text-text-primary transition-colors"
+      >
+        {open ? (
+          <ChevronDown className="h-[clamp(0.6rem,0.8vw,0.85rem)] w-[clamp(0.6rem,0.8vw,0.85rem)]" />
+        ) : (
+          <ChevronRight className="h-[clamp(0.6rem,0.8vw,0.85rem)] w-[clamp(0.6rem,0.8vw,0.85rem)]" />
+        )}
+        <span>{t('modelDash.rail.notes.title')}</span>
+        {(ifcType.mapping?.notes ?? '').trim().length > 0 && (
+          <span className="ml-auto text-[clamp(0.5rem,0.6vw,0.65rem)] text-text-tertiary tabular-nums">
+            ●
+          </span>
+        )}
+      </button>
+      {open && (
+        <>
+          {hasMapping ? (
+            <textarea
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onBlur={handleBlur}
+              placeholder={t('modelDash.rail.notes.placeholder')}
+              rows={3}
+              className="w-full resize-y rounded-md border border-border/60 bg-background/60 px-2 py-1.5 text-[clamp(0.6rem,0.75vw,0.8rem)] leading-[1.4] focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          ) : (
+            <p className="text-[clamp(0.55rem,0.7vw,0.75rem)] text-text-tertiary italic">
+              {t('modelDash.rail.notes.noMapping')}
+            </p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function RailIconButton({
+  icon,
+  title,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      className="h-[clamp(1.4rem,2vw,1.75rem)] w-[clamp(1.4rem,2vw,1.75rem)] p-0"
+    >
+      {icon}
+    </Button>
   );
 }
 

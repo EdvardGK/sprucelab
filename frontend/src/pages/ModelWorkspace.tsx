@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3, Table2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -10,6 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useModelTypes, type IFCType } from '@/hooks/use-warehouse';
+import {
+  useCreateTypeMapping,
+  useUpdateTypeMapping,
+} from '@/hooks/use-type-mapping';
+import { useToast } from '@/hooks/use-toast';
 import {
   useModelAnalysis,
   useModelStoreyVerification,
@@ -738,6 +744,127 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
     );
   }, [selectedTypeIfcClass, analysis.types]);
 
+  // Cross-reference the analysis-payload type to its IFCType row so we
+  // can surface the mapping pill + edit affordances (save / flag / ignore
+  // / notes / copy GUID). Match on (ifc_type === type_class) +
+  // type_name. When no match is found the rail falls back to the
+  // analysis-only read view.
+  const { data: modelTypes = [] } = useModelTypes(model.id, { enabled: !!model.id });
+  const matchedIfcType = useMemo<IFCType | null>(() => {
+    if (!selectedTypeRecord) return null;
+    return (
+      modelTypes.find(
+        (tp) =>
+          tp.ifc_type === selectedTypeRecord.type_class &&
+          tp.type_name === (selectedTypeRecord.type_name ?? '')
+      ) ?? null
+    );
+  }, [modelTypes, selectedTypeRecord]);
+
+  const toast = useToast();
+  const updateMapping = useUpdateTypeMapping();
+  const createMapping = useCreateTypeMapping();
+
+  const setMappingStatus = useCallback(
+    async (
+      type: IFCType,
+      status: 'mapped' | 'followup' | 'ignored',
+      toastKey: string,
+    ) => {
+      try {
+        if (type.mapping?.id) {
+          await updateMapping.mutateAsync({
+            mappingId: type.mapping.id,
+            mapping_status: status,
+          });
+        } else {
+          await createMapping.mutateAsync({
+            ifc_type: type.id,
+            mapping_status: status,
+          });
+        }
+        toast.toast({ title: t(toastKey) });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        toast.toast({
+          title: t('modelDash.rail.shortcuts.saveError'),
+          description: message,
+          variant: 'destructive',
+        });
+      }
+    },
+    [updateMapping, createMapping, toast, t],
+  );
+
+  const handleSaveType = useCallback(
+    (type: IFCType) => setMappingStatus(type, 'mapped', 'modelDash.rail.shortcuts.saved'),
+    [setMappingStatus],
+  );
+  const handleFlagType = useCallback(
+    (type: IFCType) => setMappingStatus(type, 'followup', 'modelDash.rail.shortcuts.flagged'),
+    [setMappingStatus],
+  );
+  const handleIgnoreType = useCallback(
+    (type: IFCType) => setMappingStatus(type, 'ignored', 'modelDash.rail.shortcuts.ignored'),
+    [setMappingStatus],
+  );
+  const handleCopyGuid = useCallback(
+    (type: IFCType) => {
+      if (!type.type_guid || type.type_guid.startsWith('synth_')) return;
+      navigator.clipboard.writeText(type.type_guid).then(
+        () => toast.toast({ title: t('modelDash.rail.action.copyGuidSuccess') }),
+        () => undefined,
+      );
+    },
+    [toast, t],
+  );
+  const handleSaveNotes = useCallback(
+    async (type: IFCType, notes: string) => {
+      if (!type.mapping?.id) return;
+      try {
+        await updateMapping.mutateAsync({ mappingId: type.mapping.id, notes });
+        toast.toast({ title: t('modelDash.rail.notes.saved') });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        toast.toast({
+          title: t('modelDash.rail.shortcuts.saveError'),
+          description: message,
+          variant: 'destructive',
+        });
+      }
+    },
+    [updateMapping, toast, t],
+  );
+
+  // Keyboard handler — A/F/I act on the currently matched IFCType.
+  // Input/textarea/contenteditable guard mirrors TypeBrowserV2.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          tag === 'SELECT' ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'a' && key !== 'f' && key !== 'i') return;
+      if (!matchedIfcType) return;
+      e.preventDefault();
+      if (key === 'a') handleSaveType(matchedIfcType);
+      else if (key === 'f') handleFlagType(matchedIfcType);
+      else if (key === 'i') handleIgnoreType(matchedIfcType);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [matchedIfcType, handleSaveType, handleFlagType, handleIgnoreType]);
+
   return (
     <>
       <div className="p-[clamp(0.75rem,1.5vw,1rem)] w-full flex flex-col gap-[clamp(0.4rem,0.8vw,0.75rem)]">
@@ -862,6 +989,12 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                           : undefined
                       }
                       onClose={() => setSelectedTypeIfcClass(null)}
+                      ifcType={matchedIfcType}
+                      onSave={handleSaveType}
+                      onFlag={handleFlagType}
+                      onIgnore={handleIgnoreType}
+                      onCopyGuid={handleCopyGuid}
+                      onSaveNotes={handleSaveNotes}
                     />
                   </CardContent>
                 </Card>

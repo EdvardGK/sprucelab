@@ -2140,7 +2140,35 @@
       "fireRatingUnset": "FireRating ikke satt",
       "materials": "Materialer",
       "storeyDistribution": "Etasjer",
-      "missing": "Ikke angitt i modellen"
+      "missing": "Ikke angitt i modellen",
+      "status": {
+        "pending": "Venter",
+        "mapped": "Klassifisert",
+        "flagged": "Flagget",
+        "ignored": "Ignorert",
+        "review": "Til vurdering"
+      },
+      "action": {
+        "save": "Marker klassifisert (A)",
+        "flag": "Flagg for oppfølging (F)",
+        "ignore": "Ignorer (I)",
+        "copyGuid": "Kopier GUID",
+        "copyGuidSynth": "Syntetisk GUID — ikke stabil, kopiering deaktivert",
+        "copyGuidSuccess": "GUID kopiert til utklippstavlen"
+      },
+      "notes": {
+        "title": "Notater",
+        "placeholder": "Notater om denne typen (lagres når du forlater feltet)…",
+        "saved": "Notater lagret",
+        "noMapping": "Ingen mapping ennå — trykk A for å opprette."
+      },
+      "shortcutHint": "A lagre · F flagg · I ignorer",
+      "shortcuts": {
+        "saved": "Markert som klassifisert",
+        "flagged": "Flagget for oppfølging",
+        "ignored": "Markert som ignorert",
+        "saveError": "Kunne ikke lagre"
+      }
     },
     "stats": {
       "typesByClass": "Typer og forekomster per IFC-klasse",
