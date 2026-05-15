@@ -1002,11 +1002,12 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
             )}
           </div>
 
-          {/* Row 2: Quality (left) | Geometry bar (right).
-              ModelInfoCard removed — schema/CRS/authoring tool/units already
-              live in the Metadata tab; surfacing them twice was the duplicate
-              you flagged. */}
-          <div className="col-span-3">
+          {/* Row 2: Quality | Reuse | Geometry — three cards, each
+              col-span-2 of the parent grid-cols-6. Reuse moved down from
+              the top KPI row; Geometry switched from a stacked horizontal
+              bar to a standing (vertical) bar chart so it reads as its
+              own visual rather than another stripe. */}
+          <div className="col-span-2">
             <QualityCard
               analysis={analysis}
               types={filteredTypes}
@@ -1016,16 +1017,16 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               onViewData={() => setDrillSource({ type: 'quality' })}
             />
           </div>
-          <div className="col-span-3">
+          <div className="col-span-2">
+            <ReuseCard types={filteredTypes} />
+          </div>
+          <div className="col-span-2">
             <Card className="overflow-hidden card-accent-forest h-full">
               <CardContent className="p-3 flex flex-col h-full">
                 <CardHeader
                   title="Geometry"
                   onExpand={() => setOverlay('geometry')}
                   onViewData={() => {
-                    // Pick the first geometry segment as the drill default —
-                    // there is no aggregate "all geometry" drill. Falls back
-                    // to showing nothing if no segments exist.
                     const reps = new Map<string, number>();
                     for (const t of analysis.types) {
                       if (t.primary_representation && t.instance_count > 0) {
@@ -1038,9 +1039,11 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                     }
                   }}
                 />
-                <div className="flex flex-col gap-[clamp(0.3rem,0.6vw,0.5rem)]">
-                  <GeometryBar types={filteredTypes} onSegmentClick={filterByGeometry} />
-                  <GeometryClassTable types={filteredTypes} onSegmentClick={filterByGeometry} />
+                <div className="flex-1 min-h-0">
+                  <GeometryBarVertical
+                    types={filteredTypes}
+                    onSegmentClick={filterByGeometry}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -1484,6 +1487,171 @@ function GeometryBar({ types, onSegmentClick }: { types: AnalysisTypeRecord[]; o
   );
 }
 
+// Vertical (standing) variant — used in the bottom-row Geometry card.
+// Bars grow upward; labels sit underneath at a slight rotation so the
+// representation names ("SweptSolid", "Brep", etc.) fit without
+// truncation in a half-width tile.
+function GeometryBarVertical({
+  types,
+  onSegmentClick,
+}: {
+  types: AnalysisTypeRecord[];
+  onSegmentClick?: (representation: string) => void;
+}) {
+  const data = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of types) {
+      if (!t.primary_representation || t.instance_count === 0) continue;
+      counts[t.primary_representation] =
+        (counts[t.primary_representation] || 0) + t.instance_count;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [types]);
+
+  if (!data.length) {
+    return (
+      <div className="h-full flex items-center justify-center text-text-tertiary text-xs">
+        No geometry data
+      </div>
+    );
+  }
+
+  const max = data[0][1];
+  const interactive = !!onSegmentClick;
+
+  return (
+    <div className="h-full w-full flex flex-col">
+      <div className="flex-1 min-h-0 flex items-end gap-[clamp(0.2rem,0.6vw,0.5rem)] px-1">
+        {data.map(([label, value], i) => {
+          const heightPct = (value / max) * 100;
+          const color = GEOM_COLORS[i % GEOM_COLORS.length];
+          const tooltip = `${label}: ${value.toLocaleString()}`;
+          const bar = (
+            <div
+              className="w-full rounded-t-sm transition-all"
+              style={{ height: `${heightPct}%`, background: color }}
+            />
+          );
+          return (
+            <div
+              key={label}
+              className="flex-1 min-w-0 h-full flex flex-col items-center gap-1"
+            >
+              <span className="text-[clamp(0.55rem,0.7vw,0.7rem)] tabular-nums text-text-secondary font-semibold">
+                {value.toLocaleString()}
+              </span>
+              <div className="w-full flex-1 flex items-end">
+                {interactive ? (
+                  <DrillTarget
+                    ariaLabel={`Filter by ${label}: ${value.toLocaleString()}`}
+                    title={tooltip}
+                    className="w-full h-full flex items-end"
+                    onActivate={() => onSegmentClick!(label)}
+                  >
+                    {bar}
+                  </DrillTarget>
+                ) : (
+                  <div className="w-full h-full flex items-end" title={tooltip}>
+                    {bar}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex gap-[clamp(0.2rem,0.6vw,0.5rem)] px-1 mt-1">
+        {data.map(([label], i) => (
+          <div
+            key={`label-${label}`}
+            className="flex-1 min-w-0 flex items-start justify-center"
+          >
+            <span
+              className="text-[clamp(0.5rem,0.65vw,0.65rem)] text-text-tertiary truncate w-full text-center"
+              style={{ color: GEOM_COLORS[i % GEOM_COLORS.length] }}
+              title={label}
+            >
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReuseCard({ types }: { types: AnalysisTypeRecord[] }) {
+  const { t } = useTranslation();
+  const stats = useMemo(() => {
+    let totalInstances = 0;
+    let mappedInstances = 0;
+    for (const tp of types) {
+      totalInstances += tp.instance_count;
+      if (typeof tp.mapped_item_count === 'number') {
+        mappedInstances += tp.mapped_item_count;
+      }
+    }
+    const reusePercent =
+      totalInstances > 0 ? (mappedInstances / totalInstances) * 100 : 0;
+    return { totalInstances, mappedInstances, reusePercent };
+  }, [types]);
+  const animated = useCountUp(stats.reusePercent, { fraction: true });
+  const tone =
+    stats.reusePercent >= 30
+      ? 'good'
+      : stats.reusePercent >= 10
+        ? 'warning'
+        : 'danger';
+  const toneColor =
+    tone === 'good'
+      ? 'hsl(158 70% 28%)'
+      : tone === 'warning'
+        ? 'hsl(38 92% 50%)'
+        : 'hsl(0 84% 60%)';
+
+  return (
+    <Card className="overflow-hidden card-accent-forest h-full">
+      <CardContent className="p-3 flex flex-col h-full">
+        <CardHeader title={t('modelDash.kpis.reuse')} />
+        <div className="flex-1 min-h-0 flex flex-col justify-between gap-2">
+          <div className="flex items-baseline gap-2">
+            <span
+              className="text-[clamp(1.5rem,3.2vw,2.75rem)] font-semibold tabular-nums tracking-tight leading-none"
+              style={{ color: toneColor }}
+            >
+              {animated.toFixed(1)}
+            </span>
+            <span
+              className="text-[clamp(0.9rem,1.2vw,1.1rem)] font-medium tabular-nums leading-none"
+              style={{ color: toneColor }}
+            >
+              %
+            </span>
+          </div>
+          <div className="text-[clamp(0.6rem,0.8vw,0.8rem)] text-text-tertiary tabular-nums">
+            {t('modelDash.kpis.mappedRatioShort', {
+              mapped: stats.mappedInstances.toLocaleString(),
+              total: stats.totalInstances.toLocaleString(),
+            })}
+          </div>
+          <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(stats.reusePercent, 100)}%`,
+                background: toneColor,
+              }}
+            />
+          </div>
+          <p className="text-[clamp(0.55rem,0.7vw,0.75rem)] text-text-tertiary/80 leading-[1.45]">
+            {t('modelDash.kpis.reuseHint')}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function GeometryBarLegendItem({
   label,
   value,
@@ -1518,75 +1686,6 @@ function GeometryBarLegendItem({
     >
       {swatch}
     </DrillTarget>
-  );
-}
-
-// ─── Geometry Class Breakdown Table ──────────────────────────────────────────
-// Secondary content below the stacked bar: shows per-representation instance
-// counts so the user sees the exact numbers without expanding the overlay.
-
-function GeometryClassTable({
-  types,
-  onSegmentClick,
-}: {
-  types: AnalysisTypeRecord[];
-  onSegmentClick?: (representation: string) => void;
-}) {
-  const data = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const t of types) {
-      if (!t.primary_representation || t.instance_count === 0) continue;
-      counts[t.primary_representation] = (counts[t.primary_representation] || 0) + t.instance_count;
-    }
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [types]);
-
-  if (!data.length) return null;
-
-  const total = data.reduce((s, [, v]) => s + v, 0);
-
-  return (
-    <div className="flex flex-col gap-[clamp(0.1rem,0.25vw,0.2rem)]">
-      {data.map(([label, count]) => {
-        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-        const row = <GeometryClassRow label={label} count={count} pct={pct} />;
-        if (onSegmentClick) {
-          return (
-            <DrillTarget
-              key={label}
-              ariaLabel={`Filter by ${label}`}
-              onActivate={() => onSegmentClick(label)}
-              className="rounded"
-            >
-              {row}
-            </DrillTarget>
-          );
-        }
-        return <div key={label}>{row}</div>;
-      })}
-    </div>
-  );
-}
-
-function GeometryClassRow({
-  label,
-  count,
-  pct,
-}: {
-  label: string;
-  count: number;
-  pct: number;
-}) {
-  const animatedCount = useCountUp(count);
-  const animatedPct = useCountUp(pct);
-  return (
-    <div className="flex items-center justify-between gap-2 text-[clamp(0.5rem,0.7vw,0.6rem)]">
-      <span className="text-text-secondary truncate">{label}</span>
-      <span className="tabular-nums text-text-primary font-medium shrink-0">
-        {animatedCount.toLocaleString()}{' '}
-        <span className="text-text-tertiary font-normal">({animatedPct}%)</span>
-      </span>
-    </div>
   );
 }
 

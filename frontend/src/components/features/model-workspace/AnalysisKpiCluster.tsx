@@ -8,7 +8,7 @@ import {
   Layers,
   CheckCheck,
   AlertTriangle,
-  Repeat,
+  ClipboardList,
 } from 'lucide-react';
 
 import { DashboardTile } from '@/components/Layout';
@@ -107,7 +107,19 @@ export function AnalysisKpiCluster({
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-[clamp(0.3rem,0.6vw,0.5rem)]">
-      {/* 1 — Types (count + unused subdata). When filtered, `effectiveTypes`
+      {/* 1 — Requirements (placeholder pending EIR module). When the EIR
+          rule engine lands this turns into "fulfilled / total" against the
+          project's active requirement set. */}
+      <KpiTile
+        id="kpi-requirements"
+        icon={<ClipboardList className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+        label={t('modelDash.kpis.requirements')}
+        value={0}
+        missingValue
+        subValue={t('modelDash.kpis.pendingEir')}
+      />
+
+      {/* 2 — Types (count + unused subdata). When filtered, `effectiveTypes`
           shrinks; `analysis.total_types` would otherwise stay anchored on
           the project-total and not reflect the click — the whole point of
           this rework. */}
@@ -123,7 +135,7 @@ export function AnalysisKpiCluster({
         spark={<Sparkline segments={typesSegments} variant="stacked" />}
       />
 
-      {/* 2 — Classified (pending backend aggregation) */}
+      {/* 3 — Classified (pending backend aggregation) */}
       <KpiTile
         id="kpi-classified"
         icon={<CheckCheck className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
@@ -135,7 +147,7 @@ export function AnalysisKpiCluster({
         subValue={t('modelDash.kpis.pendingExtraction')}
       />
 
-      {/* 3 — With material (pending backend aggregation) */}
+      {/* 4 — With material (pending backend aggregation) */}
       <KpiTile
         id="kpi-with-material"
         icon={<Layers className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
@@ -147,7 +159,7 @@ export function AnalysisKpiCluster({
         subValue={t('modelDash.kpis.pendingExtraction')}
       />
 
-      {/* 4 — Untyped */}
+      {/* 5 — Untyped */}
       <KpiTile
         id="kpi-untyped"
         icon={<HelpCircle className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
@@ -170,35 +182,6 @@ export function AnalysisKpiCluster({
               progressColor="hsl(25 96% 61%)"
             />
           )
-        }
-      />
-
-      {/* 5 — Reuse ratio (IfcMappedItem share) */}
-      <KpiTile
-        id="kpi-reuse"
-        icon={<Repeat className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-        label={t('modelDash.kpis.reuse')}
-        value={stats.reusePercent}
-        suffix="%"
-        fraction
-        tone={
-          stats.reusePercent >= 30
-            ? 'good'
-            : stats.reusePercent >= 10
-            ? 'warning'
-            : 'danger'
-        }
-        subValue={t('modelDash.kpis.mappedRatioShort', {
-          mapped: stats.mappedInstances.toLocaleString(),
-          total: stats.totalInstances.toLocaleString(),
-        })}
-        spark={
-          <Sparkline
-            segments={[]}
-            variant="progress"
-            progressValue={stats.reusePercent}
-            progressColor="hsl(158 70% 28%)"
-          />
         }
       />
 

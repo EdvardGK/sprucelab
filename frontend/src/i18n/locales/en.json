@@ -2105,13 +2105,16 @@
       "classified": "Classified",
       "withMaterial": "With material",
       "reuse": "Reuse ratio",
+      "reuseHint": "Share of instances built from shared type geometry (IfcMappedItem).",
+      "requirements": "Requirements",
       "proxyUserdef": "Proxy + Userdef",
       "percentOfInstancesShort": "{{n}} instances",
       "percentOfTypesShort": "{{n}} types",
       "usedUnusedShort": "{{used}} used · {{unused}} unused",
       "mappedRatioShort": "{{mapped}} / {{total}} mapped",
       "orphanShare": "{{pct}}% outside spatial tree",
-      "pendingExtraction": "Data extraction pending"
+      "pendingExtraction": "Data extraction pending",
+      "pendingEir": "EIR rules pending"
     },
     "storeys": {
       "empty": "No storeys",

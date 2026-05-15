@@ -2105,13 +2105,16 @@
       "classified": "Klassifisert",
       "withMaterial": "Med materiale",
       "reuse": "Gjenbruksandel",
+      "reuseHint": "Andel forekomster bygget på delt typegeometri (IfcMappedItem).",
+      "requirements": "Krav",
       "proxyUserdef": "Proxy + Userdef",
       "percentOfInstancesShort": "{{n}} forekomster",
       "percentOfTypesShort": "{{n}} typer",
       "usedUnusedShort": "{{used}} brukt · {{unused}} ubrukt",
       "mappedRatioShort": "{{mapped}} / {{total}} mappet",
       "orphanShare": "{{pct}}% utenfor romlig hierarki",
-      "pendingExtraction": "Venter på data"
+      "pendingExtraction": "Venter på data",
+      "pendingEir": "EIR-regler kommer"
     },
     "storeys": {
       "empty": "Ingen etasjer",
