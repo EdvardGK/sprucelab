@@ -2187,6 +2187,12 @@
     "comingSoon": {
       "nextRound": "Coming next round"
     },
+    "viewer": {
+      "title": "3D viewer",
+      "show3d": "Show 3D",
+      "showFootprint": "Show footprint",
+      "fullscreen": "Open fullscreen"
+    },
     "roadmap": {
       "validation": "Per-rule pass/fail against the project's EIR — green/yellow/red and a click-through to the offending types.",
       "scripts": "Run saved Python/JS scripts against this model and pipe the output back into the dashboard.",

@@ -27,6 +27,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QTODashboard } from '@/components/features/qto/QTODashboard';
 import { UnifiedBIMViewer } from '@/components/features/viewer/UnifiedBIMViewer';
+import { ViewerPane } from '@/components/features/viewer/ViewerPane';
 import { ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { IFCPropertiesPanel } from '@/components/features/viewer/IFCPropertiesPanel';
 import { AppLayout } from '@/components/Layout/AppLayout';
@@ -933,80 +934,91 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
               </CardContent>
             </Card>
           </div>
-          <div className="col-span-3 flex gap-[clamp(0.3rem,0.6vw,0.5rem)] min-h-[clamp(360px,44vh,560px)]">
+          <div className="col-span-3 flex min-h-[clamp(360px,44vh,560px)]">
             {hasFile ? (
-              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-w-0">
-                <CardContent className="p-0 flex flex-col flex-1 min-h-0">
-                  <div className="flex-1 min-h-0 relative overflow-hidden bg-black/20 rounded-lg">
-                    {viewerMode === '3d' ? (
-                      <UnifiedBIMViewer
-                        modelId={model.id}
-                        showPropertiesPanel={false}
-                        classColorMap={classColorMap}
-                        floorCodeFilter={viewerStoreyFilter}
-                        typeVisibility={viewerTypeVisibility}
-                      />
-                    ) : (
-                      <FootprintView
-                        spatialData={analysis.spatial_data}
-                        classColorMap={classColorMap}
-                        units={analysis.units}
-                      />
-                    )}
-                    {/* Floating controls */}
-                    <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
-                      {analysis.spatial_data?.bounding_box && (
-                        <button
-                          onClick={() => setViewerMode(v => v === '3d' ? 'footprint' : '3d')}
-                          className="bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg px-2 py-1 text-[0.6rem] font-medium text-white/60 hover:text-white/90 transition-colors flex items-center gap-1"
-                          title={viewerMode === '3d' ? 'Show footprint' : 'Show 3D'}
-                        >
-                          {viewerMode === '3d' ? <Grid3x3 className="h-3 w-3" /> : <Box className="h-3 w-3" />}
-                          {viewerMode === '3d' ? '2D' : '3D'}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setOverlay('viewer')}
-                        className="bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg px-2 py-1 text-white/60 hover:text-white/90 transition-colors"
+              <ViewerPane
+                id="model-dash-viewer"
+                className="card-accent-forest flex-1 min-w-0"
+                title={t('modelDash.viewer.title')}
+                icon={
+                  <Box className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)] text-muted-foreground" />
+                }
+                headerActions={
+                  <>
+                    {analysis.spatial_data?.bounding_box && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setViewerMode((v) => (v === '3d' ? 'footprint' : '3d'))
+                        }
+                        title={
+                          viewerMode === '3d'
+                            ? t('modelDash.viewer.showFootprint')
+                            : t('modelDash.viewer.show3d')
+                        }
+                        className="h-[clamp(1rem,1.5vw,1.5rem)] gap-1 px-1.5 text-[clamp(0.55rem,0.7vw,0.75rem)]"
                       >
-                        <Maximize2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                        {viewerMode === '3d' ? (
+                          <Grid3x3 className="h-3 w-3" />
+                        ) : (
+                          <Box className="h-3 w-3" />
+                        )}
+                        {viewerMode === '3d' ? '2D' : '3D'}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setOverlay('viewer')}
+                      title={t('modelDash.viewer.fullscreen')}
+                      aria-label={t('modelDash.viewer.fullscreen')}
+                      className="h-[clamp(1rem,1.5vw,1.5rem)] w-[clamp(1rem,1.5vw,1.5rem)] p-0"
+                    >
+                      <Maximize2 className="h-3 w-3" />
+                    </Button>
+                  </>
+                }
+                rail={
+                  <AnalysisDetailsRail
+                    selectedType={selectedTypeRecord}
+                    classColor={
+                      selectedTypeIfcClass
+                        ? classColorMap[selectedTypeIfcClass]
+                        : undefined
+                    }
+                    onClose={() => setSelectedTypeIfcClass(null)}
+                    ifcType={matchedIfcType}
+                    onSave={handleSaveType}
+                    onFlag={handleFlagType}
+                    onIgnore={handleIgnoreType}
+                    onCopyGuid={handleCopyGuid}
+                    onSaveNotes={handleSaveNotes}
+                  />
+                }
+              >
+                {viewerMode === '3d' ? (
+                  <UnifiedBIMViewer
+                    modelId={model.id}
+                    showPropertiesPanel={false}
+                    classColorMap={classColorMap}
+                    floorCodeFilter={viewerStoreyFilter}
+                    typeVisibility={viewerTypeVisibility}
+                  />
+                ) : (
+                  <FootprintView
+                    spatialData={analysis.spatial_data}
+                    classColorMap={classColorMap}
+                    units={analysis.units}
+                  />
+                )}
+              </ViewerPane>
             ) : (
-              <Card className="overflow-hidden flex flex-col card-accent-forest flex-1 min-w-0">
+              <Card className="overflow-hidden flex flex-col card-accent-forest h-full">
                 <CardContent className="p-3 flex-1 flex items-center justify-center">
                   <span className="text-text-tertiary text-sm">No IFC file</span>
                 </CardContent>
               </Card>
-            )}
-            {/* Details rail — mounts whenever a type is picked from the
-                treemap. Hidden when nothing is selected so the viewer
-                gets full width. */}
-            {selectedTypeRecord && (
-              <div className="w-[clamp(200px,14vw,300px)] flex-shrink-0">
-                <Card className="overflow-hidden card-accent-lavender h-full">
-                  <CardContent className="p-0 h-full">
-                    <AnalysisDetailsRail
-                      selectedType={selectedTypeRecord}
-                      classColor={
-                        selectedTypeIfcClass
-                          ? classColorMap[selectedTypeIfcClass]
-                          : undefined
-                      }
-                      onClose={() => setSelectedTypeIfcClass(null)}
-                      ifcType={matchedIfcType}
-                      onSave={handleSaveType}
-                      onFlag={handleFlagType}
-                      onIgnore={handleIgnoreType}
-                      onCopyGuid={handleCopyGuid}
-                      onSaveNotes={handleSaveNotes}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
             )}
           </div>
 
@@ -1076,23 +1088,24 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
       </DashboardOverlay>
       {hasFile && (
         <DashboardOverlay open={overlay === 'viewer'} onClose={() => { setOverlay(null); setSelectedElement(null); }} title="3D Viewer" fullscreen>
-          <div className="flex h-full">
-            <div className="flex-1 relative">
-              <UnifiedBIMViewer
-                modelId={model.id}
-                showPropertiesPanel={false}
-                classColorMap={classColorMap}
-                onSelectionChange={(element) => setSelectedElement(element)}
-              />
-            </div>
-            <aside className="w-80 border-l border-border bg-background overflow-hidden flex-shrink-0">
+          <ViewerPane
+            id="model-dash-viewer-fullscreen"
+            rail={
               <IFCPropertiesPanel
                 element={selectedElement}
                 onClose={() => setSelectedElement(null)}
                 className="h-full"
               />
-            </aside>
-          </div>
+            }
+            railClassName="w-80 shrink-0 border-l border-border bg-background overflow-hidden"
+          >
+            <UnifiedBIMViewer
+              modelId={model.id}
+              showPropertiesPanel={false}
+              classColorMap={classColorMap}
+              onSelectionChange={(element) => setSelectedElement(element)}
+            />
+          </ViewerPane>
         </DashboardOverlay>
       )}
 

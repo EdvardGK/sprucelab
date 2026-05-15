@@ -2187,6 +2187,12 @@
     "comingSoon": {
       "nextRound": "Kommer i neste runde"
     },
+    "viewer": {
+      "title": "3D-visning",
+      "show3d": "Vis 3D",
+      "showFootprint": "Vis fotavtrykk",
+      "fullscreen": "Åpne i fullskjerm"
+    },
     "roadmap": {
       "validation": "Regel-for-regel godkjent/feilet mot prosjektets EIR — grønn/gul/rød og klikk-gjennom til typene som svikter.",
       "scripts": "Kjør lagrede Python-/JS-skript mot denne modellen og send resultatet tilbake til dashbordet.",
