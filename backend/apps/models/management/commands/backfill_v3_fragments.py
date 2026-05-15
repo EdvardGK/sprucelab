@@ -16,6 +16,7 @@ Usage:
   python manage.py backfill_v3_fragments --all            # every model w/ IFC
   python manage.py backfill_v3_fragments --project UUID   # one project
   python manage.py backfill_v3_fragments --model UUID     # one specific model
+  python manage.py backfill_v3_fragments --force          # also re-trigger models stuck in status=generating
   python manage.py backfill_v3_fragments --dry-run        # report what would run
 """
 
@@ -45,6 +46,11 @@ class Command(BaseCommand):
             type=str,
             default=None,
             help='Only backfill a single model UUID',
+        )
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Re-trigger models even when fragments_status="generating". Use to resurrect models stuck mid-generation from a prior crashed run.',
         )
         parser.add_argument(
             '--dry-run',
@@ -85,8 +91,10 @@ class Command(BaseCommand):
         skipped = 0
         failed = 0
         for m in targets:
-            if m.fragments_status == 'generating':
-                self.stdout.write(self.style.WARNING(f'  skip generating: {m.id}  {m.name}'))
+            if m.fragments_status == 'generating' and not opts['force']:
+                self.stdout.write(self.style.WARNING(
+                    f'  skip generating: {m.id}  {m.name}  (re-run with --force to override)'
+                ))
                 skipped += 1
                 continue
             try:
