@@ -2079,6 +2079,13 @@
     "filteredEmpty": {
       "noun": "typer"
     },
+    "nav": {
+      "prev": "Forrige modell",
+      "next": "Neste modell",
+      "atStart": "Første modell",
+      "atEnd": "Siste modell",
+      "selectPlaceholder": "Velg modell"
+    },
     "tabs": {
       "overview": "Oversikt",
       "qto": "Mengder",

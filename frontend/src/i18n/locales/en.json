@@ -2079,6 +2079,13 @@
     "filteredEmpty": {
       "noun": "types"
     },
+    "nav": {
+      "prev": "Previous model",
+      "next": "Next model",
+      "atStart": "At first model",
+      "atEnd": "At last model",
+      "selectPlaceholder": "Pick a model"
+    },
     "tabs": {
       "overview": "Overview",
       "qto": "QTO",

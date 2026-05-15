@@ -1,8 +1,15 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3, Table2 } from 'lucide-react';
-import { useModel } from '@/hooks/use-models';
+import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3, Table2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useModel, useModels } from '@/hooks/use-models';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   useModelAnalysis,
   useModelStoreyVerification,
@@ -49,10 +56,37 @@ type TabId = (typeof TAB_IDS)[number];
 
 export default function ModelWorkspace() {
   const { t } = useTranslation();
-  const { modelId } = useParams<{ id: string; modelId: string }>();
+  const { id: projectId, modelId } = useParams<{ id: string; modelId: string }>();
   const navigate = useNavigate();
   // const location = useLocation();
   const { data: model, isLoading } = useModel(modelId!);
+  const { data: projectModels = [] } = useModels(projectId);
+
+  // Models in this project, ordered by upload time desc (matches ProjectModels).
+  // Used by the header model selector + Prev/Next buttons so a coordinator
+  // can step through every model without bouncing back to the listing.
+  const orderedModels = useMemo(
+    () =>
+      projectModels
+        .filter((m) => m.id && m.name)
+        .sort((a, b) =>
+          (b.created_at ?? '').localeCompare(a.created_at ?? '')
+        ),
+    [projectModels]
+  );
+  const currentIndex = useMemo(
+    () => orderedModels.findIndex((m) => m.id === modelId),
+    [orderedModels, modelId]
+  );
+  const prevModel = currentIndex > 0 ? orderedModels[currentIndex - 1] : null;
+  const nextModel =
+    currentIndex >= 0 && currentIndex < orderedModels.length - 1
+      ? orderedModels[currentIndex + 1]
+      : null;
+  const goToModel = (targetId: string | null) => {
+    if (!targetId || !projectId || targetId === modelId) return;
+    navigate(`/projects/${projectId}/models/${targetId}`);
+  };
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   // Reset cross-filter dimensions when the modelId transitions. A filter
@@ -147,6 +181,61 @@ export default function ModelWorkspace() {
                 <ModelStatusBadge status={model.status} />
               </div>
             </div>
+
+            {/* Model navigator — Prev / select / Next. Lets a coordinator
+                step through every model in the project without bouncing
+                back to the listing. Hidden when there's only one model. */}
+            {orderedModels.length > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => goToModel(prevModel?.id ?? null)}
+                  disabled={!prevModel}
+                  title={prevModel ? `${t('modelDash.nav.prev')} · ${prevModel.name}` : t('modelDash.nav.atStart')}
+                  aria-label={t('modelDash.nav.prev')}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Select
+                  value={modelId ?? ''}
+                  onValueChange={(value) => goToModel(value)}
+                >
+                  <SelectTrigger className="h-8 w-[clamp(180px,16vw,260px)] text-sm">
+                    <SelectValue placeholder={t('modelDash.nav.selectPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orderedModels.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        <span className="flex items-center gap-2 max-w-full">
+                          <span className="truncate">{m.name}</span>
+                          {m.discipline && (
+                            <span className="text-[0.625rem] text-text-tertiary uppercase tracking-wide shrink-0">
+                              {m.discipline}
+                            </span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-text-tertiary tabular-nums whitespace-nowrap">
+                  {currentIndex + 1} / {orderedModels.length}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => goToModel(nextModel?.id ?? null)}
+                  disabled={!nextModel}
+                  title={nextModel ? `${t('modelDash.nav.next')} · ${nextModel.name}` : t('modelDash.nav.atEnd')}
+                  aria-label={t('modelDash.nav.next')}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </header>
 
