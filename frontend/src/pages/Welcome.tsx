@@ -185,9 +185,10 @@ export default function Welcome() {
       );
     }
     return (
-      <Link to="/login" className="welcome-signout">
-        Sign in
-      </Link>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '20px' }}>
+        <Link to="/agents" className="welcome-signout">For agents</Link>
+        <Link to="/login" className="welcome-signout">Sign in</Link>
+      </div>
     );
   };
 
@@ -225,11 +226,17 @@ export default function Welcome() {
             ) : (
               <section className="welcome-panel">
                 <div className="welcome-tag">Beta · Invitation only</div>
-                <h1 className="welcome-heading">Apply for access.</h1>
+                <h1 className="welcome-heading">The BIM platform agents reach for.</h1>
                 <p className="welcome-lede">
-                  Sprucelab is in closed beta — the data layer behind BIM
-                  models you can actually query, diff, and verify. We open
-                  access manually so we get to meet each new account.
+                  Sprucelab is a data-first BIM platform with a capabilities
+                  manifest, a native MCP server, signed webhooks, and dry-run
+                  on every mutation — powered by ifcfast for 25–47× faster IFC
+                  parsing. Humans welcome. Apply below; we open access by hand
+                  so we get to meet each new account.
+                </p>
+                <p className="welcome-lede" style={{ marginTop: '-0.25rem' }}>
+                  <Link to="/agents" className="welcome-inline-link">For agents →</Link>{' '}
+                  · <Link to="/benchmarks" className="welcome-inline-link">Benchmarks →</Link>
                 </p>
 
                 <form className="welcome-form" onSubmit={handleSignup}>

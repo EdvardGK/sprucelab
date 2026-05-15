@@ -121,6 +121,34 @@ def capabilities(request):
         'discovery': {
             'agent_tools_manifest': '/.well-known/agent-tools.json',
             'llms_txt': '/llms.txt',
+            'marketing_for_agents': 'https://www.sprucelab.io/agents',
+            'benchmarks': 'https://www.sprucelab.io/benchmarks',
+        },
+        # Native MCP protocol surface. Agents that prefer typed tool calls
+        # over raw HTTP can install the server and get the same capabilities
+        # as a Claude/Cursor tool catalog.
+        'mcp': {
+            'package_name': 'sprucelab-mcp',
+            'install': 'pip install sprucelab-mcp',
+            'invocation': 'sprucelab-mcp',
+            'protocol_version': '2024-11-05',
+            'transport': 'stdio',
+            'config_example': {
+                'mcpServers': {
+                    'sprucelab': {'command': 'sprucelab-mcp'},
+                },
+            },
+        },
+        # Parser used by the IFC extraction layer. Stamped so an agent can
+        # decide whether to call us or roll its own based on the perf
+        # numbers we cite on the benchmarks page.
+        'parser': {
+            'ifc': 'ifcfast',
+            'ifc_version_min': '0.1.0',
+            'fallback': 'ifcopenshell',
+            'tier_1_speedup_vs_ifcopenshell': '25x-47x',
+            'audit_url': 'https://www.sprucelab.io/benchmarks',
+            'source_repo': 'https://github.com/EdvardGK/ifcfast',
         },
     })
 
@@ -188,6 +216,22 @@ def agent_tools_manifest(request):
                 "Run 'spruce capabilities' for the full command catalog."
             ),
         },
+        'mcp': {
+            'package_name': 'sprucelab-mcp',
+            'install': 'pip install sprucelab-mcp',
+            'invocation': 'sprucelab-mcp',
+            'config_example': {
+                'mcpServers': {
+                    'sprucelab': {'command': 'sprucelab-mcp'},
+                },
+            },
+        },
+        'parser': {
+            'ifc': 'ifcfast',
+            'fallback': 'ifcopenshell',
+            'tier_1_speedup_vs_ifcopenshell': '25x-47x',
+            'audit_url': 'https://www.sprucelab.io/benchmarks',
+        },
         'verbs': [
             {
                 'command': 'spruce capabilities',
@@ -243,13 +287,23 @@ LLMS_TXT_BODY = """\
 # Sprucelab
 
 > Data-first BIM intelligence: every file becomes a queryable data stream.
-> Agent-first, human-second.
+> Agent-first, human-second. The BIM platform agents reach for.
+
+## Cold-start
+- One curl: `curl https://api.sprucelab.io/api/capabilities/`
+- Marketing landing for agents: https://www.sprucelab.io/agents
+- Benchmarks (25-47x faster than ifcopenshell on tier-1 parse): https://www.sprucelab.io/benchmarks
 
 ## Discovery
 - [Capabilities (machine-readable)](/api/capabilities/)
 - [Embed capabilities](/api/embed/capabilities/)
 - [Agent tools manifest](/.well-known/agent-tools.json)
 - [Health](/api/health/)
+
+## MCP (native protocol)
+- Install: `pip install sprucelab-mcp`
+- Claude Desktop / Cursor config:
+  `{"mcpServers": {"sprucelab": {"command": "sprucelab-mcp"}}}`
 
 ## CLI
 - Install: `pip install -e cli/` (from the sprucelab repo)
@@ -268,6 +322,10 @@ LLMS_TXT_BODY = """\
 - Errors are JSON: check `detail` and (for duplicates) the `duplicate: true` flag
 - Webhooks: HMAC-SHA256, header `X-Webhook-Signature`
 - Token registration: `POST /api/automation/agent/register/`
+
+## Stack
+- IFC parser: ifcfast (Rust + Python, MIT, 25-47x faster than ifcopenshell on tier-1)
+  https://github.com/EdvardGK/ifcfast
 """
 
 

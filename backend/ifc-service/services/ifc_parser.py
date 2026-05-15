@@ -53,6 +53,11 @@ class QuickStats:
     # Error if failed
     error: Optional[str] = None
 
+    # Which parser produced this run. Stamped so we can A/B ifcfast vs
+    # ifcopenshell tier-1 timings post-deploy. Defaults to ifcopenshell;
+    # the ifcfast accelerator path sets it to "ifcfast" on success.
+    parser_used: str = "ifcopenshell"
+
 
 @dataclass
 class TypesOnlyResult:
@@ -118,6 +123,19 @@ class IFCParserService:
         """
         stats = QuickStats()
         start_time = time.time()
+
+        # Opt-in fast path: ifcfast tier-1 indexing. 25-47x faster than
+        # ifcopenshell on the audited set. Enabled by SPRUCELAB_PARSER=ifcfast;
+        # falls back to the ifcopenshell path on import error or parse failure.
+        from .ifc_parser_ifcfast import is_enabled as _ifcfast_enabled, quick_stats_ifcfast
+        if _ifcfast_enabled():
+            quick_stats_ifcfast(file_path, stats)
+            if stats.success:
+                stats.parser_used = "ifcfast"
+                return stats
+            # Fallback: reset and continue into the ifcopenshell branch below.
+            stats = QuickStats()
+            start_time = time.time()
 
         try:
             # Open the file
