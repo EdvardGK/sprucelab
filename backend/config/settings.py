@@ -159,7 +159,7 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(
             DATABASE_URL,
-            conn_max_age=0,  # Close connections immediately to prevent pool exhaustion
+            conn_max_age=60,  # Reuse connections for 60s to amortize handshake latency
             conn_health_checks=True,  # Enable connection health checks
         )
     }
@@ -173,6 +173,21 @@ else:
             'PASSWORD': 'postgres',
             'HOST': 'localhost',
             'PORT': '5432',
+        }
+    }
+
+# Django cache — Redis-backed in prod (shared across Gunicorn workers so the
+# 60s Supabase token cache in config.authentication doesn't duplicate
+# per-worker). Falls back to default LocMemCache when REDIS_URL is absent
+# (local dev without Redis). Keys are namespaced via KEY_PREFIX so they
+# coexist with the Celery broker on the same Redis DB.
+if os.getenv('REDIS_URL'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL'),
+            'KEY_PREFIX': 'sprucelab',
+            'TIMEOUT': 300,
         }
     }
 
