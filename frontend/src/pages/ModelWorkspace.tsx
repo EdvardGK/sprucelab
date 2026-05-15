@@ -700,7 +700,15 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         classes.add(t.element_class || t.type_class);
       }
     }
-    setIfcClass(classes.size > 0 ? Array.from(classes) : undefined);
+    if (classes.size === 0) {
+      setIfcClass(undefined);
+      return;
+    }
+    const next = Array.from(classes).sort();
+    const active = (filter.ifc_class ?? []).slice().sort();
+    const isSame =
+      active.length === next.length && active.every((c, i) => c === next[i]);
+    setIfcClass(isSame ? undefined : next);
   };
 
   const closeDrill = () => {
