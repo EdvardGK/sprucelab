@@ -12,7 +12,7 @@ import {
   ArrowLeft,
   type LucideIcon,
 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
@@ -47,6 +47,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="flex h-screen bg-background text-foreground">
       <aside className="w-[clamp(11rem,14vw,14rem)] shrink-0 border-r border-border-subtle bg-surface-secondary/30 flex flex-col">
         {/* Brand + back-to-app */}
@@ -102,5 +103,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
       <main className="flex-1 overflow-auto">{children}</main>
     </div>
+    </TooltipProvider>
   );
 }

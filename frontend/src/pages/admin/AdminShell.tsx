@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import apiClient from '@/lib/api-client';
 import type { AdminStats, AdminOutletContext } from '@/components/admin/types';
@@ -12,7 +11,8 @@ import type { AdminStats, AdminOutletContext } from '@/components/admin/types';
  * single aggregated `/api/admin/dashboard/` payload once, auto-refreshes
  * every 30 seconds, and hands it down to nested routes via Outlet context.
  *
- * The Tooltip provider lives here so InfoBadge tooltips work on every page.
+ * Tooltip context is provided by AdminLayout itself, so loading and error
+ * branches don't need to remount their own provider.
  */
 export default function AdminShell() {
   const { t } = useTranslation();
@@ -49,9 +49,7 @@ export default function AdminShell() {
 
   return (
     <AdminLayout>
-      <TooltipProvider delayDuration={150}>
-        <Outlet context={ctx} />
-      </TooltipProvider>
+      <Outlet context={ctx} />
     </AdminLayout>
   );
 }
