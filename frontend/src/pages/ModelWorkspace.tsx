@@ -29,6 +29,7 @@ import {
 } from '@/contexts/ProjectFilterProvider';
 import { FilterChips } from '@/components/filters/FilterChips';
 import { FilteredEmptyBanner } from '@/components/filters/FilteredEmptyBanner';
+import { useProjectFilterValidate } from '@/hooks/useProjectFilterValidate';
 import type { FilterContext } from '@/lib/embed/types';
 import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
 import { AnalysisDetailsRail } from '@/components/features/model-workspace/AnalysisDetailsRail';
@@ -475,6 +476,33 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
   // in the tabs subheader so it doesn't push content down.
   const filter = useProjectFilter();
   const { setFloorCode, setIfcClass } = useProjectFilterActions();
+
+  // One-shot post-hydrate URL filter validation. A `?d=...` payload that
+  // outlived the data it referenced (storey renamed, model re-extracted,
+  // class disappeared) would otherwise hide every row and surface as an
+  // unexplained empty page or an amber `<FilteredEmptyBanner>` over the
+  // dashboard. Build the universe directly from the analysis payload
+  // using the same value derivation `filterAnalysisTypes` consumes, then
+  // drop any dimension whose entire selection misses.
+  const filterUniverse = useMemo(() => {
+    const ifcClasses = new Set<string>();
+    const floorCodes = new Set<string>();
+    for (const t of analysis.types) {
+      ifcClasses.add(t.element_class || t.type_class);
+      for (const sd of t.storey_distribution ?? []) {
+        if (sd.storey) floorCodes.add(sd.storey);
+      }
+    }
+    for (const s of analysis.storeys ?? []) {
+      if (s.name) floorCodes.add(s.name);
+    }
+    return {
+      ifc_class: ifcClasses,
+      excluded_ifc_class: ifcClasses,
+      floor_code: floorCodes,
+    };
+  }, [analysis.types, analysis.storeys]);
+  useProjectFilterValidate(filterUniverse);
 
   // Cross-filter recompute (PowerBI signature). The dashboard tiles must
   // animate when the user clicks a treemap tile / storey bar / quality
