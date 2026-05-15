@@ -30,6 +30,7 @@ import {
 import { FilterChips } from '@/components/filters/FilterChips';
 import { FilteredEmptyBanner } from '@/components/filters/FilteredEmptyBanner';
 import { useProjectFilterValidate } from '@/hooks/useProjectFilterValidate';
+import { useResetFiltersOnModelChange } from '@/hooks/useResetFiltersOnModelChange';
 import type { FilterContext } from '@/lib/embed/types';
 import { deriveTypeVisibility } from '@/lib/filters/deriveTypeVisibility';
 import { AnalysisDetailsRail } from '@/components/features/model-workspace/AnalysisDetailsRail';
@@ -54,19 +55,16 @@ export default function ModelWorkspace() {
   const { data: model, isLoading } = useModel(modelId!);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 
-  // Reset cross-filter dimensions when the user navigates to a different
-  // model. A class/floor/type filter from model A doesn't apply to model B
-  // (different IFC schema, different storey GUIDs, etc.); leaving them
-  // active produces "0 / 297" empty views with no obvious cause. Skip the
-  // first run so a URL-hydrated `?d=...` survives initial load.
+  // Reset cross-filter dimensions when the modelId transitions. A filter
+  // authored against model A is stale on model B (different IFC schema,
+  // different storey GUIDs, type_guids only valid in their own model).
+  // The hook also clears on first mount when entering from a different
+  // page that left filters in the provider — its one carve-out is a
+  // `?d=...` URL deeplink, which the URL hydration hook owns.
+  useResetFiltersOnModelChange(modelId);
+
+  // Still used by the "Clear" chip in the active-filter strip below.
   const { clearDimensions } = useProjectFilterActions();
-  const prevModelIdRef = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (prevModelIdRef.current !== undefined && prevModelIdRef.current !== modelId) {
-      clearDimensions();
-    }
-    prevModelIdRef.current = modelId;
-  }, [modelId, clearDimensions]);
 
   // Active filter dimensions. Lives at the page level so the chip + Clear
   // bar can sit in the tabs subheader instead of popping above the KPI

@@ -15,6 +15,7 @@ import {
   useUpdateTypeMapping,
 } from '@/hooks/use-type-mapping';
 import { useToast } from '@/hooks/use-toast';
+import { useResetFiltersOnModelChange } from '@/hooks/useResetFiltersOnModelChange';
 
 import { TypeBrowserHeaderV2 } from './TypeBrowserHeaderV2';
 import { TypeBrowserFilterBarV2 } from './TypeBrowserFilterBarV2';
@@ -74,10 +75,16 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     }
   }, [models, modelId]);
 
-  // Clear selection when filters change. Skip the initial mount run so a
-  // URL-hydrated `?d=...type_guid=...` survives the first render — the
-  // dependency tuple's initial values would otherwise wipe it before the
-  // user ever interacts.
+  // Switching models nukes ALL cross-filter dimensions, not just the
+  // type selection — a class/floor/ns3451 filter from model A is stale
+  // on model B. Hook honours the `?d=` URL deeplink carve-out.
+  useResetFiltersOnModelChange(modelId);
+
+  // Targeted reset: when the user narrows the visible list via the
+  // search box or the IFC-class chip, drop the type selection so the
+  // viewer doesn't dangle on a hidden type. Other dimensions stay.
+  // Skip the initial mount run so a URL-hydrated `?d=...type_guid=...`
+  // survives the first render.
   const selectionResetMountedRef = useRef(false);
   useEffect(() => {
     if (!selectionResetMountedRef.current) {
@@ -86,7 +93,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     }
     setTypeGuid(undefined);
     setLocalFallbackTypeId(null);
-  }, [modelId, ifcClassFilter, searchQuery, setTypeGuid]);
+  }, [ifcClassFilter, searchQuery, setTypeGuid]);
 
   const {
     data: types = [],
