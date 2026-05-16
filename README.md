@@ -8,6 +8,11 @@ way around.
 > "Types are the unit of coordination in BIM. A building has 50,000 entities
 > but only 300–500 unique types."
 
+> **Working on this codebase?** Start at [`docs/dev.md`](docs/dev.md) — the
+> canonical project tracker. Punch list, page/workbench coverage,
+> deprecate-or-develop verdicts, Claims/Annotations/Issues distinction. Every
+> Claude session and every agent reads this first.
+
 ---
 
 ## Stack
