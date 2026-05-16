@@ -90,6 +90,7 @@ Concrete "feels off" / "broken" / "missing" items blocking finish line.
 
 User verbatim: *"The viewer is really bad now. Need great UI, with HUDs, toolbars, intuitive filtering and aggregation of data. Clean and modern. The viewer is not the main product of sprucelab, but a bad viewer gets in the way."*
 
+- [ ] **Ghost objects — 0-thickness standing rectangles in every model.** User reports they appear universally and are NOT IfcOpeningElement. Diagnostic ladder, run in order: (a) Toggle off all section planes — if the rectangles disappear, OBC.Clipper is leaking a preview plane (viewer-side fix). (b) Filter the Type-page treemap by `IfcAnnotation` and isolate in viewer — if they match, it's 3D-rendered presentation geometry from 2D symbols (door swings, room tags); add a default-hide for the class. (c) Filter by `IfcSpace` — some exporters emit thin marker volumes for rooms. (d) Filter by `IfcVirtualElement` / `IfcBuildingElementProxy` — catch-all classes. (e) If none match: inspect a couple GUIDs via `/api/types/{id}/instances/` and check the IFC class names; could be `IfcDoorPanel` / `IfcWindow` glazing slabs slipping through.
 - [ ] **HUDs + toolbars** — clean, modern, scoped to a small set of actions: section, annotation→issue, isolate, hide, color filter.
 - [ ] **Sectioning tool** — solid sectioning UX (already partial via SectionPlanes; needs the HUD treatment).
 - [ ] **Annotation → Issue from viewer** — pick an element in 3D, attach an annotation, route as an Issue. Closes the loop with the Spine.
