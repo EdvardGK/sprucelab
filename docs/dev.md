@@ -135,7 +135,8 @@ Anchor principles. If a PR violates one of these, push back.
 
 ## Recent shipping
 
-- **2026-05-16** — `/dev` moved out of the webapp; now `docs/dev.md` (this file). Single source, no build cycle.
+- **2026-05-16** — Frontend chore batch (commit `bcc973f`): QTO not-configured empty state (`use-script-execution` + `QTODashboard`), upload error UX with i18n strings (`UploadContext` + en/nb), Search nav button disabled with tooltip (`Sidebar` + en/nb), PlatformPanel eye-icon affordance.
+- **2026-05-16** — `/dev` moved out of the webapp; now `docs/dev.md` (this file). Single source, no build cycle (commit `1919bf6`).
 - **2026-05-15** — ViewerPane block + persistent Type-page viewer (commit `8434672`)
 - **2026-05-15** — Vercel `/api` proxy regex fix; `/api/capabilities/` + `/llms.txt` live on www
 - **2026-05-15** — Agent-first marketing pivot: `/agents` + `/benchmarks` + sprucelab-mcp
