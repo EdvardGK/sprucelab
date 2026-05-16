@@ -122,6 +122,7 @@ Export:    LCA export via material layers (Django /api/types/export-*)
 - Session worklogs: `docs/worklog/` (same timestamp format)
 - Database changes: modify models -> `makemigrations` -> review -> `migrate`
 - FastAPI changes: endpoints in `ifc-service/endpoints/`, services in `ifc-service/services/`
+- **Worklog signature header**: every new worklog starts with the agent-signature block defined globally in `~/.claude/CLAUDE.md` › *Worklog signature*. Do not duplicate the spec here.
 
 ### Code Modularity
 - Under 500 lines: fine. 500-800: review. Over 800: consider splitting.
