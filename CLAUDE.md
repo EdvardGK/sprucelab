@@ -2,6 +2,8 @@
 
 **"Files in -> Data streams out. No file is an orphan. Every format feeds the whole."**
 
+> **Canonical project tracker: [`docs/dev.md`](docs/dev.md).** Every session starts there. It carries the active punch list, page/workbench coverage, the deprecate-or-develop verdicts, and the Claims / Annotations / Issues distinction. Update this file when shipping; do not put progress state anywhere else.
+
 For BIM professionals who USE models, not create them. Dashboards, verification, and change detection are the product. The 3D viewer serves insights, not the other way around.
 
 **Design Principles**:

@@ -18,7 +18,6 @@ const Login = lazy(() => import('./pages/Login'));
 const Welcome = lazy(() => import('./pages/Welcome'));
 const Agents = lazy(() => import('./pages/Agents'));
 const Benchmarks = lazy(() => import('./pages/Benchmarks'));
-const DevHub = lazy(() => import('./pages/DevHub'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 const MyPage = lazy(() => import('./pages/MyPage'));
 const ProjectsGallery = lazy(() => import('./pages/ProjectsGallery'));
@@ -72,7 +71,6 @@ const router = createBrowserRouter([
   { path: "/signup", element: withSuspense(<Welcome />) },
   { path: "/agents", element: withSuspense(<Agents />) },
   { path: "/benchmarks", element: withSuspense(<Benchmarks />) },
-  { path: "/dev", element: withSuspense(<DevHub />) },
   { path: "/login", element: withSuspense(<Login />) },
   { path: "/auth/callback", element: withSuspense(<AuthCallback />) },
   { path: "/my-page", element: withSuspense(guard(<MyPage />)) },
