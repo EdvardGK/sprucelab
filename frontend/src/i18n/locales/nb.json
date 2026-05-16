@@ -7,6 +7,7 @@
     "edit": "Rediger",
     "add": "Legg til",
     "search": "Søk",
+    "searchComingSoon": "Søk — kommer snart",
     "filter": "Filter",
     "export": "Eksporter",
     "exporting": "Eksporterer...",
@@ -1019,7 +1020,11 @@
     "minimize": "Minimer",
     "toastSuccess": "{{count}} modell(er) lastet opp",
     "toastPartial": "{{success}} lastet opp, {{failed}} feilet",
-    "toastFailed": "{{count}} opplasting(er) feilet"
+    "toastFailed": "{{count}} opplasting(er) feilet",
+    "errorTooLargeForServer": "Filen overskrider serverens opplastingsgrense. Prøv å laste opp individuelt eller kontakt support.",
+    "errorNetwork": "Nettverksfeil under opplasting. Sjekk tilkoblingen og prøv igjen.",
+    "errorAborted": "Opplasting avbrutt.",
+    "errorGeneric": "Opplasting feilet ({{status}}). Prøv igjen."
   },
   "typeBrowser": {
     "title": "Typer",

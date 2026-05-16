@@ -54,9 +54,26 @@ interface QTOBySystemItem {
 }
 
 export function QTODashboard({ modelId }: QTODashboardProps) {
-  const { data, isLoading, isError, isExecuting, error, execution } = useQTOAnalysis(modelId);
+  const { data, isLoading, isError, isExecuting, error, execution, notConfigured } = useQTOAnalysis(modelId);
 
   const [selectedTab, setSelectedTab] = useState(0);
+
+  // Empty state: script not registered for this project — not an error.
+  if (notConfigured) {
+    return (
+      <div className="space-y-6 p-6">
+        <Title>Quantity Take-Off Analysis</Title>
+        <Card>
+          <div className="text-center py-12">
+            <Text>QTO analysis is not configured for this project.</Text>
+            <Text className="mt-2 text-sm text-gray-400">
+              Ask an administrator to enable the QTO Analyzer script.
+            </Text>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoading || isExecuting) {

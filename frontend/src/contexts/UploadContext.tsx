@@ -41,6 +41,43 @@ const UploadContext = createContext<UploadContextValue | null>(null);
  * Upload a file directly to Supabase using presigned URL.
  * Uses XMLHttpRequest for progress tracking.
  */
+export class UploadHttpError extends Error {
+  status: number;
+  constructor(status: number, statusText: string) {
+    super(`Upload failed with status ${status}: ${statusText}`);
+    this.status = status;
+    this.name = 'UploadHttpError';
+  }
+}
+
+export class UploadNetworkError extends Error {
+  constructor() {
+    super('Network error during upload');
+    this.name = 'UploadNetworkError';
+  }
+}
+
+export class UploadAbortedError extends Error {
+  constructor() {
+    super('Upload aborted');
+    this.name = 'UploadAbortedError';
+  }
+}
+
+function friendlyUploadError(err: unknown, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (err instanceof UploadHttpError) {
+    if (err.status === 413) return t('modelUpload.errorTooLargeForServer');
+    return t('modelUpload.errorGeneric', { status: err.status });
+  }
+  if (err instanceof UploadNetworkError) return t('modelUpload.errorNetwork');
+  if (err instanceof UploadAbortedError) return t('modelUpload.errorAborted');
+  // Axios errors from Django local-upload path
+  const axiosErr = err as { response?: { status?: number }; message?: string };
+  if (axiosErr?.response?.status === 413) return t('modelUpload.errorTooLargeForServer');
+  if (axiosErr?.response?.status) return t('modelUpload.errorGeneric', { status: axiosErr.response.status });
+  return err instanceof Error ? err.message : 'Upload failed';
+}
+
 function uploadToSupabase(
   file: File,
   uploadUrl: string,
@@ -60,16 +97,16 @@ function uploadToSupabase(
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
-        reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.statusText}`));
+        reject(new UploadHttpError(xhr.status, xhr.statusText));
       }
     });
 
     xhr.addEventListener('error', () => {
-      reject(new Error('Network error during upload'));
+      reject(new UploadNetworkError());
     });
 
     xhr.addEventListener('abort', () => {
-      reject(new Error('Upload aborted'));
+      reject(new UploadAbortedError());
     });
 
     xhr.open('PUT', uploadUrl);
@@ -169,7 +206,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
       return { success: true, name: upload.file.name };
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+      const errorMsg = friendlyUploadError(err, t);
       setUploads(prev =>
         prev.map(u =>
           u.id === upload.id
@@ -179,7 +216,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       );
       return { success: false, name: upload.file.name, error: errorMsg };
     }
-  }, [queryClient]);
+  }, [queryClient, t]);
 
   const startUpload = useCallback(async () => {
     // Prevent concurrent upload batches

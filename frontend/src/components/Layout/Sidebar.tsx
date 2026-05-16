@@ -197,18 +197,21 @@ export function Sidebar() {
         {/* Search + create */}
         {!collapsed ? (
           <div className="flex items-center gap-1 border-b border-border px-3 py-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 flex-1 justify-start gap-2 px-2 text-muted-foreground hover:bg-transparent hover:text-foreground"
-              aria-label={t('common.search')}
-              onClick={() => {
-                if (import.meta.env.DEV) console.log('Search clicked - feature coming soon');
-              }}
-            >
-              <Search className="h-4 w-4" />
-              <span className="text-sm">{t('common.search')}</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled
+                  className="h-8 flex-1 justify-start gap-2 px-2 text-muted-foreground disabled:opacity-60 disabled:pointer-events-auto cursor-not-allowed"
+                  aria-label={t('common.search')}
+                >
+                  <Search className="h-4 w-4" />
+                  <span className="text-sm">{t('common.search')}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>{t('common.searchComingSoon')}</TooltipContent>
+            </Tooltip>
             <Button
               variant="ghost"
               size="icon"
@@ -221,7 +224,13 @@ export function Sidebar() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1 border-b border-border px-1 py-2">
-            <SidebarIconButton icon={Search} label={t('common.search')} onClick={() => { /* search */ }} collapsed />
+            <SidebarIconButton
+              icon={Search}
+              label={t('common.searchComingSoon')}
+              onClick={() => { /* coming soon */ }}
+              collapsed
+              disabled
+            />
             <SidebarIconButton icon={Plus} label="Create" onClick={() => setCreateProjectOpen(true)} collapsed />
           </div>
         )}
@@ -390,15 +399,20 @@ interface SidebarIconButtonProps {
   label: string;
   onClick: () => void;
   collapsed?: boolean;
+  disabled?: boolean;
 }
 
-function SidebarIconButton({ icon: Icon, label, onClick, collapsed }: SidebarIconButtonProps) {
+function SidebarIconButton({ icon: Icon, label, onClick, collapsed, disabled }: SidebarIconButtonProps) {
   const btn = (
     <button
       type="button"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       aria-label={label}
-      className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+      aria-disabled={disabled || undefined}
+      className={cn(
+        'flex h-7 w-7 items-center justify-center rounded text-muted-foreground',
+        disabled ? 'opacity-60 cursor-not-allowed' : 'hover:text-foreground',
+      )}
     >
       <Icon className="h-4 w-4" />
     </button>

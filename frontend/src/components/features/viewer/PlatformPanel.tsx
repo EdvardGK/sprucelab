@@ -226,14 +226,15 @@ function ModelRow({
             {model.elementCount.toLocaleString('nb-NO')}
           </span>
         )}
-        {/* Eye toggle */}
+        {/* Eye toggle — always visible so model toggling is discoverable */}
         <button
           onClick={handleEyeClick}
+          aria-label={model.visible ? 'Hide model' : 'Show model'}
           className={cn(
             'w-3.5 h-3.5 flex items-center justify-center flex-shrink-0 transition-opacity',
             model.visible
-              ? 'text-text-tertiary opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:!text-primary'
-              : 'text-red-500 opacity-50',
+              ? 'text-text-tertiary opacity-50 group-hover:opacity-100 hover:!text-primary'
+              : 'text-red-500 opacity-80 hover:opacity-100',
           )}
         >
           {model.visible ? <Eye className="w-[11px] h-[11px]" /> : <EyeOff className="w-[11px] h-[11px]" />}

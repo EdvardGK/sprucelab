@@ -88,9 +88,13 @@ export function useScriptByName(name: string) {
   return useQuery({
     queryKey: scriptKeys.byName(name),
     queryFn: async () => {
-      const response = await apiClient.get<Script[]>(`/scripts/?name=${encodeURIComponent(name)}`);
-      // Return first matching script
-      return response.data[0] || null;
+      const response = await apiClient.get<Script[] | { count: number; results: Script[] }>(
+        `/scripts/?name=${encodeURIComponent(name)}`,
+      );
+      const items = Array.isArray(response.data)
+        ? response.data
+        : response.data?.results ?? [];
+      return items[0] ?? null;
     },
     enabled: !!name,
   });
@@ -234,10 +238,14 @@ export function useScriptResult(
 
   const isLoading = scriptLoading || executionLoading;
   const error = scriptError || executionError;
+  // Script lookup completed but returned no match — feature isn't configured,
+  // not an error. Callers should render an empty state, not a failure.
+  const notConfigured = !scriptLoading && !scriptError && !script;
 
   return {
     // Script info
     script,
+    notConfigured,
 
     // Execution info
     execution,
