@@ -51,6 +51,11 @@ Concrete "feels off" / "broken" / "missing" items blocking finish line.
 - [ ] **Counts agree across tiles** — viewer subtitle "4 types · 73 instances" must equal treemap + KPI + table. Pick one source per dimension, eliminate drift.
 - [ ] **Count-up animation everywhere** — Types page does it. Spread to Model dash KPI cluster, Materials, Project dash. The animation IS the signature.
 - [ ] **Persistent viewer everywhere** — ViewerPane + isolation prop shipped on Type + Model dash (2026-05-15). Confirm Materials and Project dash do not remount on filter changes.
+- [ ] **Type-page hero stays trimmed; pattern spreads** — recurring user note across the May 12 audit and later sessions: "components scaled bigger than necessary, table + bar chart pushed down for no reason". Hero was trimmed to `h-[clamp(420px,calc(100vh-22rem),720px)]` in Session 1 of the UX roadmap; re-verify on 1440×900 above the fold AND apply the same discipline on every surface that lifted the Types template. 40-30-20-10 rule literally. See `feedback-types-page-hero-too-tall.md`.
+
+### EIR builder — "legit horrible" full overhaul
+
+- [ ] **EIR builder visual + interaction rework** — user verbatim 2026-05-12: *"Legit horrible from a UI/UX perspective. Needs a full overhaul."* Track D polish landed (palette + workspace + preview, tier filter, mode toggle) but the page still reads dense / jittery card heights / preview xl-only / view-mode = edit-minus-sidebar. Phase 7 archive lift restores the broader EIR/BEP module; this punch-list item is the *visual* finish. See `docs/plans/2026-05-12-15-44_Unified-UX-Audit-and-Redesign-Plan.md` § 3.8 for the diagnosis and intent.
 
 ### Shareable views (forward-deployed gateway)
 
@@ -140,6 +145,12 @@ Anchor principles. If a PR violates one of these, push back.
 - **Viewers persist, isolation drives state.** UnifiedBIMViewer mounts once per modelId; filter/selection mutates the isolation prop. Never remount on interaction.
 - **Cross-filter is primary; DrillModal is secondary.** Click on a chart/chip/bar mutates the project filter (PowerBI pattern).
 - **Dashboards view, workbenches annotate.** Two distinct surface types per entity.
+
+---
+
+## Reference
+
+- **UX audit, May 12** — `docs/plans/2026-05-12-15-44_Unified-UX-Audit-and-Redesign-Plan.md` carries five verbatim user observations (Models page, Model dash, Types page, Materials, EIR) with per-surface diagnosis + intent. Most resolved across the 8-session UX roadmap closeout (`docs/worklog/2026-05-12-19-00_UX-Roadmap-Closeout-Sessions-1-to-8.md`); the residue lives in the Punch list above.
 
 ---
 
