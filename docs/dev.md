@@ -6,6 +6,16 @@
 
 ---
 
+## Why Sprucelab
+
+The industry has invested billions in BIM authoring; the data is stranded inside authoring tools and view-only viewers. The people who *use* models (coordinators, LCA, cost, owners, agents) are second-class to authors. Sprucelab flips the frame: **files in → structured data out, dashboards over viewers, annotations layered on top that never silently mutate the source, agent-first by default.** Human-only BIM tools will lose to agentic competitors that can read, verify, and propose at scale.
+
+**Projects are the unit.** Each project is its own isolated container — its own models, its own EIR, its own scope, its own Claims/Annotations/Issues. Federation across projects is opt-in: TypeBank cross-project corpus accrues as a shared classification memory; forward-deployed embed links surface filtered views from any project inside other tools. Cross-project intelligence is a layer on top of separate projects, never a default that blurs ownership.
+
+**Now.** ifcfast + fragments-v3 + cheap LLMs make the data layer tractable for the first time. The "type is the unit of coordination" insight (50k entities, ~300 types) lets the platform win on coordination intelligence without fighting authoring tools on geometry.
+
+---
+
 ## The spine — Claims / Annotations / Issues
 
 Three distinct primitives in the proposal-and-routing layer. Don't conflate them.
