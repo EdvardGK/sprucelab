@@ -361,12 +361,54 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     onStoreysDiscovered?.(storeysArray);
   }, [storeyInfo, onStoreysDiscovered]);
 
-  // Reset load guard when modelIds change
+  // Dispose previously-loaded models when modelIds change. Without this
+  // the reset effect just nulled out the JS refs while leaving every
+  // Three.js group + v3 FragmentsModel attached to the scene, so each
+  // model nav stacked the new one on top of the old. Symptom: navigating
+  // from cube_matrix → shapes_probe rendered both at once. Diagnosed
+  // 2026-05-17 after the v3 isolate fix landed.
   useEffect(() => {
+    const scene = worldRef.current?.scene?.three;
+    for (const m of loadedModelsRef.current) {
+      try {
+        if (scene && m.group) {
+          scene.remove(m.group);
+        }
+        if (m.v3Model) {
+          try { m.v3Model.dispose?.(); } catch { /* */ }
+        }
+        if (m.fragmentsGroup) {
+          try {
+            (m.fragmentsGroup as unknown as { dispose?: () => void }).dispose?.();
+          } catch { /* */ }
+        }
+      } catch (err) {
+        console.warn('[Viewer] model dispose on modelIds change failed:', err);
+      }
+    }
+
+    // Kill the v3 worker entirely so the next ensureV3() spawns a clean
+    // instance — keeps tile/item-data caches from the previous model
+    // from leaking into the new one.
+    if (v3FragmentsRef.current) {
+      try { v3FragmentsRef.current.dispose().catch(() => {}); } catch { /* */ }
+      v3FragmentsRef.current = null;
+    }
+
     hasLoadedModelsRef.current = false;
     loadedModelsRef.current = [];
     modelIdMapRef.current.clear();
     setLoadingProgress({});
+
+    // Drop derived state so the type / storey / isolation effects re-sync
+    // from scratch against the new model rather than leaking the previous
+    // model's classifications.
+    setTypeInfo(new Map());
+    setStoreyInfo(new Map());
+    prevTypeVisibilityRef.current = {};
+    prevStoreyFilterRef.current = undefined;
+    wasIsolatedRef.current = false;
+    lastRenderModeRef.current = null;
   }, [modelIds.join(',')]);
 
   // Apply model visibility changes
