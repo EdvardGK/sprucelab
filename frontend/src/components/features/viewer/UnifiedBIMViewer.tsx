@@ -2234,10 +2234,17 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
 
       // After all v3 ops dispatch, kick a single fragments.update() to
       // re-evaluate culling/LOD with the new visibility set. The worker
-      // batches its own redraws, so racing v3Ops here is safe.
+      // batches its own redraws, so racing v3Ops here is safe. Also mark
+      // the MeshCullerRenderer dirty so the next render pass re-evaluates
+      // which fragments to draw (without this, setVisible succeeds at the
+      // worker but the culler keeps drawing the previous visibility set,
+      // leaving the canvas stale — diagnosed 2026-05-17 via devtools).
       if (v3Ops.length > 0 && v3FragmentsRef.current) {
         Promise.allSettled(v3Ops).then(() => {
           v3FragmentsRef.current?.update().catch(() => {});
+          if (cullerRef.current) {
+            (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
+          }
         });
       }
 
@@ -2593,6 +2600,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 }),
               ).then(() => {
                 v3FragmentsRef.current?.update().catch(() => {});
+                if (cullerRef.current) {
+                  (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
+                }
               });
             }
 
@@ -2660,6 +2670,9 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               }),
             ).then(() => {
               v3FragmentsRef.current?.update().catch(() => {});
+              if (cullerRef.current) {
+                (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
+              }
             });
           }
 
