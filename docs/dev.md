@@ -42,7 +42,9 @@ Concrete "feels off" / "broken" / "missing" items blocking finish line.
 
 ### Cross-filter "feels right" (P0 — user has flagged some of this "a million times")
 
-- [ ] **Treemap → viewer cross-filter is broken** — user verbatim: *"Treemap is not crossfiltering to viewer. Something is fundamentally off since I have said this a million times."* Diagnose end-to-end on the Type page first. The data-extraction (TYPE class) vs fragments-runtime (ENTITY class) mismatch is documented (`data-extraction-vs-fragments-runtime-mismatch.md`); `entity_ifc_type` field shipped backend-side in commit `4215e1d`. Confirm the frontend wires the prefixed `IfcWall` form through to `typeVisibility` AND `useTypesInstancesByClass` returns matching GUIDs. P0.
+- [ ] **Treemap → viewer cross-filter is broken** — user verbatim: *"Treemap is not crossfiltering to viewer."* TWO code paths, both currently failing:
+  - **Type page (`/types`)** — uses `isolation` prop. v3 path wired in commit `6584bef` (2026-05-16). Needs verification on a real v3 model.
+  - **Model Workspace (`/models/:modelId`)** — uses `typeVisibility` prop. The effect has a v3 path (`UnifiedBIMViewer.tsx:2153-2163`) but user reports clicking the Model-dash treemap still doesn't affect the model. Suspect class-name keying mismatch between the filter store (entity-class form like `IfcWall`) and the typeVisibility map. Reproduce on the `shapes_probe.ifc` model: click Plate / Member / Annotation tiles; viewer should hide everything else.
 - [ ] **Same-click toggles off** — verify on every dashboard surface (treemap, quality chip, storey bar, type chip, table row).
 - [ ] **Counts agree across tiles** — viewer subtitle "4 types · 73 instances" must equal treemap + KPI + table. Pick one source per dimension, eliminate drift.
 - [ ] **Count-up animation everywhere** — Types page does it. Spread to Model dash KPI cluster, Materials, Project dash. The animation IS the signature.

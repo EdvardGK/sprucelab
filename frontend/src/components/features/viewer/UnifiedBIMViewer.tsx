@@ -2184,8 +2184,23 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       // don't block the rAF callback waiting for resolution.
       const v3Ops: Array<Promise<void>> = [];
 
+      // Tolerant typeVisibility lookup. typeInfo keys come from
+      // v3Model.getCategories() which returns UPPERCASE ("IFCWALL") for
+      // fragments-v3 models — but the filter store + deriveTypeVisibility
+      // produce PascalCase keys ("IfcWall") from analysis data. Without
+      // this lookup table, typeVisibility[type] for "IFCWALL" returns
+      // undefined → defaults to visible → no flips → treemap appears to
+      // do nothing. Build an upper-cased mirror so either casing resolves.
+      const typeVisibilityCi: Record<string, boolean> = {};
+      for (const k of Object.keys(typeVisibility)) {
+        typeVisibilityCi[k.toUpperCase()] = typeVisibility[k];
+      }
+
       for (const [type, data] of typeInfo) {
-        const now = typeVisibility[type] !== false; // default: visible
+        const ciKey = type.toUpperCase();
+        const explicit =
+          type in typeVisibility ? typeVisibility[type] : typeVisibilityCi[ciKey];
+        const now = explicit !== false; // default: visible
         const before = type in prev ? prev[type] : now; // first-sync: no change
         if (now === before) continue;
         // v2 path — accumulate fragmentIdMaps for batched hider.set call
@@ -2227,9 +2242,14 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
       }
 
       // Capture the applied visibility for next delta computation.
+      // Use the same tolerant lookup so prev mirrors what we actually
+      // applied (relevant when typeInfo keys are UPPERCASE).
       const snapshot: Record<string, boolean> = {};
       for (const type of typeInfo.keys()) {
-        snapshot[type] = typeVisibility[type] !== false;
+        const ciKey = type.toUpperCase();
+        const explicit =
+          type in typeVisibility ? typeVisibility[type] : typeVisibilityCi[ciKey];
+        snapshot[type] = explicit !== false;
       }
       prevTypeVisibilityRef.current = snapshot;
     });
