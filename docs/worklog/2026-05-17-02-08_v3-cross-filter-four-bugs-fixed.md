@@ -46,6 +46,14 @@ That last step proved the bug was in the renderer-side culler, not the visibilit
 4. **Extractor surfaces IfcAnnotation + IfcSpace at the type level** so the treemap matches what's visible.
 5. **Annotations / proposals primitive** still the spine work that gates LCA, material substitution, instance overrides.
 
+## Observations during verification (post-fix)
+
+After the culler-dirty fix landed, the user verified on the live site and flagged three new items now logged in `docs/dev.md`:
+
+1. **Cross-filter is one-way only.** Treemap → viewer works (and now reliably). Viewer → treemap / KPIs / charts does NOT. `UnifiedBIMViewer.onSelectionChange` exists; needs wiring into `useProjectFilterActions` so a viewer click drives the rest of the dashboard.
+2. **Viewer requires click-inside before filters apply.** Filter state updates dashboard tiles immediately, but the canvas often doesn't repaint until the user clicks inside the viewer or moves the camera. Strongest when switching rapidly between filters. The render loop appears to be camera-event-driven; need an explicit render kick after `cullerRef.needsUpdate = true`.
+3. **Info panel duplicates instance-level data.** Model + type viewer info panels are largely identical and skew toward IfcEntity property bag. Strategy: distinct payload per interaction level — class (distribution / histograms), type (classification + material layers + reuse), instance (geometry-specific + Psets + annotations). All accessible from BOTH viewer interaction and data-dashboard interaction.
+
 ## Notes
 
 - `docs/dev.md` punch list is in good shape after today's edits. Next session lands there per the canonical-tracker rule.
