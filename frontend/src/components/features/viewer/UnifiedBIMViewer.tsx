@@ -2483,13 +2483,56 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               });
             }
           } else {
-            // 'isolate' mode (default) — unchanged behaviour. Hide all then
-            // show only the matching fragments.
+            // 'isolate' mode (default) — hide all then show only the matching
+            // fragments. v2 path uses the FragmentsManager guid→fragmentId map;
+            // v3 path resolves guids → localIds per model and toggles visibility
+            // on FragmentsModel directly (the worker-side API; v2's
+            // FragmentsManager doesn't know about v3-loaded models).
             const map = fragmentsManager.guidToFragmentIdMap(isolation!.guids);
             const hasMatches = Object.keys(map).length > 0;
 
+            // v2 path
             hider.set(false);
             if (hasMatches) hider.set(true, map);
+
+            // v3 path — same pattern as the floor-filter v3 branch (above).
+            // Hide every localId tracked in typeInfo for this v3 model, then
+            // show the ones matching isolation.guids.
+            const v3IsolateModels = loadedModelsRef.current.filter(
+              (m) => m.formatVersion === 'v3' && m.v3Model,
+            );
+            if (v3IsolateModels.length > 0) {
+              Promise.all(
+                v3IsolateModels.map(async (m) => {
+                  try {
+                    const allIds: number[] = [];
+                    for (const [, data] of typeInfo) {
+                      for (const ref of data.v3Refs ?? []) {
+                        if (ref.modelId === m.fragmentModelId) {
+                          allIds.push(...ref.localIds);
+                        }
+                      }
+                    }
+                    if (allIds.length > 0) {
+                      await m.v3Model!.setVisible(allIds, false);
+                    }
+                    const matching = await m.v3Model!.getLocalIdsByGuids(
+                      isolation!.guids,
+                    );
+                    const matched = matching.filter(
+                      (id): id is number => id !== null,
+                    );
+                    if (matched.length > 0) {
+                      await m.v3Model!.setVisible(matched, true);
+                    }
+                  } catch (err) {
+                    console.warn('[Viewer] v3 isolate failed:', err);
+                  }
+                }),
+              ).then(() => {
+                v3FragmentsRef.current?.update().catch(() => {});
+              });
+            }
 
             try { highlighter.clear('current'); } catch { /* style not registered yet */ }
             if (isolation!.mode === 'single' && isolation!.currentGuid) {
@@ -2528,6 +2571,36 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           // reset delta refs so type/storey re-sync from scratch. If the
           // prior run was 'highlight', drop the v3 tint too.
           hider.set(true);
+
+          // v3 path — restore visibility for every localId we previously
+          // hid during isolate. typeInfo carries the per-model v3 refs.
+          const v3RestoreModels = loadedModelsRef.current.filter(
+            (m) => m.formatVersion === 'v3' && m.v3Model,
+          );
+          if (v3RestoreModels.length > 0) {
+            Promise.all(
+              v3RestoreModels.map(async (m) => {
+                try {
+                  const allIds: number[] = [];
+                  for (const [, data] of typeInfo) {
+                    for (const ref of data.v3Refs ?? []) {
+                      if (ref.modelId === m.fragmentModelId) {
+                        allIds.push(...ref.localIds);
+                      }
+                    }
+                  }
+                  if (allIds.length > 0) {
+                    await m.v3Model!.setVisible(allIds, true);
+                  }
+                } catch (err) {
+                  console.warn('[Viewer] v3 isolate-restore failed:', err);
+                }
+              }),
+            ).then(() => {
+              v3FragmentsRef.current?.update().catch(() => {});
+            });
+          }
+
           try { highlighter.clear('current'); } catch { /* */ }
           if (lastMode === 'highlight') {
             clearV3Highlight();
