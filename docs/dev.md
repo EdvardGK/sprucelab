@@ -47,6 +47,7 @@ Concrete "feels off" / "broken" / "missing" items blocking finish line.
 - [ ] **Counts agree across tiles** — viewer subtitle "4 types · 73 instances" must equal treemap + KPI + table. Pick one source per dimension, eliminate drift.
 - [ ] **Count-up animation everywhere** — Types page does it. Spread to Model dash KPI cluster, Materials, Project dash. The animation IS the signature.
 - [ ] **Persistent viewer everywhere** — ViewerPane + isolation prop shipped on Type + Model dash (2026-05-15). Confirm Materials and Project dash do not remount on filter changes.
+- [ ] **Source-of-filter is highlighted, never self-filters** — when the user clicks a treemap tile (or any chip / chart segment / bar), the clicked tile gets a highlighted state but the treemap itself stays whole. Only the *other* surfaces (viewer, KPI tiles, table, sparklines) adapt to the active filter. PowerBI pattern — the filter activator must remain visible at full strength so the user can swap classes, see the macro context, and unfilter with one click. Currently the treemap appears to react to its own click; needs the "filter producer ≠ filter consumer" split codified on every cross-filter surface.
 
 ### Spine — Claims / Annotations / Issues
 
