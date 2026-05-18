@@ -160,15 +160,34 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   const uploadSingleFile = useCallback(async (upload: UploadFile): Promise<{ success: boolean; name: string; error?: string }> => {
     try {
-      // Try direct Supabase upload first, fall back to Django upload for local dev
+      // Try direct Supabase upload first, fall back to Django upload for
+      // local dev only. The fallback used to fire on ANY error — including
+      // a transient 403 from the JWT auth race on first navigation — and
+      // a large file would then hit Railway's body cap and 413. Narrow
+      // the fallback trigger to "storage genuinely not configured"
+      // signals (400 from the endpoint, or a network failure where the
+      // request never reached the API). Auth/server errors surface to
+      // the user instead of silently dropping them onto a path that
+      // can't handle the file size.
       let useLocalUpload = false;
       let urlData;
 
       try {
         urlData = await getUploadUrl(upload.projectId, upload.file.name);
-      } catch {
-        // No cloud storage configured - use local Django upload
-        useLocalUpload = true;
+      } catch (err) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 400) {
+          // Backend explicitly refused (e.g. USE_SUPABASE_STORAGE off).
+          useLocalUpload = true;
+        } else if (status === undefined) {
+          // Network failure — no response. Treat as offline / dev only.
+          useLocalUpload = true;
+        } else {
+          // 401, 403, 500, etc. — re-throw so the outer catch surfaces
+          // the error to the user instead of falling onto the Django
+          // multipart path that may 413 on large files.
+          throw err;
+        }
       }
 
       if (useLocalUpload) {
