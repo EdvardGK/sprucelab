@@ -691,8 +691,10 @@
       "totalGwp": "Total GWP",
       "mixedUnits": "Mixed units",
       "mixedUnitsHint": "Materials measured in mixed units — showing the dominant axis",
-      "costMissingHint": "No materials carry a product unit cost yet",
-      "gwpMissingHint": "No EPD-linked materials carry GWP data yet"
+      "costMissingHint": "No materials carry a product unit cost yet — link a product to populate",
+      "gwpMissingHint": "No EPD-linked materials carry GWP data yet — link an EPD to populate",
+      "productMissingHint": "No materials linked to a product yet — link one to populate",
+      "epdMissingHint": "No materials linked to an EPD yet — link one to populate"
     },
     "viz": {
       "treemapTitle": "Families by quantity",

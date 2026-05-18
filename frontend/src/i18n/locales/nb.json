@@ -691,8 +691,10 @@
       "totalGwp": "Total GWP",
       "mixedUnits": "Blandede enheter",
       "mixedUnitsHint": "Materialer er målt i blandede enheter — viser dominerende akse",
-      "costMissingHint": "Ingen materialer har enhetspris ennå",
-      "gwpMissingHint": "Ingen EPD-koblede materialer har GWP-data ennå"
+      "costMissingHint": "Ingen materialer har enhetspris ennå — koble til et produkt",
+      "gwpMissingHint": "Ingen EPD-koblede materialer har GWP-data ennå — koble til en EPD",
+      "productMissingHint": "Ingen materialer er koblet til et produkt ennå — koble til ett",
+      "epdMissingHint": "Ingen materialer er koblet til en EPD ennå — koble til en"
     },
     "viz": {
       "treemapTitle": "Familier etter mengde",

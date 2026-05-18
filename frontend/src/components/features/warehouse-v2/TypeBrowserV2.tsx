@@ -202,6 +202,12 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const uniqueIfcClasses = useMemo(() => {
     const set = new Set<string>();
     for (const type of types) set.add(type.ifc_type);
+    // Hide IFC abstract supertypes from the filter dropdown — they don't
+    // narrow the list usefully and clutter the option list (issue #17
+    // finding 10). IfcTypeProduct in particular surfaces when types
+    // arrive without a concrete subclass; that case is already covered
+    // by the UNTYPED INSTANCES KPI elsewhere.
+    set.delete('IfcTypeProduct');
     return Array.from(set).sort();
   }, [types]);
 

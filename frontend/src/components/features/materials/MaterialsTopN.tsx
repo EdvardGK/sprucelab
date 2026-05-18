@@ -3,7 +3,12 @@ import { useTranslation } from 'react-i18next';
 
 import { DashboardTile } from '@/components/Layout';
 import { cn } from '@/lib/utils';
-import { pickDominantUnit, type AggregatedMaterial } from '@/hooks/use-project-materials';
+import {
+  pickDominantUnit,
+  MATERIAL_UNIT_ORDER,
+  type AggregatedMaterial,
+  type MaterialUnit,
+} from '@/hooks/use-project-materials';
 import { familyColor } from './familyColors';
 
 type RankingAxis = 'quantity' | 'cost' | 'gwp';
@@ -51,20 +56,50 @@ export function MaterialsTopN({
     [materials],
   );
 
+  // When ranking by quantity, restrict to a single unit so the bar
+  // widths represent apples-to-apples comparisons. Pick the unit with
+  // the most materials referencing it, falling back to canonical
+  // priority (m³ → m² → m → kg → pcs). Cost / GWP rankings convert to
+  // currency / CO₂e so the unit collapses anyway.
+  const quantityUnit: MaterialUnit | null = useMemo(() => {
+    if (materials.length === 0) return null;
+    const counts: Record<string, number> = {};
+    for (const m of materials) {
+      const u = pickDominantUnit(m.quantities_by_unit);
+      if (u) counts[u] = (counts[u] ?? 0) + 1;
+    }
+    const entries = Object.entries(counts) as [MaterialUnit, number][];
+    if (entries.length === 0) return null;
+    entries.sort((a, b) => {
+      if (a[1] !== b[1]) return b[1] - a[1];
+      return MATERIAL_UNIT_ORDER.indexOf(a[0]) - MATERIAL_UNIT_ORDER.indexOf(b[0]);
+    });
+    return entries[0][0];
+  }, [materials]);
+
   const rows = useMemo<RankedRow[]>(() => {
     const ranked = materials
       .map((m) => {
-        const unit = pickDominantUnit(m.quantities_by_unit);
-        const qty = unit ? m.quantities_by_unit[unit] : 0;
         if (axis === 'quantity') {
+          // Only consider materials whose dominant unit matches the
+          // ranking unit. Materials in other units are listed elsewhere
+          // (the table renders them all); ranking across units is
+          // mathematically meaningless.
+          if (!quantityUnit) return null;
+          const matDominant = pickDominantUnit(m.quantities_by_unit);
+          if (matDominant !== quantityUnit) return null;
+          const qty = m.quantities_by_unit[quantityUnit];
+          if (qty === 0) return null;
           return {
             key: m.key,
             name: m.name,
             family: m.family,
             value: qty,
-            displayValue: unit ? `${formatNum(qty)} ${unit}` : '—',
+            displayValue: `${formatNum(qty)} ${quantityUnit}`,
           };
         }
+        const unit = pickDominantUnit(m.quantities_by_unit);
+        const qty = unit ? m.quantities_by_unit[unit] : 0;
         if (axis === 'cost') {
           if (m.unit_cost === null || qty === 0) {
             return null;
@@ -97,7 +132,7 @@ export function MaterialsTopN({
       .sort((a, b) => b.value - a.value)
       .slice(0, topN);
     return ranked;
-  }, [materials, axis, topN]);
+  }, [materials, axis, topN, quantityUnit]);
 
   const maxValue = rows[0]?.value ?? 0;
 
@@ -109,6 +144,11 @@ export function MaterialsTopN({
       <div className="flex items-center justify-between gap-2 mb-[clamp(0.375rem,0.75vh,0.75rem)] flex-shrink-0">
         <h3 className="text-[clamp(0.6rem,0.8vw,0.85rem)] font-semibold uppercase tracking-wide text-muted-foreground truncate">
           {t('materialBrowser.topN.title', { count: rows.length })}
+          {axis === 'quantity' && quantityUnit && (
+            <span className="ml-1.5 text-[clamp(0.55rem,0.7vw,0.7rem)] text-muted-foreground/70 normal-case tracking-normal">
+              · {quantityUnit}
+            </span>
+          )}
         </h3>
         <AxisToggle
           axis={axis}

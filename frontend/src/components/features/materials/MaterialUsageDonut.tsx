@@ -51,13 +51,20 @@ export function MaterialUsageDonut({ material, onTypeClick }: MaterialUsageDonut
       const existing = byType.get(u.type_id);
       // quantity_per_unit × instance_count = contribution to project total
       const value = u.quantity_per_unit * u.instance_count;
+      // Compose a distinguishing label: type_name + model when present.
+      // Long Revit-style names like "Direct Shape:Rectangular Mullion:50"
+      // collapse to the same truncated prefix in the legend; tagging the
+      // model disambiguates them at a glance.
+      const rawLabel = u.type_name ?? u.ifc_type;
+      const modelSuffix = u.model_name ? ` · ${u.model_name}` : '';
+      const label = `${rawLabel}${modelSuffix}`;
       if (existing) {
         existing.value += value;
       } else {
         byType.set(u.type_id, {
           type_id: u.type_id,
           model_id: u.model_id,
-          label: u.type_name ?? u.ifc_type,
+          label,
           value,
         });
       }
@@ -207,11 +214,14 @@ export function MaterialUsageDonut({ material, onTypeClick }: MaterialUsageDonut
                   className="h-[clamp(0.45rem,0.55vw,0.6rem)] w-[clamp(0.45rem,0.55vw,0.6rem)] rounded-sm shrink-0"
                   style={{ background: w.color, opacity }}
                 />
-                <span className="truncate flex-1 text-text-primary">
+                <span
+                  className="flex-1 text-text-primary line-clamp-2 leading-tight break-words"
+                  title={w.label}
+                >
                   {w.label}
                 </span>
                 <span className="tabular-nums shrink-0 text-text-tertiary">
-                  {pct.toFixed(0)}%
+                  {formatPct(pct)}
                 </span>
               </li>
             );
@@ -252,4 +262,11 @@ function formatNum(n: number): string {
   if (n >= 1000) return n.toFixed(0);
   if (n >= 10) return n.toFixed(1);
   return n.toFixed(2);
+}
+
+function formatPct(pct: number): string {
+  if (pct === 0) return '0%';
+  if (pct < 1) return '<1%';
+  if (pct < 10) return `${pct.toFixed(1)}%`;
+  return `${pct.toFixed(0)}%`;
 }

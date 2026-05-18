@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, Package, Search, Sparkles } from 'lucide-react';
@@ -46,26 +46,41 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMaterialKey, setSelectedMaterialKey] = useState<string | null>(null);
 
-  const filteredMaterials = useMemo<AggregatedMaterial[]>(() => {
+  // Source-of-filter rule: the family treemap PRODUCES the family
+  // dimension, so it must stay whole on family but narrow on other
+  // dimensions (search). Build a slice that applies every filter
+  // EXCEPT family — the treemap reads from this, everything else
+  // (table, TopN, detail) reads from the fully filtered set.
+  const searchFilteredMaterials = useMemo<AggregatedMaterial[]>(() => {
     if (!data) return [];
+    if (!searchQuery) return data.materials;
+    const query = searchQuery.toLowerCase();
     return data.materials.filter((m) => {
-      if (selectedFamily && m.family !== selectedFamily) return false;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        if (
-          !m.name.toLowerCase().includes(query) &&
-          !m.raw_names.some((n) => n.toLowerCase().includes(query))
-        ) {
-          return false;
-        }
-      }
-      return true;
+      return (
+        m.name.toLowerCase().includes(query) ||
+        m.raw_names.some((n) => n.toLowerCase().includes(query))
+      );
     });
-  }, [data, selectedFamily, searchQuery]);
+  }, [data, searchQuery]);
+
+  const filteredMaterials = useMemo<AggregatedMaterial[]>(() => {
+    if (!selectedFamily) return searchFilteredMaterials;
+    return searchFilteredMaterials.filter((m) => m.family === selectedFamily);
+  }, [searchFilteredMaterials, selectedFamily]);
+
+  // Detail panel desyncs (issue #17 finding 5): if the selected material
+  // falls outside the current filter, drop the selection so the right
+  // pane reflects what's visible. The user can pick a new one.
+  useEffect(() => {
+    if (!selectedMaterialKey) return;
+    if (!filteredMaterials.some((m) => m.key === selectedMaterialKey)) {
+      setSelectedMaterialKey(null);
+    }
+  }, [filteredMaterials, selectedMaterialKey]);
 
   const selectedMaterial = useMemo(
-    () => data?.materials.find((m) => m.key === selectedMaterialKey) ?? null,
-    [data, selectedMaterialKey],
+    () => filteredMaterials.find((m) => m.key === selectedMaterialKey) ?? null,
+    [filteredMaterials, selectedMaterialKey],
   );
 
   const clearFilters = () => {
@@ -121,6 +136,7 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
       <MaterialsKpiHeader
         summary={data.summary}
         materials={data.materials}
+        filteredCount={filteredMaterials.length}
         loading={isLoading}
         dataUpdatedAt={dataUpdatedAt}
       />
@@ -183,7 +199,7 @@ export function MaterialBrowserView({ projectId }: MaterialBrowserViewProps) {
         <div className="flex justify-start">
           <div className="w-full max-w-[clamp(360px,40vw,640px)] aspect-[4/3]">
             <MaterialsFamilyTreemap
-              materials={data.materials}
+              materials={searchFilteredMaterials}
               activeFamily={selectedFamily}
               onFamilyClick={(family) => {
                 setSelectedFamily(family === selectedFamily ? null : family);

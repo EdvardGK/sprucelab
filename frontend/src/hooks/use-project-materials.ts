@@ -115,10 +115,27 @@ export interface ProjectMaterialsSummary {
   dominant_unit: MaterialUnit | null;
   /** True when materials carry mixed units (no single dominant axis). */
   mixed_units: boolean;
+  /** Per-unit subtotals so the KPI can render a stacked breakdown when
+   * mixed_units is true ("324 m³ · 1,205 m² · 16k m"). Adding scalars
+   * across different units would silently mis-label the result. */
+  quantities_by_unit: Record<MaterialUnit, number>;
   /** Sum of (quantity × unit_cost) — null when no material has unit_cost. */
   total_cost_nok: number | null;
   /** Sum of (quantity × gwp_per_unit) — null when no EPD-linked material has GWP. */
   total_gwp_kg_co2e: number | null;
+}
+
+/**
+ * Canonical sort order for material units. Volume → area → length → mass
+ * → count. Used to band the materials table so cross-unit "Quantity"
+ * sorts don't compare 16 m against 6.26 m³ as raw scalars.
+ */
+export const MATERIAL_UNIT_ORDER: MaterialUnit[] = ['m3', 'm2', 'm', 'kg', 'pcs'];
+
+export function unitRank(unit: MaterialUnit | null): number {
+  if (!unit) return MATERIAL_UNIT_ORDER.length;
+  const idx = MATERIAL_UNIT_ORDER.indexOf(unit);
+  return idx === -1 ? MATERIAL_UNIT_ORDER.length : idx;
 }
 
 export interface ProjectMaterialsData {
@@ -379,6 +396,7 @@ function buildSummary(
     total_quantity: totalQuantity,
     dominant_unit: dominantUnit,
     mixed_units: mixedUnits,
+    quantities_by_unit: unitTotals,
     total_cost_nok: totalCost,
     total_gwp_kg_co2e: totalGwp,
   };

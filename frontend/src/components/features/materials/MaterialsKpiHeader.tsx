@@ -16,15 +16,23 @@ import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
 import { familyColor } from './familyColors';
 import type {
   AggregatedMaterial,
+  MaterialUnit,
   ProjectMaterialsSummary,
 } from '@/hooks/use-project-materials';
-import { pickDominantUnit } from '@/hooks/use-project-materials';
+import {
+  MATERIAL_UNIT_ORDER,
+  pickDominantUnit,
+} from '@/hooks/use-project-materials';
 
 type Tone = 'neutral' | 'good' | 'warning' | 'danger';
 
 interface MaterialsKpiHeaderProps {
   summary: ProjectMaterialsSummary;
   materials: AggregatedMaterial[];
+  /** Count of materials passing the active dashboard filters. Used to
+   * render the MATERIALS KPI as "N/total" so the headline tracks the
+   * active filter (issue #17 finding 7). */
+  filteredCount?: number;
   loading?: boolean;
   dataUpdatedAt?: number;
 }
@@ -42,6 +50,7 @@ interface MaterialsKpiHeaderProps {
 export function MaterialsKpiHeader({
   summary,
   materials,
+  filteredCount,
   loading,
   dataUpdatedAt,
 }: MaterialsKpiHeaderProps) {
@@ -125,35 +134,19 @@ export function MaterialsKpiHeader({
           id="kpi-mat-total-materials"
           icon={<Boxes className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
           label={t('materialBrowser.kpi.totalMaterials')}
-          rawValue={summary.total_materials}
+          rawValue={filteredCount ?? summary.total_materials}
+          totalValue={
+            filteredCount !== undefined && filteredCount !== summary.total_materials
+              ? summary.total_materials
+              : undefined
+          }
           renderValue={(animated) => animated.toLocaleString()}
           loading={loading}
           spark={<Sparkline segments={familySegments} variant="stacked" />}
         />
 
-        <KpiCard
-          id="kpi-mat-total-quantity"
-          icon={<Ruler className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
-          label={t('materialBrowser.kpi.totalQuantity')}
-          rawValue={summary.total_quantity}
-          fraction
-          renderValue={(animated) =>
-            summary.dominant_unit
-              ? `${formatQty(animated)} ${summary.dominant_unit}`
-              : '—'
-          }
-          missing={!summary.dominant_unit}
-          missingHint={
-            summary.mixed_units ? t('materialBrowser.kpi.mixedUnits') : undefined
-          }
-          subline={
-            summary.mixed_units
-              ? t('materialBrowser.kpi.mixedUnitsHint')
-              : undefined
-          }
-          loading={loading}
-          spark={<Sparkline segments={topQuantitySegments} variant="stacked" />}
-        />
+        <QuantityKpiCard summary={summary} loading={loading} sparkSegments={topQuantitySegments} />
+
 
         <KpiCard
           id="kpi-mat-product"
@@ -165,6 +158,7 @@ export function MaterialsKpiHeader({
           missing={
             summary.procurement_linked_count === 0 && summary.total_materials > 0
           }
+          missingHint={t('materialBrowser.kpi.productMissingHint')}
           tone={
             summary.procurement_linked_count === 0
               ? 'warning'
@@ -192,6 +186,7 @@ export function MaterialsKpiHeader({
           totalValue={summary.total_materials}
           renderValue={(animated) => animated.toLocaleString()}
           missing={summary.epd_linked_count === 0 && summary.total_materials > 0}
+          missingHint={t('materialBrowser.kpi.epdMissingHint')}
           tone={
             summary.epd_linked_count === 0
               ? 'warning'
@@ -284,6 +279,89 @@ interface KpiCardProps {
   loading?: boolean;
   tone?: Tone;
   spark?: React.ReactNode;
+}
+
+interface QuantityKpiCardProps {
+  summary: ProjectMaterialsSummary;
+  loading?: boolean;
+  sparkSegments: SparkSegment[];
+}
+
+/**
+ * Quantity tile. Cross-unit aggregation is invalid (you can't add m³ to
+ * m as scalars), so when multiple units carry meaningful subtotals we
+ * render each one stacked — there is no single "total quantity" to
+ * report. The single-unit path keeps the count-up affordance for parity
+ * with the rest of the row.
+ */
+function QuantityKpiCard({ summary, loading, sparkSegments }: QuantityKpiCardProps) {
+  const { t } = useTranslation();
+  const buckets = (Object.entries(summary.quantities_by_unit) as [MaterialUnit, number][])
+    .filter(([, v]) => v > 0)
+    .sort(([ua], [ub]) => MATERIAL_UNIT_ORDER.indexOf(ua) - MATERIAL_UNIT_ORDER.indexOf(ub));
+  const single = buckets.length <= 1;
+
+  if (single) {
+    return (
+      <KpiCard
+        id="kpi-mat-total-quantity"
+        icon={<Ruler className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />}
+        label={t('materialBrowser.kpi.totalQuantity')}
+        rawValue={summary.total_quantity}
+        fraction
+        renderValue={(animated) =>
+          summary.dominant_unit
+            ? `${formatQty(animated)} ${summary.dominant_unit}`
+            : '—'
+        }
+        missing={!summary.dominant_unit}
+        loading={loading}
+        spark={<Sparkline segments={sparkSegments} variant="stacked" />}
+      />
+    );
+  }
+
+  // Mixed-unit layout: stacked rows, one per unit. No headline number —
+  // the previous "61210 m" headline silently dropped m² / m³ buckets.
+  return (
+    <DashboardTile
+      id="kpi-mat-total-quantity"
+      className={cn(
+        'p-[clamp(0.5rem,1vw,1rem)] flex flex-col justify-between h-[clamp(7rem,12vh,9rem)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+      )}
+    >
+      <div className="flex items-center justify-between text-muted-foreground">
+        <span className="text-[clamp(0.55rem,0.7vw,0.75rem)] uppercase tracking-wide font-medium truncate">
+          {t('materialBrowser.kpi.totalQuantity')}
+        </span>
+        <span className="shrink-0 text-muted-foreground">
+          <Ruler className="h-[clamp(0.875rem,1.4vw,1.25rem)] w-[clamp(0.875rem,1.4vw,1.25rem)]" />
+        </span>
+      </div>
+      {loading ? (
+        <ShimmerBlock className="h-[clamp(1.5rem,3vw,2.5rem)] w-[clamp(2.5rem,5vw,4rem)]" />
+      ) : (
+        <ul className="flex flex-col gap-[1px] flex-1 justify-center min-h-0">
+          {buckets.map(([unit, value]) => (
+            <li
+              key={unit}
+              className="flex items-baseline justify-between gap-2 text-[clamp(0.7rem,1vw,0.95rem)] tabular-nums leading-tight"
+            >
+              <span className="font-semibold tracking-tight">{formatQty(value)}</span>
+              <span className="text-[clamp(0.5rem,0.65vw,0.7rem)] uppercase tracking-wide text-muted-foreground/80">
+                {unit}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!loading && (
+        <div className="mt-[clamp(0.25rem,0.5vh,0.5rem)]">
+          <Sparkline segments={sparkSegments} variant="stacked" />
+        </div>
+      )}
+    </DashboardTile>
+  );
 }
 
 function KpiCard({

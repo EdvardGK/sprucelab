@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { familyColor } from './familyColors';
 import {
   pickDominantUnit,
+  unitRank,
   type AggregatedMaterial,
   type MaterialUnit,
 } from '@/hooks/use-project-materials';
@@ -87,6 +88,21 @@ export function MaterialsTable({
 
   const sortedRows = useMemo(() => {
     const dir = sort.dir === 'asc' ? 1 : -1;
+    // Quantity sort is unit-aware: primary band by unit (m³ → m² → m →
+    // kg → pcs canonical order), secondary by numeric value within the
+    // band. Comparing 6.26 m³ against 16 m as raw scalars is the bug
+    // reported in #17 — same row label, different physical meaning.
+    if (sort.col === 'quantity') {
+      return [...rows].sort((a, b) => {
+        const ra = unitRank(a.quantityUnit);
+        const rb = unitRank(b.quantityUnit);
+        if (ra !== rb) return (ra - rb) * dir;
+        const va = a.quantity ?? -Infinity;
+        const vb = b.quantity ?? -Infinity;
+        if (va === vb) return 0;
+        return (va - vb) * dir;
+      });
+    }
     const get = (r: Row): string | number => {
       switch (sort.col) {
         case 'name':
