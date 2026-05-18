@@ -87,7 +87,7 @@ export default function FederatedViewer() {
   // provider mounted at <ProjectShell />; URL + localStorage sync hooks are
   // mounted there too.
   const filter = useProjectFilter();
-  const { setFloorCode } = useProjectFilterActions();
+  const { setFloorCode, setIfcClass } = useProjectFilterActions();
 
   const includedClasses = useMemo(
     () => filter.ifc_class ?? [],
@@ -287,7 +287,31 @@ export default function FederatedViewer() {
                 showControls={false}
                 showFilterHUD={false}
                 onSectionPlanesChange={setSectionPlanes}
-                onSelectionChange={setSelectedElement}
+                onSelectionChange={(el) => {
+                  // Open the side-rail with element details (existing behavior)
+                  // AND drive bidirectional cross-filter on the ifc_class
+                  // dimension. The dashboard surfaces that share this filter
+                  // store (Type page, Model dash) react to the same mutation.
+                  setSelectedElement(el);
+                  if (!el || !el.type || el.type === 'Unknown') return;
+                  const stripped = el.type.replace(/^IFC/i, '');
+                  if (!stripped) return;
+                  const pascal =
+                    stripped.charAt(0).toUpperCase() + stripped.slice(1).toLowerCase();
+                  const guess = `Ifc${pascal}`;
+                  // Match against the known class set when available so we get
+                  // the canonical PascalCase of compound names.
+                  const candidates = discoveredTypes
+                    .map((t) => t.type)
+                    .filter(Boolean);
+                  const match =
+                    candidates.find(
+                      (c) => c.toLowerCase() === guess.toLowerCase(),
+                    ) ?? guess;
+                  const active = filter.ifc_class;
+                  const isOnly = active?.length === 1 && active[0] === match;
+                  setIfcClass(isOnly ? undefined : [match]);
+                }}
                 onTypesDiscovered={handleTypesDiscovered}
                 onStoreysDiscovered={handleStoreysDiscovered}
                 typeVisibility={typeVisibilityMap}

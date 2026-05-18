@@ -610,6 +610,33 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
     () => filterAnalysisTypes(analysis.types, filter),
     [analysis.types, filter.ifc_class, filter.excluded_ifc_class, filter.floor_code, filter.type_guid]
   );
+  // Source-of-filter rule (PowerBI pattern): a surface that PRODUCES a
+  // filter dimension must stay whole on its own dimension — only the
+  // OTHER surfaces narrow. Build per-producer slices that omit the
+  // producer's own dimension, so the Elements treemap (produces
+  // `ifc_class`) doesn't collapse to one tile on its own click, and the
+  // Storeys chart (produces `floor_code`) doesn't shrink to the active
+  // storey's bar.
+  const classUnfilteredTypes = useMemo(
+    () =>
+      filterAnalysisTypes(analysis.types, {
+        ifc_class: undefined,
+        excluded_ifc_class: filter.excluded_ifc_class,
+        floor_code: filter.floor_code,
+        type_guid: filter.type_guid,
+      }),
+    [analysis.types, filter.excluded_ifc_class, filter.floor_code, filter.type_guid]
+  );
+  const storeyUnfilteredTypes = useMemo(
+    () =>
+      filterAnalysisTypes(analysis.types, {
+        ifc_class: filter.ifc_class,
+        excluded_ifc_class: filter.excluded_ifc_class,
+        floor_code: undefined,
+        type_guid: filter.type_guid,
+      }),
+    [analysis.types, filter.ifc_class, filter.excluded_ifc_class, filter.type_guid]
+  );
   const totalStats = useMemo(() => computeAnalysisStats(analysis.types), [analysis.types]);
   const filteredStats = useMemo(() => computeAnalysisStats(filteredTypes), [filteredTypes]);
   // Stats used as the page's "live" object — filtered scalars/classCounts
@@ -906,7 +933,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 <VerifiedStoreyChart
                   storeys={analysis.storeys}
                   verification={storeyVerification}
-                  filteredTypes={filteredTypes}
+                  filteredTypes={storeyUnfilteredTypes}
                   activeStorey={viewerStoreyFilter}
                   onBarClick={filterByStorey}
                 />
@@ -921,7 +948,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 />
                 <div className="flex-1 relative">
                   <Treemap
-                    types={filteredTypes}
+                    types={classUnfilteredTypes}
                     classColorMap={classColorMap}
                     activeIfcClass={
                       filter.ifc_class && filter.ifc_class.length === 1
@@ -1004,6 +1031,18 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                     classColorMap={classColorMap}
                     floorCodeFilter={viewerStoreyFilter}
                     typeVisibility={viewerTypeVisibility}
+                    onSelectionChange={(el) => {
+                      // Bidirectional cross-filter: viewer click drives the
+                      // ifc_class dimension. Same toggle-off semantics as the
+                      // dashboard tiles — clicking the same class twice clears.
+                      // Null/Unknown selections (e.g. clicking empty space)
+                      // intentionally do NOT clear the filter — the user
+                      // clears via the dashboard or the Clear-all button.
+                      if (!el || !el.type || el.type === 'Unknown') return;
+                      const cls = el.type.replace(/^IFC/i, '');
+                      if (!cls) return;
+                      filterByIfcClass(cls);
+                    }}
                   />
                 ) : (
                   <FootprintView

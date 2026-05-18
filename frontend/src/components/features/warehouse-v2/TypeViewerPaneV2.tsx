@@ -6,6 +6,7 @@ import {
   UnifiedBIMViewer,
   type IsolationConfig,
 } from '@/components/features/viewer/UnifiedBIMViewer';
+import { type ElementProperties } from '@/components/features/viewer/ElementPropertiesPanel';
 import { ViewerPane } from '@/components/features/viewer/ViewerPane';
 import { useTypeInstances } from '@/hooks/use-type-mapping';
 import { useTypesInstancesByClass, type IFCType } from '@/hooks/use-warehouse';
@@ -22,6 +23,10 @@ interface TypeViewerPaneV2Props {
   /** Color of the filtered class in the shared class-color map. */
   classColor?: string;
   onClearSelection: () => void;
+  /** Fires when the user picks an element inside the viewer. Bidirectional
+   * cross-filter (viewer → dashboard): callers can dispatch a filter
+   * mutation from the picked element's IFC class. */
+  onElementSelect?: (element: ElementProperties | null) => void;
   /** Quick-action handlers passed through to TypeDataRail. */
   onSave?: (type: IFCType) => void;
   onFlag?: (type: IFCType) => void;
@@ -54,6 +59,7 @@ export function TypeViewerPaneV2({
   filteredInstanceCount = 0,
   classColor,
   onClearSelection,
+  onElementSelect,
   onSave,
   onFlag,
   onIgnore,
@@ -146,6 +152,7 @@ export function TypeViewerPaneV2({
         showModelInfo={false}
         showControls={false}
         showFilterHUD={false}
+        onSelectionChange={onElementSelect}
       />
     </ViewerPane>
   );

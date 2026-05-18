@@ -168,6 +168,16 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
     return filterTypesV2(types, { searchQuery, ifcClassFilter });
   }, [types, searchQuery, ifcClassFilter]);
 
+  // Source-of-filter rule (PowerBI pattern): the surface that PRODUCES a
+  // filter dimension must stay whole on its own dimension — only OTHER
+  // surfaces narrow. The treemap and class-distribution sparklines produce
+  // `ifc_class`, so they consume search-filtered (other dimension) but
+  // class-unfiltered (own dimension) types. Without this split they would
+  // collapse to a single tile the moment the user clicks one.
+  const classUnfilteredTypes = useMemo(() => {
+    return filterTypesV2(types, { searchQuery, ifcClassFilter: 'all' });
+  }, [types, searchQuery]);
+
   const totalStats = useMemo(() => computeStats(types), [types]);
   // The filtered subset drives the foreground numbers; sparkline
   // distributions stay project-scoped (from totalStats) so the macro
@@ -299,6 +309,32 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
   const handleIgnoreType = useCallback(
     (type: IFCType) => setMappingStatus(type, 'ignored', 'typesV2.shortcuts.ignored'),
     [setMappingStatus]
+  );
+
+  // Bidirectional cross-filter (viewer → dashboard): when the user picks
+  // an element inside the persistent viewer, drive the ifc_class dimension
+  // from its element class. Same toggle-off semantics as the dashboard
+  // tiles. Empty / Unknown selections do NOT clear the filter — explicit
+  // clear lives on the dashboard chips and the Clear-all button.
+  const handleElementSelect = useCallback(
+    (el: import('@/components/features/viewer/ElementPropertiesPanel').ElementProperties | null) => {
+      if (!el || !el.type || el.type === 'Unknown') return;
+      // Element type arrives as "IfcWall" from v2 or "IFCWALL" from v3.
+      // Normalize to PascalCase by stripping the IFC prefix then lowercasing
+      // the remainder's tail; ifcClassFilter expects the prefixed PascalCase
+      // ("IfcWall") form, matching uniqueIfcClasses.
+      const stripped = el.type.replace(/^IFC/i, '');
+      if (!stripped) return;
+      const pascal = stripped.charAt(0).toUpperCase() + stripped.slice(1).toLowerCase();
+      const targetClass = `Ifc${pascal}`;
+      // Prefer the case from uniqueIfcClasses if it disagrees with our
+      // PascalCase guess (handles classes like `IfcBeamStandardCase`).
+      const match = uniqueIfcClasses.find(
+        (c) => c.toLowerCase() === targetClass.toLowerCase(),
+      ) ?? targetClass;
+      setIfcClassFilter((curr) => (curr === match ? 'all' : match));
+    },
+    [setIfcClassFilter, uniqueIfcClasses],
   );
 
   const handleCopyGuid = useCallback(
@@ -484,7 +520,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
             <div className="flex-[2_1_72%] min-h-0 grid grid-cols-1 md:grid-cols-2 gap-[clamp(0.5rem,1vw,1rem)]">
               <div className="min-h-0">
                 <TypeTreemap
-                  types={filteredTypes}
+                  types={classUnfilteredTypes}
                   activeIfcClass={ifcClassFilter}
                   classColors={classColors}
                   onClassClick={(cls) =>
@@ -505,6 +541,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                       : undefined
                   }
                   onClearSelection={handleClearSelection}
+                  onElementSelect={handleElementSelect}
                   onSave={handleSaveType}
                   onFlag={handleFlagType}
                   onIgnore={handleIgnoreType}
@@ -568,6 +605,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
               : undefined
           }
           onClearSelection={handleClearSelection}
+          onElementSelect={handleElementSelect}
           onSave={handleSaveType}
           onFlag={handleFlagType}
           onIgnore={handleIgnoreType}
