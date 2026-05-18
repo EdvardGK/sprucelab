@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, X, FileText, AlertCircle, CheckCircle, Loader2, Minimize2 } from 'lucide-react';
+import { Upload, X, FileText, AlertCircle, CheckCircle, Loader2, Minimize2, RotateCcw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
     uploads,
     addFiles,
     removeFile,
+    retryFile,
     startUpload,
     clearCompleted,
     isUploading,
@@ -237,9 +238,38 @@ export function ModelUploadDialog({ open, onOpenChange, projectId }: ModelUpload
                               size="icon"
                               className="h-6 w-6"
                               onClick={() => removeFile(upload.id)}
+                              title={t('modelUpload.removeFile')}
+                              aria-label={t('modelUpload.removeFile')}
                             >
                               <X className="h-3 w-3" />
                             </Button>
+                          )}
+                          {upload.status === 'error' && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => retryFile(upload.id)}
+                                disabled={isUploading}
+                                title={t('modelUpload.retry')}
+                                aria-label={t('modelUpload.retry')}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => removeFile(upload.id)}
+                                title={t('modelUpload.removeFile')}
+                                aria-label={t('modelUpload.removeFile')}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>

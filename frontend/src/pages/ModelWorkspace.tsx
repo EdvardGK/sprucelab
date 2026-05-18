@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3, Table2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Play, Loader2, Maximize2, X, Box, Grid3x3, Table2, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { useModel, useModels } from '@/hooks/use-models';
 import {
   Select,
@@ -10,6 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useModelTypes, type IFCType } from '@/hooks/use-warehouse';
 import {
   useCreateTypeMapping,
@@ -53,6 +61,7 @@ import { VerifiedStoreyChart } from '@/components/features/model-workspace/Verif
 import { ComingSoonTile } from '@/components/features/model-workspace/ComingSoonTile';
 import { StatisticsTab } from '@/components/features/model-workspace/StatisticsTab';
 import { useCountUp } from '@/components/features/warehouse-v2/useCountUp';
+import { cn } from '@/lib/utils';
 
 // Tab definitions — see CLAUDE.md "modelers own data" + Track C lift brief.
 // Flattened: AnalysisDashboard is now the default Overview content (no
@@ -68,6 +77,17 @@ export default function ModelWorkspace() {
   // const location = useLocation();
   const { data: model, isLoading } = useModel(modelId!);
   const { data: projectModels = [] } = useModels(projectId);
+
+  // Sibling versions for THIS model name. The gallery hides earlier
+  // versions (one card per name); the workspace header surfaces them
+  // here so a coordinator can step back to v1 — answering the tester's
+  // "no way to view, compare, or revert to v1" finding (issue #15).
+  const versionSiblings = useMemo(() => {
+    if (!model) return [] as Model[];
+    return projectModels
+      .filter((m) => m.name === model.name)
+      .sort((a, b) => b.version_number - a.version_number);
+  }, [projectModels, model]);
 
   // Models in this project, ordered by upload time desc (matches ProjectModels).
   // Used by the header model selector + Prev/Next buttons so a coordinator
@@ -167,7 +187,15 @@ export default function ModelWorkspace() {
               <div className="flex items-center gap-3">
                 <div>
                   <h1 className="text-xl font-semibold text-text-primary">{model.name}</h1>
-                  <p className="text-sm text-text-tertiary">Version {model.version_number}</p>
+                  <ModelVersionPicker
+                    currentModel={model}
+                    siblings={versionSiblings}
+                    onPick={(targetId) => {
+                      if (targetId !== model.id) {
+                        navigate(`/projects/${projectId}/models/${targetId}`);
+                      }
+                    }}
+                  />
                 </div>
                 {model.discipline && (
                   <span
@@ -325,6 +353,66 @@ export default function ModelWorkspace() {
 // of Overview — no inner sub-tab navigation. QTO + Statistics moved up to
 // be peer top-level tabs. MMI / Properties were never built and have
 // been removed.
+
+/**
+ * Version picker on the model workspace header. Hidden when this is the
+ * only version of the name; otherwise renders a dropdown of every
+ * sibling (newest first) with the current version highlighted. v1 stays
+ * accessible — the gallery hides earlier versions but they're never
+ * deleted (`Model.parent_model` keeps the linkage at the backend).
+ */
+function ModelVersionPicker({
+  currentModel,
+  siblings,
+  onPick,
+}: {
+  currentModel: Model;
+  siblings: Model[];
+  onPick: (id: string) => void;
+}) {
+  if (siblings.length <= 1) {
+    return (
+      <p className="text-sm text-text-tertiary">Version {currentModel.version_number}</p>
+    );
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 text-sm text-text-tertiary hover:text-text-primary rounded px-1 -mx-1 hover:bg-muted/40 transition-colors"
+          title="Switch to another version"
+          aria-label={`Version ${currentModel.version_number} — switch version`}
+        >
+          <span>Version {currentModel.version_number}</span>
+          <span className="text-text-tertiary/70 text-xs">of {siblings.length}</span>
+          <ChevronDown className="h-3 w-3" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuLabel className="text-xs">Versions of {currentModel.name}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {siblings.map((m) => {
+          const isCurrent = m.id === currentModel.id;
+          const date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '';
+          return (
+            <DropdownMenuItem
+              key={m.id}
+              onSelect={() => onPick(m.id)}
+              className={cn(
+                'flex items-center justify-between gap-2',
+                isCurrent && 'bg-muted/40 font-medium'
+              )}
+            >
+              <span>v{m.version_number}</span>
+              <span className="text-xs text-text-tertiary">{date}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 function OverviewTab({ model }: { model: Model }) {
   const { data: analysis, isLoading } = useModelAnalysis(model.id);

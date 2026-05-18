@@ -1023,10 +1023,12 @@
     "toastSuccess": "{{count}} modell(er) lastet opp",
     "toastPartial": "{{success}} lastet opp, {{failed}} feilet",
     "toastFailed": "{{count}} opplasting(er) feilet",
-    "errorTooLargeForServer": "Filen overskrider serverens opplastingsgrense. Prøv å laste opp individuelt eller kontakt support.",
+    "errorTooLargeForServer": "Opplastingsserveren avviste filen (størrelsesgrense). Direkte lagringsopplasting er kanskje ikke aktivert — prøv igjen, last opp én og én fil, eller kontakt support.",
     "errorNetwork": "Nettverksfeil under opplasting. Sjekk tilkoblingen og prøv igjen.",
     "errorAborted": "Opplasting avbrutt.",
-    "errorGeneric": "Opplasting feilet ({{status}}). Prøv igjen."
+    "errorGeneric": "Opplasting feilet ({{status}}). Prøv igjen.",
+    "retry": "Prøv opplasting på nytt",
+    "removeFile": "Fjern"
   },
   "typeBrowser": {
     "title": "Typer",

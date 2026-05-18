@@ -1023,10 +1023,12 @@
     "toastSuccess": "{{count}} model(s) uploaded successfully",
     "toastPartial": "{{success}} uploaded, {{failed}} failed",
     "toastFailed": "{{count}} upload(s) failed",
-    "errorTooLargeForServer": "File exceeds the server upload limit. Try uploading individually or contact support.",
+    "errorTooLargeForServer": "Upload server rejected the file (size limit). Direct-to-storage upload may not be enabled — retry, upload one file at a time, or contact support.",
     "errorNetwork": "Network error during upload. Check your connection and retry.",
     "errorAborted": "Upload aborted.",
-    "errorGeneric": "Upload failed ({{status}}). Please retry."
+    "errorGeneric": "Upload failed ({{status}}). Please retry.",
+    "retry": "Retry upload",
+    "removeFile": "Remove"
   },
   "typeBrowser": {
     "title": "Types",

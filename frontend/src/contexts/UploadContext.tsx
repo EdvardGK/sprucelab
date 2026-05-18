@@ -29,6 +29,7 @@ interface UploadContextValue {
   uploads: UploadFile[];
   addFiles: (files: File[], projectId: string) => void;
   removeFile: (id: string) => void;
+  retryFile: (id: string) => void;
   startUpload: () => void;
   clearCompleted: () => void;
   isUploading: boolean;
@@ -138,6 +139,19 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   const removeFile = useCallback((id: string) => {
     setUploads(prev => prev.filter(u => u.id !== id));
+  }, []);
+
+  const retryFile = useCallback((id: string) => {
+    // Reset the row back to pending so the next startUpload() pass picks
+    // it up. Per-row retry beats "dismiss + start over" — the tester
+    // report flagged this as a missing affordance on 413 failures.
+    setUploads(prev =>
+      prev.map(u =>
+        u.id === id
+          ? { ...u, status: 'pending' as UploadStatus, error: undefined, progress: 0 }
+          : u
+      )
+    );
   }, []);
 
   const clearCompleted = useCallback(() => {
@@ -260,6 +274,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         uploads,
         addFiles,
         removeFile,
+        retryFile,
         startUpload,
         clearCompleted,
         isUploading,
