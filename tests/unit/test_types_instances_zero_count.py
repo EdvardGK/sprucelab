@@ -71,6 +71,30 @@ def test_instances_still_404s_for_truly_missing_id(client):
     assert resp.status_code == 404
 
 
+def test_instances_returns_structured_200_for_synthetic_type_guid(client):
+    """Synthetic type_guids (`synth_<md5>` hashes for untyped element groups)
+    don't correspond to any real IFC GlobalId, so the FastAPI lookup 404s.
+    Action must short-circuit and return a structured 200 instead of
+    bubbling the upstream 404 back to the frontend."""
+    model = _make_model()
+    t = IFCType.objects.create(
+        model=model,
+        ifc_type="IfcOpeningElementType",
+        type_guid="synth_abc123def456",
+        type_name="<untyped>",
+        instance_count=42,
+    )
+
+    resp = client.get(f"/api/types/types/{t.id}/instances/")
+    assert resp.status_code == 200, resp.content
+    body = resp.json()
+    assert body["type_id"] == str(t.id)
+    assert body["type_guid"] == "synth_abc123def456"
+    assert body["total_count"] == 42
+    assert body["instances"] == []
+    assert body["error"] == "synthetic_type_guid"
+
+
 def test_list_still_filters_zero_count_types(client):
     """The relaxation is scoped to the `instances` action only — the list
     endpoint must keep filtering out 0-count types so they don't pollute

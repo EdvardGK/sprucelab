@@ -544,6 +544,31 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
                 'error_message': 'Type has no IfcTypeObject (untyped). Per-instance isolation is unavailable.'
             })
 
+        # Synthetic type_guids (extractor-generated `synth_<md5>` hashes for
+        # groups of untyped elements keyed by (ifc_class, ObjectType) — see
+        # ifc_parser.py:398 + memory `type-guid-synth-hash-fallback.md`)
+        # don't correspond to any real IFC GlobalId in the source file, so
+        # the FastAPI `/types/{type_guid}/instances` lookup 404s. That bare
+        # 404 used to bubble back through the `except httpx.HTTPStatusError`
+        # below, breaking the viewer cross-filter for every class whose
+        # fan-out included a synthetic type (typical for IfcOpeningElement,
+        # IfcAnnotation, anything without an IfcTypeObject upstream). Return
+        # the same structured 200 shape so the frontend treats it as a silent
+        # skip until a proper "find instances by class + ObjectType" path is
+        # added to FastAPI.
+        if ifc_type.type_guid.startswith('synth_'):
+            return Response({
+                'type_id': str(ifc_type.id),
+                'type_name': ifc_type.type_name,
+                'type_guid': ifc_type.type_guid,
+                'ifc_type': ifc_type.ifc_type,
+                'model_id': str(model.id),
+                'total_count': ifc_type.instance_count or 0,
+                'instances': [],
+                'error': 'synthetic_type_guid',
+                'error_message': 'Synthetic type (no IfcTypeObject upstream). Per-instance lookup by GlobalId is not available; instances would need to be resolved via class + ObjectType.'
+            })
+
         if not model.file_url:
             return Response({
                 'type_id': str(ifc_type.id),
