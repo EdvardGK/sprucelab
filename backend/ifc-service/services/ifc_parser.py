@@ -409,6 +409,25 @@ class IFCParserService:
                         group['first_element'] = element
                     untyped_total += 1
 
+            # IfcAnnotation is an IfcProduct but NOT an IfcElement, so the
+            # IfcElement loop above misses it. Web-ifc still tessellates
+            # IfcAnnotation when it carries a 3D body — the viewer renders
+            # them but the dashboard had no matching type chip, so the user
+            # couldn't filter to them. Iterate them explicitly and feed the
+            # same synthetic-type pipeline. Spatial structure (IfcSpace /
+            # Site / Building / Storey) is intentionally still excluded —
+            # we don't want spatial containers as type chips.
+            for element in ifc_file.by_type('IfcAnnotation'):
+                if element.GlobalId not in typed_guids:
+                    ifc_class = element.is_a()
+                    object_type = getattr(element, 'ObjectType', None) or '<untyped>'
+                    key = (ifc_class, object_type)
+                    group = untyped_groups[key]
+                    group['count'] += 1
+                    if group['first_element'] is None:
+                        group['first_element'] = element
+                    untyped_total += 1
+
             # Create synthetic types for untyped groups
             for (ifc_class, object_type), group in untyped_groups.items():
                 type_name = object_type if object_type != '<untyped>' else f'{ifc_class}::<untyped>'
@@ -444,6 +463,13 @@ class IFCParserService:
             if untyped_total > 0:
                 # Add untyped elements to element_to_type_name for storey distribution
                 for element in ifc_file.by_type('IfcElement'):
+                    if element.GlobalId not in element_to_type_name:
+                        ifc_class = element.is_a()
+                        object_type = getattr(element, 'ObjectType', None) or '<untyped>'
+                        type_name = object_type if object_type != '<untyped>' else f'{ifc_class}::<untyped>'
+                        element_to_type_name[element.GlobalId] = type_name
+                # Mirror the IfcAnnotation extension for storey-distribution.
+                for element in ifc_file.by_type('IfcAnnotation'):
                     if element.GlobalId not in element_to_type_name:
                         ifc_class = element.is_a()
                         object_type = getattr(element, 'ObjectType', None) or '<untyped>'
