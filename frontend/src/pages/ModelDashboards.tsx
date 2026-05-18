@@ -170,8 +170,8 @@ function Pane({ children, span, className }: { children: React.ReactNode; span?:
 function Viewer({ tall }: { tall?: boolean }) {
   return (
     <div className={cn('relative w-full rounded overflow-hidden bg-gradient-to-b from-[hsl(220_15%_14%)] to-[hsl(220_18%_10%)]', tall ? 'h-full' : 'flex-1')}>
-      {/* perspective floor grid */}
-      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 500">
+      {/* perspective floor grid — preserveAspectRatio so the model silhouette doesn't stretch */}
+      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice" viewBox="0 0 800 500">
         <defs>
           <linearGradient id="floorFade" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="rgba(255,255,255,0)" />
@@ -403,17 +403,17 @@ function MmiBar() {
 function ClassificationBars() {
   const max = Math.max(...MOCK_NS3451.map(b => b.types));
   return (
-    <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto">
+    <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
       {MOCK_NS3451.map(b => {
         const pct = (b.types / max) * 100;
         return (
-          <div key={b.code} className="flex items-center gap-3 text-[12px]">
-            <span className="font-mono text-[11px] text-text-tertiary tabular-nums w-10 shrink-0">{b.code}</span>
-            <span className="text-text-secondary w-24 truncate shrink-0">{b.name}</span>
-            <div className="flex-1 h-5 bg-text-tertiary/8 rounded-sm overflow-hidden relative">
+          <div key={b.code} className="flex items-center gap-2 text-[12px]">
+            <span className="font-mono text-[11px] text-text-tertiary tabular-nums shrink-0">{b.code}</span>
+            <span className="text-text-secondary text-[12px] shrink-0">{b.name}</span>
+            <div className="flex-1 h-5 bg-text-tertiary/10 rounded-sm overflow-hidden relative min-w-[60px]">
               <div className="h-full bg-[hsl(158_70%_28%)] rounded-sm" style={{ width: `${pct}%` }} />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-medium tabular-nums text-text-primary">{b.types}</span>
             </div>
+            <span className="font-mono text-[11px] tabular-nums text-text-primary shrink-0 w-8 text-right">{b.types}</span>
           </div>
         );
       })}
@@ -423,23 +423,21 @@ function ClassificationBars() {
 
 // Real materials list with quantity + family color swatch
 function MaterialsList() {
-  const max = Math.max(...MOCK_MATERIALS.map(m => m.qty / (m.unit === 'kg' ? 50 : 1))); // normalize roughly
+  const max = Math.max(...MOCK_MATERIALS.map(m => m.qty / (m.unit === 'kg' ? 50 : 1)));
   return (
-    <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto">
+    <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
       {MOCK_MATERIALS.map(m => {
         const normalized = m.qty / (m.unit === 'kg' ? 50 : 1);
         const pct = (normalized / max) * 100;
         return (
           <div key={m.name} className="flex items-center gap-2 text-[12px]">
             <span className="h-3 w-3 rounded-sm shrink-0 border border-black/10" style={{ background: m.color }} />
-            <div className="flex flex-col min-w-0 w-28 shrink-0">
-              <span className="text-text-primary truncate text-[12px]">{m.name}</span>
-              <span className="text-[10px] text-text-tertiary uppercase tracking-wider font-mono">{m.family}</span>
-            </div>
-            <div className="flex-1 h-4 bg-text-tertiary/8 rounded-sm overflow-hidden">
+            <span className="text-text-primary text-[12px] shrink-0 truncate">{m.name}</span>
+            <span className="text-[10px] text-text-tertiary uppercase tracking-wider font-mono shrink-0">{m.family}</span>
+            <div className="flex-1 h-4 bg-text-tertiary/10 rounded-sm overflow-hidden min-w-[40px]">
               <div className="h-full rounded-sm" style={{ width: `${pct}%`, background: m.color, opacity: 0.7 }} />
             </div>
-            <span className="font-mono text-[11px] tabular-nums text-text-primary shrink-0 w-20 text-right">{m.qty.toLocaleString()} {m.unit}</span>
+            <span className="font-mono text-[11px] tabular-nums text-text-primary shrink-0">{m.qty.toLocaleString()} {m.unit}</span>
           </div>
         );
       })}
@@ -467,10 +465,10 @@ function LineageStrip() {
 }
 function Item({ k, v, icon, emDash }: { k: string; v: string; icon?: React.ReactNode; emDash?: boolean }) {
   return (
-    <div className="flex items-center gap-2 min-w-0">
-      {icon && <span className="text-text-tertiary shrink-0">{icon}</span>}
-      <span className="text-text-tertiary text-[10px] uppercase tracking-wider font-mono w-24 shrink-0">{k}</span>
-      <span className={cn('truncate text-[12px]', emDash && 'text-amber-600')}>{v}</span>
+    <div className="flex items-baseline gap-1.5 min-w-0">
+      {icon && <span className="text-text-tertiary shrink-0 self-center">{icon}</span>}
+      <span className="text-text-tertiary text-[10px] uppercase tracking-wider font-mono shrink-0">{k}</span>
+      <span className={cn('truncate text-[12px] font-medium', emDash && 'text-amber-600')}>{v}</span>
     </div>
   );
 }
@@ -483,7 +481,7 @@ function LayoutV1({ classColorMap }: { classColorMap: Record<string, string> }) 
   return (
     <div className="flex flex-col gap-[13px]">
       <StatusRibbon />
-      <div style={{ ...GRID13, height: 400 }}>
+      <div style={{ ...GRID13, height: 460 }}>
         <Pane span={8}><Title>3D viewer</Title><Viewer /></Pane>
         <Pane span={5}>
           <Title right="10 signals">IFC health</Title>
@@ -512,18 +510,18 @@ function LayoutV2({ classColorMap }: { classColorMap: Record<string, string> }) 
   return (
     <div className="flex flex-col gap-[13px]">
       <StatusRibbon />
-      <div style={{ ...GRID13, height: 400 }}>
+      <div style={{ ...GRID13, height: 460 }}>
         <Pane span={8}><Title>3D viewer</Title><Viewer /></Pane>
         <Pane span={5}>
           <Title>Model state</Title>
-          <div className="flex flex-col gap-4 flex-1 min-h-0">
+          <div className="flex flex-col gap-3 flex-1 min-h-0">
             <div>
               <div className="text-[clamp(2.5rem,4vw,3.5rem)] font-semibold tabular-nums leading-none">
                 {EIR_MET}<span className="text-text-tertiary text-[55%]"> / {EIR_TOTAL}</span>
               </div>
               <div className="text-[11px] uppercase tracking-wider text-text-tertiary mt-1">EIR requirements met</div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 auto-rows-min">
               <Tile icon={<Shapes className="h-3.5 w-3.5" />} label="Types" value={MOCK_TYPES.length} sub="298 used · 14 unused" />
               <Tile icon={<HelpCircle className="h-3.5 w-3.5" />} label="Untyped" value={3} suffix="%" fraction sub="37 instances" tone="good" />
               <Tile icon={<Unlink className="h-3.5 w-3.5" />} label="Orphans" value={12} sub="0.4% outside tree" tone="warn" />
@@ -586,7 +584,7 @@ function LayoutV3({ classColorMap }: { classColorMap: Record<string, string> }) 
   return (
     <div className="flex flex-col gap-[13px]">
       <StatusRibbon />
-      <div style={{ ...GRID13, height: 400 }}>
+      <div style={{ ...GRID13, height: 460 }}>
         <Pane span={5}>
           <Title right={`${MOCK_ATTENTION.length} items`}>Needs attention</Title>
           <div className="flex-1 min-h-0"><AttentionFeed /></div>
