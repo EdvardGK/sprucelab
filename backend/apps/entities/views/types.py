@@ -109,7 +109,14 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         include_unused = self.request.query_params.get('include_unused', 'false').lower() == 'true'
-        if not include_unused:
+        # The `instances` action self-handles 0-instance and missing-type-guid
+        # rows with structured 200 payloads (see the action body's defensive
+        # branches). Applying the `instance_count__gt=0` filter here would
+        # short-circuit that handling at get_object() and return a bare 404 —
+        # which is what the frontend cross-filter (`useTypesInstancesByClass`)
+        # was hitting on annotation types whose instance_count never got
+        # back-filled after extraction.
+        if not include_unused and self.action != 'instances':
             # Use stored instance_count field (populated during parsing)
             qs = qs.filter(instance_count__gt=0)
 
@@ -501,6 +508,24 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
 
         ifc_type = self.get_object()
         model = ifc_type.model
+
+        # 0-instance types (extractor edge cases — e.g. annotation types whose
+        # instance_count was not back-filled) cannot have any instances to
+        # return. Same defensive shape as the no-type-guid branch below so the
+        # frontend cross-filter (`useTypesInstancesByClass`) treats it as a
+        # silent skip rather than a hard error.
+        if (ifc_type.instance_count or 0) == 0:
+            return Response({
+                'type_id': str(ifc_type.id),
+                'type_name': ifc_type.type_name,
+                'type_guid': ifc_type.type_guid,
+                'ifc_type': ifc_type.ifc_type,
+                'model_id': str(model.id),
+                'total_count': 0,
+                'instances': [],
+                'error': 'no_instances',
+                'error_message': 'Type has 0 instances in this model.'
+            })
 
         # Untyped rows (no IfcTypeObject upstream — common for IfcOpeningElement
         # and other void-style entities) cannot be isolated per-type. Return a
