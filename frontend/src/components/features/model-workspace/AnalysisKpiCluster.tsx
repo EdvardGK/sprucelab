@@ -93,7 +93,16 @@ export function AnalysisKpiCluster({
     [stats.untypedByClass, classColorMap]
   );
 
-  const orphanCount = storeyVerification?.orphan_count ?? null;
+  // Orphan count comes from /storey-verification/ at the MODEL scope — it
+  // can't be subset by the cross-filter without per-class orphan data from
+  // the backend (not exposed today). When any filter is active we cannot
+  // honestly say "this is the orphan count for your current view", so we
+  // mark the tile as a project-total readout (dimmed, "model total" sub-
+  // value) instead of letting it sit anchored while every other tile moves
+  // with the filter — the previous behaviour read as a bug.
+  const isFilterActive = filteredTypes !== undefined && filteredTypes !== analysis.types;
+  const rawOrphanCount = storeyVerification?.orphan_count ?? null;
+  const orphanCount = isFilterActive ? null : rawOrphanCount;
   // Use physical_total as the denominator — non-physical IFC products
   // (openings, annotations, grids) never live in storey containment and
   // would inflate the orphan ratio if counted.
@@ -227,6 +236,11 @@ export function AnalysisKpiCluster({
           orphanCount != null
             ? t('modelDash.kpis.orphanShare', {
                 pct: orphanPercent.toFixed(1),
+              })
+            : isFilterActive && rawOrphanCount != null
+            ? t('modelDash.kpis.orphanModelTotal', {
+                n: rawOrphanCount.toLocaleString(),
+                defaultValue: 'Model total: {{n}} (not filtered)',
               })
             : t('modelDash.kpis.pendingExtraction')
         }

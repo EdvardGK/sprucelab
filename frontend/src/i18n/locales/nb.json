@@ -2122,6 +2122,7 @@
       "usedUnusedShort": "{{used}} brukt · {{unused}} ubrukt",
       "mappedRatioShort": "{{mapped}} / {{total}} mappet",
       "orphanShare": "{{pct}}% utenfor romlig hierarki",
+      "orphanModelTotal": "Modelltotal: {{n}} (ikke filtrert)",
       "pendingExtraction": "Venter på data",
       "pendingEir": "EIR-regler kommer"
     },

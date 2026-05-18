@@ -2122,6 +2122,7 @@
       "usedUnusedShort": "{{used}} used · {{unused}} unused",
       "mappedRatioShort": "{{mapped}} / {{total}} mapped",
       "orphanShare": "{{pct}}% outside spatial tree",
+      "orphanModelTotal": "Model total: {{n}} (not filtered)",
       "pendingExtraction": "Data extraction pending",
       "pendingEir": "EIR rules pending"
     },
