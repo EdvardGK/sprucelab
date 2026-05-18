@@ -2,30 +2,36 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Model Dashboard — layout-only wireframes</title>
+<title>Model Dashboard — above-fold layouts</title>
 <link rel="stylesheet" href="_light.css">
 <style>
   /*
-    GRID SYSTEM — Fibonacci 13-col with golden-section splits.
-    Layout discipline only. Content is intentionally abstract.
+    Target: 1440×900 laptop. Above-the-fold ≈ 712px after browser/app chrome.
+    Everything visible at once. No scroll required.
 
-    Horizontal: 13 columns. Splits use Fibonacci sums: 8+5, 3+5+5, 5+5+3.
-    Vertical rhythm: hero 600 → 370 → 230 → 140. Each row ≈ φ-minor of the one above.
-    Card padding 13, gutter 13.
+    Vertical budget (712px):
+      status strip   32
+      gutter         13
+      hero          400
+      gutter         13
+      row 2         254
+      total         712
 
-    Slot roles:
-      hero       — primary content slot (≈1:1.18 or 1.4:1 — treemap-friendly)
-      bar        — wide narrow slot (3:1 to 5:1 — bars / lists / linear charts)
-      square     — close-to-square slot (1:1 to 4:3 — treemap-friendly)
-      tall       — tall narrow slot (1:1.5 to 1:2 — vertical list / sparklines)
-      strip      — full-width narrow strip (linear, ≥6:1)
+    Hero 400 × φ-minor 254 = 400 × 0.635 ≈ φ⁻¹. Two-band layout.
+
+    Horizontal: 13-col Fibonacci grid. Splits: 8+5, 3+5+5, 5+5+3, 13.
+    Gutter 13, card padding 13.
+
+    Below-fold content (detail tables, history, drill panels) lives in
+    modals / overlays / a separate "More" tab — never on the dashboard
+    page itself. The dashboard is the index, not the report.
   */
   :root {
     --gutter: 13px;
-    --hero-h: 600px;
-    --row2-h: 370px;
-    --row3-h: 230px;
-    --row4-h: 140px;
+    --hero-h: 400px;
+    --row2-h: 254px;
+    --strip-h: 32px;
+    --fold: 712px; /* status + 2 rows + 2 gutters */
   }
 
   .opt {
@@ -49,6 +55,7 @@
   .opt-name { font-weight: 600; font-size: 14px; }
   .opt-pitch { font-size: 12px; color: var(--ink-soft); margin-left: auto; max-width: 60%; text-align: right; }
 
+  /* Wireframe canvas — 13-col grid, capped to fold height */
   .wf {
     background: var(--bg);
     border: 1px solid var(--line);
@@ -58,20 +65,33 @@
     grid-template-columns: repeat(13, 1fr);
     grid-auto-rows: min-content;
     gap: var(--gutter);
+    position: relative;
   }
   .wf > * { min-width: 0; }
+
+  /* Fold marker — shows the 1440×900 above-fold boundary */
+  .wf::after {
+    content: "1440×900 fold";
+    position: absolute;
+    bottom: -1px; right: 12px;
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    color: var(--accent);
+    background: var(--bg);
+    padding: 0 6px;
+    letter-spacing: 0.06em;
+    transform: translateY(50%);
+  }
 
   .c1 { grid-column: span 1; } .c2 { grid-column: span 2; }
   .c3 { grid-column: span 3; } .c5 { grid-column: span 5; }
   .c8 { grid-column: span 8; } .c13 { grid-column: span 13; }
 
-  .h-hero { height: var(--hero-h); }
-  .h-row2 { height: var(--row2-h); }
-  .h-row3 { height: var(--row3-h); }
-  .h-row4 { height: var(--row4-h); }
-  .h-strip { height: 60px; }
+  .h-strip { height: var(--strip-h); }
+  .h-hero  { height: var(--hero-h); }
+  .h-row2  { height: var(--row2-h); }
 
-  /* Slot — pure shape, no content. Inner label shows role + aspect. */
+  /* Slot — pure shape */
   .slot {
     background: var(--surface);
     border: 1px solid var(--line);
@@ -121,21 +141,10 @@
     border-radius: 3px;
   }
 
-  /* Inner vertical φ subdivision */
-  .vsplit-8-5 {
-    display: grid;
-    grid-template-rows: 8fr 5fr;
-    gap: var(--gutter);
-    flex: 1;
-    min-height: 0;
-  }
-  .vsplit-5-3 {
-    display: grid;
-    grid-template-rows: 5fr 3fr;
-    gap: var(--gutter);
-    flex: 1;
-    min-height: 0;
-  }
+  /* Inner subdivisions for hero data panes */
+  .vsplit-8-5 { display: grid; grid-template-rows: 8fr 5fr; gap: var(--gutter); flex: 1; min-height: 0; }
+  .vsplit-1-1 { display: grid; grid-template-rows: 1fr 1fr; gap: var(--gutter); flex: 1; min-height: 0; }
+  .vsplit-5-3 { display: grid; grid-template-rows: 5fr 3fr; gap: var(--gutter); flex: 1; min-height: 0; }
 
   /* Status-headline strip */
   .headline {
@@ -144,15 +153,16 @@
     border: 1px solid var(--line);
     border-left: 3px solid var(--accent);
     border-radius: 4px;
-    padding: 8px 12px;
+    padding: 7px 12px;
     font-family: ui-monospace, monospace;
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--ink-mute);
+    height: var(--strip-h);
+    display: flex; align-items: center;
   }
 
-  /* Grid math footer */
   .grid-math {
     margin-top: 10px;
     font-family: ui-monospace, monospace;
@@ -185,346 +195,255 @@
     font-family: ui-monospace, monospace; font-size: 11px;
     color: var(--ink-mute); min-width: 22px;
   }
+  .toc code { font-size: 11px; }
 </style>
 </head>
 <body>
 <div class="page-frame">
 
   <div class="page-head">
-    <div class="title">Model Dashboard — layout-only wireframes</div>
+    <div class="title">Model Dashboard — above-fold layouts (1440×900)</div>
     <div class="route">docs/wireframes/2026-05-18_model-dash-10-options.html</div>
-    <div class="note">Pure geometry. Slot roles + aspect ratios. Content decided later.</div>
+    <div class="note">Everything visible at once · no scroll · pure geometry</div>
   </div>
 
   <div class="toc">
-    <div class="block-label">Grid system</div>
+    <div class="block-label">Vertical budget · 1440×900</div>
     <div style="font-size:12px; margin-top:6px;">
-      <strong>13-column Fibonacci grid</strong> · gutter 13 · card padding 13. Horizontal splits use Fibonacci sums: <code>8+5</code>, <code>3+5+5</code>, <code>5+5+3</code>. Vertical rhythm: <code>600 → 370 → 230 → 140</code> (each row ≈ φ-minor of the one above).
+      <code>status 32 + gutter 13 + hero 400 + gutter 13 + row2 254 = 712px</code>. Fits inside the 712px above-fold budget after browser + app chrome. Hero 400 × φ-minor 254 = 400 × 0.635 ≈ φ⁻¹.
+    </div>
+    <div class="block-label" style="margin-top:12px;">Horizontal grid</div>
+    <div style="font-size:12px; margin-top:6px;">
+      13 columns. Splits use Fibonacci sums: <code>8+5</code>, <code>3+5+5</code>, <code>5+5+3</code>, <code>13</code>. Gutter 13, card padding 13.
     </div>
     <div class="block-label" style="margin-top:12px;">Slot aspect at ~1280px container</div>
     <div style="font-size:12px; margin-top:6px;">
-      <code>c5 × hero  ≈ 1:1.18</code> (square)<br>
-      <code>c8 × hero  ≈ 1.4:1</code> (square-ish)<br>
-      <code>c5 × row2  ≈ 1.4:1</code> (square-ish)<br>
-      <code>c3 × row3  ≈ 1.3:1</code> (square-ish)<br>
-      <code>c8 × row2  ≈ 2.2:1</code> (bar/list slot)<br>
-      <code>c8 × row3  ≈ 3.6:1</code> (linear strip)<br>
-      <code>c5 × row4  ≈ 3.6:1</code> (linear strip)<br>
-      Treemap-friendly = aspect 1:1 to 4:3. Linear charts work in any wider slot.
+      <code>c8 × hero (400)  ≈ 2:1</code> bar/list slot<br>
+      <code>c5 × hero (400)  ≈ 1.3:1</code> square slot · treemap-friendly<br>
+      <code>c3 × hero (400)  ≈ 1:1.3</code> tall list slot<br>
+      <code>c8 × row2 (254)  ≈ 3.2:1</code> linear strip<br>
+      <code>c5 × row2 (254)  ≈ 2.0:1</code> bar/list<br>
+      <code>c3 × row2 (254)  ≈ 1.2:1</code> square slot · treemap-friendly<br>
+      <code>c13 × any</code>          full-width linear band
     </div>
-    <div class="block-label" style="margin-top:12px;">Five layouts on the same grid</div>
+    <div class="block-label" style="margin-top:12px;">Five layouts</div>
     <div class="toc-grid">
-      <a href="#opt1"><span class="n">01</span><span>8 / 5 hero · descending rows</span></a>
-      <a href="#opt2"><span class="n">02</span><span>8 / 5 hero reversed · square 5 right</span></a>
-      <a href="#opt3"><span class="n">03</span><span>3 / 5 / 5 hero · centered major</span></a>
-      <a href="#opt4"><span class="n">04</span><span>8 / 5 hero · full-width strip below</span></a>
-      <a href="#opt5"><span class="n">05</span><span>13 hero · full-width φ-descent</span></a>
+      <a href="#opt1"><span class="n">01</span><span>8 / 5 hero · 8 / 5 row</span></a>
+      <a href="#opt2"><span class="n">02</span><span>8 / 5 hero reversed · split-row 5/5/3</span></a>
+      <a href="#opt3"><span class="n">03</span><span>3 / 5 / 5 hero · single c13 row</span></a>
+      <a href="#opt4"><span class="n">04</span><span>5 / 8 hero · 8 / 5 row (asymmetric flip)</span></a>
+      <a href="#opt5"><span class="n">05</span><span>13 hero · 5 / 5 / 3 row</span></a>
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 1 — 8/5 hero, descending rows -->
+  <!-- OPTION 1 — 8/5 hero · 8/5 row -->
   <!-- ============================================================ -->
   <div class="opt" id="opt1">
     <div class="opt-head">
       <span class="opt-num">01</span>
-      <span class="opt-name">8 / 5 hero · descending rows</span>
-      <span class="opt-pitch">Hero major-left (c8), data column right (c5). Below-hero rows alternate 8/5 then 5/5/3 in strict φ-descent.</span>
+      <span class="opt-name">8 / 5 hero · 8 / 5 row</span>
+      <span class="opt-pitch">Hero major-left, data column right. Row below mirrors the same 8/5 split but inverted in usage — the major slot below becomes a wide bar/list, the c5 below is a square treemap slot.</span>
     </div>
 
     <div class="wf">
-      <div class="headline">status strip · c13 · h-strip</div>
+      <div class="headline">status strip · c13</div>
 
       <!-- HERO: c8 / c5 -->
-      <div class="slot c8 h-hero" data-aspect="≈1.4:1 · primary slot">
-        <div class="slot-label">hero · c8</div>
+      <div class="slot c8 h-hero" data-aspect="≈2:1 primary">
+        <div class="slot-label">hero · c8 · 400</div>
         <div class="slot-fill"></div>
       </div>
       <div class="c5 h-hero" style="display:flex;flex-direction:column;gap:var(--gutter);">
-        <div class="slot" style="flex:8;" data-aspect="≈1:1.6 · tall">
-          <div class="slot-label">hero · c5 · top 8/13</div>
+        <div class="slot" style="flex:1;" data-aspect="≈2.5:1">
+          <div class="slot-label">hero · c5 top</div>
           <div class="slot-fill-solid"></div>
         </div>
-        <div class="slot" style="flex:5;" data-aspect="≈1:1 · square">
-          <div class="slot-label">hero · c5 · bottom 5/13</div>
+        <div class="slot" style="flex:1;" data-aspect="≈2.5:1">
+          <div class="slot-label">hero · c5 bottom</div>
           <div class="slot-fill-solid"></div>
         </div>
       </div>
 
       <!-- ROW 2: c8 / c5 -->
-      <div class="slot c8 h-row2" data-aspect="≈2.2:1 · bar slot">
-        <div class="slot-label">row 2 · c8</div>
-        <div class="slot-fill"></div>
-      </div>
-      <div class="slot c5 h-row2" data-aspect="≈1.4:1 · treemap slot">
-        <div class="slot-label">row 2 · c5</div>
-        <div class="slot-fill"></div>
-      </div>
-
-      <!-- ROW 3: c5 / c5 / c3 -->
-      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · bar">
-        <div class="slot-label">row 3 · c5</div>
-        <div class="slot-fill"></div>
-      </div>
-      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · bar">
-        <div class="slot-label">row 3 · c5</div>
-        <div class="slot-fill"></div>
-      </div>
-      <div class="slot c3 h-row3" data-aspect="≈1.3:1 · square">
-        <div class="slot-label">row 3 · c3</div>
-        <div class="slot-fill"></div>
-      </div>
-
-      <!-- ROW 4: c5 / c5 / c3 -->
-      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 4 · c5</div>
+      <div class="slot c8 h-row2" data-aspect="≈3.2:1 linear">
+        <div class="slot-label">row 2 · c8 · 254</div>
         <div class="slot-fill-solid"></div>
       </div>
-      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 4 · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c3 h-row4" data-aspect="≈2.2:1 · linear">
-        <div class="slot-label">row 4 · c3</div>
-        <div class="slot-fill-solid"></div>
+      <div class="slot c5 h-row2" data-aspect="≈2:1 bar/list">
+        <div class="slot-label">row 2 · c5 · 254</div>
+        <div class="slot-fill"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>01 ·</strong> H: <code>8/5</code>, <code>8/5</code>, <code>5/5/3</code>, <code>5/5/3</code> · V: <code>600 → 370 → 230 → 140</code> (φ-descent) · Hero data column inner split <code>8/5</code> vertical.
+      <strong>01 ·</strong> H: hero <code>8/5</code>, row 2 <code>8/5</code> · V: <code>32 + 400 + 254 = 686</code> + 2 gutters = 712 (fold) · Hero c5 inner split <code>1/1</code> (two equal panels).
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 2 — 8/5 hero reversed -->
+  <!-- OPTION 2 — 8/5 hero reversed · split row -->
   <!-- ============================================================ -->
   <div class="opt" id="opt2">
     <div class="opt-head">
       <span class="opt-num">02</span>
-      <span class="opt-name">8 / 5 hero reversed</span>
-      <span class="opt-pitch">Hero major-left becomes a content-dense block (c8); minor-right (c5) is the square slot. Below mirrors row by row.</span>
+      <span class="opt-name">8 / 5 hero reversed · 5/5/3 row</span>
+      <span class="opt-pitch">Hero major-left (single dense block), minor-right is one uninterrupted square. Row below breaks into three: two equal bars + one small square corner.</span>
     </div>
 
     <div class="wf">
-      <div class="headline">status strip · c13 · h-strip</div>
+      <div class="headline">status strip · c13</div>
 
-      <!-- HERO: c8 (dense) / c5 (square) -->
-      <div class="slot c8 h-hero" data-aspect="≈1.4:1 · primary dense">
-        <div class="slot-label">hero · c8 dense</div>
+      <!-- HERO: c8 dense / c5 square -->
+      <div class="slot c8 h-hero" data-aspect="≈2:1 dense block">
+        <div class="slot-label">hero · c8 · single block</div>
         <div class="slot-fill"></div>
       </div>
-      <div class="slot c5 h-hero" data-aspect="≈1:1.18 · square">
-        <div class="slot-label">hero · c5 · single slot</div>
+      <div class="slot c5 h-hero" data-aspect="≈1.3:1 square">
+        <div class="slot-label">hero · c5 · square</div>
         <div class="slot-fill"></div>
       </div>
 
-      <!-- ROW 2: c8 / c5 -->
-      <div class="slot c8 h-row2" data-aspect="≈2.2:1 · bar">
-        <div class="slot-label">row 2 · c8</div>
-        <div class="slot-fill"></div>
-      </div>
-      <div class="slot c5 h-row2" data-aspect="≈1.4:1 · treemap slot">
+      <!-- ROW 2: c5 / c5 / c3 -->
+      <div class="slot c5 h-row2" data-aspect="≈2:1 bar">
         <div class="slot-label">row 2 · c5</div>
+        <div class="slot-fill-solid"></div>
+      </div>
+      <div class="slot c5 h-row2" data-aspect="≈2:1 bar">
+        <div class="slot-label">row 2 · c5</div>
+        <div class="slot-fill-solid"></div>
+      </div>
+      <div class="slot c3 h-row2" data-aspect="≈1.2:1 square">
+        <div class="slot-label">row 2 · c3</div>
         <div class="slot-fill"></div>
-      </div>
-
-      <!-- ROW 3: c8 / c5 -->
-      <div class="slot c8 h-row3" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 3 · c8</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · linear">
-        <div class="slot-label">row 3 · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-
-      <!-- ROW 4: c5 / c5 / c3 -->
-      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 4 · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 4 · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c3 h-row4" data-aspect="≈2.2:1 · linear">
-        <div class="slot-label">row 4 · c3</div>
-        <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>02 ·</strong> H: <code>8/5</code>, <code>8/5</code>, <code>8/5</code>, <code>5/5/3</code> · V: <code>600 → 370 → 230 → 140</code> · Hero c5 is a single uninterrupted square (no inner subdivide).
+      <strong>02 ·</strong> H: hero <code>8/5</code>, row 2 <code>5/5/3</code> · V: same 712 fold · Hero c5 is one uninterrupted square — no inner subdivision; most "single-figure" hero of the five.
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 3 — 3/5/5 hero -->
+  <!-- OPTION 3 — 3/5/5 hero · single c13 row -->
   <!-- ============================================================ -->
   <div class="opt" id="opt3">
     <div class="opt-head">
       <span class="opt-num">03</span>
-      <span class="opt-name">3 / 5 / 5 hero · centered major</span>
-      <span class="opt-pitch">Hero splits into three: tall narrow rail (c3), centered square (c5), wider companion (c5). Major sits at the golden center between two minors. Below: simpler 2-up rows.</span>
+      <span class="opt-name">3 / 5 / 5 hero · single c13 row</span>
+      <span class="opt-pitch">Three-card hero: narrow rail (c3) + center square (c5) + companion square (c5). Below is a single full-width linear ledger — used for time-series, version history, or attention summary.</span>
     </div>
 
     <div class="wf">
-      <div class="headline">status strip · c13 · h-strip</div>
+      <div class="headline">status strip · c13</div>
 
       <!-- HERO: c3 / c5 / c5 = 13 -->
-      <div class="slot c3 h-hero" data-aspect="≈1:3 · tall list">
-        <div class="slot-label">hero · c3 · tall rail</div>
+      <div class="slot c3 h-hero" data-aspect="≈1:1.3 tall">
+        <div class="slot-label">hero · c3 rail</div>
         <div class="slot-fill-solid"></div>
       </div>
-      <div class="slot c5 h-hero" data-aspect="≈1:1.18 · square">
-        <div class="slot-label">hero · c5 · center</div>
+      <div class="slot c5 h-hero" data-aspect="≈1.3:1 square">
+        <div class="slot-label">hero · c5 center</div>
         <div class="slot-fill"></div>
       </div>
-      <div class="slot c5 h-hero" data-aspect="≈1:1.18 · square">
-        <div class="slot-label">hero · c5 · right</div>
+      <div class="slot c5 h-hero" data-aspect="≈1.3:1 square">
+        <div class="slot-label">hero · c5 right</div>
         <div class="slot-fill-solid"></div>
       </div>
 
-      <!-- ROW 2: c8 / c5 -->
-      <div class="slot c8 h-row2" data-aspect="≈2.2:1 · bar">
-        <div class="slot-label">row 2 · c8</div>
-        <div class="slot-fill"></div>
-      </div>
-      <div class="slot c5 h-row2" data-aspect="≈1.4:1 · treemap slot">
-        <div class="slot-label">row 2 · c5</div>
-        <div class="slot-fill"></div>
-      </div>
-
-      <!-- ROW 3: c5 / c8 -->
-      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · linear">
-        <div class="slot-label">row 3 · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c8 h-row3" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 3 · c8</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-
-      <!-- ROW 4: c5 / c5 / c3 -->
-      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 4 · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 4 · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c3 h-row4" data-aspect="≈2.2:1 · linear">
-        <div class="slot-label">row 4 · c3</div>
+      <!-- ROW 2: c13 -->
+      <div class="slot c13 h-row2" data-aspect="≈5:1 wide ledger">
+        <div class="slot-label">row 2 · c13 · full-width ledger</div>
         <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>03 ·</strong> H: <code>3/5/5</code>, <code>8/5</code>, <code>5/8</code>, <code>5/5/3</code> · V: <code>600 → 370 → 230 → 140</code> · Hero alternates between three primary cards instead of two.
+      <strong>03 ·</strong> H: hero <code>3/5/5</code>, row 2 <code>13</code> · V: 712 fold · Center c5 sits at the golden midpoint between the rail and the companion. Simplest below-hero of the five (one band).
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 4 — 8/5 hero + full-width strip below -->
+  <!-- OPTION 4 — 5/8 hero reversed · 8/5 row -->
   <!-- ============================================================ -->
   <div class="opt" id="opt4">
     <div class="opt-head">
       <span class="opt-num">04</span>
-      <span class="opt-name">8 / 5 hero · full-width strip below</span>
-      <span class="opt-pitch">Same hero as 01. Adds a full-width <code>c13</code> linear strip between hero and the descending rows. The strip becomes a horizontal "ledger" — natural home for time-series, version timeline, or breadcrumb-style context.</span>
+      <span class="opt-name">5 / 8 hero reversed · 8 / 5 row</span>
+      <span class="opt-pitch">Major right (c8), minor left (c5). Below: row reverses again (major left, minor right). Creates a deliberate zig-zag between hero and row 2 — eye sweeps L→R then R→L.</span>
     </div>
 
     <div class="wf">
-      <div class="headline">status strip · c13 · h-strip</div>
+      <div class="headline">status strip · c13</div>
 
-      <!-- HERO: c8 / c5 -->
-      <div class="slot c8 h-hero" data-aspect="≈1.4:1 · primary">
-        <div class="slot-label">hero · c8</div>
+      <!-- HERO: c5 / c8 (reversed) -->
+      <div class="c5 h-hero" style="display:flex;flex-direction:column;gap:var(--gutter);">
+        <div class="slot" style="flex:1;" data-aspect="≈2.5:1">
+          <div class="slot-label">hero · c5 top</div>
+          <div class="slot-fill-solid"></div>
+        </div>
+        <div class="slot" style="flex:1;" data-aspect="≈2.5:1">
+          <div class="slot-label">hero · c5 bottom</div>
+          <div class="slot-fill-solid"></div>
+        </div>
+      </div>
+      <div class="slot c8 h-hero" data-aspect="≈2:1 primary right">
+        <div class="slot-label">hero · c8 (right)</div>
         <div class="slot-fill"></div>
       </div>
-      <div class="slot c5 h-hero" data-aspect="≈1:1.18 · square">
-        <div class="slot-label">hero · c5</div>
+
+      <!-- ROW 2: c8 / c5 (re-reversed) -->
+      <div class="slot c8 h-row2" data-aspect="≈3.2:1 linear">
+        <div class="slot-label">row 2 · c8</div>
+        <div class="slot-fill-solid"></div>
+      </div>
+      <div class="slot c5 h-row2" data-aspect="≈2:1 bar">
+        <div class="slot-label">row 2 · c5</div>
         <div class="slot-fill"></div>
-      </div>
-
-      <!-- FULL-WIDTH LEDGER STRIP -->
-      <div class="slot c13 h-row4" data-aspect="≈9:1 · ledger strip">
-        <div class="slot-label">full-width linear strip · c13 · h-row4</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-
-      <!-- ROW: c8 / c5 -->
-      <div class="slot c8 h-row3" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row · c8</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · linear">
-        <div class="slot-label">row · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-
-      <!-- ROW: c5 / c5 / c3 -->
-      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row · c5</div>
-        <div class="slot-fill-solid"></div>
-      </div>
-      <div class="slot c3 h-row4" data-aspect="≈2.2:1 · linear">
-        <div class="slot-label">row · c3</div>
-        <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>04 ·</strong> H: <code>8/5</code>, <code>13</code>, <code>8/5</code>, <code>5/5/3</code> · V: <code>600 → 140 → 230 → 140</code> · The ledger row breaks the strict φ-descent on purpose to give a horizontal pivot between hero and detail rows.
+      <strong>04 ·</strong> H: hero <code>5/8</code> (reversed), row 2 <code>8/5</code> · V: 712 fold · Eye zig-zags — major right in hero, major left in row 2. Asymmetric and memorable; not symmetric and forgettable.
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 5 — full-width φ-descent -->
+  <!-- OPTION 5 — 13 hero · 5/5/3 row -->
   <!-- ============================================================ -->
   <div class="opt" id="opt5">
     <div class="opt-head">
       <span class="opt-num">05</span>
-      <span class="opt-name">13 hero · full-width φ-descent</span>
-      <span class="opt-pitch">No horizontal hero split. Every row is full-width (<code>c13</code>) except the last detail row. Golden ratio lives entirely in vertical heights. Reads as a single column of descending bands.</span>
+      <span class="opt-name">13 hero · 5 / 5 / 3 row</span>
+      <span class="opt-pitch">Panoramic hero — single full-width slot dominates. Below splits into three. Most "single-image" of the five; hero is the only thing the eye lands on first.</span>
     </div>
 
     <div class="wf">
-      <div class="headline">status strip · c13 · h-strip</div>
+      <div class="headline">status strip · c13</div>
 
-      <div class="slot c13 h-hero" data-aspect="≈2.1:1 · panoramic">
-        <div class="slot-label">hero · c13 · 600</div>
+      <!-- HERO: c13 panoramic -->
+      <div class="slot c13 h-hero" data-aspect="≈3.2:1 panoramic">
+        <div class="slot-label">hero · c13 · 400 · single panoramic slot</div>
         <div class="slot-fill"></div>
       </div>
 
-      <div class="slot c13 h-row2" data-aspect="≈3.5:1 · linear">
-        <div class="slot-label">row 2 · c13 · 370</div>
+      <!-- ROW 2: c5 / c5 / c3 -->
+      <div class="slot c5 h-row2" data-aspect="≈2:1 bar">
+        <div class="slot-label">row 2 · c5</div>
         <div class="slot-fill-solid"></div>
       </div>
-
-      <!-- Row 3: still split into 8/5 since 230 is too tall for full-width linear -->
-      <div class="slot c8 h-row3" data-aspect="≈3.6:1 · linear">
-        <div class="slot-label">row 3 · c8 · 230</div>
+      <div class="slot c5 h-row2" data-aspect="≈2:1 bar">
+        <div class="slot-label">row 2 · c5</div>
         <div class="slot-fill-solid"></div>
       </div>
-      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · marginal">
-        <div class="slot-label">row 3 · c5 · 230</div>
+      <div class="slot c3 h-row2" data-aspect="≈1.2:1 square">
+        <div class="slot-label">row 2 · c3</div>
         <div class="slot-fill"></div>
-      </div>
-
-      <div class="slot c13 h-row4" data-aspect="≈9:1 · ledger">
-        <div class="slot-label">row 4 · c13 · 140</div>
-        <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>05 ·</strong> H: mostly <code>13</code>, row 3 <code>8/5</code> · V: <code>600 → 370 → 230 → 140</code> (strict φ-descent) · Most "ratio-pure" — proportions live in row heights, not column splits.
+      <strong>05 ·</strong> H: hero <code>13</code>, row 2 <code>5/5/3</code> · V: 712 fold · Hero is one panoramic slot — maximum singular focus, no competing card in the hero band.
     </div>
   </div>
 
