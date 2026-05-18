@@ -1,10 +1,7 @@
-import { useQueries } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import apiClient from '@/lib/api-client';
-import type { PaginatedResponse } from '@/lib/api-types';
-import { useModels } from './use-models';
 import {
-  warehouseKeys,
   type IFCType,
   type TypeDefinitionLayer,
 } from './use-warehouse';
@@ -420,73 +417,66 @@ export function pickDominantUnit(
 // HOOK
 // =============================================================================
 
+interface ProjectMaterialsResponseModel {
+  model_id: string;
+  model_name: string | null;
+  types: Array<
+    Pick<IFCType, 'id' | 'type_name' | 'ifc_type' | 'instance_count'> & {
+      mapping: { definition_layers: TypeDefinitionLayer[] } | null;
+    }
+  >;
+}
+
+interface ProjectMaterialsResponse {
+  project_id: string;
+  models: ProjectMaterialsResponseModel[];
+}
+
+export const projectMaterialsKeys = {
+  all: ['project-materials'] as const,
+  byProject: (projectId: string) => [...projectMaterialsKeys.all, projectId] as const,
+};
+
 export function useProjectMaterials(projectId: string | undefined): {
   data: ProjectMaterialsData | null;
   isLoading: boolean;
   error: Error | null;
-  /** Latest moment any underlying type query last refreshed. 0 if none yet. */
+  /** Moment the underlying query last refreshed. 0 if none yet. */
   dataUpdatedAt: number;
 } {
-  const { data: models, isLoading: modelsLoading } = useModels(projectId);
-
-  const readyModels = useMemo(
-    () => (models ?? []).filter((m) => m.status === 'ready'),
-    [models],
-  );
-
-  const typeQueries = useQueries({
-    queries: readyModels.map((model) => ({
-      queryKey: warehouseKeys.typesList(model.id),
-      queryFn: async () => {
-        const params = new URLSearchParams();
-        params.append('model', model.id);
-        // Project-materials aggregates definition_layers across every type, so
-        // we need both the nested mapping object (?expand=mapping) and every
-        // row in a single response (?page_size=10000). See use-type-mapping.ts.
-        params.append('page_size', '10000');
-        params.append('expand', 'mapping');
-        const response = await apiClient.get<PaginatedResponse<IFCType> | IFCType[]>(
-          `/types/types/?${params}`,
-        );
-        const data = response.data;
-        const types = Array.isArray(data) ? data : data?.results ?? [];
-        return {
-          modelId: model.id,
-          modelName: model.name,
-          types,
-        };
-      },
-      staleTime: 30 * 1000,
-    })),
+  const query = useQuery({
+    queryKey: projectId ? projectMaterialsKeys.byProject(projectId) : ['project-materials', 'no-project'],
+    queryFn: async () => {
+      const response = await apiClient.get<ProjectMaterialsResponse>(
+        `/types/types/project-materials/?project_id=${projectId}`,
+      );
+      return response.data;
+    },
+    enabled: Boolean(projectId),
+    staleTime: 30 * 1000,
   });
 
-  const loadedQueries = typeQueries.filter((q) => q.isSuccess && q.data);
-  const pendingCount = typeQueries.filter((q) => q.isLoading).length;
-  const errored = typeQueries.find((q) => q.isError);
-
   const aggregated = useMemo(() => {
-    if (loadedQueries.length === 0) {
+    const models = query.data?.models;
+    if (!models || models.length === 0) {
       return {
         families: [] as FamilyNode[],
         materials: [] as AggregatedMaterial[],
         sets: [] as MaterialSet[],
       };
     }
-    const inputs: AggregateInput[] = loadedQueries.map((q) => q.data!);
+    const inputs: AggregateInput[] = models.map((m) => ({
+      modelId: m.model_id,
+      modelName: m.model_name,
+      types: m.types as unknown as IFCType[],
+    }));
     return aggregateProjectMaterials(inputs);
-  }, [loadedQueries.length, loadedQueries.map((q) => q.data?.modelId).join(',')]);
+  }, [query.data]);
 
+  const loadedModelCount = query.data?.models.length ?? 0;
   const summary = useMemo(
-    () => buildSummary(aggregated, loadedQueries.length, pendingCount),
-    [aggregated, loadedQueries.length, pendingCount],
-  );
-
-  const isLoading = modelsLoading || (readyModels.length > 0 && loadedQueries.length === 0);
-
-  // Freshness — most-recent `dataUpdatedAt` across all underlying type queries.
-  const dataUpdatedAt = typeQueries.reduce(
-    (latest, q) => (q.dataUpdatedAt > latest ? q.dataUpdatedAt : latest),
-    0,
+    () => buildSummary(aggregated, loadedModelCount, 0),
+    [aggregated, loadedModelCount],
   );
 
   return {
@@ -494,8 +484,8 @@ export function useProjectMaterials(projectId: string | undefined): {
       summary,
       ...aggregated,
     },
-    isLoading,
-    error: errored?.error instanceof Error ? errored.error : null,
-    dataUpdatedAt,
+    isLoading: query.isLoading,
+    error: query.error instanceof Error ? query.error : null,
+    dataUpdatedAt: query.dataUpdatedAt,
   };
 }
