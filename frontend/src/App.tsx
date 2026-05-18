@@ -50,6 +50,7 @@ const ProcessingReports = lazy(() => import('./pages/dev/ProcessingReports'));
 const ProcessingReportDetail = lazy(() => import('./pages/dev/ProcessingReportDetail'));
 const GridDemo = lazy(() => import('./pages/dev/GridDemo'));
 const ModelDashPreview = lazy(() => import('./pages/dev/ModelDashPreview'));
+const ModelDashPreviewV2 = lazy(() => import('./pages/dev/ModelDashPreviewV2'));
 const EmbedDashboard = lazy(() => import('./pages/EmbedDashboard'));
 const WebhookSubscriptions = lazy(() => import('./pages/Settings/WebhookSubscriptions'));
 const WebhookDeliveries = lazy(() => import('./pages/Settings/WebhookDeliveries'));
@@ -122,6 +123,7 @@ const router = createBrowserRouter([
   { path: "/dev/processing-reports/:id", element: withSuspense(guard(<ProcessingReportDetail />)) },
   { path: "/dev/grid-demo", element: withSuspense(guard(<GridDemo />)) },
   { path: "/dev/model-dash-preview", element: withSuspense(guard(<ModelDashPreview />)) },
+  { path: "/dev/model-dash-preview-v2", element: withSuspense(guard(<ModelDashPreviewV2 />)) },
   // Forward-deployed embed surface — token-authenticated, no Supabase guard.
   // The token rides on the URL (`?token=…`) and is the sole credential.
   { path: "/embed/:dashboard", element: withSuspense(<EmbedDashboard />) },
