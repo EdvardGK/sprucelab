@@ -224,6 +224,10 @@
     <div style="font-size:12px; margin-top:6px;">
       <strong>13-column grid</strong> · gutter 13px · Hero row 600px → next rows in φ-descent (370 / 230 / 140). Horizontal splits use Fibonacci spans: <code>5 + 8 = 13</code>. Internal subdivisions use <code>3 + 5</code> or <code>2 + 3</code>. Card padding 13px outer, gutter 13px.
     </div>
+    <div class="block-label" style="margin-top:12px;">Aspect-ratio rules</div>
+    <div style="font-size:12px; margin-top:6px;">
+      <strong>Treemaps</strong> live only in slots with aspect <code>1:1 to 4:3</code> — c5×hero (≈1.18:1) or c5×row2 (≈1.4:1). Anywhere wider becomes a stacked bar in disguise. <strong>Linear charts</strong> (bars / stacked bars / time-series lines / lists) work fine in narrow bands — c8×row3, c5×row4, c3×row4. <strong>NS3451 codes-present</strong> + <strong>MMI distribution</strong> are stacked bars, not treemaps — they belong in linear slots. <strong>Discipline</strong> is a single-model field (lives in the Identity card, not as a chart).
+    </div>
     <div class="block-label" style="margin-top:12px;">Five story arcs on the same grid</div>
     <div class="toc-grid">
       <a href="#opt1"><span class="n">01</span><span>Viewer-led · viewer 8, data 5</span></a>
@@ -277,7 +281,8 @@
             <span class="k">Uploaded</span><span class="v">2026-05-18 14:21</span>
             <span class="k">Version</span><span class="v">V3 of 3</span>
             <span class="k">Last modified</span><span class="v">edkjo · 14:35</span>
-            <span class="k">Application</span><span class="v">Revit 2024 · ARK</span>
+            <span class="k">Application</span><span class="v">Revit 2024</span>
+            <span class="k">Discipline</span><span class="v">ARK</span>
             <span class="k">Schema</span><span class="v">IFC4</span>
             <span class="k">Issues on objects</span><span class="v em-dash">— pending</span>
             <span class="k">Claims</span><span class="v">7</span>
@@ -287,20 +292,23 @@
         </div>
       </div>
 
-      <!-- Row 2 (370px, φ-descent): Elements 8 / Storeys 5 -->
+      <!-- Row 2 (370px, φ-descent): Storeys 8 (bar wants wide) / Elements 5 (treemap wants square) -->
       <div class="card c8 h-row2">
-        <div class="card-title">Elements · treemap (8 of 13)</div>
-        <div class="placeholder">elements treemap</div>
+        <div class="card-title">Storeys · bar (8 · wide-friendly)</div>
+        <div class="placeholder">storey horizontal bars · canonical alignment</div>
       </div>
       <div class="card c5 h-row2">
-        <div class="card-title">Storeys (5 of 13)</div>
-        <div class="placeholder">storey bar chart</div>
+        <div class="card-title">Elements · treemap (5 · ≈1.4:1 square)</div>
+        <div class="placeholder">elements treemap</div>
       </div>
 
-      <!-- Row 3 (230px, φ-descent): Disciplines 5 / Attention 5 / Geometry 3 -->
+      <!-- Row 3 (230px, φ-descent): Maturity & Classification 5 / Attention 5 / Geometry 3 -->
       <div class="card c5 h-row3">
-        <div class="card-title">Disciplines (5)</div>
-        <div class="placeholder">disciplines treemap</div>
+        <div class="card-title">Maturity & Classification (5)</div>
+        <div class="vsplit-5-3">
+          <div class="placeholder">MMI distribution · 100 / 200 / 300 / 400 / 500</div>
+          <div class="placeholder">NS3451 classification distribution</div>
+        </div>
       </div>
       <div class="card c5 h-row3">
         <div class="card-title">Attention feed (5)</div>
@@ -328,9 +336,9 @@
 
     <div class="grid-math">
       <strong>Grid math · option 01</strong><br>
-      Horizontal: hero <code>8 / 5</code> · row 2 <code>8 / 5</code> · row 3 <code>5 / 5 / 3</code> · row 4 <code>5 / 5 / 3</code>.<br>
+      Horizontal: hero <code>8 / 5</code> · row 2 <code>8 / 5</code> (Storeys bars in c8; Elements treemap in c5 = 1.4:1) · row 3 <code>5 / 5 / 3</code> · row 4 <code>5 / 5 / 3</code>.<br>
       Vertical: hero 600 → row2 370 (×0.617) → row3 230 (×0.622) → row4 140 (×0.609). Data pane internal split <code>8 / 5</code>.<br>
-      Every span is a Fibonacci number (2, 3, 5, 8, 13). No arbitrary widths.
+      Treemap rule: only in c5×row2 (≈1.4:1) or c5×hero (≈1.18:1). Linear charts (bars / stacked bars / lists) take the wide-narrow slots.
     </div>
   </div>
 
@@ -351,26 +359,19 @@
         <span class="tail">312 types · 1,204 instances · 5 storeys · 78% classified · 62% with material · 4 open issues</span>
       </div>
 
-      <!-- Hero row: 8 / 5 (data / viewer) -->
-      <div class="c8 h-hero" style="display:flex;flex-direction:column;gap:var(--gutter);">
-        <!-- KPI cluster top (5 of vertical 8) -->
-        <div class="card" style="flex:5;">
-          <div class="card-title">KPIs (5 of vertical 8 inside data pane)</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:100%;">
-            <div class="kpi"><span class="label">Types</span><span class="value">312</span><span class="sub">298 used</span></div>
-            <div class="kpi"><span class="label">Classified</span><span class="value">78%</span><span class="sub">244/312</span></div>
-            <div class="kpi"><span class="label">Material</span><span class="value">62%</span><span class="sub">194/312</span></div>
-            <div class="kpi"><span class="label">Verified</span><span class="value">41%</span><span class="sub">128/312</span></div>
-            <div class="kpi"><span class="label">Untyped</span><span class="value">3%</span><span class="sub">37 inst</span></div>
-            <div class="kpi"><span class="label">Proxy/UD</span><span class="value">1%</span><span class="sub">8 types</span></div>
-            <div class="kpi"><span class="label">Reuse</span><span class="value">1.8</span><span class="sub">avg inst/type</span></div>
-            <div class="kpi"><span class="label">Orphan</span><span class="value">12</span><span class="sub">0.4%</span></div>
-          </div>
-        </div>
-        <!-- Elements treemap bottom (3 of vertical 8) -->
-        <div class="card" style="flex:3;">
-          <div class="card-title">Elements treemap (3 of vertical 8)</div>
-          <div class="placeholder">elements treemap</div>
+      <!-- Hero row: 8 / 5 (data / viewer). Data pane is KPI cluster only — Elements
+           treemap moved to row 2 c5 so it gets a square slot. -->
+      <div class="card c8 h-hero">
+        <div class="card-title">KPIs (8 · full data pane)</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:8px;height:100%;">
+          <div class="kpi"><span class="label">Types</span><span class="value">312</span><span class="sub">298 used · 14 unused</span></div>
+          <div class="kpi"><span class="label">Classified</span><span class="value">78%</span><span class="sub">244 of 312</span></div>
+          <div class="kpi"><span class="label">Material</span><span class="value">62%</span><span class="sub">194 of 312</span></div>
+          <div class="kpi"><span class="label">Verified</span><span class="value">41%</span><span class="sub">128 of 312</span></div>
+          <div class="kpi"><span class="label">Untyped</span><span class="value">3%</span><span class="sub">37 instances</span></div>
+          <div class="kpi"><span class="label">Proxy/UD</span><span class="value">1%</span><span class="sub">8 types</span></div>
+          <div class="kpi"><span class="label">Reuse</span><span class="value">1.8</span><span class="sub">avg inst/type</span></div>
+          <div class="kpi"><span class="label">Orphan</span><span class="value">12</span><span class="sub">0.4% outside tree</span></div>
         </div>
       </div>
       <div class="c5 h-hero" style="display:flex;flex-direction:column;gap:var(--gutter);">
@@ -391,14 +392,17 @@
         </div>
       </div>
 
-      <!-- Row 2: Storeys 8 / Disciplines 5 -->
+      <!-- Row 2: Storeys 8 (bar = wide-friendly) / Elements 5 (treemap = square) -->
       <div class="card c8 h-row2">
-        <div class="card-title">Storeys with canonical verification (8)</div>
-        <div class="placeholder">storey bar chart</div>
+        <div class="card-title">Storeys + Maturity (8 · wide-friendly bars)</div>
+        <div class="vsplit-8-5">
+          <div class="placeholder">storey bars · canonical alignment</div>
+          <div class="placeholder">MMI stacked bar · NS3451 codes (linear, narrow OK)</div>
+        </div>
       </div>
       <div class="card c5 h-row2">
-        <div class="card-title">Disciplines (5)</div>
-        <div class="placeholder">disciplines treemap</div>
+        <div class="card-title">Elements · treemap (5 · ≈1.4:1)</div>
+        <div class="placeholder">elements treemap</div>
       </div>
 
       <!-- Row 3: Attention 8 / Geometry 5 -->
@@ -476,7 +480,8 @@
           <span class="k">Uploaded</span><span class="v">2026-05-18 14:21</span>
           <span class="k">Version</span><span class="v">V3 of 3</span>
           <span class="k">Last modified</span><span class="v">edkjo · 14:35</span>
-          <span class="k">Application</span><span class="v">Revit 2024 · ARK</span>
+          <span class="k">Application</span><span class="v">Revit 2024</span>
+          <span class="k">Discipline</span><span class="v">ARK</span>
           <span class="k">Schema</span><span class="v">IFC4</span>
           <span class="k">File size</span><span class="v">42 MB</span>
           <span class="k">Issues on objects</span><span class="v em-dash">— pending</span>
@@ -487,20 +492,23 @@
         </div>
       </div>
 
-      <!-- Row 2: Elements 8 / Storeys 5 -->
+      <!-- Row 2: Storeys 8 (bar = wide-friendly) / Elements 5 (treemap = square) -->
       <div class="card c8 h-row2">
-        <div class="card-title">§ Composition · Elements treemap (8)</div>
-        <div class="placeholder">elements treemap</div>
+        <div class="card-title">§ Structure · Storeys (8 · bars)</div>
+        <div class="placeholder">storey bars · canonical alignment</div>
       </div>
       <div class="card c5 h-row2">
-        <div class="card-title">§ Structure · Storeys (5)</div>
-        <div class="placeholder">storey bar chart</div>
+        <div class="card-title">§ Composition · Elements treemap (5 · ≈1.4:1)</div>
+        <div class="placeholder">elements treemap</div>
       </div>
 
-      <!-- Row 3: Disciplines 5 / Attention 8 -->
+      <!-- Row 3: Maturity & Classification 5 / Attention 8 -->
       <div class="card c5 h-row3">
-        <div class="card-title">§ Authorship · Disciplines (5)</div>
-        <div class="placeholder">disciplines treemap</div>
+        <div class="card-title">§ Maturity · MMI + NS3451 (5)</div>
+        <div class="vsplit-5-3">
+          <div class="placeholder">MMI distribution</div>
+          <div class="placeholder">NS3451 codes present</div>
+        </div>
       </div>
       <div class="card c8 h-row3">
         <div class="card-title">§ Attention · 24 items (8)</div>
@@ -567,7 +575,7 @@
         </div>
       </div>
 
-      <!-- Row 2: KPI cluster 8 / Identity 5 -->
+      <!-- Row 2: KPI cluster 8 / Elements treemap 5 (treemap moved up from row 3 to get square slot) -->
       <div class="card c8 h-row2">
         <div class="card-title">KPIs (8)</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:100%;">
@@ -582,13 +590,20 @@
         </div>
       </div>
       <div class="card c5 h-row2">
-        <div class="card-title">Identity · Lineage (5)</div>
+        <div class="card-title">Elements · treemap (5 · ≈1.4:1)</div>
+        <div class="placeholder">elements treemap</div>
+      </div>
+
+      <!-- Row 2b: Identity strip (full-width, narrow) -->
+      <div class="card c13 h-row4">
+        <div class="card-title">Identity · Lineage (13 · linear strip)</div>
         <div class="id-list">
           <span class="k">Uploader</span><span class="v">edkjo</span>
           <span class="k">Uploaded</span><span class="v">2026-05-18 14:21</span>
           <span class="k">Version</span><span class="v">V3 of 3</span>
           <span class="k">Last modified</span><span class="v">edkjo · 14:35</span>
-          <span class="k">Application</span><span class="v">Revit 2024 · ARK</span>
+          <span class="k">Application</span><span class="v">Revit 2024</span>
+          <span class="k">Discipline</span><span class="v">ARK</span>
           <span class="k">Schema</span><span class="v">IFC4</span>
           <span class="k">Issues on objects</span><span class="v em-dash">— pending</span>
           <span class="k">Claims</span><span class="v">7</span>
@@ -597,27 +612,30 @@
         </div>
       </div>
 
-      <!-- Row 3: Elements 8 / Storeys 5 -->
+      <!-- Row 3: Storeys 8 (bars, wide-friendly) / MMI + NS3451 5 (linear bars OK) -->
       <div class="card c8 h-row3">
-        <div class="card-title">Elements · treemap (8)</div>
-        <div class="placeholder">elements treemap</div>
+        <div class="card-title">Storeys · bars (8 · linear, wide-friendly)</div>
+        <div class="placeholder">storey horizontal bars · canonical alignment</div>
       </div>
       <div class="card c5 h-row3">
-        <div class="card-title">Storeys (5)</div>
-        <div class="placeholder">storey bars</div>
+        <div class="card-title">MMI + NS3451 (5 · linear stacked bars)</div>
+        <div class="vsplit-5-3">
+          <div class="placeholder">MMI distribution · 100 / 200 / 300 / 400 / 500</div>
+          <div class="placeholder">NS3451 codes present</div>
+        </div>
       </div>
 
-      <!-- Row 4: Disciplines 5 / Quality 5 / Non-element 3 -->
+      <!-- Row 4: Quality / Reuse / Non-element (140px — linear bars + lists OK) -->
       <div class="card c5 h-row4">
-        <div class="card-title">Disciplines (5)</div>
-        <div class="placeholder">disciplines treemap</div>
+        <div class="card-title">Quality (5 · linear)</div>
+        <div class="placeholder">quality check bars</div>
       </div>
       <div class="card c5 h-row4">
-        <div class="card-title">Quality + Reuse (5)</div>
-        <div class="placeholder">small dual chart</div>
+        <div class="card-title">Reuse (5 · linear)</div>
+        <div class="placeholder">reuse histogram bars</div>
       </div>
       <div class="card c3 h-row4">
-        <div class="card-title">Non-element (3)</div>
+        <div class="card-title">Non-element (3 · list)</div>
         <div class="placeholder">openings · virtual</div>
       </div>
     </div>
@@ -668,14 +686,17 @@
         </div>
       </div>
 
-      <!-- Row 3: Elements + Storeys + Disciplines (230px = 370 × φ-1) -->
+      <!-- Row 3: Storeys + Maturity (bars/linear) 8 / Elements treemap 5 (≈1.4:1 ok-ish at this width) -->
       <div class="card c8 h-row3">
-        <div class="card-title">Elements treemap (8 · 230px)</div>
-        <div class="placeholder">elements treemap</div>
+        <div class="card-title">Storeys + Maturity (8 · 230px · linear bars)</div>
+        <div class="vsplit-5-3">
+          <div class="placeholder">storeys (canonical alignment) · horizontal bars</div>
+          <div class="placeholder">MMI + NS3451 stacked bars (linear, narrow OK)</div>
+        </div>
       </div>
       <div class="card c5 h-row3">
-        <div class="card-title">Storeys + Disciplines (5 · 230px)</div>
-        <div class="placeholder">combined: storeys (top) + disciplines (bottom)</div>
+        <div class="card-title">Elements treemap (5 · 230px · ≈2.2:1 — marginal)</div>
+        <div class="placeholder">elements treemap (or grouped bar if marginal aspect bothers)</div>
       </div>
 
       <!-- Row 4: Attention + Identity (140px = 230 × φ-1) -->
@@ -689,6 +710,7 @@
           <span class="k">Uploader</span><span class="v">edkjo</span>
           <span class="k">Version</span><span class="v">V3 of 3</span>
           <span class="k">Application</span><span class="v">Revit 24</span>
+          <span class="k">Discipline</span><span class="v">ARK</span>
           <span class="k">Issues</span><span class="v em-dash">— pending</span>
           <span class="k">Claims</span><span class="v">7</span>
           <span class="k">Drawings</span><span class="v">12</span>
