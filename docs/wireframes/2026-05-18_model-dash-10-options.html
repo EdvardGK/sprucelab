@@ -2,20 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Model Dashboard — golden-section layouts</title>
+<title>Model Dashboard — layout-only wireframes</title>
 <link rel="stylesheet" href="_light.css">
 <style>
   /*
     GRID SYSTEM — Fibonacci 13-col with golden-section splits.
+    Layout discipline only. Content is intentionally abstract.
 
-    Horizontal: 13 columns. Major:minor splits use 8/5 (φ ≈ 1.618).
-    Subdivisions inside the major (8) use 5/3 (also φ). Inside minor (5)
-    use 3/2.
+    Horizontal: 13 columns. Splits use Fibonacci sums: 8+5, 3+5+5, 5+5+3.
+    Vertical rhythm: hero 600 → 370 → 230 → 140. Each row ≈ φ-minor of the one above.
+    Card padding 13, gutter 13.
 
-    Vertical rhythm: rows descend by φ. Hero 600px → next 370 → next 230 → 140.
-    Each successive row is the golden minor of the previous.
-
-    Card padding: 21px outer, 13px inner — Fibonacci tokens. Gutter: 13px.
+    Slot roles:
+      hero       — primary content slot (≈1:1.18 or 1.4:1 — treemap-friendly)
+      bar        — wide narrow slot (3:1 to 5:1 — bars / lists / linear charts)
+      square     — close-to-square slot (1:1 to 4:3 — treemap-friendly)
+      tall       — tall narrow slot (1:1.5 to 1:2 — vertical list / sparklines)
+      strip      — full-width narrow strip (linear, ≥6:1)
   */
   :root {
     --gutter: 13px;
@@ -44,9 +47,8 @@
     padding: 2px 8px; border-radius: 4px;
   }
   .opt-name { font-weight: 600; font-size: 14px; }
-  .opt-pitch { font-size: 12px; color: var(--ink-soft); margin-left: auto; max-width: 56%; text-align: right; }
+  .opt-pitch { font-size: 12px; color: var(--ink-soft); margin-left: auto; max-width: 60%; text-align: right; }
 
-  /* Wireframe canvas — 13-col grid */
   .wf {
     background: var(--bg);
     border: 1px solid var(--line);
@@ -59,123 +61,98 @@
   }
   .wf > * { min-width: 0; }
 
-  /* Fibonacci spans */
   .c1 { grid-column: span 1; } .c2 { grid-column: span 2; }
   .c3 { grid-column: span 3; } .c5 { grid-column: span 5; }
   .c8 { grid-column: span 8; } .c13 { grid-column: span 13; }
 
-  /* Row heights anchored to φ-descent */
   .h-hero { height: var(--hero-h); }
   .h-row2 { height: var(--row2-h); }
   .h-row3 { height: var(--row3-h); }
   .h-row4 { height: var(--row4-h); }
+  .h-strip { height: 60px; }
 
-  /* Card primitive with inner φ subdivision */
-  .card {
+  /* Slot — pure shape, no content. Inner label shows role + aspect. */
+  .slot {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 4px;
-    padding: 13px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    position: relative;
   }
-  .card-tight { padding: 8px 10px; }
-  .card-title {
+  .slot::after {
+    content: attr(data-aspect);
+    position: absolute;
+    bottom: 6px; right: 8px;
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    color: var(--ink-mute);
+    letter-spacing: 0.04em;
+  }
+  .slot-label {
     font-family: ui-monospace, monospace;
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--ink-mute);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     flex-shrink: 0;
   }
-  .card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .slot-fill {
+    flex: 1;
+    background:
+      repeating-linear-gradient(
+        135deg,
+        transparent 0,
+        transparent 8px,
+        rgba(0,0,0,0.025) 8px,
+        rgba(0,0,0,0.025) 9px
+      );
+    border: 1px dashed var(--line);
+    border-radius: 3px;
+  }
+  .slot-fill-solid {
+    flex: 1;
+    background: rgba(0,0,0,0.025);
+    border: 1px dashed var(--line);
+    border-radius: 3px;
+  }
 
-  /* Vertical φ split inside a card: 8/5 = top dominant, bottom subordinate */
+  /* Inner vertical φ subdivision */
   .vsplit-8-5 {
     display: grid;
     grid-template-rows: 8fr 5fr;
     gap: var(--gutter);
-    height: 100%;
+    flex: 1;
+    min-height: 0;
   }
   .vsplit-5-3 {
     display: grid;
     grid-template-rows: 5fr 3fr;
     gap: var(--gutter);
-    height: 100%;
+    flex: 1;
+    min-height: 0;
   }
 
-  /* Status headline ribbon — sits above hero */
+  /* Status-headline strip */
   .headline {
     grid-column: span 13;
     background: var(--surface);
     border: 1px solid var(--line);
     border-left: 3px solid var(--accent);
     border-radius: 4px;
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-  .headline .lead { font-weight: 600; }
-  .headline .tail { color: var(--ink-soft); margin-left: 8px; }
-
-  /* KPI mini-tile — fills its share of the data pane */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: 1fr;
-    gap: 8px;
-    height: 100%;
-  }
-  .kpi {
-    background: rgba(0,0,0,0.02);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 8px 10px;
-    display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .kpi .label {
+    padding: 8px 12px;
     font-family: ui-monospace, monospace;
-    font-size: 9px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--ink-mute);
   }
-  .kpi .value {
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    font-variant-numeric: tabular-nums;
-  }
-  .kpi .value.dim { color: var(--warn); }
-  .kpi .sub {
-    font-size: 10px;
-    color: var(--ink-mute);
-    font-variant-numeric: tabular-nums;
-  }
 
-  /* Filler placeholder for charts/treemaps */
-  .placeholder {
-    flex: 1;
-    background: rgba(0,0,0,0.025);
-    border: 1px dashed var(--line);
-    border-radius: 3px;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--ink-mute);
-    font-family: ui-monospace, monospace;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  /* Identity / lineage compact list */
-  .id-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 11px; }
-  .id-list .k { color: var(--ink-mute); }
-  .id-list .v { font-variant-numeric: tabular-nums; }
-  .id-list .v.em-dash { color: var(--warn); }
-
-  /* Grid math display under the wireframe */
+  /* Grid math footer */
   .grid-math {
     margin-top: 10px;
     font-family: ui-monospace, monospace;
@@ -214,515 +191,340 @@
 <div class="page-frame">
 
   <div class="page-head">
-    <div class="title">Model Dashboard — golden-section layouts</div>
+    <div class="title">Model Dashboard — layout-only wireframes</div>
     <div class="route">docs/wireframes/2026-05-18_model-dash-10-options.html</div>
-    <div class="note">All options on one 13-col Fibonacci grid · 8/5 splits · φ-descent rows</div>
+    <div class="note">Pure geometry. Slot roles + aspect ratios. Content decided later.</div>
   </div>
 
   <div class="toc">
     <div class="block-label">Grid system</div>
     <div style="font-size:12px; margin-top:6px;">
-      <strong>13-column grid</strong> · gutter 13px · Hero row 600px → next rows in φ-descent (370 / 230 / 140). Horizontal splits use Fibonacci spans: <code>5 + 8 = 13</code>. Internal subdivisions use <code>3 + 5</code> or <code>2 + 3</code>. Card padding 13px outer, gutter 13px.
+      <strong>13-column Fibonacci grid</strong> · gutter 13 · card padding 13. Horizontal splits use Fibonacci sums: <code>8+5</code>, <code>3+5+5</code>, <code>5+5+3</code>. Vertical rhythm: <code>600 → 370 → 230 → 140</code> (each row ≈ φ-minor of the one above).
     </div>
-    <div class="block-label" style="margin-top:12px;">Aspect-ratio rules</div>
+    <div class="block-label" style="margin-top:12px;">Slot aspect at ~1280px container</div>
     <div style="font-size:12px; margin-top:6px;">
-      <strong>Treemaps</strong> live only in slots with aspect <code>1:1 to 4:3</code> — c5×hero (≈1.18:1) or c5×row2 (≈1.4:1). Anywhere wider becomes a stacked bar in disguise. <strong>Linear charts</strong> (bars / stacked bars / time-series lines / lists) work fine in narrow bands — c8×row3, c5×row4, c3×row4. <strong>NS3451 codes-present</strong> + <strong>MMI distribution</strong> are stacked bars, not treemaps — they belong in linear slots. <strong>Discipline</strong> is a single-model field (lives in the Identity card, not as a chart).
+      <code>c5 × hero  ≈ 1:1.18</code> (square)<br>
+      <code>c8 × hero  ≈ 1.4:1</code> (square-ish)<br>
+      <code>c5 × row2  ≈ 1.4:1</code> (square-ish)<br>
+      <code>c3 × row3  ≈ 1.3:1</code> (square-ish)<br>
+      <code>c8 × row2  ≈ 2.2:1</code> (bar/list slot)<br>
+      <code>c8 × row3  ≈ 3.6:1</code> (linear strip)<br>
+      <code>c5 × row4  ≈ 3.6:1</code> (linear strip)<br>
+      Treemap-friendly = aspect 1:1 to 4:3. Linear charts work in any wider slot.
     </div>
-    <div class="block-label" style="margin-top:12px;">Five story arcs on the same grid</div>
+    <div class="block-label" style="margin-top:12px;">Five layouts on the same grid</div>
     <div class="toc-grid">
-      <a href="#opt1"><span class="n">01</span><span>Viewer-led · viewer 8, data 5</span></a>
-      <a href="#opt2"><span class="n">02</span><span>Data-led · data 8, viewer 5</span></a>
-      <a href="#opt3"><span class="n">03</span><span>Balanced editorial · 3 / 5 / 5 hero</span></a>
-      <a href="#opt4"><span class="n">04</span><span>Attention-led · feed 5, viewer 8 hero</span></a>
-      <a href="#opt5"><span class="n">05</span><span>Vertical rhythm · full-width rows in φ-descent</span></a>
+      <a href="#opt1"><span class="n">01</span><span>8 / 5 hero · descending rows</span></a>
+      <a href="#opt2"><span class="n">02</span><span>8 / 5 hero reversed · square 5 right</span></a>
+      <a href="#opt3"><span class="n">03</span><span>3 / 5 / 5 hero · centered major</span></a>
+      <a href="#opt4"><span class="n">04</span><span>8 / 5 hero · full-width strip below</span></a>
+      <a href="#opt5"><span class="n">05</span><span>13 hero · full-width φ-descent</span></a>
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 1 — Viewer-led (viewer 8, data 5) -->
+  <!-- OPTION 1 — 8/5 hero, descending rows -->
   <!-- ============================================================ -->
   <div class="opt" id="opt1">
     <div class="opt-head">
       <span class="opt-num">01</span>
-      <span class="opt-name">Viewer-led</span>
-      <span class="opt-pitch">Hero splits 8/5 with viewer on the major. Data column carries 4 KPIs (top, 8 of vertical 13) and identity/lineage (bottom, 5 of 13). Below-fold rows descend 600 → 370 → 230.</span>
+      <span class="opt-name">8 / 5 hero · descending rows</span>
+      <span class="opt-pitch">Hero major-left (c8), data column right (c5). Below-hero rows alternate 8/5 then 5/5/3 in strict φ-descent.</span>
     </div>
 
     <div class="wf">
-      <!-- Status headline ribbon (full width) -->
-      <div class="headline">
-        <span class="lead">ARK-BuildingA-V3.ifc</span>
-        <span class="tail">312 types · 1,204 instances · 5 storeys · 78% classified · 62% with material · 4 open issues</span>
-      </div>
+      <div class="headline">status strip · c13 · h-strip</div>
 
-      <!-- Hero row: 8 / 5 -->
-      <div class="card c8 h-hero">
-        <div class="card-title">3D viewer · selection-driven cross-filter</div>
-        <div class="placeholder">viewer · 8 / 13</div>
+      <!-- HERO: c8 / c5 -->
+      <div class="slot c8 h-hero" data-aspect="≈1.4:1 · primary slot">
+        <div class="slot-label">hero · c8</div>
+        <div class="slot-fill"></div>
       </div>
       <div class="c5 h-hero" style="display:flex;flex-direction:column;gap:var(--gutter);">
-        <!-- Top of data pane: KPI cluster (8 of vertical 13) -->
-        <div class="card" style="flex:8;">
-          <div class="card-title">KPIs · top of data pane (8 of vertical 13)</div>
-          <div class="kpi-grid">
-            <div class="kpi"><span class="label">Types</span><span class="value">312</span><span class="sub">298 used · 14 unused</span></div>
-            <div class="kpi"><span class="label">Classified</span><span class="value">78%</span><span class="sub">244 of 312</span></div>
-            <div class="kpi"><span class="label">Material</span><span class="value">62%</span><span class="sub">194 of 312</span></div>
-            <div class="kpi"><span class="label">Verified</span><span class="value">41%</span><span class="sub">128 of 312</span></div>
-            <div class="kpi"><span class="label">Untyped</span><span class="value">3%</span><span class="sub">37 instances</span></div>
-            <div class="kpi"><span class="label">Orphan</span><span class="value">12</span><span class="sub">0.4% outside tree</span></div>
-          </div>
+        <div class="slot" style="flex:8;" data-aspect="≈1:1.6 · tall">
+          <div class="slot-label">hero · c5 · top 8/13</div>
+          <div class="slot-fill-solid"></div>
         </div>
-        <!-- Bottom of data pane: identity + lineage (5 of vertical 13) -->
-        <div class="card" style="flex:5;">
-          <div class="card-title">Identity · Lineage (5 of vertical 13)</div>
-          <div class="id-list">
-            <span class="k">Uploader</span><span class="v">edkjo</span>
-            <span class="k">Uploaded</span><span class="v">2026-05-18 14:21</span>
-            <span class="k">Version</span><span class="v">V3 of 3</span>
-            <span class="k">Last modified</span><span class="v">edkjo · 14:35</span>
-            <span class="k">Application</span><span class="v">Revit 2024</span>
-            <span class="k">Discipline</span><span class="v">ARK</span>
-            <span class="k">Schema</span><span class="v">IFC4</span>
-            <span class="k">Issues on objects</span><span class="v em-dash">— pending</span>
-            <span class="k">Claims</span><span class="v">7</span>
-            <span class="k">Viewer groups</span><span class="v">3</span>
-            <span class="k">Linked drawings</span><span class="v">12</span>
-          </div>
+        <div class="slot" style="flex:5;" data-aspect="≈1:1 · square">
+          <div class="slot-label">hero · c5 · bottom 5/13</div>
+          <div class="slot-fill-solid"></div>
         </div>
       </div>
 
-      <!-- Row 2 (370px, φ-descent): Storeys 8 (bar wants wide) / Elements 5 (treemap wants square) -->
-      <div class="card c8 h-row2">
-        <div class="card-title">Storeys · bar (8 · wide-friendly)</div>
-        <div class="placeholder">storey horizontal bars · canonical alignment</div>
+      <!-- ROW 2: c8 / c5 -->
+      <div class="slot c8 h-row2" data-aspect="≈2.2:1 · bar slot">
+        <div class="slot-label">row 2 · c8</div>
+        <div class="slot-fill"></div>
       </div>
-      <div class="card c5 h-row2">
-        <div class="card-title">Elements · treemap (5 · ≈1.4:1 square)</div>
-        <div class="placeholder">elements treemap</div>
-      </div>
-
-      <!-- Row 3 (230px, φ-descent): Maturity & Classification 5 / Attention 5 / Geometry 3 -->
-      <div class="card c5 h-row3">
-        <div class="card-title">Maturity & Classification (5)</div>
-        <div class="vsplit-5-3">
-          <div class="placeholder">MMI distribution · 100 / 200 / 300 / 400 / 500</div>
-          <div class="placeholder">NS3451 classification distribution</div>
-        </div>
-      </div>
-      <div class="card c5 h-row3">
-        <div class="card-title">Attention feed (5)</div>
-        <div class="placeholder">flagged · warn · info</div>
-      </div>
-      <div class="card c3 h-row3">
-        <div class="card-title">Geometry (3)</div>
-        <div class="placeholder">geometry bars</div>
+      <div class="slot c5 h-row2" data-aspect="≈1.4:1 · treemap slot">
+        <div class="slot-label">row 2 · c5</div>
+        <div class="slot-fill"></div>
       </div>
 
-      <!-- Row 4 (140px, φ-descent): Quality 5 / Reuse 5 / Non-element 3 -->
-      <div class="card c5 h-row4">
-        <div class="card-title">Quality (5)</div>
-        <div class="placeholder">quality checks</div>
+      <!-- ROW 3: c5 / c5 / c3 -->
+      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · bar">
+        <div class="slot-label">row 3 · c5</div>
+        <div class="slot-fill"></div>
       </div>
-      <div class="card c5 h-row4">
-        <div class="card-title">Reuse (5)</div>
-        <div class="placeholder">reuse histogram</div>
+      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · bar">
+        <div class="slot-label">row 3 · c5</div>
+        <div class="slot-fill"></div>
       </div>
-      <div class="card c3 h-row4">
-        <div class="card-title">Non-element (3)</div>
-        <div class="placeholder">openings · virtual</div>
+      <div class="slot c3 h-row3" data-aspect="≈1.3:1 · square">
+        <div class="slot-label">row 3 · c3</div>
+        <div class="slot-fill"></div>
+      </div>
+
+      <!-- ROW 4: c5 / c5 / c3 -->
+      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 4 · c5</div>
+        <div class="slot-fill-solid"></div>
+      </div>
+      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 4 · c5</div>
+        <div class="slot-fill-solid"></div>
+      </div>
+      <div class="slot c3 h-row4" data-aspect="≈2.2:1 · linear">
+        <div class="slot-label">row 4 · c3</div>
+        <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>Grid math · option 01</strong><br>
-      Horizontal: hero <code>8 / 5</code> · row 2 <code>8 / 5</code> (Storeys bars in c8; Elements treemap in c5 = 1.4:1) · row 3 <code>5 / 5 / 3</code> · row 4 <code>5 / 5 / 3</code>.<br>
-      Vertical: hero 600 → row2 370 (×0.617) → row3 230 (×0.622) → row4 140 (×0.609). Data pane internal split <code>8 / 5</code>.<br>
-      Treemap rule: only in c5×row2 (≈1.4:1) or c5×hero (≈1.18:1). Linear charts (bars / stacked bars / lists) take the wide-narrow slots.
+      <strong>01 ·</strong> H: <code>8/5</code>, <code>8/5</code>, <code>5/5/3</code>, <code>5/5/3</code> · V: <code>600 → 370 → 230 → 140</code> (φ-descent) · Hero data column inner split <code>8/5</code> vertical.
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 2 — Data-led (data 8, viewer 5) -->
+  <!-- OPTION 2 — 8/5 hero reversed -->
   <!-- ============================================================ -->
   <div class="opt" id="opt2">
     <div class="opt-head">
       <span class="opt-num">02</span>
-      <span class="opt-name">Data-led</span>
-      <span class="opt-pitch">Same grid. Hero reverses: data dominant (8), viewer on the minor (5). For coordinators who live in dashboards and treat the viewer as a verification glance, not the primary surface.</span>
+      <span class="opt-name">8 / 5 hero reversed</span>
+      <span class="opt-pitch">Hero major-left becomes a content-dense block (c8); minor-right (c5) is the square slot. Below mirrors row by row.</span>
     </div>
 
     <div class="wf">
-      <!-- Status headline ribbon -->
-      <div class="headline">
-        <span class="lead">ARK-BuildingA-V3.ifc</span>
-        <span class="tail">312 types · 1,204 instances · 5 storeys · 78% classified · 62% with material · 4 open issues</span>
+      <div class="headline">status strip · c13 · h-strip</div>
+
+      <!-- HERO: c8 (dense) / c5 (square) -->
+      <div class="slot c8 h-hero" data-aspect="≈1.4:1 · primary dense">
+        <div class="slot-label">hero · c8 dense</div>
+        <div class="slot-fill"></div>
+      </div>
+      <div class="slot c5 h-hero" data-aspect="≈1:1.18 · square">
+        <div class="slot-label">hero · c5 · single slot</div>
+        <div class="slot-fill"></div>
       </div>
 
-      <!-- Hero row: 8 / 5 (data / viewer). Data pane is KPI cluster only — Elements
-           treemap moved to row 2 c5 so it gets a square slot. -->
-      <div class="card c8 h-hero">
-        <div class="card-title">KPIs (8 · full data pane)</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:8px;height:100%;">
-          <div class="kpi"><span class="label">Types</span><span class="value">312</span><span class="sub">298 used · 14 unused</span></div>
-          <div class="kpi"><span class="label">Classified</span><span class="value">78%</span><span class="sub">244 of 312</span></div>
-          <div class="kpi"><span class="label">Material</span><span class="value">62%</span><span class="sub">194 of 312</span></div>
-          <div class="kpi"><span class="label">Verified</span><span class="value">41%</span><span class="sub">128 of 312</span></div>
-          <div class="kpi"><span class="label">Untyped</span><span class="value">3%</span><span class="sub">37 instances</span></div>
-          <div class="kpi"><span class="label">Proxy/UD</span><span class="value">1%</span><span class="sub">8 types</span></div>
-          <div class="kpi"><span class="label">Reuse</span><span class="value">1.8</span><span class="sub">avg inst/type</span></div>
-          <div class="kpi"><span class="label">Orphan</span><span class="value">12</span><span class="sub">0.4% outside tree</span></div>
-        </div>
+      <!-- ROW 2: c8 / c5 -->
+      <div class="slot c8 h-row2" data-aspect="≈2.2:1 · bar">
+        <div class="slot-label">row 2 · c8</div>
+        <div class="slot-fill"></div>
       </div>
-      <div class="c5 h-hero" style="display:flex;flex-direction:column;gap:var(--gutter);">
-        <div class="card" style="flex:8;">
-          <div class="card-title">3D viewer (8 of vertical 13)</div>
-          <div class="placeholder">viewer · 5 / 13</div>
-        </div>
-        <div class="card" style="flex:5;">
-          <div class="card-title">Identity (5 of vertical 13)</div>
-          <div class="id-list">
-            <span class="k">Uploader</span><span class="v">edkjo</span>
-            <span class="k">Version</span><span class="v">V3 of 3</span>
-            <span class="k">Application</span><span class="v">Revit 2024</span>
-            <span class="k">Schema</span><span class="v">IFC4</span>
-            <span class="k">Issues</span><span class="v em-dash">— pending</span>
-            <span class="k">Claims</span><span class="v">7</span>
-          </div>
-        </div>
+      <div class="slot c5 h-row2" data-aspect="≈1.4:1 · treemap slot">
+        <div class="slot-label">row 2 · c5</div>
+        <div class="slot-fill"></div>
       </div>
 
-      <!-- Row 2: Storeys 8 (bar = wide-friendly) / Elements 5 (treemap = square) -->
-      <div class="card c8 h-row2">
-        <div class="card-title">Storeys + Maturity (8 · wide-friendly bars)</div>
-        <div class="vsplit-8-5">
-          <div class="placeholder">storey bars · canonical alignment</div>
-          <div class="placeholder">MMI stacked bar · NS3451 codes (linear, narrow OK)</div>
-        </div>
+      <!-- ROW 3: c8 / c5 -->
+      <div class="slot c8 h-row3" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 3 · c8</div>
+        <div class="slot-fill-solid"></div>
       </div>
-      <div class="card c5 h-row2">
-        <div class="card-title">Elements · treemap (5 · ≈1.4:1)</div>
-        <div class="placeholder">elements treemap</div>
+      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · linear">
+        <div class="slot-label">row 3 · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
 
-      <!-- Row 3: Attention 8 / Geometry 5 -->
-      <div class="card c8 h-row3">
-        <div class="card-title">Attention feed (8)</div>
-        <div class="placeholder">flagged · warn · info — 24 items</div>
+      <!-- ROW 4: c5 / c5 / c3 -->
+      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 4 · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
-      <div class="card c5 h-row3">
-        <div class="card-title">Geometry (5)</div>
-        <div class="placeholder">geometry bars</div>
+      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 4 · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
-
-      <!-- Row 4: Quality 5 / Reuse 5 / Non-element 3 -->
-      <div class="card c5 h-row4">
-        <div class="card-title">Quality (5)</div>
-        <div class="placeholder">quality checks</div>
-      </div>
-      <div class="card c5 h-row4">
-        <div class="card-title">Reuse (5)</div>
-        <div class="placeholder">reuse histogram</div>
-      </div>
-      <div class="card c3 h-row4">
-        <div class="card-title">Non-element (3)</div>
-        <div class="placeholder">openings · virtual</div>
+      <div class="slot c3 h-row4" data-aspect="≈2.2:1 · linear">
+        <div class="slot-label">row 4 · c3</div>
+        <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>Grid math · option 02</strong><br>
-      Horizontal: hero <code>8 / 5</code> (data / viewer) · row 2 <code>8 / 5</code> · row 3 <code>8 / 5</code> · row 4 <code>5 / 5 / 3</code>.<br>
-      Vertical: same φ-descent. Data pane internal split <code>5 / 3</code>. Viewer pane internal split <code>8 / 5</code>.<br>
-      Reverses the major emphasis vs option 01; same skeleton.
+      <strong>02 ·</strong> H: <code>8/5</code>, <code>8/5</code>, <code>8/5</code>, <code>5/5/3</code> · V: <code>600 → 370 → 230 → 140</code> · Hero c5 is a single uninterrupted square (no inner subdivide).
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 3 — Balanced editorial -->
+  <!-- OPTION 3 — 3/5/5 hero -->
   <!-- ============================================================ -->
   <div class="opt" id="opt3">
     <div class="opt-head">
       <span class="opt-num">03</span>
-      <span class="opt-name">Balanced editorial</span>
-      <span class="opt-pitch">Centered viewer column 5, flanked by KPI rail (3) and identity rail (5) — 3 / 5 / 5 = 13 (Fibonacci sum). Below-fold reads top-to-bottom as full-width sections. Most "report-like" of the three.</span>
+      <span class="opt-name">3 / 5 / 5 hero · centered major</span>
+      <span class="opt-pitch">Hero splits into three: tall narrow rail (c3), centered square (c5), wider companion (c5). Major sits at the golden center between two minors. Below: simpler 2-up rows.</span>
     </div>
 
     <div class="wf">
-      <!-- Status headline -->
-      <div class="headline">
-        <span class="lead">ARK-BuildingA-V3.ifc · model report</span>
-        <span class="tail">312 types · 1,204 instances · 5 storeys · 78% classified · 62% material · 4 issues</span>
+      <div class="headline">status strip · c13 · h-strip</div>
+
+      <!-- HERO: c3 / c5 / c5 = 13 -->
+      <div class="slot c3 h-hero" data-aspect="≈1:3 · tall list">
+        <div class="slot-label">hero · c3 · tall rail</div>
+        <div class="slot-fill-solid"></div>
+      </div>
+      <div class="slot c5 h-hero" data-aspect="≈1:1.18 · square">
+        <div class="slot-label">hero · c5 · center</div>
+        <div class="slot-fill"></div>
+      </div>
+      <div class="slot c5 h-hero" data-aspect="≈1:1.18 · square">
+        <div class="slot-label">hero · c5 · right</div>
+        <div class="slot-fill-solid"></div>
       </div>
 
-      <!-- Hero: 3 / 5 / 5 = 13 -->
-      <div class="card c3 h-hero">
-        <div class="card-title">KPI rail (3)</div>
-        <div style="display:flex;flex-direction:column;gap:8px;height:100%;">
-          <div class="kpi" style="flex:1;"><span class="label">Types</span><span class="value">312</span></div>
-          <div class="kpi" style="flex:1;"><span class="label">Classified</span><span class="value">78%</span></div>
-          <div class="kpi" style="flex:1;"><span class="label">Material</span><span class="value">62%</span></div>
-          <div class="kpi" style="flex:1;"><span class="label">Verified</span><span class="value">41%</span></div>
-          <div class="kpi" style="flex:1;"><span class="label">Untyped</span><span class="value">3%</span></div>
-          <div class="kpi" style="flex:1;"><span class="label">Orphan</span><span class="value">12</span></div>
-          <div class="kpi" style="flex:1;"><span class="label">Issues</span><span class="value dim">—</span></div>
-          <div class="kpi" style="flex:1;"><span class="label">Reuse</span><span class="value">1.8</span></div>
-        </div>
+      <!-- ROW 2: c8 / c5 -->
+      <div class="slot c8 h-row2" data-aspect="≈2.2:1 · bar">
+        <div class="slot-label">row 2 · c8</div>
+        <div class="slot-fill"></div>
       </div>
-      <div class="card c5 h-hero">
-        <div class="card-title">3D viewer · center (5)</div>
-        <div class="placeholder">viewer</div>
-      </div>
-      <div class="card c5 h-hero">
-        <div class="card-title">Identity · Provenance · Lineage (5)</div>
-        <div class="id-list">
-          <span class="k">Uploader</span><span class="v">edkjo</span>
-          <span class="k">Uploaded</span><span class="v">2026-05-18 14:21</span>
-          <span class="k">Version</span><span class="v">V3 of 3</span>
-          <span class="k">Last modified</span><span class="v">edkjo · 14:35</span>
-          <span class="k">Application</span><span class="v">Revit 2024</span>
-          <span class="k">Discipline</span><span class="v">ARK</span>
-          <span class="k">Schema</span><span class="v">IFC4</span>
-          <span class="k">File size</span><span class="v">42 MB</span>
-          <span class="k">Issues on objects</span><span class="v em-dash">— pending</span>
-          <span class="k">Claims</span><span class="v">7</span>
-          <span class="k">Viewer groups</span><span class="v">3</span>
-          <span class="k">Linked drawings</span><span class="v">12</span>
-          <span class="k">Last federated</span><span class="v">2026-05-18 14:40</span>
-        </div>
+      <div class="slot c5 h-row2" data-aspect="≈1.4:1 · treemap slot">
+        <div class="slot-label">row 2 · c5</div>
+        <div class="slot-fill"></div>
       </div>
 
-      <!-- Row 2: Storeys 8 (bar = wide-friendly) / Elements 5 (treemap = square) -->
-      <div class="card c8 h-row2">
-        <div class="card-title">§ Structure · Storeys (8 · bars)</div>
-        <div class="placeholder">storey bars · canonical alignment</div>
+      <!-- ROW 3: c5 / c8 -->
+      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · linear">
+        <div class="slot-label">row 3 · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
-      <div class="card c5 h-row2">
-        <div class="card-title">§ Composition · Elements treemap (5 · ≈1.4:1)</div>
-        <div class="placeholder">elements treemap</div>
-      </div>
-
-      <!-- Row 3: Maturity & Classification 5 / Attention 8 -->
-      <div class="card c5 h-row3">
-        <div class="card-title">§ Maturity · MMI + NS3451 (5)</div>
-        <div class="vsplit-5-3">
-          <div class="placeholder">MMI distribution</div>
-          <div class="placeholder">NS3451 codes present</div>
-        </div>
-      </div>
-      <div class="card c8 h-row3">
-        <div class="card-title">§ Attention · 24 items (8)</div>
-        <div class="placeholder">flagged · warn · info</div>
+      <div class="slot c8 h-row3" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 3 · c8</div>
+        <div class="slot-fill-solid"></div>
       </div>
 
-      <!-- Row 4: Quality 5 / Reuse 5 / Geometry 3 -->
-      <div class="card c5 h-row4">
-        <div class="card-title">§ Quality (5)</div>
-        <div class="placeholder">quality checks</div>
+      <!-- ROW 4: c5 / c5 / c3 -->
+      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 4 · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
-      <div class="card c5 h-row4">
-        <div class="card-title">§ Reuse (5)</div>
-        <div class="placeholder">reuse histogram</div>
+      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 4 · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
-      <div class="card c3 h-row4">
-        <div class="card-title">§ Non-element (3)</div>
-        <div class="placeholder">openings</div>
+      <div class="slot c3 h-row4" data-aspect="≈2.2:1 · linear">
+        <div class="slot-label">row 4 · c3</div>
+        <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>Grid math · option 03</strong><br>
-      Horizontal: hero <code>3 / 5 / 5 = 13</code> (Fibonacci sum) · row 2 <code>8 / 5</code> · row 3 <code>5 / 8</code> · row 4 <code>5 / 5 / 3</code>.<br>
-      Vertical: same φ-descent. Each row gets a § marker so the page reads as a structured report (cf. skiplum-reports).<br>
-      The hero's 3 / 5 / 5 split puts the viewer at the golden center between the small KPI rail and the wider identity panel — center stage by ratio, not by raw width.
+      <strong>03 ·</strong> H: <code>3/5/5</code>, <code>8/5</code>, <code>5/8</code>, <code>5/5/3</code> · V: <code>600 → 370 → 230 → 140</code> · Hero alternates between three primary cards instead of two.
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 4 — Attention-led -->
+  <!-- OPTION 4 — 8/5 hero + full-width strip below -->
   <!-- ============================================================ -->
   <div class="opt" id="opt4">
     <div class="opt-head">
       <span class="opt-num">04</span>
-      <span class="opt-name">Attention-led</span>
-      <span class="opt-pitch">Hero replaces the data panel with an attention feed (5). Viewer stays on the major (8). KPIs land in row 2 as a full-width 8 + identity 5 strip. For coordinators whose job IS finding flags.</span>
+      <span class="opt-name">8 / 5 hero · full-width strip below</span>
+      <span class="opt-pitch">Same hero as 01. Adds a full-width <code>c13</code> linear strip between hero and the descending rows. The strip becomes a horizontal "ledger" — natural home for time-series, version timeline, or breadcrumb-style context.</span>
     </div>
 
     <div class="wf">
-      <!-- Status headline -->
-      <div class="headline">
-        <span class="lead">ARK-BuildingA-V3.ifc</span>
-        <span class="tail">24 attention items · 4 flagged · 20 warnings</span>
+      <div class="headline">status strip · c13 · h-strip</div>
+
+      <!-- HERO: c8 / c5 -->
+      <div class="slot c8 h-hero" data-aspect="≈1.4:1 · primary">
+        <div class="slot-label">hero · c8</div>
+        <div class="slot-fill"></div>
+      </div>
+      <div class="slot c5 h-hero" data-aspect="≈1:1.18 · square">
+        <div class="slot-label">hero · c5</div>
+        <div class="slot-fill"></div>
       </div>
 
-      <!-- Hero: viewer 8 / attention 5 -->
-      <div class="card c8 h-hero">
-        <div class="card-title">3D viewer · highlights flagged elements (8)</div>
-        <div class="placeholder">viewer · 8 / 13</div>
-      </div>
-      <div class="card c5 h-hero" style="border-left: 3px solid var(--danger);">
-        <div class="card-title">Attention feed (5 of 13)</div>
-        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;flex:1;overflow:hidden;">
-          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">7 walls missing fire-rating</span><span class="meta">ARK</span></div>
-          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">5 storey deviations from canonical</span><span class="meta">RIB</span></div>
-          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">3 type-merge candidates (Revit GUID drift)</span><span class="meta">ARK</span></div>
-          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">12 orphan elements outside spatial tree</span><span class="meta">—</span></div>
-          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">9 untyped wall elements</span><span class="meta">ARK</span></div>
-          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">3 types use IfcProxy</span><span class="meta">ARK</span></div>
-          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">14 types missing material layers</span><span class="meta">ARK</span></div>
-          <div class="list-row"><span class="pill">info</span><span class="name">Reuse ratio 1.8 (below project avg 2.2)</span><span class="meta">—</span></div>
-          <div class="list-row"><span class="pill">info</span><span class="name">+ 16 more</span><span class="meta dim">expand</span></div>
-        </div>
+      <!-- FULL-WIDTH LEDGER STRIP -->
+      <div class="slot c13 h-row4" data-aspect="≈9:1 · ledger strip">
+        <div class="slot-label">full-width linear strip · c13 · h-row4</div>
+        <div class="slot-fill-solid"></div>
       </div>
 
-      <!-- Row 2: KPI cluster 8 / Elements treemap 5 (treemap moved up from row 3 to get square slot) -->
-      <div class="card c8 h-row2">
-        <div class="card-title">KPIs (8)</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:100%;">
-          <div class="kpi"><span class="label">Types</span><span class="value">312</span><span class="sub">298 used · 14 unused</span></div>
-          <div class="kpi"><span class="label">Classified</span><span class="value">78%</span><span class="sub">244 of 312</span></div>
-          <div class="kpi"><span class="label">Material</span><span class="value">62%</span><span class="sub">194 of 312</span></div>
-          <div class="kpi"><span class="label">Verified</span><span class="value">41%</span><span class="sub">128 of 312</span></div>
-          <div class="kpi"><span class="label">Untyped</span><span class="value">3%</span><span class="sub">37 instances</span></div>
-          <div class="kpi"><span class="label">Proxy/UD</span><span class="value">1%</span><span class="sub">8 types</span></div>
-          <div class="kpi"><span class="label">Reuse</span><span class="value">1.8</span><span class="sub">avg inst/type</span></div>
-          <div class="kpi"><span class="label">Orphan</span><span class="value">12</span><span class="sub">0.4% outside</span></div>
-        </div>
+      <!-- ROW: c8 / c5 -->
+      <div class="slot c8 h-row3" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row · c8</div>
+        <div class="slot-fill-solid"></div>
       </div>
-      <div class="card c5 h-row2">
-        <div class="card-title">Elements · treemap (5 · ≈1.4:1)</div>
-        <div class="placeholder">elements treemap</div>
+      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · linear">
+        <div class="slot-label">row · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
 
-      <!-- Row 2b: Identity strip (full-width, narrow) -->
-      <div class="card c13 h-row4">
-        <div class="card-title">Identity · Lineage (13 · linear strip)</div>
-        <div class="id-list">
-          <span class="k">Uploader</span><span class="v">edkjo</span>
-          <span class="k">Uploaded</span><span class="v">2026-05-18 14:21</span>
-          <span class="k">Version</span><span class="v">V3 of 3</span>
-          <span class="k">Last modified</span><span class="v">edkjo · 14:35</span>
-          <span class="k">Application</span><span class="v">Revit 2024</span>
-          <span class="k">Discipline</span><span class="v">ARK</span>
-          <span class="k">Schema</span><span class="v">IFC4</span>
-          <span class="k">Issues on objects</span><span class="v em-dash">— pending</span>
-          <span class="k">Claims</span><span class="v">7</span>
-          <span class="k">Viewer groups</span><span class="v">3</span>
-          <span class="k">Linked drawings</span><span class="v">12</span>
-        </div>
+      <!-- ROW: c5 / c5 / c3 -->
+      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
-
-      <!-- Row 3: Storeys 8 (bars, wide-friendly) / MMI + NS3451 5 (linear bars OK) -->
-      <div class="card c8 h-row3">
-        <div class="card-title">Storeys · bars (8 · linear, wide-friendly)</div>
-        <div class="placeholder">storey horizontal bars · canonical alignment</div>
+      <div class="slot c5 h-row4" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row · c5</div>
+        <div class="slot-fill-solid"></div>
       </div>
-      <div class="card c5 h-row3">
-        <div class="card-title">MMI + NS3451 (5 · linear stacked bars)</div>
-        <div class="vsplit-5-3">
-          <div class="placeholder">MMI distribution · 100 / 200 / 300 / 400 / 500</div>
-          <div class="placeholder">NS3451 codes present</div>
-        </div>
-      </div>
-
-      <!-- Row 4: Quality / Reuse / Non-element (140px — linear bars + lists OK) -->
-      <div class="card c5 h-row4">
-        <div class="card-title">Quality (5 · linear)</div>
-        <div class="placeholder">quality check bars</div>
-      </div>
-      <div class="card c5 h-row4">
-        <div class="card-title">Reuse (5 · linear)</div>
-        <div class="placeholder">reuse histogram bars</div>
-      </div>
-      <div class="card c3 h-row4">
-        <div class="card-title">Non-element (3 · list)</div>
-        <div class="placeholder">openings · virtual</div>
+      <div class="slot c3 h-row4" data-aspect="≈2.2:1 · linear">
+        <div class="slot-label">row · c3</div>
+        <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>Grid math · option 04</strong><br>
-      Horizontal: hero <code>8 / 5</code> (viewer / attention) · row 2 <code>8 / 5</code> · row 3 <code>8 / 5</code> · row 4 <code>5 / 5 / 3</code>.<br>
-      Vertical: same φ-descent 600 → 370 → 230 → 140.<br>
-      Same Fibonacci skeleton as 01; swaps the "what" in the data pane from KPIs+identity to attention. KPIs demoted to row 2.
+      <strong>04 ·</strong> H: <code>8/5</code>, <code>13</code>, <code>8/5</code>, <code>5/5/3</code> · V: <code>600 → 140 → 230 → 140</code> · The ledger row breaks the strict φ-descent on purpose to give a horizontal pivot between hero and detail rows.
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- OPTION 5 — Vertical rhythm (full-width rows in φ-descent) -->
+  <!-- OPTION 5 — full-width φ-descent -->
   <!-- ============================================================ -->
   <div class="opt" id="opt5">
     <div class="opt-head">
       <span class="opt-num">05</span>
-      <span class="opt-name">Vertical rhythm</span>
-      <span class="opt-pitch">No horizontal hero split. Every row is full-width (span 13). The golden ratio lives only in row HEIGHTS — each row is φ-minor of the one above. Reads as a magazine column from top to bottom. Most disciplined ratio expression.</span>
+      <span class="opt-name">13 hero · full-width φ-descent</span>
+      <span class="opt-pitch">No horizontal hero split. Every row is full-width (<code>c13</code>) except the last detail row. Golden ratio lives entirely in vertical heights. Reads as a single column of descending bands.</span>
     </div>
 
     <div class="wf">
-      <!-- Status headline -->
-      <div class="headline">
-        <span class="lead">ARK-BuildingA-V3.ifc · model report</span>
-        <span class="tail">312 types · 1,204 instances · 5 storeys · 78% classified · 62% material · 4 issues</span>
+      <div class="headline">status strip · c13 · h-strip</div>
+
+      <div class="slot c13 h-hero" data-aspect="≈2.1:1 · panoramic">
+        <div class="slot-label">hero · c13 · 600</div>
+        <div class="slot-fill"></div>
       </div>
 
-      <!-- Hero: viewer full-width (600px) -->
-      <div class="card c13 h-hero">
-        <div class="card-title">3D viewer (13 of 13 · 600px)</div>
-        <div class="placeholder">viewer · full width</div>
+      <div class="slot c13 h-row2" data-aspect="≈3.5:1 · linear">
+        <div class="slot-label">row 2 · c13 · 370</div>
+        <div class="slot-fill-solid"></div>
       </div>
 
-      <!-- Row 2: KPI cluster full-width (370px = 600 × φ-1) -->
-      <div class="card c13 h-row2">
-        <div class="card-title">KPIs (13 · 370px)</div>
-        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;height:100%;">
-          <div class="kpi"><span class="label">Types</span><span class="value">312</span><span class="sub">298 used</span></div>
-          <div class="kpi"><span class="label">Classified</span><span class="value">78%</span><span class="sub">244/312</span></div>
-          <div class="kpi"><span class="label">Material</span><span class="value">62%</span><span class="sub">194/312</span></div>
-          <div class="kpi"><span class="label">Verified</span><span class="value">41%</span><span class="sub">128/312</span></div>
-          <div class="kpi"><span class="label">Untyped</span><span class="value">3%</span><span class="sub">37 inst</span></div>
-          <div class="kpi"><span class="label">Proxy/UD</span><span class="value">1%</span><span class="sub">8 types</span></div>
-          <div class="kpi"><span class="label">Reuse</span><span class="value">1.8</span><span class="sub">avg</span></div>
-          <div class="kpi"><span class="label">Orphan</span><span class="value">12</span><span class="sub">0.4%</span></div>
-        </div>
+      <!-- Row 3: still split into 8/5 since 230 is too tall for full-width linear -->
+      <div class="slot c8 h-row3" data-aspect="≈3.6:1 · linear">
+        <div class="slot-label">row 3 · c8 · 230</div>
+        <div class="slot-fill-solid"></div>
+      </div>
+      <div class="slot c5 h-row3" data-aspect="≈2.2:1 · marginal">
+        <div class="slot-label">row 3 · c5 · 230</div>
+        <div class="slot-fill"></div>
       </div>
 
-      <!-- Row 3: Storeys + Maturity (bars/linear) 8 / Elements treemap 5 (≈1.4:1 ok-ish at this width) -->
-      <div class="card c8 h-row3">
-        <div class="card-title">Storeys + Maturity (8 · 230px · linear bars)</div>
-        <div class="vsplit-5-3">
-          <div class="placeholder">storeys (canonical alignment) · horizontal bars</div>
-          <div class="placeholder">MMI + NS3451 stacked bars (linear, narrow OK)</div>
-        </div>
-      </div>
-      <div class="card c5 h-row3">
-        <div class="card-title">Elements treemap (5 · 230px · ≈2.2:1 — marginal)</div>
-        <div class="placeholder">elements treemap (or grouped bar if marginal aspect bothers)</div>
-      </div>
-
-      <!-- Row 4: Attention + Identity (140px = 230 × φ-1) -->
-      <div class="card c8 h-row4">
-        <div class="card-title">Attention (8 · 140px)</div>
-        <div class="placeholder">attention feed · top 4</div>
-      </div>
-      <div class="card c5 h-row4">
-        <div class="card-title">Identity · Lineage (5 · 140px)</div>
-        <div class="id-list" style="font-size:10px;">
-          <span class="k">Uploader</span><span class="v">edkjo</span>
-          <span class="k">Version</span><span class="v">V3 of 3</span>
-          <span class="k">Application</span><span class="v">Revit 24</span>
-          <span class="k">Discipline</span><span class="v">ARK</span>
-          <span class="k">Issues</span><span class="v em-dash">— pending</span>
-          <span class="k">Claims</span><span class="v">7</span>
-          <span class="k">Drawings</span><span class="v">12</span>
-        </div>
+      <div class="slot c13 h-row4" data-aspect="≈9:1 · ledger">
+        <div class="slot-label">row 4 · c13 · 140</div>
+        <div class="slot-fill-solid"></div>
       </div>
     </div>
 
     <div class="grid-math">
-      <strong>Grid math · option 05</strong><br>
-      Horizontal: hero, KPIs full-width <code>13</code>. Row 3 <code>8 / 5</code>. Row 4 <code>8 / 5</code>.<br>
-      Vertical: 600 → 370 (×0.617) → 230 (×0.622) → 140 (×0.609). Strict φ-descent — each row is the golden minor of the one above.<br>
-      The golden ratio lives entirely in row HEIGHTS. Horizontal proportions stay Fibonacci. Most "ratio-pure" of the five.
+      <strong>05 ·</strong> H: mostly <code>13</code>, row 3 <code>8/5</code> · V: <code>600 → 370 → 230 → 140</code> (strict φ-descent) · Most "ratio-pure" — proportions live in row heights, not column splits.
     </div>
   </div>
 
