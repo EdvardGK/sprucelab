@@ -155,7 +155,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         - basepoint: GIS coordinates from first model with coords
         """
         from apps.entities.models import (
-            IFCEntity, IFCType, TypeMapping, TypeAssignment,
+            IFCType, TypeMapping, TypeAssignment,
             Material, MaterialMapping, MaterialAssignment
         )
         from apps.models.models import Model
@@ -164,9 +164,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project_models = Model.objects.filter(project=project)
         model_ids = project_models.values_list('id', flat=True)
 
-        # Basic counts
+        # Basic counts. Sprucelab is types-only — IFCEntity rows are not
+        # persisted (per CLAUDE.md "Types-Only Architecture"), so counting
+        # the IFCEntity table for an element rollup returns zero on any
+        # real project. The authoritative number lives on
+        # `Model.element_count`, populated by the FastAPI extractor at
+        # upload time. Reported as `element_count: 0` in issue #12 — this
+        # closes that finding.
         model_count = project_models.count()
-        element_count = IFCEntity.objects.filter(model_id__in=model_ids).count()
+        element_count = (
+            project_models.aggregate(total=Sum('element_count'))['total'] or 0
+        )
 
         # Type statistics
         types = IFCType.objects.filter(model_id__in=model_ids)

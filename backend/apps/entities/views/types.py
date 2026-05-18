@@ -1005,35 +1005,115 @@ class IFCTypeViewSet(viewsets.ReadOnlyModelViewSet):
         )
         project_metrics = compute_metrics(all_types)
 
-        # Per-model breakdown
+        # Per-model breakdown — single aggregate grouped by model_id so the
+        # cost is one query, not one-per-model (was an 11× N+1 cliff
+        # reported in issue #13 driving dashboard-metrics to ~3.6s).
+        has_material_layer = TypeDefinitionLayer.objects.filter(
+            type_mapping=OuterRef('mapping'),
+            quantity_per_unit__gt=0,
+        )
+        per_model_rows = list(
+            IFCType.objects
+            .filter(model__project_id=project_id, instance_count__gt=0)
+            .annotate(has_layers=Exists(has_material_layer))
+            .values('model_id')
+            .annotate(
+                total=Count('id'),
+                with_ns3451=Count(
+                    'id',
+                    filter=Q(mapping__ns3451_code__isnull=False)
+                    & ~Q(mapping__ns3451_code=''),
+                ),
+                with_unit=Count(
+                    'id',
+                    filter=Q(mapping__representative_unit__isnull=False)
+                    & ~Q(mapping__representative_unit=''),
+                ),
+                with_materials=Count(
+                    'id',
+                    filter=Q(mapping__isnull=False) & Q(has_layers=True),
+                ),
+                verified_ok=Count(
+                    'id',
+                    filter=Q(mapping__verification_status__in=['auto', 'verified'])
+                    & ~Q(mapping__verification_status='flagged'),
+                ),
+                verification_failed=Count(
+                    'id',
+                    filter=Q(mapping__verification_status='flagged'),
+                ),
+                verification_pending=Count(
+                    'id',
+                    filter=Q(mapping__verification_status='pending')
+                    | Q(mapping__isnull=True),
+                ),
+                mapped=Count('id', filter=Q(mapping__mapping_status='mapped')),
+                pending=Count(
+                    'id',
+                    filter=Q(mapping__mapping_status='pending')
+                    | Q(mapping__isnull=True),
+                ),
+                ignored=Count('id', filter=Q(mapping__mapping_status='ignored')),
+                review=Count('id', filter=Q(mapping__mapping_status='review')),
+                followup=Count('id', filter=Q(mapping__mapping_status='followup')),
+            )
+        )
+        rows_by_model = {row['model_id']: row for row in per_model_rows}
+
+        def discipline_for(name):
+            if not name:
+                return None
+            upper = name.upper()
+            for disc in ['ARK', 'RIB', 'RIV', 'RIE', 'RIBE', 'RIRV']:
+                if disc in upper:
+                    return disc
+            return None
+
+        def score_from(row):
+            total = row['total']
+            if total == 0:
+                return None
+            classification_score = (row['with_ns3451'] / total) * 100
+            unit_score = (row['with_unit'] / total) * 100
+            material_score = (row['with_materials'] / total) * 100
+            checked = total - row['verification_pending']
+            verification_score = (
+                (row['verified_ok'] / checked * 100) if checked > 0 else 0
+            )
+            health = round(
+                classification_score * 0.30
+                + unit_score * 0.15
+                + material_score * 0.25
+                + verification_score * 0.30,
+                1,
+            )
+            return health
+
         model_breakdown = []
         for model in models:
-            model_types = IFCType.objects.filter(model=model, instance_count__gt=0)
-            m_metrics = compute_metrics(model_types)
-            if m_metrics['total_types'] == 0:
-                continue  # Skip models with no types
-
-            # Get discipline from model name or mapping
-            discipline = None
-            if model.name:
-                # Try to extract discipline from model name (e.g., "ARK_Model.ifc")
-                for disc in ['ARK', 'RIB', 'RIV', 'RIE', 'RIBE', 'RIRV']:
-                    if disc in model.name.upper():
-                        discipline = disc
-                        break
+            row = rows_by_model.get(model.id)
+            if not row or row['total'] == 0:
+                continue
+            health = score_from(row)
+            if health >= 80:
+                health_status = 'healthy'
+            elif health >= 50:
+                health_status = 'warning'
+            else:
+                health_status = 'critical'
 
             model_breakdown.append({
                 'id': str(model.id),
                 'name': model.name,
-                'discipline': discipline,
-                'total_types': m_metrics['total_types'],
-                'mapped': m_metrics['mapped'],
-                'pending': m_metrics['pending'],
-                'ignored': m_metrics['ignored'],
-                'review': m_metrics['review'],
-                'followup': m_metrics['followup'],
-                'health_score': m_metrics['health_score'],
-                'status': m_metrics['status'],
+                'discipline': discipline_for(model.name),
+                'total_types': row['total'],
+                'mapped': row['mapped'],
+                'pending': row['pending'],
+                'ignored': row['ignored'],
+                'review': row['review'],
+                'followup': row['followup'],
+                'health_score': health,
+                'status': health_status,
             })
 
         # Sort by health score (worst first for attention)
