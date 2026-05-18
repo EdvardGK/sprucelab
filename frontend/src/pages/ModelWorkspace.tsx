@@ -638,7 +638,15 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
     [analysis.types, filter.ifc_class, filter.excluded_ifc_class, filter.type_guid]
   );
   const totalStats = useMemo(() => computeAnalysisStats(analysis.types), [analysis.types]);
+  // filterAnalysisTypes already projects each type's instance_count down
+  // to the storey-scoped subtotal when a floor filter is active, so
+  // computeAnalysisStats sees the storey-scoped numbers and the KPI
+  // cluster / viewer subtitle / treemap / quality all agree.
   const filteredStats = useMemo(() => computeAnalysisStats(filteredTypes), [filteredTypes]);
+  // Animate the viewer subtitle so it count-ups on cross-filter changes
+  // — matches the rest of the KPI cluster's signature.
+  const animatedViewerTypes = useCountUp(filteredTypes.length);
+  const animatedViewerInstances = useCountUp(filteredStats.totalInstances);
   // Stats used as the page's "live" object — filtered scalars/classCounts
   // for the foreground, but the unfiltered classCounts feed the
   // `classColorMap` so colors stay stable across filter changes.
@@ -718,7 +726,15 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
         problem.add(t.element_class || t.type_class);
       }
     }
-    setIfcClass(problem.size > 0 ? Array.from(problem) : undefined);
+    if (problem.size === 0) {
+      setIfcClass(undefined);
+      return;
+    }
+    const next = Array.from(problem).sort();
+    const active = (filter.ifc_class ?? []).slice().sort();
+    const isSame =
+      active.length === next.length && active.every((c, i) => c === next[i]);
+    setIfcClass(isSame ? undefined : next);
   };
   const filterByGeometry = (representation: string) => {
     // Include all IFC classes whose primary representation matches.
@@ -967,6 +983,7 @@ function AnalysisDashboard({ analysis, model }: { analysis: ModelAnalysis; model
                 id="model-dash-viewer"
                 className="card-accent-forest flex-1 min-w-0"
                 title={t('modelDash.viewer.title')}
+                subtitle={`${animatedViewerTypes.toLocaleString()} types · ${animatedViewerInstances.toLocaleString()} instances`}
                 icon={
                   <Box className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)] text-muted-foreground" />
                 }
@@ -1229,22 +1246,34 @@ function filterAnalysisTypes(
   const hasFloor = floorCodes && floorCodes.length > 0;
   if (!hasInclude && !hasExclude && !hasFloor) return types;
 
-  return types.filter((t) => {
+  const floorSet = hasFloor ? new Set(floorCodes!) : null;
+  const out: AnalysisTypeRecord[] = [];
+  for (const t of types) {
     // Match against both forms the store uses — raw (e.g. "IfcWall") and
     // the AnalysisTypeRecord shape (`element_class`/`type_class`).
     const elementClass = t.element_class || t.type_class;
-    if (hasInclude && !includedClasses!.includes(elementClass)) return false;
-    if (hasExclude && excludedClasses!.includes(elementClass)) return false;
-    if (hasFloor) {
-      // Match by storey GUID OR storey name — `storey_distribution[].storey`
-      // carries the name; the filter store carries GUIDs when fragments-v3
-      // provides them, else names (see VerifiedStoreyChart filterKey).
+    if (hasInclude && !includedClasses!.includes(elementClass)) continue;
+    if (hasExclude && excludedClasses!.includes(elementClass)) continue;
+    if (floorSet) {
+      // Storey scope: drop types absent on these floors, and project the
+      // type's instance_count down to the storey-scoped subtotal so KPI
+      // / treemap / viewer subtitle all reflect what's actually visible
+      // (the viewer hides off-storey instances). Match by storey GUID OR
+      // storey name — `storey_distribution[].storey` carries the name;
+      // the filter store carries GUIDs when fragments-v3 provides them,
+      // else names (see VerifiedStoreyChart filterKey).
       const dist = t.storey_distribution ?? [];
-      const matches = dist.some((sd) => floorCodes!.includes(sd.storey));
-      if (!matches) return false;
+      let scoped = 0;
+      for (const sd of dist) {
+        if (floorSet.has(sd.storey)) scoped += sd.instance_count;
+      }
+      if (scoped === 0) continue;
+      out.push({ ...t, instance_count: scoped });
+    } else {
+      out.push(t);
     }
-    return true;
-  });
+  }
+  return out;
 }
 
 // ─── KPI Card — removed Track C lift ─────────────────────────────────────

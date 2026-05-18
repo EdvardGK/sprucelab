@@ -12,6 +12,7 @@ import { useTypeInstances } from '@/hooks/use-type-mapping';
 import { useTypesInstancesByClass, type IFCType } from '@/hooks/use-warehouse';
 
 import { TypeDataRail } from './TypeDataRail';
+import { useCountUp } from './useCountUp';
 
 interface TypeViewerPaneV2Props {
   modelId: string;
@@ -112,12 +113,20 @@ export function TypeViewerPaneV2({
     <Box className="h-[clamp(0.75rem,1vw,1rem)] w-[clamp(0.75rem,1vw,1rem)] text-muted-foreground" />
   );
 
-  const subtitle = isClassFiltered
-    ? t('typesV2.viewer.filteredHint', {
-        types: filteredTypeCount,
-        instances: filteredInstanceCount,
-      })
-    : undefined;
+  // Always show counts so the viewer subtitle agrees with the dashboard
+  // KPI / treemap / table at a glance — filtered or not. When a single
+  // type is selected, the subtitle becomes "1 type · N instances" for
+  // the picked type's instance count (single-type isolation).
+  const subtitleTypes = selectedType ? 1 : filteredTypeCount;
+  const subtitleInstances = selectedType
+    ? typeInstances?.instances?.length ?? selectedType.instance_count ?? 0
+    : filteredInstanceCount;
+  const animatedTypes = useCountUp(subtitleTypes);
+  const animatedInstances = useCountUp(subtitleInstances);
+  const subtitle = t('typesV2.viewer.filteredHint', {
+    types: animatedTypes.toLocaleString(),
+    instances: animatedInstances.toLocaleString(),
+  });
 
   const showClear = !!selectedType || isClassFiltered;
 

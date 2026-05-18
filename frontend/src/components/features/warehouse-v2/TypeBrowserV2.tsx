@@ -568,7 +568,7 @@ export function TypeBrowserV2({ projectId }: TypeBrowserV2Props) {
                 <TypeTableV2
                   types={filteredTypes}
                   selectedTypeId={selectedTypeId}
-                  onSelectType={handleSelectType}
+                  onSelectType={handleToggleType}
                   onIfcClassClick={(cls) =>
                     setIfcClassFilter((curr) => (curr === cls ? 'all' : cls))
                   }
