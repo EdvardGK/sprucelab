@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Model Dashboard — 10 layout options</title>
+<link rel="stylesheet" href="_light.css">
+<style>
+  .opt {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 16px 18px;
+    margin-bottom: 24px;
+  }
+  .opt-head {
+    display: flex; align-items: baseline; gap: 12px;
+    padding-bottom: 8px; margin-bottom: 12px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .opt-num {
+    font-family: ui-monospace, monospace; font-size: 11px;
+    color: var(--accent); letter-spacing: 0.08em;
+    background: rgba(21,121,84,0.08);
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .opt-name { font-weight: 600; font-size: 14px; }
+  .opt-pitch { font-size: 12px; color: var(--ink-soft); margin-left: auto; max-width: 60%; text-align: right; }
+  .wf {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 8px;
+  }
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+  }
+  .toc-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 16px;
+    margin-top: 8px;
+  }
+  .toc a {
+    text-decoration: none; color: var(--ink);
+    font-size: 12px; padding: 3px 0;
+    display: flex; gap: 8px;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc a .n {
+    font-family: ui-monospace, monospace; font-size: 11px;
+    color: var(--ink-mute); min-width: 22px;
+  }
+  .legend-row { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="page-frame">
+
+  <div class="page-head">
+    <div class="title">Model Dashboard — 10 layout options</div>
+    <div class="route">docs/wireframes/2026-05-18_model-dash-10-options.html</div>
+    <div class="note">Pick one (or hybrid). All wireframes use _light.css primitives.</div>
+  </div>
+
+  <div class="toc">
+    <div class="block-label">Story arcs</div>
+    <div class="toc-grid">
+      <a href="#opt1"><span class="n">01</span><span>Refined current — surgical tightening</span></a>
+      <a href="#opt2"><span class="n">02</span><span>Five-row story arc — layered narrative</span></a>
+      <a href="#opt3"><span class="n">03</span><span>Above-fold dense — everything visible</span></a>
+      <a href="#opt4"><span class="n">04</span><span>Viewer-led right rail — viewer dominant</span></a>
+      <a href="#opt5"><span class="n">05</span><span>Attention-first — what needs work leads</span></a>
+      <a href="#opt6"><span class="n">06</span><span>Three columns full-height — parallel reading</span></a>
+      <a href="#opt7"><span class="n">07</span><span>Tabbed sub-surfaces — overview / quality / provenance</span></a>
+      <a href="#opt8"><span class="n">08</span><span>Sparkline grid — Bloomberg terminal density</span></a>
+      <a href="#opt9"><span class="n">09</span><span>Linear-inspired — quiet chrome, content forward</span></a>
+      <a href="#opt10"><span class="n">10</span><span>Editorial report — top-to-bottom read</span></a>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 1 — Refined current -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt1">
+    <div class="opt-head">
+      <span class="opt-num">01</span>
+      <span class="opt-name">Refined current</span>
+      <span class="opt-pitch">Smallest change. Shrink Reuse + Quality, drop Storeys from Info, add Issues count, fix Orphan. No structural reorganization.</span>
+    </div>
+    <div class="wf">
+      <!-- KPI row 7 tiles, same as today -->
+      <div class="grid-12" style="margin-bottom:8px;">
+        <div class="block span-2"><div class="block-label">Requirements</div><div class="block-value em-dash">—</div><div class="block-sub">EIR pending</div></div>
+        <div class="block span-2"><div class="block-label">Types</div><div class="block-value">312</div><div class="block-sub">298 used · 14 unused</div></div>
+        <div class="block span-2"><div class="block-label">Classified</div><div class="block-value">78%</div><div class="bar"><div class="fill" style="width:78%"></div></div></div>
+        <div class="block span-2"><div class="block-label">With material</div><div class="block-value">62%</div><div class="bar warn"><div class="fill" style="width:62%"></div></div></div>
+        <div class="block span-1"><div class="block-label">Untyped</div><div class="block-value">3%</div></div>
+        <div class="block span-1"><div class="block-label">Proxy/UD</div><div class="block-value">1%</div></div>
+        <div class="block span-2"><div class="block-label">Orphan</div><div class="block-value">12</div><div class="block-sub">0.4% outside tree</div></div>
+      </div>
+      <!-- Row 1: Storeys + Elements (left) | Viewer (right) -->
+      <div class="grid-6" style="margin-bottom:8px;">
+        <div class="span-3 col gap-sm">
+          <div class="block"><div class="block-label">Storeys (compact)</div><div class="h-4 muted-bg"></div></div>
+          <div class="block"><div class="block-label">Elements treemap</div><div class="h-16 muted-bg"></div></div>
+        </div>
+        <div class="span-3 mock-viewer h-24">3D viewer</div>
+      </div>
+      <!-- Row 2: Quality(small) Reuse(small) Geometry(med) Info(medium) -->
+      <div class="grid-12">
+        <div class="block span-2"><div class="block-label">Quality (small)</div><div class="block-value">4</div><div class="block-sub">issues</div></div>
+        <div class="block span-2"><div class="block-label">Reuse ratio</div><div class="block-value">1.8</div><div class="block-sub">avg instances / type</div></div>
+        <div class="block span-3"><div class="block-label">Geometry</div><div class="h-8 muted-bg"></div></div>
+        <div class="block span-5"><div class="block-label">Info (storeys removed; + uploader, version, claims, issues)</div>
+          <div class="list-row"><span class="name">Uploaded by</span><span class="meta">edkjo · 2026-05-18 14:21</span></div>
+          <div class="list-row"><span class="name">Version</span><span class="meta">V3 of 3</span></div>
+          <div class="list-row"><span class="name">Issues on objects</span><span class="meta em-dash">— pending</span></div>
+          <div class="list-row"><span class="name">Claims</span><span class="meta">7</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 2 — Five-row story arc -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt2">
+    <div class="opt-head">
+      <span class="opt-num">02</span>
+      <span class="opt-name">Five-row story arc</span>
+      <span class="opt-pitch">Each row answers one BIM question: Is it ready? · What's in it? · How is it organized? · What needs attention? · Who owns it / what's connected?</span>
+    </div>
+    <div class="wf">
+      <!-- Row A: Status headline + KPI cluster + viewer -->
+      <div class="grid-6 gap-sm" style="margin-bottom:8px;">
+        <div class="span-3 col gap-sm">
+          <div class="block" style="border-left: 3px solid var(--accent);">
+            <div class="block-label">Status headline · "Is it ready?"</div>
+            <div style="font-size:14px;margin-top:4px;">312 types · 1,204 instances · 5 storeys · <span style="color:var(--accent);">78% classified</span> · <span style="color:var(--warn);">62% with material</span> · 4 open issues</div>
+          </div>
+          <div class="grid-4 gap-sm">
+            <div class="block block-tight"><div class="block-label">Req</div><div class="block-value em-dash">—</div></div>
+            <div class="block block-tight"><div class="block-label">Types</div><div class="block-value">312</div></div>
+            <div class="block block-tight"><div class="block-label">Class</div><div class="block-value">78%</div></div>
+            <div class="block block-tight"><div class="block-label">Mat</div><div class="block-value">62%</div></div>
+            <div class="block block-tight"><div class="block-label">Untyp</div><div class="block-value">3%</div></div>
+            <div class="block block-tight"><div class="block-label">Proxy</div><div class="block-value">1%</div></div>
+            <div class="block block-tight"><div class="block-label">Reuse</div><div class="block-value">1.8</div></div>
+            <div class="block block-tight"><div class="block-label">Orph</div><div class="block-value">12</div></div>
+          </div>
+        </div>
+        <div class="span-3 mock-viewer h-20">3D viewer + selection rail</div>
+      </div>
+      <!-- Row B: "What's in it?" Elements + Non-elements -->
+      <div class="grid-6 gap-sm" style="margin-bottom:8px;">
+        <div class="block span-4">
+          <div class="block-label">"What's in it" — Elements treemap</div>
+          <div class="h-12 muted-bg"></div>
+        </div>
+        <div class="block span-2">
+          <div class="block-label">Non-element (noise tracker)</div>
+          <div class="list-row"><span class="name">Openings</span><span class="meta">412</span></div>
+          <div class="list-row"><span class="name">Virtual</span><span class="meta">36</span></div>
+          <div class="list-row"><span class="name">Grids</span><span class="meta">8</span></div>
+        </div>
+      </div>
+      <!-- Row C: "How is it organized?" Storeys + Disciplines -->
+      <div class="grid-6 gap-sm" style="margin-bottom:8px;">
+        <div class="block span-3"><div class="block-label">"How is it organized" — Storeys</div><div class="h-6 muted-bg"></div></div>
+        <div class="block span-3"><div class="block-label">Disciplines treemap</div><div class="h-6 muted-bg"></div></div>
+      </div>
+      <!-- Row D: "What needs attention?" -->
+      <div class="grid-6 gap-sm" style="margin-bottom:8px;">
+        <div class="block span-1"><div class="block-label">Quality</div><div class="block-value">4</div></div>
+        <div class="block span-1"><div class="block-label">Reuse</div><div class="block-value">1.8</div></div>
+        <div class="block span-2"><div class="block-label">Geometry</div><div class="h-4 muted-bg"></div></div>
+        <div class="block span-2">
+          <div class="block-label">Attention feed</div>
+          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">7 walls missing fire-rating</span></div>
+          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">12 orphan elements</span></div>
+        </div>
+      </div>
+      <!-- Row E: Provenance + Lineage -->
+      <div class="block">
+        <div class="block-label">"Who owns it / what's connected" — Provenance + Lineage</div>
+        <div class="grid-4 gap-sm" style="margin-top:6px;">
+          <div><div class="block-label">Uploader</div><div style="font-size:12px;">edkjo · 2026-05-18 14:21</div></div>
+          <div><div class="block-label">Last modified</div><div style="font-size:12px;">edkjo · 2026-05-18 14:35</div></div>
+          <div><div class="block-label">Version</div><div style="font-size:12px;">V3 of 3</div></div>
+          <div><div class="block-label">Application</div><div style="font-size:12px;">Revit 2024 · ARK</div></div>
+          <div><div class="block-label">Issues on objects</div><div class="block-value em-dash" style="font-size:14px;">— pending</div></div>
+          <div><div class="block-label">Claims</div><div class="block-value" style="font-size:14px;">7</div></div>
+          <div><div class="block-label">Viewer groups</div><div style="font-size:12px;">LBK · Skanska-coord · QA-Q3</div></div>
+          <div><div class="block-label">Linked drawings</div><div style="font-size:12px;">12 sheets</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 3 — Above-fold dense -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt3">
+    <div class="opt-head">
+      <span class="opt-num">03</span>
+      <span class="opt-name">Above-fold dense</span>
+      <span class="opt-pitch">Every signal visible at 1440×900. No scroll. Density over breathing room. PowerBI-style: lots of small tiles, fast cross-filter scanning.</span>
+    </div>
+    <div class="wf">
+      <div class="grid-12 gap-sm" style="margin-bottom:6px;">
+        <div class="block block-tight span-2"><div class="block-label">Types</div><div class="block-value" style="font-size:16px;">312</div><div class="spark"><i style="height:30%"></i><i style="height:60%"></i><i style="height:40%"></i><i style="height:80%"></i><i style="height:50%"></i></div></div>
+        <div class="block block-tight span-2"><div class="block-label">Classified</div><div class="block-value" style="font-size:16px;">78%</div><div class="bar"><div class="fill" style="width:78%"></div></div></div>
+        <div class="block block-tight span-2"><div class="block-label">Material</div><div class="block-value" style="font-size:16px;">62%</div><div class="bar warn"><div class="fill" style="width:62%"></div></div></div>
+        <div class="block block-tight span-2"><div class="block-label">Verified</div><div class="block-value" style="font-size:16px;">41%</div><div class="bar danger"><div class="fill" style="width:41%"></div></div></div>
+        <div class="block block-tight span-2"><div class="block-label">Orphan</div><div class="block-value" style="font-size:16px;">12</div><div class="block-sub tiny">0.4%</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Issues</div><div class="block-value em-dash" style="font-size:16px;">—</div><div class="block-sub tiny">pending</div></div>
+      </div>
+      <div class="grid-12 gap-sm" style="margin-bottom:6px;">
+        <div class="span-7 mock-viewer h-16">3D viewer</div>
+        <div class="span-5 col gap-sm">
+          <div class="block block-tight"><div class="block-label">Elements treemap</div><div class="h-6 muted-bg"></div></div>
+          <div class="block block-tight"><div class="block-label">Storeys</div><div class="h-4 muted-bg"></div></div>
+        </div>
+      </div>
+      <div class="grid-12 gap-sm">
+        <div class="block block-tight span-2"><div class="block-label">Discipline</div><div class="h-4 muted-bg"></div></div>
+        <div class="block block-tight span-2"><div class="block-label">Geometry</div><div class="h-4 muted-bg"></div></div>
+        <div class="block block-tight span-2"><div class="block-label">Quality</div><div class="block-value" style="font-size:14px;">4</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Reuse</div><div class="block-value" style="font-size:14px;">1.8</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Untyped</div><div class="block-value" style="font-size:14px;">3%</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Proxy</div><div class="block-value" style="font-size:14px;">1%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 4 — Viewer-led right rail -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt4">
+    <div class="opt-head">
+      <span class="opt-num">04</span>
+      <span class="opt-name">Viewer-led right rail</span>
+      <span class="opt-pitch">Viewer ~65% width, dominant. Right rail (~35%) is a vertical stack of compact tiles. Picks viewer-first BIM users: coordination flow lives in 3D, data is a sidekick.</span>
+    </div>
+    <div class="wf" style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+      <div class="mock-viewer" style="min-height:480px;">3D viewer (large)</div>
+      <div class="col gap-sm">
+        <div class="block">
+          <div class="block-label">Status</div>
+          <div style="font-size:13px;">312 types · 1,204 instances · 5 storeys</div>
+          <div class="legend-row">
+            <span class="pill pill-good">78% classified</span>
+            <span class="pill pill-warn">62% material</span>
+            <span class="pill pill-danger">4 issues</span>
+          </div>
+        </div>
+        <div class="grid-2 gap-sm">
+          <div class="block block-tight"><div class="block-label">Types</div><div class="block-value">312</div></div>
+          <div class="block block-tight"><div class="block-label">Orphan</div><div class="block-value">12</div></div>
+          <div class="block block-tight"><div class="block-label">Untyped</div><div class="block-value">3%</div></div>
+          <div class="block block-tight"><div class="block-label">Reuse</div><div class="block-value">1.8</div></div>
+        </div>
+        <div class="block"><div class="block-label">Elements (treemap)</div><div class="h-8 muted-bg"></div></div>
+        <div class="block"><div class="block-label">Storeys</div><div class="h-4 muted-bg"></div></div>
+        <div class="block"><div class="block-label">Disciplines</div><div class="h-4 muted-bg"></div></div>
+        <div class="block">
+          <div class="block-label">Provenance · Lineage</div>
+          <div class="list-row"><span class="name">Uploaded</span><span class="meta">edkjo · 14:21</span></div>
+          <div class="list-row"><span class="name">Version</span><span class="meta">V3</span></div>
+          <div class="list-row"><span class="name">Issues</span><span class="meta em-dash">— pending</span></div>
+          <div class="list-row"><span class="name">Claims</span><span class="meta">7</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 5 — Attention-first -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt5">
+    <div class="opt-head">
+      <span class="opt-num">05</span>
+      <span class="opt-name">Attention-first</span>
+      <span class="opt-pitch">Open with the action items, not the descriptive data. "What needs work on this model" leads. Composition/identity are below the fold. Maps to BIM coordinators whose job IS finding issues.</span>
+    </div>
+    <div class="wf">
+      <!-- Hero: Attention feed + viewer -->
+      <div class="grid-6 gap-sm" style="margin-bottom:8px;">
+        <div class="block span-3" style="border-left: 3px solid var(--danger);">
+          <div class="block-label">Needs attention · 24 items</div>
+          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">7 walls missing fire-rating</span><span class="meta">ARK</span></div>
+          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">5 storey deviations from canonical</span><span class="meta">RIB</span></div>
+          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">12 orphan elements outside spatial tree</span><span class="meta">—</span></div>
+          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">9 untyped wall elements</span><span class="meta">ARK</span></div>
+          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">3 types use IfcProxy</span><span class="meta">ARK</span></div>
+          <div class="list-row"><span class="pill">info</span><span class="name">+ 8 more</span><span class="meta dim">expand</span></div>
+        </div>
+        <div class="span-3 mock-viewer h-20">3D viewer · highlights flagged elements</div>
+      </div>
+      <!-- Row: descriptive but compact -->
+      <div class="grid-12 gap-sm" style="margin-bottom:8px;">
+        <div class="block block-tight span-2"><div class="block-label">Types</div><div class="block-value">312</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Class</div><div class="block-value">78%</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Material</div><div class="block-value">62%</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Verified</div><div class="block-value">41%</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Reuse</div><div class="block-value">1.8</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Orphan</div><div class="block-value">12</div></div>
+      </div>
+      <div class="grid-6 gap-sm">
+        <div class="block span-3"><div class="block-label">Elements</div><div class="h-8 muted-bg"></div></div>
+        <div class="block span-3"><div class="block-label">Storeys · Disciplines (combined)</div><div class="h-8 muted-bg"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 6 — Three columns full-height -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt6">
+    <div class="opt-head">
+      <span class="opt-num">06</span>
+      <span class="opt-name">Three columns full-height</span>
+      <span class="opt-pitch">Permanent 3-column read: left "what's in it" (treemap + storeys + disciplines), center viewer, right "context" (provenance + attention). No row scrolling, all parallel.</span>
+    </div>
+    <div class="wf" style="display:grid; grid-template-columns: 1fr 2fr 1fr; gap:8px; min-height:520px;">
+      <!-- Left: data composition -->
+      <div class="col gap-sm">
+        <div class="block"><div class="block-label">Elements</div><div class="h-12 muted-bg"></div></div>
+        <div class="block"><div class="block-label">Storeys</div><div class="h-6 muted-bg"></div></div>
+        <div class="block"><div class="block-label">Disciplines</div><div class="h-6 muted-bg"></div></div>
+      </div>
+      <!-- Center: viewer + KPI strip below -->
+      <div class="col gap-sm">
+        <div class="mock-viewer" style="flex:1;">3D viewer (center)</div>
+        <div class="grid-4 gap-sm">
+          <div class="block block-tight"><div class="block-label">Types</div><div class="block-value">312</div></div>
+          <div class="block block-tight"><div class="block-label">Classified</div><div class="block-value">78%</div></div>
+          <div class="block block-tight"><div class="block-label">Material</div><div class="block-value">62%</div></div>
+          <div class="block block-tight"><div class="block-label">Verified</div><div class="block-value">41%</div></div>
+        </div>
+      </div>
+      <!-- Right: context + attention -->
+      <div class="col gap-sm">
+        <div class="block">
+          <div class="block-label">Identity · Provenance</div>
+          <div class="list-row"><span class="name">Uploader</span><span class="meta">edkjo</span></div>
+          <div class="list-row"><span class="name">Version</span><span class="meta">V3 of 3</span></div>
+          <div class="list-row"><span class="name">Application</span><span class="meta">Revit 2024</span></div>
+        </div>
+        <div class="block">
+          <div class="block-label">Connections</div>
+          <div class="list-row"><span class="name">Issues</span><span class="meta em-dash">— pending</span></div>
+          <div class="list-row"><span class="name">Claims</span><span class="meta">7</span></div>
+          <div class="list-row"><span class="name">Viewer groups</span><span class="meta">3</span></div>
+        </div>
+        <div class="block">
+          <div class="block-label">Attention</div>
+          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">7 fire-rating</span></div>
+          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">12 orphan</span></div>
+          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">9 untyped</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 7 — Tabbed sub-surfaces -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt7">
+    <div class="opt-head">
+      <span class="opt-num">07</span>
+      <span class="opt-name">Tabbed sub-surfaces</span>
+      <span class="opt-pitch">Minimal hero (viewer + identity strip). Then tabbed sub-surfaces: Overview · Quality · Provenance · History. Each tab is a focused page. Trade depth for clarity per surface.</span>
+    </div>
+    <div class="wf">
+      <!-- Identity strip + viewer hero -->
+      <div class="grid-6 gap-sm" style="margin-bottom:8px;">
+        <div class="block span-2">
+          <div class="block-label">Model</div>
+          <div style="font-size:14px;font-weight:600;">ARK-BuildingA-V3.ifc</div>
+          <div class="block-sub">edkjo · 2026-05-18 · 312 types · 1,204 instances</div>
+        </div>
+        <div class="span-4 mock-viewer h-12">3D viewer (small hero)</div>
+      </div>
+      <!-- Tab bar -->
+      <div class="tabs">
+        <div class="tab active">Overview</div>
+        <div class="tab">Quality</div>
+        <div class="tab">Provenance</div>
+        <div class="tab">History</div>
+        <div class="tab">Connections</div>
+      </div>
+      <!-- Active tab content -->
+      <div class="grid-12 gap-sm" style="margin-bottom:6px;">
+        <div class="block block-tight span-2"><div class="block-label">Types</div><div class="block-value">312</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Classified</div><div class="block-value">78%</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Material</div><div class="block-value">62%</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Verified</div><div class="block-value">41%</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Reuse</div><div class="block-value">1.8</div></div>
+        <div class="block block-tight span-2"><div class="block-label">Orphan</div><div class="block-value">12</div></div>
+      </div>
+      <div class="grid-2 gap-sm">
+        <div class="block"><div class="block-label">Elements</div><div class="h-12 muted-bg"></div></div>
+        <div class="block"><div class="block-label">Storeys + Disciplines</div><div class="h-12 muted-bg"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 8 — Sparkline grid (Bloomberg-style) -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt8">
+    <div class="opt-head">
+      <span class="opt-num">08</span>
+      <span class="opt-name">Sparkline grid · terminal density</span>
+      <span class="opt-pitch">Bloomberg-style. Every signal is a small tile with value + delta-since-last-version + a sparkline. No big charts. Reads as a quant terminal — power-user dense, not for first-timers.</span>
+    </div>
+    <div class="wf">
+      <div class="grid-12 gap-sm" style="margin-bottom:6px;">
+        <!-- Row 1: 8 KPIs -->
+        <div class="block block-tight span-3"><div class="block-label">Types</div><div class="block-value" style="font-size:16px;">312 <span class="pill pill-good tiny">+4</span></div><div class="spark"><i style="height:30%"></i><i style="height:50%"></i><i style="height:60%"></i><i style="height:55%"></i><i style="height:70%"></i><i style="height:80%"></i></div></div>
+        <div class="block block-tight span-3"><div class="block-label">Classified %</div><div class="block-value" style="font-size:16px;">78 <span class="pill pill-good tiny">+12</span></div><div class="spark"><i style="height:40%"></i><i style="height:50%"></i><i style="height:60%"></i><i style="height:70%"></i><i style="height:75%"></i><i style="height:78%"></i></div></div>
+        <div class="block block-tight span-3"><div class="block-label">Material %</div><div class="block-value" style="font-size:16px;">62 <span class="pill pill-warn tiny">−3</span></div><div class="spark"><i style="height:70%"></i><i style="height:65%"></i><i style="height:60%"></i><i style="height:62%"></i><i style="height:62%"></i><i style="height:62%"></i></div></div>
+        <div class="block block-tight span-3"><div class="block-label">Verified %</div><div class="block-value" style="font-size:16px;">41 <span class="pill pill-good tiny">+8</span></div><div class="spark"><i style="height:20%"></i><i style="height:25%"></i><i style="height:30%"></i><i style="height:35%"></i><i style="height:38%"></i><i style="height:41%"></i></div></div>
+      </div>
+      <div class="grid-12 gap-sm" style="margin-bottom:6px;">
+        <div class="block block-tight span-3"><div class="block-label">Orphans</div><div class="block-value" style="font-size:16px;">12 <span class="pill pill-good tiny">−4</span></div><div class="spark"><i style="height:80%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:50%"></i><i style="height:30%"></i><i style="height:25%"></i></div></div>
+        <div class="block block-tight span-3"><div class="block-label">Untyped %</div><div class="block-value" style="font-size:16px;">3 <span class="pill pill-good tiny">−1</span></div><div class="spark"><i style="height:60%"></i><i style="height:55%"></i><i style="height:50%"></i><i style="height:45%"></i><i style="height:40%"></i><i style="height:35%"></i></div></div>
+        <div class="block block-tight span-3"><div class="block-label">Reuse</div><div class="block-value" style="font-size:16px;">1.8 <span class="pill pill-good tiny">+0.2</span></div><div class="spark"><i style="height:50%"></i><i style="height:55%"></i><i style="height:60%"></i><i style="height:65%"></i><i style="height:70%"></i><i style="height:72%"></i></div></div>
+        <div class="block block-tight span-3"><div class="block-label">Issues open</div><div class="block-value em-dash" style="font-size:16px;">—</div><div class="block-sub tiny">pending</div></div>
+      </div>
+      <div class="grid-12 gap-sm" style="margin-bottom:6px;">
+        <div class="span-7 mock-viewer h-12">viewer · selection-driven</div>
+        <div class="block span-5">
+          <div class="block-label">Class distribution · 12 classes</div>
+          <div class="h-8 muted-bg"></div>
+        </div>
+      </div>
+      <div class="grid-12 gap-sm">
+        <div class="block block-tight span-3"><div class="block-label">Walls</div><div class="block-value" style="font-size:14px;">214</div></div>
+        <div class="block block-tight span-3"><div class="block-label">Slabs</div><div class="block-value" style="font-size:14px;">128</div></div>
+        <div class="block block-tight span-3"><div class="block-label">Doors</div><div class="block-value" style="font-size:14px;">86</div></div>
+        <div class="block block-tight span-3"><div class="block-label">+ 9 more</div><div class="block-value dim" style="font-size:14px;">…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 9 — Linear-inspired -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt9">
+    <div class="opt-head">
+      <span class="opt-num">09</span>
+      <span class="opt-name">Linear-inspired · quiet chrome</span>
+      <span class="opt-pitch">Quiet narrow left rail (metadata + status), big content area, monochrome density. Echoes Linear's "tactical workspace" pattern. Composes-not-reflows: every panel is a fixed slot.</span>
+    </div>
+    <div class="wf" style="display:grid; grid-template-columns: 240px 1fr; gap:8px; min-height:540px;">
+      <!-- Narrow left rail -->
+      <div class="block" style="padding:8px 10px;">
+        <div class="block-label">Model</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;">ARK-BuildingA-V3</div>
+        <div class="block-sub" style="margin-bottom:10px;">312 types · 1,204 instances</div>
+        <div class="block-label">Status</div>
+        <div class="legend-row" style="margin-bottom:10px;">
+          <span class="pill pill-good">78%</span>
+          <span class="pill pill-warn">62%</span>
+          <span class="pill pill-danger">4</span>
+        </div>
+        <div class="block-label">Provenance</div>
+        <div class="list-row block-tight"><span class="name">Uploader</span><span class="meta">edkjo</span></div>
+        <div class="list-row block-tight"><span class="name">Version</span><span class="meta">V3</span></div>
+        <div class="list-row block-tight"><span class="name">Application</span><span class="meta">Revit 24</span></div>
+        <div class="block-label" style="margin-top:8px;">Connections</div>
+        <div class="list-row block-tight"><span class="name">Issues</span><span class="meta em-dash">—</span></div>
+        <div class="list-row block-tight"><span class="name">Claims</span><span class="meta">7</span></div>
+        <div class="list-row block-tight"><span class="name">Drawings</span><span class="meta">12</span></div>
+        <div class="block-label" style="margin-top:8px;">Attention · 24</div>
+        <div class="list-row block-tight"><span class="pill pill-danger">flag</span><span class="name">fire-rating</span></div>
+        <div class="list-row block-tight"><span class="pill pill-warn">warn</span><span class="name">orphans</span></div>
+      </div>
+      <!-- Main content -->
+      <div class="col gap-sm">
+        <div class="grid-6 gap-sm">
+          <div class="span-4 mock-viewer h-16">3D viewer (big)</div>
+          <div class="span-2 col gap-sm">
+            <div class="block"><div class="block-label">Elements</div><div class="h-8 muted-bg"></div></div>
+            <div class="block"><div class="block-label">Storeys</div><div class="h-4 muted-bg"></div></div>
+          </div>
+        </div>
+        <div class="grid-6 gap-sm">
+          <div class="block block-tight span-1"><div class="block-label">Types</div><div class="block-value">312</div></div>
+          <div class="block block-tight span-1"><div class="block-label">Class</div><div class="block-value">78%</div></div>
+          <div class="block block-tight span-1"><div class="block-label">Mat</div><div class="block-value">62%</div></div>
+          <div class="block block-tight span-1"><div class="block-label">Ver</div><div class="block-value">41%</div></div>
+          <div class="block block-tight span-1"><div class="block-label">Reuse</div><div class="block-value">1.8</div></div>
+          <div class="block block-tight span-1"><div class="block-label">Orph</div><div class="block-value">12</div></div>
+        </div>
+        <div class="grid-2 gap-sm">
+          <div class="block"><div class="block-label">Disciplines</div><div class="h-6 muted-bg"></div></div>
+          <div class="block"><div class="block-label">Geometry</div><div class="h-6 muted-bg"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OPTION 10 — Editorial report -->
+  <!-- ============================================================ -->
+  <div class="opt" id="opt10">
+    <div class="opt-head">
+      <span class="opt-num">10</span>
+      <span class="opt-name">Editorial report style</span>
+      <span class="opt-pitch">Reads top-to-bottom like a printed report. Section headings, generous spacing, each section answers one question. Anchored against skiplum-reports — the dashboard IS the report.</span>
+    </div>
+    <div class="wf">
+      <!-- Section: cover -->
+      <div style="text-align:center; padding: 14px; border-bottom: 1px solid var(--line); margin-bottom:14px;">
+        <div class="block-label">Model report</div>
+        <div style="font-size:18px;font-weight:600;margin-top:4px;">ARK-BuildingA-V3.ifc</div>
+        <div class="block-sub">edkjo · 2026-05-18 14:21 · IFC4 · Revit 2024 · ARK</div>
+      </div>
+      <!-- Section 1 -->
+      <div style="margin-bottom:14px;">
+        <div class="block-label" style="margin-bottom:6px;">§ 1 · State</div>
+        <div style="font-size:13px;margin-bottom:8px;">312 types across 1,204 instances on 5 storeys. <strong>78%</strong> of types classified against NS3451. <strong>62%</strong> carry material layers. <strong>41%</strong> are verified by a human. <strong>4 open issues</strong> across structural and architectural disciplines.</div>
+        <div class="grid-4 gap-sm">
+          <div class="block block-tight"><div class="block-label">Types</div><div class="block-value">312</div></div>
+          <div class="block block-tight"><div class="block-label">Classified</div><div class="block-value">78%</div></div>
+          <div class="block block-tight"><div class="block-label">Material</div><div class="block-value">62%</div></div>
+          <div class="block block-tight"><div class="block-label">Verified</div><div class="block-value">41%</div></div>
+        </div>
+      </div>
+      <!-- Section 2 -->
+      <div style="margin-bottom:14px;">
+        <div class="block-label" style="margin-bottom:6px;">§ 2 · Composition</div>
+        <div class="grid-6 gap-sm">
+          <div class="span-4 mock-viewer h-12">3D viewer (figure 1)</div>
+          <div class="span-2 block"><div class="block-label">Element types · top 5</div><div class="h-8 muted-bg"></div></div>
+        </div>
+      </div>
+      <!-- Section 3 -->
+      <div style="margin-bottom:14px;">
+        <div class="block-label" style="margin-bottom:6px;">§ 3 · Structure</div>
+        <div class="grid-2 gap-sm">
+          <div class="block"><div class="block-label">Storeys (with canonical verification)</div><div class="h-6 muted-bg"></div></div>
+          <div class="block"><div class="block-label">Disciplines</div><div class="h-6 muted-bg"></div></div>
+        </div>
+      </div>
+      <!-- Section 4 -->
+      <div style="margin-bottom:14px;">
+        <div class="block-label" style="margin-bottom:6px;">§ 4 · Attention</div>
+        <div class="block">
+          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">7 walls missing fire-rating</span><span class="meta">ARK</span></div>
+          <div class="list-row"><span class="pill pill-danger">flag</span><span class="name">5 storey deviations from canonical</span><span class="meta">RIB</span></div>
+          <div class="list-row"><span class="pill pill-warn">warn</span><span class="name">12 orphan elements outside spatial tree</span><span class="meta">—</span></div>
+        </div>
+      </div>
+      <!-- Section 5 -->
+      <div>
+        <div class="block-label" style="margin-bottom:6px;">§ 5 · Lineage</div>
+        <div class="grid-3 gap-sm">
+          <div class="block block-tight"><div class="block-label">Version</div><div style="font-size:13px;">V3 of 3</div></div>
+          <div class="block block-tight"><div class="block-label">Last modified</div><div style="font-size:13px;">2026-05-18 14:35</div></div>
+          <div class="block block-tight"><div class="block-label">Federated into</div><div style="font-size:13px;">3 viewer groups</div></div>
+          <div class="block block-tight"><div class="block-label">Issues</div><div class="block-value em-dash" style="font-size:13px;">— pending</div></div>
+          <div class="block block-tight"><div class="block-label">Claims</div><div style="font-size:13px;">7</div></div>
+          <div class="block block-tight"><div class="block-label">Linked drawings</div><div style="font-size:13px;">12 sheets</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
