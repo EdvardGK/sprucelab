@@ -311,6 +311,23 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
   const typeVisibility = typeVisibilityProp ?? internalTypeVisibility;
   const setTypeVisibility = typeVisibilityProp ? undefined : setInternalTypeVisibility;
 
+  // Force a single render pass. v3 visibility/highlight mutations mark the
+  // worker + culler dirty, but the OBC render loop is camera-event-driven —
+  // it sits idle until a camera/control event fires. Without this nudge the
+  // canvas keeps painting the stale frame until the user clicks or moves
+  // the mouse inside the viewer. Floor filter had this since 2026-05-16;
+  // typeVisibility + isolation effects didn't (added 2026-05-17).
+  const nudgeRender = useCallback(() => {
+    try {
+      const world = worldRef.current;
+      if (world?.renderer?.three && world.scene?.three && world.camera?.three) {
+        world.renderer.three.render(world.scene.three, world.camera.three);
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
+
   // Store Three.js objects in state for hooks that need them
   const [viewerState, setViewerState] = useState<{
     components: OBC.Components | null;
@@ -2245,7 +2262,12 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           if (cullerRef.current) {
             (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
           }
+          nudgeRender();
         });
+      } else if (flippedOn.length > 0 || flippedOff.length > 0) {
+        // v2-only path or no-op — still kick a render so the v2 hider's
+        // visibility change paints without waiting for a camera event.
+        nudgeRender();
       }
 
       // Capture the applied visibility for next delta computation.
@@ -2262,7 +2284,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     });
 
     return () => cancelAnimationFrame(rafId);
-  }, [typeVisibility, typeInfo, isolation]);
+  }, [typeVisibility, typeInfo, isolation, nudgeRender]);
 
   // Reset delta tracking when the set of loaded types changes out from under us
   // (e.g. new model loaded). The next visibility effect run will re-sync from
@@ -2331,20 +2353,6 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
           }
         }
       }
-
-      // Force a render after visibility changes. v3Model.setVisible +
-      // fragments.update() mark the worker dirty but the OBC render loop
-      // sits idle until a camera event nudges it. Without this nudge the
-      // viewer keeps showing stale visibility until the user moves the
-      // mouse over the canvas.
-      const nudgeRender = () => {
-        try {
-          const world = worldRef.current;
-          if (world?.renderer?.three && world.scene?.three && world.camera?.three) {
-            world.renderer.three.render(world.scene.three, world.camera.three);
-          }
-        } catch { /* noop */ }
-      };
 
       try {
         if (floorCodeFilter == null) {
@@ -2442,7 +2450,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     });
 
     return () => cancelAnimationFrame(rafId);
-  }, [floorCodeFilter, floorAliases, storeyInfo, isolation]);
+  }, [floorCodeFilter, floorAliases, storeyInfo, isolation, nudgeRender]);
 
   // GUID-based isolation (Type page). When active, hide all then show only the
   // matching fragments; in 'single' mode, also paint currentGuid orange. When
@@ -2549,6 +2557,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 }),
               ).then(() => {
                 v3FragmentsRef.current?.update().catch(() => {});
+                nudgeRender();
               });
             }
           } else {
@@ -2603,6 +2612,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
                 if (cullerRef.current) {
                   (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
                 }
+                nudgeRender();
               });
             }
 
@@ -2673,6 +2683,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
               if (cullerRef.current) {
                 (cullerRef.current as unknown as { needsUpdate: boolean }).needsUpdate = true;
               }
+              nudgeRender();
             });
           }
 
@@ -2687,6 +2698,11 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
         if (cullerRef.current) {
           cullerRef.current.needsUpdate = true;
         }
+        // Synchronous render kick for v2-only viewers (the v2 hider mutates
+        // visibility synchronously above). v3 paths kick again in their
+        // .then() callbacks once the worker resolves — a second render is
+        // harmless.
+        nudgeRender();
       } catch (err) {
         console.error('[Viewer] Isolation failed:', err);
       }
@@ -2696,7 +2712,7 @@ export const UnifiedBIMViewer = forwardRef<UnifiedBIMViewerHandle, UnifiedBIMVie
     });
 
     return () => cancelAnimationFrame(rafId);
-  }, [isolation, typeInfo.size, viewerState.components]);
+  }, [isolation, typeInfo.size, viewerState.components, nudgeRender]);
 
   // Apply class-based coloring when classColorMap is provided.
   // Uses the FragmentIdMap stored directly in typeInfo — no GUID round-trip.
