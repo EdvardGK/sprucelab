@@ -3,7 +3,7 @@
   "installCommand": "corepack enable && corepack prepare yarn@4.12.0 --activate && yarn install --immutable",
   "outputDirectory": "dist",
   "framework": "vite",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
+  "ignoreCommand": "git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- .",
   "rewrites": [
     { "source": "/api/(.*)",                         "destination": "https://sprucelab-production.up.railway.app/api/$1" },
     { "source": "/llms.txt",                         "destination": "https://sprucelab-production.up.railway.app/llms.txt" },
